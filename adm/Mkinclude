@@ -1,0 +1,35 @@
+#==========================================================
+# CaMa-Flood Mkinclude (for MaxOSX, Intel fortran)
+#==========================================================
+RM = /bin/rm -f
+CP = /bin/cp
+
+#======================================
+# Pre-Prosessing options
+# DCDF: activate when using netCDF, comment out when not needed
+#======================================
+
+DCDF=-DUseCDF
+CFLAGS=$(DCDF) 
+
+#======================================
+# Intel Fortran: Mac OSX 
+#======================================
+
+## without netCDF
+#INC = -I/opt/intel/include -I/opt/local/include 
+#LIB = -L/opt/intel/lib -L/opt/intel/mkl/lib -L/opt/local/lib
+
+## with netCDF
+INC = -I/opt/intel/include -I/opt/local/include -I/opt/local/netcdf-fortran-4/include
+LIB = -L/opt/intel/lib -L/opt/intel/mkl/lib -L/opt/local/lib -L/opt/local/netcdf-fortran-4/lib -lnetcdff
+
+#==============================
+# FCMP: main program (src/), FC: pre/post process (map/ etc/)
+FCMP = ifort -qopenmp
+FC = ifort
+
+LFLAGS =
+FFLAGS = -O3 -warn all -fpp -free -assume byterecl -heap-arrays -nogen-interface -lpthread -static-intel
+
+
