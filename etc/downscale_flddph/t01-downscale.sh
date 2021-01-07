@@ -46,11 +46,11 @@ do
         ./src/downscale_flddph $WEST $EAST $SOUTH $NORTH $RES $FLDDPH $FFLOOD $IREC &
 
         ## for parallel computation using multiple CPUs 
-        NUM=`ps -U $USER | grep src/downscale_flddph | wc -l | awk '{print $1}'`
+        NUM=`ps aux | grep $USER | grep src/downscale_flddph | wc -l | awk '{print $1}'`
         while [ $NUM -gt 8 ];
         do
           sleep 1
-          NUM=`ps -U $USER | grep src/downscale_flddph | wc -l | awk '{print $1}'`
+          NUM=`ps aux | grep $USER | grep src/downscale_flddph | wc -l | awk '{print $1}'`
         done
       fi
     IDAY=$(( $IDAY + 1 ))
