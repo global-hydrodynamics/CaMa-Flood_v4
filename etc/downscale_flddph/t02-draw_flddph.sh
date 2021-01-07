@@ -46,11 +46,11 @@ do
         ./u02-flddph.sh $WEST $EAST $SOUTH $NORTH $CDATE $NGRID $MAXDPH $RES    ##  draw figure
 
         ## for parallel computation
-        NUM=`ps -U $USER | grep u02-flddph.sh | wc -l | awk '{print $1}'`
+        NUM=`ps aux | grep $USER | grep u02-flddph.sh | wc -l | awk '{print $1}'`
         while [ $NUM -gt 8 ];
         do
           sleep 2
-          NUM=`ps -U $USER | grep u02-flddph.sh | wc -l | awk '{print $1}'`
+          NUM=`ps aux | grep $USER | grep u02-flddph.sh | wc -l | awk '{print $1}'`
         done
       fi
     IDAY=$(( $IDAY + 1 ))
