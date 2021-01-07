@@ -1,4 +1,4 @@
-# CaMa-Flood_v4
-CaMa-Flood_v4 development master
+# CaMa-Flood_v4.00
+CaMa-Flood_v4.00 release
 
-Please make a branch for development. Make changes in that branch, and push back to origin. Then, make a pull request.
+This is the codes included in the CaMa-Flood v4.00 release.
