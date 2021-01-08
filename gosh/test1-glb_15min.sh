@@ -33,7 +33,8 @@ echo $BASE
 
 #*** 0b. Set dynamic library if needed
 export IFORTLIB="/opt/intel/lib:/opt/intel/mkl/lib"
-export DYLD_LIBRARY_PATH="${IFORTLIB}:${DYLD_LIBRARY_PATH}"
+export HDF5LIB="/opt/local/hdf5-1.10.5/lib"
+export DYLD_LIBRARY_PATH="${HDF5LIB}:${IFORTLIB}:${DYLD_LIBRARY_PATH}"
 
 #*** 0c. OpenMP thread number
 export OMP_NUM_THREADS=16                    # OpenMP cpu num
