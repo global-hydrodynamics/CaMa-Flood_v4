@@ -20,7 +20,7 @@
 cd ..
 
 #######################
-# Specify input gridsize, input domain edge, input north-south order, diminfo & inpmat name
+# Specify filename, input gridsize, input domain edge, input north-south order, diminfo & inpmat name
 
 DIMINFO="diminfo_test-15min_nc.txt"
 INPMAT="inpmat_test-15min_nc.bin"
@@ -31,12 +31,12 @@ WESTIN=-180.0       # input domain west east north south edge
 EASTIN=180.0
 NORTHIN=90.0
 SOUTHIN=-60.0
-#OLAT="StoN"        # north-south order of input data
-OLAT="NtoS"
+OLAT="NtoS"         # north-south order of input data (if south to north, use StoN)
+#OLAT="StoN"
 #--------------------
 
-######################
-### below is the example for sample test3-japan simulation in 
+#+++++++++++++++++++++++++++++++++++++++++++
+### below is the example for sample test3-japan simulation in gosh
 #DIMINFO="diminfo_test-tej.txt"
 #INPMAT="inpmat_test-tej.bin"
 ##--------------------
@@ -46,9 +46,8 @@ OLAT="NtoS"
 #EASTIN=148.0
 #NORTHIN=46.0
 #SOUTHIN=24.0
-##OLAT="StoN"        # north-south order of input data
-#OLAT="NtoS"
-##--------------------
+#OLAT="NtoS"        # north-south order of input data
+#+++++++++++++++++++++++++++++++++++++++++++
 
 
 TAG="1min"          # tag for hires data dir (1min / 15sec / 3sec)
