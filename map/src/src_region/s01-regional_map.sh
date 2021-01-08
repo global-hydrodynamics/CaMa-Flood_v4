@@ -1,10 +1,18 @@
 #!/bin/sh
 
-SOURCE="../../glb_15min/"  #        !! global map directory
-WEST="90.0"               #         !! west edge (regional)
-EAST="110.0"               #          !! east edge
-SOUTH="5.0"              #          !! south edge
-NORTH="35.0"               #          !! north edge
+# To regionalize glb_06min to CONUS_06min (sample simulation test2)
+SOURCE="../../glb_06min/"  #        !! global map directory
+WEST="-130.0"              #         !! west edge (regional)
+EAST="-60.0"               #          !! east edge
+SOUTH="20.0"               #          !! south edge
+NORTH="55.0"               #          !! north edge
+
+# To convert jpn_01min to TE-Japan domain (sample simulation test3)
+#SOURCE="../../jpn_01min/"  #        !! global map directory
+#WEST="123.0"               #         !! west edge (regional)
+#EAST="148.0"               #          !! east edge
+#SOUTH="24.0"               #          !! south edge
+#NORTH="46.0"               #          !! north edge
 
 echo "$SOURCE"     >  region_info.txt
 echo "$WEST"       >> region_info.txt
