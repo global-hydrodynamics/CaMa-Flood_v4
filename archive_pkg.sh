@@ -180,6 +180,7 @@ cp -r ${BASE}/doc             .
 rm -f ./doc/.*                 2> /dev/null
 
 cp ${BASE}/archive_pkg.sh         .
+cp ${BASE}/archive_src.sh         .
 
 #===========
 
