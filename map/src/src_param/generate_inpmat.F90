@@ -167,7 +167,7 @@ print *, 'CALC_INPMAT:'
           end do
         end do
 
-        rfile1=trim(hires)//'/'//trim(area)//'.grarea.bin'
+        rfile1=trim(hires)//'/'//trim(area)//'.grdare.bin'  !! bugfix v4.1 grarea->grdare
         open(21,file=rfile1,form='unformatted',access='direct',recl=4*nx*ny,status='old',iostat=ios)
         if( ios==0 )then
           print *, 'Replace carea with file: '
