@@ -77,7 +77,7 @@
 print *, 'CALC_INPMAT:'
 
       call getarg(1,tag)
-       if( buf=='' ) then
+       if( tag=='' ) then
          print *, 'usage % generate_inpmat $HIRES $GSISE $WEST $EAST $NORTH $SOUTH $OLAT'
          stop
       endif
