@@ -20,15 +20,13 @@ cd "/cluster/data6/x.zhou/Model/CaMa-Flood_v4/etc/n-year_flood_depth/script"
 
 ##### Settings #################################
 
-VAR='storge' # variable in CaMa-Flood
-VAR='rivdph'
+VAR='rivdph storge' # variable in CaMa-Flood
 
 # Where the CaMa-Flood is 
 CAMA_FOLDER="/cluster/data6/x.zhou/CaMa_v396/glb_15min/"
 
 # If there are multiple simulations.
 GLBNAMES="e2o_anu  e2o_cnrs  e2o_jrc  e2o_nerc  e2o_ecmwf  e2o_univk  e2o_univu"
-GLBNAMES="e2o_ecmwf"
 
 # The Experiment name for the region 
 # Note that the downscaling for the global region is infesible at 3sec. 
@@ -63,14 +61,12 @@ MAXDPH=11
 
 # define the fitting functions 
 FUNC="GEV GAM PE3 GUM WEI WAK"
-FUNC="GEV"
 
 # define the return period
 RPS="0.001 0.005 0.01 0.02 0.1 0.2 0.25 0.4 0.5 0.6 0.75 0.8 0.9 0.98 0.99 0.995 0.999"
-RPS="0.01"
 
 # calculate the paramters for distribution fitting  
-#./s01-n-year_para_estimate.sh  $VAR $CAMA_FOLDER $GLBNAMES $FUNC $YEARS $YEARE $RES
+./s01-n-year_para_estimate.sh  $VAR $CAMA_FOLDER $GLBNAMES $FUNC $YEARS $YEARE $RES
 
 # calculate the flood water depth at different return period (RP)
 ./s02-n-year_flddph_estimate.sh  $VAR $CAMA_FOLDER $GLBNAMES $FUNC $RPS $YEARS $YEARE $RES $EXPNAME $WEST $EAST $SOUTH $NORTH $NGRID $MAXDPH
