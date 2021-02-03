@@ -1,4 +1,4 @@
-MODULE CMF_CTRL_RESTART_MOD
+MODULE CMF_CTRL_RESTART_MOD     !!!tentative version 7/21
 !==========================================================
 !* PURPOSE: Control CaMa-Flood restart
 !
@@ -36,6 +36,7 @@ NAMELIST/NRESTART/ CRESTSTO,CRESTDIR,CVNREST,LRESTCDF,IFRQ_RST
 !
 CONTAINS 
 !####################################################################
+!! changed 12/12
 ! -- CMF_RESTART_NMLIST : set restart configulation info from namelist
 ! -- CMF_RESTART_INIT   : Read  restart file
 ! -- CMF_RESTART_WRITE  : Write restart file
@@ -87,10 +88,11 @@ END SUBROUTINE CMF_RESTART_NMLIST
 SUBROUTINE CMF_RESTART_INIT
 ! read restart file
 ! -- call from CMF_DRV_INIT
-USE YOS_CMF_INPUT,  ONLY: LSTOONLY
+USE YOS_CMF_INPUT,  ONLY: LSTOONLY, ldamout
 USE YOS_CMF_PROG,   ONLY: D2RIVSTO,    D2FLDSTO,    D2RIVOUT,    D2FLDOUT,    D2GDWSTO, &
                         & D2RIVOUT_PRE,D2FLDOUT_PRE,D2RIVDPH_PRE,D2FLDSTO_PRE,&
-                        & D1PTHFLW,    D1PTHFLW_PRE
+                        & D1PTHFLW,    D1PTHFLW_PRE, &
+                        & d2damsto      !!! added
 IMPLICIT NONE
 ! ===========
 D2RIVSTO(:,:)=0._JPRB
@@ -107,6 +109,8 @@ D2GDWSTO(:,:)=0._JPRB
 
 D1PTHFLW(:,:)=0._JPRB
 D1PTHFLW_PRE(:,:)=0._JPRB
+
+d2damsto(:,:)=0._JPRB   !!! added
 
 IF ( LRESTCDF ) THEN
   CALL READ_REST_CDF
@@ -161,6 +165,12 @@ IF ( .not. LSTOONLY )THEN           !! default restart with previous t-step outf
      CALL MAP2VEC(R2TEMP,D2GDWSTO)
   ENDIF
 
+  if ( ldamout ) then      !!! added
+    read(tmpnam, rec=8) r2temp
+      call map2vec(r2temp, d2damsto)
+  endif
+
+
 ELSE                                 !!  storage only restart
   READ(TMPNAM,REC=1) R2TEMP
    CALL MAP2VEC(R2TEMP,D2RIVSTO)
@@ -171,6 +181,12 @@ ELSE                                 !!  storage only restart
     READ(TMPNAM,REC=3) R2TEMP
      CALL MAP2VEC(R2TEMP,D2GDWSTO)
   ENDIF
+
+  if ( ldamout ) then   !!! added
+      read(tmpnam, rec=4) r2temp
+        call map2vec(r2temp, d2damsto)
+  endif
+
 ENDIF
 CLOSE(TMPNAM)
 
@@ -245,6 +261,12 @@ IF ( LGDWDLY ) THEN
   CALL MAP2VECD(R2TEMP,D2GDWSTO)
 ENDIF
 
+IF ( ldamout ) THEN    !!! added
+  CALL NCERROR( NF90_INQ_VARID(NCID,'d2damsto',VARID))
+  CALL NCERROR( NF90_GET_VAR(NCID,VARID,R2TEMP,(/1,1,1/),(/NX,NY,1/) ) )
+  CALL MAP2VECD(R2TEMP,d2damsto)
+ENDIF
+
 IF ( LPTHOUT .AND. .NOT. LSTOONLY ) THEN
   CALL NCERROR( NF90_INQ_VARID(NCID,'pthflw_pre',VARID))
   CALL NCERROR( NF90_GET_VAR(NCID,VARID,D1PTHFLW_PRE,(/1,1,1/),(/NPTHOUT,NPTHLEV,1/) ) )
@@ -267,11 +289,12 @@ END SUBROUTINE CMF_RESTART_INIT
 SUBROUTINE CMF_RESTART_WRITE
 ! write restart files
 ! -- called CMF_from DRV_ADVANCE
-USE YOS_CMF_INPUT,      ONLY: TMPNAM, NX, NY, LPTHOUT,   LGDWDLY
+USE YOS_CMF_INPUT,      ONLY: TMPNAM, NX, NY, LPTHOUT,   LGDWDLY, ldamout
 USE YOS_CMF_TIME,       ONLY: KSTEP,  NSTEPS, JYYYYMMDD, JHHMM, JDD, JHOUR, JMIN
 USE YOS_CMF_MAP,        ONLY: NPTHOUT,     NPTHLEV
 USE YOS_CMF_PROG,       ONLY: D2RIVSTO,    D2FLDSTO,    D2RIVOUT_PRE,D2FLDOUT_PRE, &
-                            & D1PTHFLW_PRE,D2RIVDPH_PRE,D2FLDSTO_PRE,D2GDWSTO
+                            & D1PTHFLW_PRE,D2RIVDPH_PRE,D2FLDSTO_PRE,D2GDWSTO, &
+                            & d2damsto
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
 IMPLICIT NONE
 !* local variable
@@ -347,6 +370,12 @@ OPEN(TMPNAM,FILE=CFILE,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NX*NY)
     CALL VEC2MAP(D2GDWSTO,R2TEMP)
      WRITE(TMPNAM,REC=7) R2TEMP
   ENDIF
+  
+  if ( ldamout ) then   !!! added
+    call vec2map(d2damsto, r2temp)
+    write(tmpnam,rec=8) r2temp
+  endif
+
 CLOSE(TMPNAM)
 
 !*** write restart data (1D bifucation chanenl)
@@ -471,6 +500,14 @@ IF ( LGDWDLY ) THEN
   CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',DMIS) )
 ENDIF
 
+IF ( ldamout ) THEN    !!! added
+  CALL NCERROR( NF90_DEF_VAR(NCID, 'damsto', NF90_DOUBLE, (/LONID,LATID,TIMEID/), &
+                           VARID,DEFLATE_LEVEL=6), 'Creating Variable dasmto')  
+  CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"dam reservoir storage" ) )
+  CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m3") )
+  CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',DMIS) )
+ENDIF
+
 CALL NCERROR( NF90_ENDDEF(NCID) )
 
 !============================
@@ -487,7 +524,8 @@ CALL NCERROR ( NF90_INQ_VARID(NCID,'lat',VARID),'getting id' )
 CALL NCERROR( NF90_PUT_VAR(NCID,VARID,D1LAT))
 
 !! write restart variables
-DO JF=1,7
+!DO JF=1,7
+DO JF=1,8
   SELECT CASE(JF)
     CASE (1)
         CVAR='rivsto'
@@ -510,6 +548,10 @@ DO JF=1,7
     CASE (7)
         CVAR='GDWSTO'
         CALL VEC2MAPD(D2GDWSTO,R2TEMP)
+    case (8)  !!! added
+        cvar='damsto'
+        call vec2mapd(d2damsto,r2temp)
+
   END SELECT
   STATUS = NF90_INQ_VARID(NCID,TRIM(CVAR),VARID)
   IF ( STATUS .EQ. 0 ) THEN
