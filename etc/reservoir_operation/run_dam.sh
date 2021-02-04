@@ -26,8 +26,8 @@
 # (0) Basic Setting (for workstation)
 
 #*** 0a. Set CaMa-Flood base directory
-#BASE=`pwd`/..
-BASE="/cluster/data5/hanazaki/CaMa-Flood_v396a_20200514/"
+BASE=`pwd`/..
+#BASE="/cluster/data5/hanazaki/CaMa-Flood_v4/"
 # BASE="/home/yamadai/work/CaMa_v396/cmf_v396_pkg"  # setting for PBS in cluster
 
 echo $BASE
@@ -69,9 +69,9 @@ LDAMOUT=".TRUE."                           # .TRUE. to activate reservoir operat
 #============================
 #*** 1c. simulation time
 YSTA=2001                                   # start year ( from YSTA / Jan  1st _ 00:00)
-YEND=2019                                   # end   year (until YEND / Dec 31st _ 24:00)
+YEND=2002                                   # end   year (until YEND / Dec 31st _ 24:00)
 SPINUP=0                                    # [0]: zero-storage start, [1]: from restart file
-NSP=2                                       # spinup repeat time
+NSP=1                                       # spinup repeat time
 
 
 #============================
@@ -101,8 +101,8 @@ DROFUNIT="3600"   # [m/hour->m/s]       # runoff unit conversion   !!!! check
 LINPCDF=".FALSE."                           # true for netCDF runoff
 LINTERP=".TRUE."                            # .TRUE. to interporlate with input matri
 LINTERPCDF=".FALSE."                        # .TRUE. to use netCDF input matrix
-#CROFDIR="${BASE}/inp/test_1deg/runoff/"     # runoff directory
-CROFDIR="${BASE}/inp/ERA5LAND_6min_hourly_2001_2019_m/"     # runoff directory
+CROFDIR="${BASE}/inp/test_1deg/runoff/"     # runoff directory
+#CROFDIR="${BASE}/inp/ERA5LAND_6min_hourly_2001_2019_m/"     # runoff directory
 CROFPRE="Roff____"                          # runoff prefix/suffix  
 CROFSUF=".sixmin"                              #   $(CROFPRE)YYYYMMDD$(CROFSUF)
 
