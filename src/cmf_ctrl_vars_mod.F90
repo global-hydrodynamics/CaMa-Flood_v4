@@ -31,7 +31,9 @@ USE YOS_CMF_PROG,            ONLY: ND2PROG,      D2PROG, &
                                  & D2RUNOFF,     D2ROFSUB,     D2GDWSTO,     D2GDWRTN, &
                                  & D2RIVSTO,     D2FLDSTO,     D2RIVOUT,     D2FLDOUT, &
                                  & D2RIVOUT_PRE, D2FLDOUT_PRE, D2RIVDPH_PRE, D2FLDSTO_PRE, &
-                                 & D1PTHFLW,     D1PTHFLW_PRE
+                                 & D1PTHFLW,     D1PTHFLW_PRE, &
+                                 & d2damsto,     d2daminf      !!! added
+use yos_cmf_input,           only: ldamout   !!!
 IMPLICIT NONE
 !================================================
 WRITE(LOGNAM,*) ""
@@ -40,7 +42,7 @@ WRITE(LOGNAM,*) "!---------------------!"
 WRITE(LOGNAM,*) "CMF::PROG_INIT: prognostic variable initialization"
 
 !*** 1. ALLOCATE 
-ND2PROG=12
+ND2PROG=14    !!! dam variables are added
 ALLOCATE( D2PROG(NSEQMAX,1,ND2PROG)     )
 ALLOCATE( D1PTHFLW(NPTHOUT,NPTHLEV)     )
 ALLOCATE( D1PTHFLW_PRE(NPTHOUT,NPTHLEV) )
@@ -57,6 +59,8 @@ D2RIVDPH_PRE => D2PROG(:,:,9)
 D2FLDSTO_PRE => D2PROG(:,:,10)
 D2GDWSTO     => D2PROG(:,:,11)
 D2GDWRTN     => D2PROG(:,:,12)
+d2damsto     => D2PROG(:,:,13)  !!! added
+d2daminf     => D2PROG(:,:,14)  !!! added
 D2PROG(:,:,:) = 0._JPRB
 
 !============================
@@ -75,10 +79,14 @@ D2GDWRTN(:,:)     = 0._JPRB
 D2GDWSTO(:,:)     = 0._JPRB
 D1PTHFLW(:,:)     = 0._JPRB
 D1PTHFLW_PRE(:,:) = 0._JPRB
+d2damsto(:,:)     = 0._JPRB   !!! added
+d2daminf(:,:)     = 0._JPRB   !!! added
+
 
 !***  2b. set initial water surface elevation to sea surface level
 WRITE(LOGNAM,*) 'PROG_INIT: fill channels below downstream boundary'
 CALL STORAGE_SEA_SURFACE
+
 
 WRITE(LOGNAM,*) "CMF::PROG_INIT: end"
 
@@ -131,7 +139,8 @@ USE YOS_CMF_DIAG,       ONLY: N2DIAG, D2DIAG, &
                             &   D2PTHOUT, D2PTHINF, D2SFCELV, D2OUTFLW, D2STORGE, D2OUTINS
 USE YOS_CMF_DIAG,       ONLY: N2DIAG_AVG, D2DIAG_AVG, NADD, &
                             &   D2RIVOUT_AVG, D2FLDOUT_AVG, D2OUTFLW_AVG, D2RIVVEL_AVG, D2PTHOUT_AVG, &
-                            &   D2GDWRTN_AVG, D2RUNOFF_AVG, D2ROFSUB_AVG, D1PTHFLW_AVG
+                            &   D2GDWRTN_AVG, D2RUNOFF_AVG, D2ROFSUB_AVG, D1PTHFLW_AVG, &
+                            &   d2daminf_avg   !!! added
 USE YOS_CMF_DIAG,       ONLY: N2DIAG_MAX, D2DIAG_MAX, &
                             &   D2STORGE_MAX, D2OUTFLW_MAX, D2RIVDPH_MAX
 IMPLICIT NONE
@@ -161,7 +170,7 @@ D2OUTINS => D2DIAG(:,:,13)
 
 !============================
 !*** 2a. time-average 2D diagnostics
-N2DIAG_AVG=8
+N2DIAG_AVG=9    !!! d2daminf_avg is added
 ALLOCATE(D2DIAG_AVG(NSEQMAX,1,N2DIAG_AVG))
 D2DIAG_AVG(:,:,:) = 0._JPRB 
 D2RIVOUT_AVG => D2DIAG_AVG(:,:,1)
@@ -173,6 +182,9 @@ D2PTHOUT_AVG => D2DIAG_AVG(:,:,5)
 D2GDWRTN_AVG => D2DIAG_AVG(:,:,6)
 D2RUNOFF_AVG => D2DIAG_AVG(:,:,7)
 D2ROFSUB_AVG => D2DIAG_AVG(:,:,8)
+
+d2daminf_avg => D2DIAG_AVG(:,:,9)
+
 NADD=0
 
 !*** 2b time-average 1D Diagnostics (bifurcation channel)
