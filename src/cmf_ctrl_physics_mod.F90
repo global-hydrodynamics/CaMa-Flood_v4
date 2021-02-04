@@ -31,6 +31,10 @@ USE CMF_CALC_DAMOUT_MOD,   ONLY: CMF_CALC_DAMOUT
 USE CMF_CALC_STONXT_MOD,   ONLY: CMF_CALC_STONXT
 USE CMF_OPT_OUTFLW_MOD,    ONLY: CMF_CALC_OUTFLW_KINEMIX, CMF_CALC_OUTFLW_KINE
 USE CMF_CALC_DIAG_MOD,     ONLY: CMF_DIAG_AVEMAX
+#ifdef ILS
+USE YOS_CMF_ICI,           ONLY: LLAKEIN
+USE CMF_CALC_LAKEIN_MOD,   ONLY: CMF_CALC_LAKEIN, CMF_LAKEIN_AVE
+#endif
 IMPLICIT NONE
 !! LOCAL
 INTEGER(KIND=JPIM)            ::  IT, NT
@@ -71,6 +75,12 @@ DO IT=1, NT
 !=== 2.  Calculate the storage in the next time step in FTCS diff. eq.
   CALL CMF_CALC_STONXT
 
+#ifdef ILS
+  IF( LLAKEIN )THEN
+    CALL CMF_CALC_LAKEIN            !! calculate lake inflow for river-lake coupling
+  ENDIF
+#endif
+
 !=== 3. calculate river and floodplain staging
   CALL CMF_CALC_FLDSTG
 
@@ -79,6 +89,12 @@ DO IT=1, NT
 
 !=== 5. calculate averages, maximum
   CALL CMF_DIAG_AVEMAX
+
+#ifdef ILS
+  IF( LLAKEIN )THEN
+    CALL CMF_LAKEIN_AVE
+  ENDIF
+#endif
 
 END DO
 
