@@ -1,6 +1,6 @@
-PROGRAM MAIN_cmf_moj
+PROGRAM MAIN_cmf_ici
 !==========================================================
-!* PURPOSE: CaMa-Flood coupler for MOJ
+!* PURPOSE: CaMa-Flood coupler for ICI
 !
 ! (C) M. Hatono & D.Yamazaki (Tohoku-U / U-Tokyo)  Sep 2019
 !
@@ -20,8 +20,8 @@ USE CMF_DRV_CONTROL_MOD,     ONLY: CMF_DRV_INPUT,      CMF_DRV_INIT,        CMF_
 USE CMF_DRV_ADVANCE_MOD,     ONLY: CMF_DRV_ADVANCE     
 !USE CMF_CTRL_FORCING_MOD,    ONLY: CMF_FORCING_GET,    CMF_FORCING_PUT
 !
-USE CMF_CTRL_MOJ_MOD,        ONLY: CMF_MOJ_INPUT,      CMF_MOJ_INIT,        CMF_MOJ_END
-USE CMF_CTRL_MOJ_MOD,        ONLY: CMF_MOJ_FORCING_GET,CMF_MOJ_OUTPUT
+USE CMF_CTRL_ICI_MOD,        ONLY: CMF_ICI_INPUT,      CMF_ICI_INIT,        CMF_ICI_END
+USE CMF_CTRL_ICI_MOD,        ONLY: CMF_ICI_FORCING_GET,CMF_ICI_OUTPUT
 !$ USE OMP_LIB
 IMPLICIT NONE
 ! Local variables
@@ -32,11 +32,11 @@ REAL(KIND=JPRB),ALLOCATABLE     :: ZBUFF(:,:,:)       ! Buffer to store forcing 
 
 !*** 1a. Namelist handling
 CALL CMF_DRV_INPUT
-CALL CMF_MOJ_INPUT
+CALL CMF_ICI_INPUT
 
 !*** 1b. INITIALIZATION
 CALL CMF_DRV_INIT
-CALL CMF_MOJ_INIT
+CALL CMF_ICI_INIT
 
 !*** 1c. allocate data buffer for input forcing
 ALLOCATE(ZBUFF(NXIN,NYIN,2))
@@ -50,14 +50,14 @@ ALLOCATE(ZBUFF(NXIN,NYIN,2))
 ISTEPADV=1
 DO ISTEP=1,NSTEPS,1
 
-  !*  2a Get forcing from MOJ
-  CALL CMF_MOJ_FORCING_GET
+  !*  2a Get forcing from ICI
+  CALL CMF_ICI_FORCING_GET
 
   !*  2b  Advance CaMa-Flood model for ISTEPADV
   CALL CMF_DRV_ADVANCE(ISTEPADV)
   
-  !*  2c  Output data with MOJ
-  CALL CMF_MOJ_OUTPUT
+  !*  2c  Output data with ICI
+  CALL CMF_ICI_OUTPUT
 
 ENDDO
 !================================================
@@ -65,9 +65,9 @@ ENDDO
 !*** 3a. Finalize 
 DEALLOCATE(ZBUFF)
 CALL CMF_DRV_END
-CALL CMF_MOJ_END
+CALL CMF_ICI_END
 
 !================================================
 
-END PROGRAM MAIN_cmf_moj
+END PROGRAM MAIN_cmf_ici
 !####################################################################
