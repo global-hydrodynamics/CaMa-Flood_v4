@@ -10,8 +10,7 @@
 #PBS -V
 
 # 
-cd "/cluster/data6/x.zhou/Model/CaMa-Flood_v4/etc/n-year_flood_depth/script"
-#cd $PBS_O_WORKDIR
+cd $PBS_O_WORKDIR
 # calculate N-year flddph by converting storage to flddph
 # the distrition is working on the storage rather than the rivdph
 # But since we cannot get the flddph directly from the parameters, 
@@ -23,7 +22,7 @@ cd "/cluster/data6/x.zhou/Model/CaMa-Flood_v4/etc/n-year_flood_depth/script"
 VAR='rivdph storge' # variable in CaMa-Flood
 
 # Where the CaMa-Flood is 
-CAMA_FOLDER="/cluster/data6/x.zhou/CaMa_v396/glb_15min/"
+CAMA_FOLDER="../../"
 
 # If there are multiple simulations.
 GLBNAMES="e2o_anu  e2o_cnrs  e2o_jrc  e2o_nerc  e2o_ecmwf  e2o_univk  e2o_univu"
@@ -31,7 +30,7 @@ GLBNAMES="e2o_anu  e2o_cnrs  e2o_jrc  e2o_nerc  e2o_ecmwf  e2o_univk  e2o_univu"
 # The Experiment name for the region 
 # Note that the downscaling for the global region is infesible at 3sec. 
 # Mekong
-EXPNAME='Mekong-e2o' # name of hazard map
+EXPNAME='Mekong' # name of hazard map
 WEST=102 # target downscale domain
 EAST=108
 SOUTH=9
