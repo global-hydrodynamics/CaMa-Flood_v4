@@ -26,7 +26,7 @@
 # (0) Basic Setting (for workstation)
 
 #*** 0a. Set CaMa-Flood base directory
-BASE=`pwd`/..
+BASE=`pwd`/../..
 #BASE="/cluster/data5/hanazaki/CaMa-Flood_v4/"
 # BASE="/home/yamadai/work/CaMa_v396/cmf_v396_pkg"  # setting for PBS in cluster
 
@@ -34,7 +34,8 @@ echo $BASE
 
 #*** 0b. Set dynamic library if needed
 export IFORTLIB="/opt/intel/lib:/opt/intel/mkl/lib"
-export DYLD_LIBRARY_PATH="${IFORTLIB}:${DYLD_LIBRARY_PATH}"
+export HDF5LIB="/opt/local/hdf5-1.10.5/lib"
+export DYLD_LIBRARY_PATH="${HDF5LIB}:${IFORTLIB}:${DYLD_LIBRARY_PATH}"
 
 #*** 0c. OpenMP thread number
 export OMP_NUM_THREADS=16                    # OpenMP cpu num
@@ -45,7 +46,7 @@ export OMP_NUM_THREADS=16                    # OpenMP cpu num
 
 #============================
 #*** 1a. Experiment directory setting
-EXP="test"                       # experiment name (output directory name)
+EXP="test_dam"                       # experiment name (output directory name)
 RDIR=${BASE}/out/${EXP}                     # directory to run CaMa-Flood
 EXE="MAIN_cmf"                              # Execute file name
 PROG=${BASE}/src/${EXE}                     # location of Fortran main program
@@ -68,8 +69,8 @@ LDAMOUT=".TRUE."                           # .TRUE. to activate reservoir operat
 
 #============================
 #*** 1c. simulation time
-YSTA=2001                                   # start year ( from YSTA / Jan  1st _ 00:00)
-YEND=2002                                   # end   year (until YEND / Dec 31st _ 24:00)
+YSTA=2000                                   # start year ( from YSTA / Jan  1st _ 00:00)
+YEND=2001                                   # end   year (until YEND / Dec 31st _ 24:00)
 SPINUP=0                                    # [0]: zero-storage start, [1]: from restart file
 NSP=1                                       # spinup repeat time
 
@@ -92,19 +93,20 @@ IFRQ_RST="0"                                # output restat frequency.
 
 #============================
 #*** 1e. forcing setting
-#IFRQ_INP="24"                               # input forcing frequency: [1,2,3,...,24] hour
-#DROFUNIT="86400000"   # [mm/day->m/s]       # runoff unit conversion   !!!! check
-IFRQ_INP="1"                               # input forcing frequency: [1,2,3,...,24] hour
-DROFUNIT="3600"   # [m/hour->m/s]       # runoff unit conversion   !!!! check
+IFRQ_INP="24"                               # input forcing frequency: [1,2,3,...,24] hour
+DROFUNIT="86400000"   # [mm/day->m/s]       # runoff unit conversion   !!!! check
+#IFRQ_INP="1"                               # input forcing frequency: [1,2,3,...,24] hour
+#DROFUNIT="3600"   # [m/hour->m/s]       # runoff unit conversion   !!!! check
 
 #----- for plain binary runoff forcing
 LINPCDF=".FALSE."                           # true for netCDF runoff
 LINTERP=".TRUE."                            # .TRUE. to interporlate with input matri
 LINTERPCDF=".FALSE."                        # .TRUE. to use netCDF input matrix
-CROFDIR="${BASE}/inp/test_1deg/runoff/"     # runoff directory
+CROFDIR="${BASE}/inp/test_1deg/runoff"     # runoff directory
 #CROFDIR="${BASE}/inp/ERA5LAND_6min_hourly_2001_2019_m/"     # runoff directory
 CROFPRE="Roff____"                          # runoff prefix/suffix  
-CROFSUF=".sixmin"                              #   $(CROFPRE)YYYYMMDD$(CROFSUF)
+CROFSUF=".one"                              #   $(CROFPRE)YYYYMMDD$(CROFSUF)
+#CROFSUF=".sixmin"                              #   $(CROFPRE)YYYYMMDD$(CROFSUF)
 
 ###** sub-surface runoff scheme (not available with plain binary runoff)
 LROSPLIT=".FALSE."                          # .TRUE. for sub-surface runoff
@@ -132,8 +134,10 @@ LROSPLIT=".FALSE."                          # .TRUE. for sub-surface runoff
 #============================
 #*** 1f. river map & topography
 FMAP="${BASE}/map/glb_15min"                # map directory
-CDIMINFO="${FMAP}/diminfo_ERA5LAND_0.1deg.txt"    # dimention information file
-CINPMAT=${FMAP}/inpmat_ERA5LAND_0.1deg.bin           # runoff input matrix for interporlation
+CDIMINFO="${FMAP}/diminfo_test-1deg.txt"    # dimention information file
+CINPMAT=${FMAP}/inpmat_test-1deg.bin        # runoff input matrix for interporlation
+#CDIMINFO="${FMAP}/diminfo_ERA5LAND_0.1deg.txt"    # dimention information file
+#CINPMAT=${FMAP}/inpmat_ERA5LAND_0.1deg.bin           # runoff input matrix for interporlation
 #CDIMINFO="${FMAP}/diminfo_test-15min_nc.txt" # dimention information file
 #CINPMAT=${FMAP}/inpmat_test-15min_nc.bin     # runoff input matrix for interporlation
 
@@ -196,7 +200,10 @@ LOUTCDF=".FALSE."                           # .TRUE. netCDF output, .FALSE. plai
 COUTDIR="./"                                # output directory 
 #CVARSOUT="outflw,storge,fldfrc,maxdph,flddph" # list output variable (comma separated)
 #CVARSOUT="rivout,rivsto,rivdph,rivvel,fldout,fldsto,flddph,fldfrc,fldare,sfcelv,outflw,storge,pthflw,pthout,maxsto,maxflw,maxdph,damsto,daminf" # list output variable (comma separated)    # dam variables are added!!!!
-CVARSOUT="flddph,outflw,daminf,damsto,rivdph" # list output variable (comma separated)    # dam variables are added!!!!
+
+CVARSOUT="flddph,outflw,rivdph" # list output variable (comma separated)    # dam variables are added!!!!
+#CVARSOUT="flddph,outflw,daminf,damsto,rivdph" # list output variable (comma separated)    # dam variables are added!!!!
+
 COUTTAG=""  # see (3) set each year         #   output tag $(COUTDIR)/$(VARNAME)$(OUTTAG).bin
 
 ##### Model Parameters ################

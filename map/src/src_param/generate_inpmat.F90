@@ -174,6 +174,13 @@ print *, 'CALC_INPMAT:'
           print *, trim(rfile1)
           read(21,rec=1) carea
           close(21)
+
+          do iy=1, ny
+            do ix=1, nx
+              if( carea(ix,iy)>0 ) carea(ix,iy)=carea(ix,iy)*1.e6  !!! km2 -> m2
+            end do
+          end do
+
         endif
 
 !================================================
