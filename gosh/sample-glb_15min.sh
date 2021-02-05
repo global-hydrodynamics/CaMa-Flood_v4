@@ -26,9 +26,8 @@
 # (0) Basic Setting (for workstation)
 
 #*** 0a. Set CaMa-Flood base directory
-#BASE=`pwd`/..
+BASE=`pwd`/..
 # BASE="/home/yamadai/work/CaMa_v400/cmf_v400_pkg"  # setting for PBS in cluster
-BASE="/cluster/data6/x.zhou/Model/test/"
 
 echo $BASE
 
