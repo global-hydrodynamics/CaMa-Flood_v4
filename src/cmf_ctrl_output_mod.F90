@@ -275,6 +275,17 @@ DO JF=1,NVARSOUT
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='daily maximum river depth'
       VAROUT(JF)%CVUNITS='m' 
+
+
+    CASE ('damsto')   !!! added
+      VAROUT(JF)%CVNAME=CVNAMES(JF)
+      VAROUT(JF)%CVLNAME='reservoir storage'
+      VAROUT(JF)%CVUNITS='m3' 
+    CASE ('daminf')   !!! added
+      VAROUT(JF)%CVNAME=CVNAMES(JF)
+      VAROUT(JF)%CVLNAME='reservoir inflow'
+      VAROUT(JF)%CVUNITS='m3/s' 
+
     CASE DEFAULT
     WRITE(LOGNAM,*) trim(CVNAMES(JF)), ' Not defined in CMF_CREATE_OUTCDF_MOD'
 #ifdef IFS
@@ -394,11 +405,13 @@ USE ABORT_SURF_MOD,     ONLY: ABORT_SURF
 USE YOS_CMF_INPUT,      ONLY: NX,NY
 USE YOS_CMF_MAP,        ONLY: NSEQMAX, NPTHOUT, NPTHLEV
 USE YOS_CMF_TIME,       ONLY: JYYYYMMDD, JHHMM, JHOUR, JMIN
-USE YOS_CMF_PROG,       ONLY: D2RIVSTO,     D2FLDSTO,     D2GDWSTO
+USE YOS_CMF_PROG,       ONLY: D2RIVSTO,     D2FLDSTO,     D2GDWSTO, &
+                            & d2damsto !!! added
 USE YOS_CMF_DIAG,       ONLY: D2RIVDPH,     D2FLDDPH,     D2FLDFRC,     D2FLDARE,     D2SFCELV,     D2STORGE, &
                             & D2OUTFLW_AVG, D2RIVOUT_AVG, D2FLDOUT_AVG, D2PTHOUT_AVG, D1PTHFLW_AVG, &
                             & D2RIVVEL_AVG, D2GDWRTN_AVG, D2RUNOFF_AVG, D2ROFSUB_AVG,               &
-                            & D2OUTFLW_MAX, D2STORGE_MAX, D2RIVDPH_MAX
+                            & D2OUTFLW_MAX, D2STORGE_MAX, D2RIVDPH_MAX, &
+                            & d2daminf_avg   !!! added
 IMPLICIT NONE
 INTEGER(KIND=JPIM)      ::    JF
 REAL(KIND=JPRB),POINTER ::    D2VEC(:,:) ! point data location to output
@@ -475,6 +488,10 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
       CASE ('rofsub')
         D2VEC =>  D2ROFSUB_AVG
 
+      CASE ('damsto')   !!! added
+        D2VEC =>  d2damsto
+      CASE ('daminf')   !!! added
+        D2VEC =>  d2daminf_avg
 
       CASE DEFAULT
         WRITE(LOGNAM,*) VAROUT(JF)%CVNAME, ' Not defined in CMF_OUTPUT_MOD'
