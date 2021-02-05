@@ -136,8 +136,9 @@ Users can specify the river parameters according to a sample runoff (long-term m
 ```bash
 cd ../map
 ```
+If users downloaded the package from website, you will see the /data/ directory in the /map/, then you can skip preparing the data but generate the river parameters.
 
-For external users,
+For external users (from github),
 
 ```bash
 wget --user=USER --password=PASS http://hydro.iis.u-tokyo.ac.jp/~yamadai/cama-flood/distribute/climatology_runoff.tar.gz
@@ -145,7 +146,7 @@ tar -xvf climatology_runoff.tar.gz
 mv climatology_runoff data
 ```
 
-<font color="#FFFF">For internal users</font> 
+<font color="#FFFF">For internal users</font> (only copy the scripts but not the package)
 
 ```bash
 cp -r /home/yamadai/work/CaMa_v400/cmf_v400_data/dat_map/data .
