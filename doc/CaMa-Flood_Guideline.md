@@ -6,6 +6,8 @@ This document is prepared to give an example how CaMa-Flood is prepared and how 
 
 The full package of CaMa-Flood scripts can be accessed and downloadable from website (http://hydro.iis.u-tokyo.ac.jp/~yamadai/cama-flood/index.html). It can be cloned from github for developers, while the necessary data should be prepared additionally because of the size limit of github repository.  Internal users at U-Tokyo can copy the data from server. 
 
+NOTE: The GitHub repogitory is designed for users who want to contribute to CaMa-Flood development. As the repository on GitHub might include potential bugs in the latest development version, we recommend general users to download and use the "package" distributed from the webpage. 
+
 ### 1.1 Download from website
 
 Users can download CaMa-Flood model package (with source code, basic map data, and sample input data from http://hydro.iis.u-tokyo.ac.jp/~yamadai/cama-flood/index.html. A general description can also be found in this website.
@@ -96,7 +98,9 @@ In this section, users have to adjust settings according to your computation env
 /doc/Manual_CaMa-Flood_v400.docx
 ```
 
-Here we will give an example to run with E2O_ecmwf for 1980-2014 at a global scale with 0.25 degree spatial resolution. 
+We reccomend first-time users to start from basic simulations in the gosh/ directory (test1, test2, test3).
+
+Here we will give an additional example (test4) to run with E2O_ecmwf for 1980-2014 at a global scale with 0.25 degree spatial resolution. The external runoff data (not included in the package) should be donwlaoded to run this simulation.
 
 ### 2.1 Computation Environment
 
@@ -301,6 +305,8 @@ Users have to adjust in s01-mapping_plot.sh if their output is in netcdf. Plot s
 
 The global simulation is generally conducted at 15 arcmin (~25km) or 6 arcmin (~10km) which are not sufficient to describe the details at local scale. Therefore, CaMa-Flood provide demo script to downscale the result at coarse spatial resolution to high spatial resolution (e.g., 1min, 15sec, 3sec). Although, users can easily define the extent to be downscaled, we suggest the extent is smaller than 20deg by 20deg (if your target is 3sec) to avoid exceeding the integer limit. 
 
+The sample script is prepaed for downscaling the results of sample simulation "test1", and you can change the setting by modifying the script.
+
 ```bash
 cd ../downscale_flddph
 cd src
@@ -319,6 +325,8 @@ Flood duration is an estimation of how many days in a year the water level is hi
 cd ../flood_duration
 ./s01-flood_duration.sh 
 ```
+
+The sample script is prepaed for downscaling the results of sample simulation "test1", and you can change the setting by modifying the script.
 
 ### 3.4 Flood hazard map
 
