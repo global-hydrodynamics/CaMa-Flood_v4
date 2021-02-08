@@ -6,7 +6,7 @@
 *.o
 
 # map folder
-*/map/glb_15min/
+*/glb_15min/
 
 # out folder
 */out/
