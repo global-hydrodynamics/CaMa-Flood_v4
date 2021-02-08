@@ -30,6 +30,9 @@ def mk_dir(sdir):
   except:
     pass
 #========================================
+def RMSE(s,o):
+    return np.sqrt(np.mean((s-o)**2))
+#========================================    
 def NS(s,o):
     """
     Nash Sutcliffe efficiency coefficient
@@ -58,7 +61,7 @@ def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,CaMa_di
         lines=f.readlines()
 
     #--
-    head=15
+    head=20
     #--
     time=[] # time in days
     data=[] # WSE in [m]
@@ -107,8 +110,6 @@ print N
 pnames=[]
 x1list=[]
 y1list=[]
-x2list=[]
-y2list=[]
 rivers=[]
 legm08=[]
 legm96=[]
@@ -123,10 +124,8 @@ for line in lines[1::]:
     pnames.append(line[1].strip())
     x1list.append(int(line[2]))
     y1list.append(int(line[3]))
-    x2list.append(int(line[4]))
-    y2list.append(int(line[5]))
-    legm08.append(float(line[6]))
-    legm08.append(float(line[7]))
+    legm08.append(float(line[4]))
+    legm08.append(float(line[5]))
 pnum=len(pnames)
 #========================
 org=[]
@@ -171,11 +170,8 @@ def read_data(inputlist):
     simfile=np.fromfile(fname,np.float32).reshape([dt,ny,nx])
     #-------------
     for point in np.arange(pnum):
-        ix1,iy1,ix2,iy2=x1list[point],y1list[point],x2list[point],y2list[point]
-        if ix2 == -9999 or iy2 == -9999:
-            tmp_sim[st:et,point]=simfile[:,iy1-1,ix1-1]
-        else:
-            tmp_sim[st:et,point]=simfile[:,iy1-1,ix1-1]+simfile[:,iy2-1,ix2-1]
+        ix1,iy1=x1list[point],y1list[point]
+        tmp_sim[st:et,point]=simfile[:,iy1-1,ix1-1]
 #--------
 p   = Pool(1)
 res = p.map(read_data, inputlist)
@@ -192,7 +188,7 @@ def make_fig(point):
     else:
        org=np.array(org) 
     #print org
-    lines=[ax1.plot(time,org,label="obs",marker="o",color="black",linewidth=0.0,zorder=101)[0]] #,marker = "o",markevery=swt[point])
+    lines=[ax1.plot(time,org,label="obs",marker="o",color="black",fillstyle="none",linewidth=0.0,zorder=101)[0]] #,marker = "o",markevery=swt[point])
     
     # draw simulations
     lines.append(ax1.plot(np.arange(start,last),sim[:,point],label=labels[1],color="blue",linewidth=1.0,alpha=1,zorder=106)[0])
@@ -214,12 +210,11 @@ def make_fig(point):
     ax1.set_xticks(xxlist)
     ax1.set_xticklabels(xxlab,fontsize=10)
 
-    # Nash-Sutcllf calcuation
-    # NS1=NS(sim[:,point],org)
-    # #print point,NS1,NS2
-    # Nash1="NS: %4.2f"%(NS1)
+    # Root Mean Square Error
+    RE1=RMSE(sim[time,point],org)
+    Rmse1="RMSE: %4.2f"%(RE1)
     #
-    # ax1.text(0.02,0.95,Nash1,ha="left",va="center",transform=ax1.transAxes,fontsize=10)
+    ax1.text(0.02,0.95,Rmse1,ha="left",va="center",transform=ax1.transAxes,fontsize=10)
 
     plt.legend(lines,labels,ncol=1,loc='upper right') #, bbox_to_anchor=(1.0, 1.0),transform=ax1.transAxes)
     
