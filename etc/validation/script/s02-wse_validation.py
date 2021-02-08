@@ -48,49 +48,42 @@ def NS(s,o):
 #========================================
 def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,CaMa_dir="../../../"):
     # read the sample observation data
-    start_dt=datetime.date(syear,smon,sday)
-    last_dt=datetime.date(eyear,emon,eday)
-    #-----
-    start=0
-    last=(last_dt-start_dt).days + 1
+    start=datetime.date(syear,smon,sday)
+    end=datetime.date(eyear,emon,eday)
+    
+    # read wse observation
+    fname=CaMa_dir+"obs/wse/"+station+".txt"
 
-    # read discharge
-    fname =CaMa_dir+"obs/discharge/"+station+".txt"
-    head = 21 #header lines
-    if not os.path.exists(fname):
-        print "no file", fname
-        return np.ones([last],np.float32)*-9999.0
-    else:
-        f = open(fname,"r")
-        lines = f.readlines()
-        f.close()
-        dis = {}
-        for line in lines[head::]:
-            line     = filter(None, re.split(" ",line))
-            yyyymmdd = filter(None, re.split("-",line[0]))
-            yyyy     = int(yyyymmdd[0])
-            mm       = int(yyyymmdd[1])
-            dd       = int(yyyymmdd[2])
-            #---
-            if start_dt < datetime.date(yyyy,mm,dd) and last_dt > datetime.date(yyyy,mm,dd):
-                dis[yyyy,mm,dd]=float(line[1])
-            elif last_dt  < datetime.date(yyyy,mm,dd):
-                break
-        #---
-        start=0
-        last=(last_dt-start_dt).days + 1
-        Q=[]
-        for day in np.arange(start,last):
-            target_dt=start_dt+datetime.timedelta(days=day)
-            if (target_dt.year,target_dt.month,target_dt.day) in dis.keys():
-                Q.append(dis[target_dt.year,target_dt.month,target_dt.day])
-            else:
-                Q.append(-9900.0)
-    return np.array(Q)
+    with open(fname,"r") as f:
+        lines=f.readlines()
+
+    #--
+    head=15
+    #--
+    time=[] # time in days
+    data=[] # WSE in [m]
+    for line in lines[head::]:
+        if line[0][0] == "#":
+            continue
+        line = filter(None,re.split(" ",line))
+        date = line[0]
+        date = re.split("-",date)
+        yyyy = int(date[0])
+        mm   = int(date[1])
+        dd   = int(date[2])
+        wse  = float(line[1])
+        now  = datetime.date(yyyy,mm,dd)
+        if now < start and now > end:
+            continue
+        data.append(wse)
+        lag  = int((now-start).days)
+        time.append(lag)
+    return time, data
 #========================================
 indir = "../../../out/test1-glb_15min" # folder where Simulated discharge
 CaMa_dir="../../../" # CaMa folder
 mapname="glb_15min" # map name [e.g. glb_15min,glb_06min, etc.]
+egm="EGM08" # provide EGM of observations, CaMa-Flood wse is given in EGM96
 fname=CaMa_dir+"map/"+mapname+"/params.txt"
 f=open(fname,"r")
 lines=f.readlines()
@@ -117,19 +110,23 @@ y1list=[]
 x2list=[]
 y2list=[]
 rivers=[]
-#--
+legm08=[]
+legm96=[]
+#----------------------------
 fname=CaMa_dir+"/obs/wse/wse_list.txt"
 with open(fname,"r") as f:
     lines=f.readlines()
-    for line in lines[1::]:
-        line = filter(None, re.split(" ",line))
-        rivers.append(line[0].strip())
-        pnames.append(line[1].strip())
-        x1list.append(int(line[2]))
-        y1list.append(int(line[3]))
-        x2list.append(int(line[4]))
-        y2list.append(int(line[5]))
-
+#----------------------------
+for line in lines[1::]:
+    line = filter(None, re.split(" ",line))
+    rivers.append(line[0].strip())
+    pnames.append(line[1].strip())
+    x1list.append(int(line[2]))
+    y1list.append(int(line[3]))
+    x2list.append(int(line[4]))
+    y2list.append(int(line[5]))
+    legm08.append(float(line[6]))
+    legm08.append(float(line[7]))
 pnum=len(pnames)
 #========================
 org=[]
@@ -189,21 +186,21 @@ def make_fig(point):
     plt.close()
     labels=["Observed","Simulated"]
     fig, ax1 = plt.subplots()
-    org=obs_data(pnames[point],syear=syear,eyear=eyear)
-    org=np.array(org)
+    time,org=obs_data(pnames[point],syear=syear,eyear=eyear)
+    if egm=="EGM96":
+        org=np.array(org)+np.array(legm08[point])-np.array(legm96[point])
+    else:
+       org=np.array(org) 
     #print org
-    lines=[ax1.plot(np.arange(start,last),ma.masked_less(org,0.0),label=labels[0],color="black",linewidth=1.5,zorder=101)[0]] #,marker = "o",markevery=swt[point])
+    lines=[ax1.plot(time,org,label="obs",marker="o",color="black",linewidth=0.0,zorder=101)[0]] #,marker = "o",markevery=swt[point])
     
     # draw simulations
     lines.append(ax1.plot(np.arange(start,last),sim[:,point],label=labels[1],color="blue",linewidth=1.0,alpha=1,zorder=106)[0])
 
     # Make the y-axis label, ticks and tick labels match the line color.
-    ax1.set_ylabel('discharge (m$^3$/s)', color='k')
+    ax1.set_ylabel('$WSE (m)$', color='k')
     ax1.set_xlim(xmin=0,xmax=last+1)
     ax1.tick_params('y', colors='k')
-    # scentific notaion
-    ax1.ticklabel_format(style="sci",axis="y",scilimits=(0,0))
-    ax1.yaxis.major.formatter._useMathText=True 
 
     if eyear-syear > 5:
         dtt=5
@@ -213,26 +210,26 @@ def make_fig(point):
         dt=(eyear-syear)+2
 
     xxlist=np.linspace(0,N,dt,endpoint=True)
-    xxlab=np.arange(syear,eyear+1,dtt)
+    xxlab=np.arange(syear,eyear+2,dtt)
     ax1.set_xticks(xxlist)
     ax1.set_xticklabels(xxlab,fontsize=10)
 
     # Nash-Sutcllf calcuation
-    NS1=NS(sim[:,point],org)
-    #print point,NS1,NS2
-    Nash1="NS: %4.2f"%(NS1)
+    # NS1=NS(sim[:,point],org)
+    # #print point,NS1,NS2
+    # Nash1="NS: %4.2f"%(NS1)
     #
-    ax1.text(0.02,0.95,Nash1,ha="left",va="center",transform=ax1.transAxes,fontsize=10)
+    # ax1.text(0.02,0.95,Nash1,ha="left",va="center",transform=ax1.transAxes,fontsize=10)
 
     plt.legend(lines,labels,ncol=1,loc='upper right') #, bbox_to_anchor=(1.0, 1.0),transform=ax1.transAxes)
     
     print 'save',rivers[point] , pnames[point]
-    plt.savefig("../fig/discharge/"+rivers[point]+"-"+pnames[point]+".png",dpi=500)
+    plt.savefig("../fig/wse/"+rivers[point]+"-"+pnames[point]+".png",dpi=500)
     return 0
 
 # make folders for figures
 mk_dir("../fig")
-mk_dir("../fig/discharge")
+mk_dir("../fig/wse")
 
 # para_flag=1
 para_flag=0

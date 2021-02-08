@@ -4,3 +4,19 @@
 #
 *.bin
 *.o
+
+# map folder
+*/map/glb_15min/
+
+# out folder
+*/out/
+
+#obs folder
+*/obs/
+
+# figures 
+*.png
+*.jpg
+
+# text files
+*.txt

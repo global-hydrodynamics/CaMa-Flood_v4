@@ -61,9 +61,9 @@ def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,CaMa_di
         print "no file", fname
         return np.ones([last],np.float32)*-9999.0
     else:
-        f = open(fname,"r")
-        lines = f.readlines()
-        f.close()
+        with open(fname,"r") as f:
+            lines = f.readlines()
+        #------
         dis = {}
         for line in lines[head::]:
             line     = filter(None, re.split(" ",line))
@@ -91,10 +91,10 @@ def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,CaMa_di
 indir = "../../../out/test1-glb_15min" # folder where Simulated discharge
 CaMa_dir="../../../" # CaMa folder
 mapname="glb_15min" # map name [e.g. glb_15min,glb_06min, etc.]
+#========================================
 fname=CaMa_dir+"map/"+mapname+"/params.txt"
-f=open(fname,"r")
-lines=f.readlines()
-f.close()
+with open(fname,"r") as f:
+    lines=f.readlines()
 #-------
 nx     = int(filter(None, re.split(" ",lines[0]))[0])
 ny     = int(filter(None, re.split(" ",lines[1]))[0])
