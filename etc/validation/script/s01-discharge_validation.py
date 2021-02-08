@@ -56,7 +56,7 @@ def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,CaMa_di
 
     # read discharge
     fname =CaMa_dir+"obs/discharge/"+station+".txt"
-    head = 21 #header lines
+    head = 19 #header lines
     if not os.path.exists(fname):
         print "no file", fname
         return np.ones([last],np.float32)*-9999.0
@@ -121,21 +121,19 @@ rivers=[]
 fname=CaMa_dir+"/obs/discharge/discharge_list.txt"
 with open(fname,"r") as f:
     lines=f.readlines()
-    for line in lines[1::]:
-        line = filter(None, re.split(" ",line))
-        rivers.append(line[0].strip())
-        pnames.append(line[1].strip())
-        x1list.append(int(line[2]))
-        y1list.append(int(line[3]))
-        x2list.append(int(line[4]))
-        y2list.append(int(line[5]))
+for line in lines[1::]:
+    line = filter(None, re.split(" ",line))
+    rivers.append(line[0].strip())
+    pnames.append(line[1].strip())
+    x1list.append(int(line[2]))
+    y1list.append(int(line[3]))
+    x2list.append(int(line[4]))
+    y2list.append(int(line[5]))
 
 pnum=len(pnames)
 #========================
-org=[]
-opn=[]
-sim=[]
 
+sim=[]
 # multiprocessing array
 sim=np.ctypeslib.as_ctypes(np.zeros([N,pnum],np.float32))
 shared_array_sim  = sharedctypes.RawArray(sim._type_, sim)
@@ -181,7 +179,7 @@ def read_data(inputlist):
         else:
             tmp_sim[st:et,point]=simfile[:,iy1-1,ix1-1]+simfile[:,iy2-1,ix2-1]
 #--------
-p   = Pool(1)
+p   = Pool(4)
 res = p.map(read_data, inputlist)
 sim = np.ctypeslib.as_array(shared_array_sim)
 p.terminate()
@@ -192,7 +190,8 @@ def make_fig(point):
     fig, ax1 = plt.subplots()
     org=obs_data(pnames[point],syear=syear,eyear=eyear)
     org=np.array(org)
-    #print org
+
+    # sample observations
     lines=[ax1.plot(np.arange(start,last),ma.masked_less(org,0.0),label=labels[0],color="black",linewidth=1.5,zorder=101)[0]] #,marker = "o",markevery=swt[point])
     
     # draw simulations
@@ -202,6 +201,7 @@ def make_fig(point):
     ax1.set_ylabel('discharge (m$^3$/s)', color='k')
     ax1.set_xlim(xmin=0,xmax=last+1)
     ax1.tick_params('y', colors='k')
+
     # scentific notaion
     ax1.ticklabel_format(style="sci",axis="y",scilimits=(0,0))
     ax1.yaxis.major.formatter._useMathText=True 
@@ -234,11 +234,11 @@ def make_fig(point):
 mk_dir("../fig")
 mk_dir("../fig/discharge")
 
-# para_flag=1
-para_flag=0
+para_flag=1
+# para_flag=0
 #--
 if para_flag==1:
-    p=Pool(1)
+    p=Pool(4)
     p.map(make_fig,np.arange(pnum))
     p.terminate()
 else:
