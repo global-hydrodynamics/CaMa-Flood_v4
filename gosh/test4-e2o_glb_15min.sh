@@ -1,10 +1,12 @@
 #!/bin/sh
 #==========================================================
-# CaMa-Flood sample go script (1) global 15min simulation
-# -- Multi 1-year simulations (2000 spinup -> 2000 -> 2001)
-# -- Daily runoff forcing (plain binary) at 1deg resolution
+# CaMa-Flood sample go script (4) global 15min simulation with "external runoff data"
+# Please follow the doc/Guideline.Md about detail, You need to download external runoff data not included in the package to execute this script.
+# -- Long-term  simulations (1980 spinup -> 1980 ~ 2014)
+# -- Daily runoff forcing (netCDF) at 15min resolution from "E2O WRR2 WCMEF" is used
+# -- input matrix is same as the sample ruoff data (test-15min_nc)
 #
-# (C) D.Yamazaki & E. Dutra  (U-Tokyo/FCUL)  Aug 2019
+# (C) X. Zhou, D.Yamazaki & E. Dutra  (U-Tokyo/FCUL)  Feb 2021
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 #   You may not use this file except in compliance with the License.
@@ -16,7 +18,7 @@
 #==========================================================
 
 #*** PBS setting when needed
-#PBS -q F40
+#PBS -q F20
 #PBS -l select=1:ncpus=40:mem=10gb
 #PBS -j oe
 #PBS -m ea
