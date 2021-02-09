@@ -1,6 +1,6 @@
 ##################################################
-#include   ../../../adm/Mkinclude
-include   /cluster/data6/x.zhou/CaMa_v395b/GLB_15min/adm/Mkinclude
+include   ../../../../adm/Mkinclude
+#include   /cluster/data6/x.zhou/CaMa_v395b/GLB_15min/adm/Mkinclude
 ##################################################
 TARGETS=\
 igetday \

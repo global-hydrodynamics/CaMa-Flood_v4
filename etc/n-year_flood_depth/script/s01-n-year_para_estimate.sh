@@ -2,25 +2,25 @@
 # Estimate the parameters for each combination of runoff, variable and fitting distribution
 # ./s01-n-year_para_estimate.sh  $CAMA_FOLDER $YEARS $YEARE $RES
 CAMA_FOLDER=$1
-YEARS=$2
-YEARE=$3
-RES=$4
+MAPDIR=$2
+YEARS=$3
+YEARE=$4
+RES=$5
 
+echo "@@@@@ s01-n-year_para_estimate.sh @@@@@"
 
 VARS=`cat vars.txt`
 GLBNAMES=`cat glbnames.txt`
 FUNCS=`cat funcs.txt`
 RPS=`cat rps.txt`
 
-
 for VAR in $VARS
 do
-
     for GLBNAME in $GLBNAMES
     do
-        INPDIR=$CAMA_FOLDER'/out/'${GLBNAME} # input directory
-        MAPDIR=$CAMA_FOLDER'/map/glb_15min' # map directory
+        echo "\n\n\n####### $GLBNAME $VAR ######"
 
+        INPDIR=$CAMA_FOLDER'/out/'${GLBNAME} # input directory
         EXPNAME=$EXPNAME-$RES
 
         # '' > no normorlization
@@ -28,16 +28,14 @@ do
         norm=''
 
         # define the output folder
-        if [ $VAR == 'rivdph' ] ; then
+        if [ $VAR = 'rivdph' ] ; then
             OUTDIR="./../result"$norm"/"${GLBNAME}"/"
         else
             OUTDIR="./../result"$norm"/"${GLBNAME}"/STO2DPH"
         fi
 
-
         mkdir -p $OUTDIR
         ln -snf $MAPDIR ${OUTDIR}/map
-        ln -snf $MAPDIR map
         ln -snf $INPDIR ${OUTDIR}/inp
 
         # calculate the x,y information from the map parameters
@@ -51,7 +49,8 @@ do
 
         ##### Main calculation ##########################
 
-        echo '\n### calculate annual maximum value ###'
+        echo '\n### calculate annual maximum value ###' $OUTDIR $VAR
+        echo "python ./src/annual_max.py $YEARS $YEARE $YSIZE $XSIZE $OUTDIR $VAR"
         mkdir -p ${OUTDIR}/amax
         python ./src/annual_max.py $YEARS $YEARE $YSIZE $XSIZE $OUTDIR $VAR
 
@@ -59,18 +58,18 @@ do
         for fun in $FUNCS
         do 
             echo '\n### calculate and store the parameter, also the statistics for the fitting###'
-
-            echo `ls './../result/'$GLBNAME/para/$fun* | grep $fun | wc -l  `
-            paranum=`ls './../result/'$GLBNAME/para/$fun* | grep $fun | wc -l  `
-            
+            paranum=`ls './../result/'$GLBNAME/para/$fun* 2> /dev/null | grep $fun | wc -l `
+            echo $paranum
 
             if [ $paranum -gt 0 ]; then
                 echo "$GLBNAME $fun exists"
+                echo "1 python ./src/calc_distributions.py $YEARS $YEARE $YSIZE $XSIZE $OUTDIR $VAR $fun $norm"
                 python ./src/calc_distributions.py $YEARS $YEARE $YSIZE $XSIZE $OUTDIR $VAR $fun $norm #&
 
             else
                 echo $GLBNAME $fun 
                 mkdir -p ${OUTDIR}/para
+                echo "2 python ./src/calc_distributions.py $YEARS $YEARE $YSIZE $XSIZE $OUTDIR $VAR $fun $norm"
                 python ./src/calc_distributions.py $YEARS $YEARE $YSIZE $XSIZE $OUTDIR $VAR $fun $norm #&
 
             # controlling of the parallization.

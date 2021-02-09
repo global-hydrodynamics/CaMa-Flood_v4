@@ -3,27 +3,23 @@
 # ./s02-n-year_flddph_estimate.sh $CAMA_FOLDER $YEARS $YEARE $RES $EXPNAME $WEST $EAST $SOUTH $NORTH $NGRID $MAXDPH
 
 CAMA_FOLDER=$1
+MAPDIR=$2
 
-YEARS=$2
-YEARE=$3
-RES=$4
+YEARS=$3
+YEARE=$4
+RES=$5
+EXPNAME=$6
+NGRID=$7
+MAXDPH=$8
 
-EXPNAME=$5
-WEST=$6
-EAST=$7
-SOUTH=$8
-NORTH=$9
-
-
-NGRID=${10}
-MAXDPH=${11}
-
+echo "@@@@@ s02-n-year_flddph_estimate.sh @@@@@"
 
 
 VARS=`cat vars.txt`
 GLBNAMES=`cat glbnames.txt`
 FUNCS=`cat funcs.txt`
 RPS=`cat rps.txt`
+DOMAIN=`cat domain.txt`
 
 for VAR in $VARS
 do 
@@ -31,7 +27,6 @@ do
     for GLBNAME in $GLBNAMES
     do
         INPDIR=$CAMA_FOLDER'/out/'${GLBNAME} # input directory
-        MAPDIR=$CAMA_FOLDER'/map/glb_15min' # map directory
 
         EXPNAME=$EXPNAME-$RES
 
@@ -39,7 +34,7 @@ do
 
         #OUTDIR="./${EXPNAME}" # output directory
         #OUTDIR="./out"
-        if [ $VAR == 'rivdph' ] ; then
+        if [ $VAR = 'rivdph' ] ; then
             OUTDIR="./../result"$norm"/"${GLBNAME}"/"
         else
             OUTDIR="./../result"$norm"/"${GLBNAME}"/STO2DPH"
@@ -67,12 +62,12 @@ do
             for fun in $FUNCS
             do 
                 echo $GLBNAME $RP $fun
-                if [ $VAR == 'storge' ] ; then
-                    echo '\n### calculate n-year flood storage with the parameters'
+                if [ "$VAR" = "storge" ] ; then
+                    echo '\n\n### calculate n-year flood storage with the parameters'
                     mkdir -p ${OUTDIR}/Nyear_storge
                     python ./src/rp2storge_dis.py $YEARS $YEARE $YSIZE $XSIZE $OUTDIR $VAR $RP $fun
 
-                    echo '\n### convert the storge to rivdph and flddph'
+                    echo '\n\n### convert the storge to rivdph and flddph'
                     mkdir -p ${OUTDIR}/Nyear_flddph
                     python ./src/sto2dph.py $YEARS $YEARE $YSIZE $XSIZE $OUTDIR $RP $fun
 
@@ -80,7 +75,7 @@ do
 
                 else
 
-                    echo '\n### calculate n-year flood depth (flddph) with the parameters'
+                    echo '\n\n### calculate n-year flood depth (flddph) with the parameters'
                     mkdir -p ${OUTDIR}/Nyear_flddph
                     python ./src/rp2flddph_dis.py $YEARS $YEARE $YSIZE $XSIZE $OUTDIR $VAR $RP $fun
 
@@ -94,13 +89,13 @@ do
 
                 FFLOOD="${OUTDIR}/${EXPNAME}/downscaled_flddph/${EXPNAME}_RP${RP}_${RES}_${fun}.bin"
                 FFLOODM="${OUTDIR}/${EXPNAME}/downscaled_flddph/${EXPNAME}_RP${RP}_${RES}_mask_${fun}.bin"
-                echo "\n### starting downscale_nflddph"
-                ./src/downscale_nflddph $WEST $EAST $SOUTH $NORTH $RES $FLDDPH $FFLOOD $FFLOODM $OUTDIR
+                echo "\n\n### starting downscale_nflddph"
+                ./src/downscale_nflddph $DOMAIN $RES $FLDDPH $FFLOOD $FFLOODM $OUTDIR
 
-                echo '\n### print the downscaled maps'
+                echo '\n\n### print the downscaled maps'
                 # visualization using PyThon
                 mkdir -p ${OUTDIR}/${EXPNAME}/floodrisk_figure
-                ./t02-draw_flddph.sh $WEST $EAST $SOUTH $NORTH $RES $NGRID $MAXDPH $OUTDIR/${EXPNAME} $FFLOOD $RP $fun 
+                ./t02-draw_flddph.sh $DOMAIN $RES $NGRID $MAXDPH $OUTDIR/${EXPNAME} $FFLOOD $RP $fun 
             done 
 
         done
@@ -108,3 +103,5 @@ do
     done
 done
 
+rm -f map
+rm -f ele.bin

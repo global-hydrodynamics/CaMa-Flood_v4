@@ -19,7 +19,7 @@ amax_total = np.zeros((nyears, ysize, xsize), 'f')
 for i in range(nyears):
 #for year in yearlist:
     year = yearlist[i]
-    print year,
+    print ( year, )
     sys.stdout.flush()
     filename = var + str(year) + '.bin'
     fdat = outdir + '/inp/' + filename
