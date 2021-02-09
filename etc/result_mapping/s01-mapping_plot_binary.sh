@@ -2,7 +2,7 @@
 
 ## CaMa-Flood: simulation map directory & simulation output dorectory
 MAPDIR="../../map/glb_15min/"
-OUTDIR="../../out/e2o_ecmwf-glb_15min/"
+OUTDIR="../../out/test1-glb_15min/"
 
 
 # calculate the x,y information from the map parameters

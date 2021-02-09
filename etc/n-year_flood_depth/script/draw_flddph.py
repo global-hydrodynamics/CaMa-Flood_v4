@@ -39,7 +39,10 @@ hires = argv[6]
 md = float( argv[7] )
 maxdph = int(md)
 fflood = argv[8]
-RP = int(argv[9])
+RP = float(argv[9])
+
+if RP < 1:
+    RP = int(1/RP)
 
 if( hires=="3sec" ):
     csize=1./1200.
