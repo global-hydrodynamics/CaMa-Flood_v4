@@ -19,7 +19,7 @@
 
 #*** PBS setting when needed
 #PBS -q F20
-#PBS -l select=1:ncpus=40:mem=10gb
+#PBS -l select=1:ncpus=20:mem=10gb
 #PBS -j oe
 #PBS -m ea
 #PBS -V
@@ -47,7 +47,7 @@ export OMP_NUM_THREADS=16                    # OpenMP cpu num
 
 #============================
 #*** 1a. Experiment directory setting
-EXP="e2o_ecmwf-glb_15min"                       # experiment name (output directory name)
+EXP="test4-e2o_ecmwf-glb_15min"                       # experiment name (output directory name)
 RDIR=${BASE}/out/${EXP}                     # directory to run CaMa-Flood
 EXE="MAIN_cmf"                              # Execute file name
 PROG=${BASE}/src/${EXE}                     # location of Fortran main program
