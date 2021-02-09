@@ -1,6 +1,6 @@
 #!/bin/sh
 # calculate the flddph at different return period using the parameters estimated for the various fitting distribution.
-# ./ $VARS $CAMA_FOLDER $GLBNAMES $FUNC $RPS $YEARS $YEARE $RES $EXPNAME $WEST $EAST $SOUTH $NORTH $NGRID $MAXDPH
+# ./s02-n-year_flddph_estimate.sh $CAMA_FOLDER $YEARS $YEARE $RES $EXPNAME $WEST $EAST $SOUTH $NORTH $NGRID $MAXDPH
 
 CAMA_FOLDER=$1
 

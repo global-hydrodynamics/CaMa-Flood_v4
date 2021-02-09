@@ -1,4 +1,6 @@
 #!/bin/sh
+# Estimate the parameters for each combination of runoff, variable and fitting distribution
+# ./s01-n-year_para_estimate.sh  $CAMA_FOLDER $YEARS $YEARE $RES
 CAMA_FOLDER=$1
 YEARS=$2
 YEARE=$3

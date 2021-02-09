@@ -132,7 +132,7 @@ There will be seven folders (simulation at seven time steps, e.g., 2007-09-03 06
 
 ## 3. Download from Github
 
-Not the scripts for CaMa-Flood are uploaded to Github, thus we need additional efforts to prepare the topograph data, input data to start runs. Here we will give a sample for test4-e2o_ecmwf-glb_15min.sh. It will allow runs with E2O_ecmwf for 1980-2014 at a global scale with 0.25 degree spatial resolution. The external runoff data (not included in the package) should be donwlaoded to run this simulation.
+Note that only the scripts for CaMa-Flood are uploaded to Github, thus we need additional efforts to prepare the topograph data and input data to start runs. Here we will give a sample for test4-e2o_ecmwf-glb_15min.sh. It will allow runs with E2O_ecmwf runoff for 1980-2014 at a global scale with 0.25 degree spatial resolution. The external runoff data (not included in the package) should be donwlaoded to run this simulation.
 
 ### 3.1 Download scripts from Github
 
@@ -240,7 +240,7 @@ cd src_param
 
 ### 3.6 Prepare the input matrix for runoff 
 
-Then we need to prepare/revise the input matrix which corresponds to the input runoff by revising /s02-generate_inpmat.sh. In general, users need to redefine the spatial resolution, extent (west, east, south, north) and the latitude direction (NtoS or StoN). Then excute it
+Then we need to prepare/revise the input matrix which corresponds to the input runoff by revising /s02-generate_inpmat.sh. In general, users need to redefine the spatial resolution, extent (west, east, south, north) and the latitude direction (NtoS or StoN). Then execute it
 
 ```bash
 ./s02-generate_inpmat.sh
@@ -363,8 +363,8 @@ With this demo script, users can easily plot the map for river discharge (outflw
 
 ```bash
 cd ../../etc/result_mapping/
-./s01-mapping_plot_binary.sh
-./s02-mapping_plot_netcdf.sh
+./s01-mapping_plot_binary.sh  # for plain binary data: test1
+./s02-mapping_plot_netcdf.sh  # for netCDF data: test2
 ```
 
 Users have to adjust the bash file to plot other outputs (e.g., experiment name, variables). Plot settings can be modified in plot.py or plot_nc.py.
@@ -433,6 +433,12 @@ ls -l ../results/test4-e2o_ecmwf-glb_15min/Mekong-1min/downscaled_flddph/
 ```
 
 Same as **4.2 Downscale the flood water depth to a higher spatial resolution**, users need to add 3sec topography map to downscale the results to 3arcsec (~90m). 
+
+The output figures can be found 
+
+```bash
+ls -l ../results/test4-e2o_ecmwf-glb_15min/Mekong-1min/floodrisk_figure/
+```
 
 ### 4.5 Runoff presettings
 
