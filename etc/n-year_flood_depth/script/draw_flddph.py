@@ -1,11 +1,12 @@
 import sys
 import os
 
-from pylab import *
 import numpy as np
+from numpy import *
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 from matplotlib import colors
 from matplotlib.ticker import FormatStrFormatter
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -55,7 +56,7 @@ dx=csize
 dy=csize
 nx=int( (east -west )/csize/ngrid+0.5 )
 ny=int( (north-south)/csize/ngrid+0.5 )
-print nx, ny
+print ( nx, ny )
 
 ssize=int(12)
 fsize=int(ssize*1.5)
@@ -114,7 +115,7 @@ cbar.ax.tick_params(labelsize=ssize)
 
 
 #savefig("./fig/flddph_"+cdate+".jpg")
-savefig("./fig/fldris_"+str(RP)+".jpg")
+plt.savefig("./fig/fldris_"+str(RP)+".jpg")
 
 
 
