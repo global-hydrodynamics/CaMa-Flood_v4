@@ -1,6 +1,7 @@
 #!/bin/sh
 
 ## CaMa-Flood: simulation map directory & simulation output dorectory
+## Below is the example to downscale the result of sample simulation "test1"
 MAPDIR="../../map/glb_15min/"
 OUTDIR="../../out/test1-glb_15min/"
 

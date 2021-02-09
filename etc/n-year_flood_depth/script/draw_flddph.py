@@ -30,15 +30,20 @@ class BoundaryNorm(colors.Normalize):
         return ret
 
 argv  = sys.argv
-west  = int( argv[1] )
-east  = int( argv[2] )
-south = int( argv[3] )
-north = int( argv[4] )
-cdate = argv[5]
-ngrid = int( argv[6] )
-hires = argv[7]
-md = float( argv[8] )
+west  = float( argv[1] )
+east  = float( argv[2] )
+south = float( argv[3] )
+north = float( argv[4] )
+
+ngrid = int( argv[5] )
+hires = argv[6]
+md = float( argv[7] )
 maxdph = int(md)
+fflood = argv[8]
+RP = float(argv[9])
+
+if RP < 1:
+    RP = int(1/RP)
 
 if( hires=="3sec" ):
     csize=1./1200.
@@ -53,7 +58,7 @@ nx=int( (east -west )/csize/ngrid+0.5 )
 ny=int( (north-south)/csize/ngrid+0.5 )
 print ( nx, ny )
 
-ssize=int(20)
+ssize=int(12)
 fsize=int(ssize*1.5)
 
 xlint=1.0
@@ -82,14 +87,17 @@ plt.xticks( np.arange(west,east+0.000001,xlint) )
 plt.yticks( np.arange(south,north+0.000001,ylint) )
 
 ysf=(north-south)*0.05
-ctext="CaMa-Flood v3.9: Floodplain Water Depth [ "+cdate+" ]"
+ctext="CaMa-Flood v4.0: flood risk map with return period "+ str(RP) + ' years'
 plt.text(west,north+ysf,ctext,fontsize=fsize)
 
 #===================================
 
-rfile="./dph"+cdate+".bin"
+#rfile="./dph"+cdate+".bin"
+#rfile="./Mekong-e2o/downscaled_flddph/N09E102_RP50_3sec.bin"
+rfile = fflood
 dph=np.fromfile(rfile,float32).reshape(ny,nx)
 dph=np.ma.masked_where(dph<-9000,dph)
+#dph=np.ma.masked_where(dph<0.01,dph)
 
 interval=np.array(range(maxdph))
 norml=colors.BoundaryNorm(interval,256) 
@@ -103,9 +111,11 @@ cbar=plt.colorbar(im2, cax=cax)
 #cbar=plt.colorbar(im3, cax=cax, extend='max', orientation="horizontal")
 cbar.set_label('Flood Depth [m]', size=ssize*1.2)
 cbar.set_ticks(interval)
+cbar.ax.tick_params(labelsize=ssize)
 
 
-plt.savefig("./fig/flddph_"+cdate+".jpg")
+#savefig("./fig/flddph_"+cdate+".jpg")
+plt.savefig("./fig/fldris_"+str(RP)+".jpg")
 
 
 

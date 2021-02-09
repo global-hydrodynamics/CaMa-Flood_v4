@@ -1,11 +1,12 @@
 import sys
 import os
 
-from pylab import *
 import numpy as np
+from numpy import *
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 from matplotlib import colors
 from matplotlib.ticker import FormatStrFormatter
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -50,7 +51,7 @@ dx=csize
 dy=csize
 nx=int( (east -west )/csize/ngrid+0.5 )
 ny=int( (north-south)/csize/ngrid+0.5 )
-print nx, ny
+print ( nx, ny )
 
 ssize=int(20)
 fsize=int(ssize*1.5)
@@ -103,7 +104,7 @@ cbar=plt.colorbar(im2, cax=cax)
 cbar.set_label('Flood DUration [Day]', size=ssize*1.2)
 cbar.set_ticks(interval)
 
-savefig("./fig/fldprd"+tag+".jpg")
+plt.savefig("./fig/fldprd"+tag+".jpg")
 
 quit()
 
