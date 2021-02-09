@@ -21,7 +21,6 @@ do
         echo "\n\n\n####### $GLBNAME $VAR ######"
 
         INPDIR=$CAMA_FOLDER'/out/'${GLBNAME} # input directory
-        EXPNAME=$EXPNAME-$RES
 
         # '' > no normorlization
         # "
