@@ -1,6 +1,10 @@
+*
+!*/
+!*.*
+!LICENSE
+!Mkinclude*
+!Makefile
 .DS_Store
-
-
 #
 *.bin
 *.o
