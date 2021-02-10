@@ -1,13 +1,9 @@
 # CaMa-Flood_v4
-<<<<<<< HEAD
-CaMa-Flood_v4 code on GitHUb
-=======
 CaMa-Flood_v4 code on GitHub.
 
 This GitHub repository is mainly used for those who want to make contributions to CaMa-Flood.
 If you simply want to use CaMa-Flood, please visit the product webpage and register on Google Form. (the password for downloading is issued after registration). Then, you can download the CaMa-Flood package which contains data (map/input) to run the model.
 http://hydro.iis.u-tokyo.ac.jp/~yamadai/cama-flood/
->>>>>>> upstream/dev400_ValiCode
 
 Now the codes of CaMa-Flood v4 is distributed under Apache 2.0 license (so Open Source!). 
 So you can feel free to use/modify the code. (note: data is distributed under difference license)
