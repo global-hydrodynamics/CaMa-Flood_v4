@@ -1,6 +1,10 @@
+*
+!*/
+!*.*
+!LICENSE
+!Mkinclude_*
+!Makefile
 .DS_Store
-
-
 #
 *.bin
 *.o
@@ -20,3 +24,5 @@
 
 # text files
 *.txt
+*.mod
+*.a

@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 # coding=utf-8
+import sys
+import os
 import numpy as np
+
 import lmoments as lmom
 from lmoments import *
 #from math import *
-import sys
 from RegscorePy import *
 import time
 
@@ -110,6 +112,7 @@ def calc_aic( xx, yy):
 if FUNC == 'GEV':
     #for i in progressbar(range(ysize), "Computing: ", 40):
     for i in range(ysize):
+        if i % 10 == 0: print ( i, 'out of ', ysize )
         for j in range(xsize):
             if np.nanmean(datm[:,i,j]) > -9990.:
                 # There are many grids with constant values or 
@@ -151,6 +154,7 @@ if FUNC == 'GEV':
 if FUNC == 'GAM':
     #for i in progressbar(range(ysize), "Computing: ", 40):
     for i in range(ysize):
+        if i % 10 == 0: print ( i, 'out of ', ysize )
         for j in range(xsize):
             if np.nanmean(datm[:,i,j]) > -9990.:
                 # There are many grids with constant values or 
@@ -187,6 +191,7 @@ if FUNC == 'GAM':
 if FUNC == 'PE3':
     #for i in progressbar(range(ysize), "Computing: ", 40):
     for i in range(ysize):
+        if i % 10 == 0: print ( i, 'out of ', ysize )
         for j in range(xsize):
             if np.nanmean(datm[:,i,j]) > -9990.:
                 # There are many grids with constant values or 
@@ -204,9 +209,9 @@ if FUNC == 'PE3':
                         c_AIC[i,j] = calc_aic(datm[:,i,j], y) 
                         py_AIC[i,j] = aic.aic(datm[:,i,j], y, len(params)) 
                     except:
-                        print "error in calculating the params",i,j,params
-                        print "datm:" , datm[:,i,j]
-                        print "daty", lmom.quape3(p, [para1[i,j], para2[i,j], para3[i,j]])
+                        print ( "error in calculating the params",i,j,params )
+                        print ( "datm:" , datm[:,i,j] )
+                        print ( "daty", lmom.quape3(p, [para1[i,j], para2[i,j], para3[i,j]]) )
                         para1[i,j] = -9999.
                         para2[i,j] = -9999.
                         para3[i,j] = -9999.
@@ -228,6 +233,7 @@ if FUNC == 'PE3':
 if FUNC == 'GUM':
     #for i in progressbar(range(ysize), "Computing: ", 40):
     for i in range(ysize):
+        if i % 10 == 0: print ( i, 'out of ', ysize )
         for j in range(xsize):
             if np.nanmean(datm[:,i,j]) > -9990.:
                 # There are many grids with constant values or 
@@ -244,9 +250,9 @@ if FUNC == 'GUM':
                         c_AIC[i,j] = calc_aic(datm[:,i,j], y) 
                         py_AIC[i,j] = aic.aic(datm[:,i,j], y, len(params)) 
                     except:
-                        print "error in calculating the params",i,j,params
-                        print "datm:" , datm[:,i,j]
-                        print "daty", lmom.quagum(p, [para1[i,j], para2[i,j]])
+                        print ( "error in calculating the params",i,j,params ) 
+                        print ( "datm:" , datm[:,i,j] )
+                        print ( "daty", lmom.quagum(p, [para1[i,j], para2[i,j]]) )
                         sys.exit()
                         para1[i,j] = -9999.
                         para2[i,j] = -9999.
@@ -269,6 +275,7 @@ if FUNC == 'GUM':
 if FUNC == 'WEI':
     #for i in progressbar(range(ysize), "Computing: ", 40):
     for i in range(ysize):
+        if i % 10 == 0: print ( i, 'out of ', ysize )
         for j in range(xsize):
             if np.nanmean(datm[:,i,j]) > -9990.:
                 # There are many grids with constant values or 
@@ -285,9 +292,9 @@ if FUNC == 'WEI':
                         y = lmom.quawei(p, params)
                         c_AIC[i,j] = calc_aic(datm[:,i,j], y) 
                         py_AIC[i,j] = aic.aic(datm[:,i,j], y, len(params)) 
-                        #print "success point:", i,j, lmoms, params
+                        #print ( "success point:", i,j, lmoms, params )
                     except:
-                        print "error in calculating the params",i,j,lmoms,params
+                        print ( "error in calculating the params",i,j,lmoms,params )
                         para1[i,j] = -9999.
                         para2[i,j] = -9999.
                         para3[i,j] = -9999.
@@ -312,6 +319,7 @@ if FUNC == 'WEI':
 if FUNC == 'WAK':
     #for i in progressbar(range(ysize), "Computing: ", 40):
     for i in range(ysize):
+        if i % 10 == 0: print ( i, 'out of ', ysize )
         for j in range(xsize):
             if np.nanmean(datm[:,i,j]) > -9990.:
                 # There are many grids with constant values or 
@@ -332,10 +340,10 @@ if FUNC == 'WAK':
                         py_AIC[i,j] = aic.aic(datm[:,i,j], y, len(params)) 
                         #print "success point:", i,j, params
                     except:
-                        print "error in calculating the params",i,j,params
-                        print "datm:" , datm[:,i,j]
-                        print "daty", lmom.quawak(p, [para1[i,j], para2[i,j], para3[i,j], para4[i,j], para5[i,j]])
-                        print "p_AIC", lmom.AIC(datm[:,i,j], FUNC)
+                        print ("error in calculating the params",i,j,params )
+                        print ("datm:" , datm[:,i,j] )
+                        print ("daty", lmom.quawak(p, [para1[i,j], para2[i,j], para3[i,j], para4[i,j], para5[i,j]]) )
+                        print ("p_AIC", lmom.AIC(datm[:,i,j], FUNC) )
                         sys.exit()
                         para1[i,j] = -9999.
                         para2[i,j] = -9999.

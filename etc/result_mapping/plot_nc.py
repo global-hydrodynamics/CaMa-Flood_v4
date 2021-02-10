@@ -17,7 +17,6 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 from matplotlib.ticker import FormatStrFormatter
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from mpl_toolkits.basemap import Basemap
 
 from matplotlib.backends.backend_pdf import PdfPages
 
@@ -67,12 +66,7 @@ north = min(np.max(lat),90)
 
 print west, east, south, north
 
-m = Basemap(llcrnrlon=west, llcrnrlat=south, urcrnrlon=east, urcrnrlat=north, resolution='i', projection='cyl')
-span = 30
-m.drawparallels(np.arange(-90, north+0.01, span), labels=[1,0,0,0], linewidth=0) # draw latitudes
-m.drawmeridians(np.arange(-180, east+0.01, span), labels=[0,0,0,1], linewidth=0) # draw longitudes
-
-im2=plt.imshow(data, cmap=cm.YlOrRd, origin='lower', extent=(np.min(lon), np.max(lon), np.min(lat), np.max(lat)), zorder=10)
+im2=plt.imshow(data, cmap=cm.YlOrRd, origin='lower', extent=(west, east, south, north), zorder=10)
 
 divider = make_axes_locatable(ax)
 cax = divider.append_axes("right", size="2%", pad=0.15)
