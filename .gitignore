@@ -10,6 +10,7 @@
 *.o
 
 # map folder
+*/etc/map/*/
 */glb_15min/
 
 # out folder
@@ -17,6 +18,9 @@
 
 #obs folder
 */obs/
+
+#fig folders
+*/etc/validation/fig_*/
 
 # figures 
 *.png

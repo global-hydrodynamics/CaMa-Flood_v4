@@ -1,5 +1,3 @@
-#! /usr/python
-# -*- coding: utf-8 -*-
 '''
 Simulated discharge comparison with observed discharge values.
 Some sample data is prepared in ./obs directory.
@@ -23,12 +21,7 @@ from numpy import ma
 import re
 import math
 #========================================
-#========================================
-def mk_dir(sdir):
-  try:
-    os.makedirs(sdir)
-  except:
-    pass
+#====  functions for making figures  ====
 #========================================
 def NS(s,o):
     """
@@ -46,7 +39,7 @@ def NS(s,o):
     s=np.compress(o>0.0,s) 
     return 1 - sum((s-o)**2)/(sum((o-np.mean(o))**2)+1e-20)
 #========================================
-def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,CaMa_dir="../../../"):
+def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,obs_dir="../../obs/discharge"):
     # read the sample observation data
     start_dt=datetime.date(syear,smon,sday)
     last_dt=datetime.date(eyear,emon,eday)
@@ -55,10 +48,10 @@ def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,CaMa_di
     last=(last_dt-start_dt).days + 1
 
     # read discharge
-    fname =CaMa_dir+"obs/discharge/"+station+".txt"
+    fname =obs_dir+"/"+station+".txt"
     head = 19 #header lines
     if not os.path.exists(fname):
-        print "no file", fname
+        print ("no file", fname)
         return np.ones([last],np.float32)*-9999.0
     else:
         with open(fname,"r") as f:
@@ -88,11 +81,12 @@ def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,CaMa_di
                 Q.append(-9900.0)
     return np.array(Q)
 #========================================
-indir = "../../../out/test1-glb_15min" # folder where Simulated discharge
-CaMa_dir="../../../" # CaMa folder
-mapname="glb_15min" # map name [e.g. glb_15min,glb_06min, etc.]
+indir ="out"         # folder where Simulated discharge
+syear,smonth,sdate=int(sys.argv[1]),int(sys.argv[2]),int(sys.argv[3])
+eyear,emonth,edate=int(sys.argv[4]),int(sys.argv[5]),int(sys.argv[6])
+CaMa_dir=sys.argv[7] # CaMa folder
 #========================================
-fname=CaMa_dir+"map/"+mapname+"/params.txt"
+fname="./map/params.txt"
 with open(fname,"r") as f:
     lines=f.readlines()
 #-------
@@ -100,8 +94,6 @@ nx     = int(filter(None, re.split(" ",lines[0]))[0])
 ny     = int(filter(None, re.split(" ",lines[1]))[0])
 gsize  = float(filter(None, re.split(" ",lines[3]))[0])
 #----
-syear,smonth,sdate=2000,1,1
-eyear,emonth,edate=2001,12,31
 start_dt=datetime.date(syear,smonth,sdate)
 end_dt=datetime.date(eyear,emonth,edate)
 size=60
@@ -109,7 +101,7 @@ size=60
 start=0
 last=(end_dt-start_dt).days + 1
 N=int(last)
-print N
+
 #====================
 pnames=[]
 x1list=[]
@@ -144,10 +136,12 @@ for year in np.arange(syear,eyear+1):
     yyyy='%04d' % (year)
     inputlist.append([yyyy,indir])
 
-#========================
+#==============================
+#=== function for read data ===
+#==============================
 def read_data(inputlist):
-    yyyy = inputlist[0]
-    odir = inputlist[1]
+    yyyy  = inputlist[0]
+    indir = inputlist[1]
     print (yyyy)
     #--
     tmp_sim  = np.ctypeslib.as_array(shared_array_sim)
@@ -169,7 +163,6 @@ def read_data(inputlist):
 
     # simulated discharge
     fname=indir+"/outflw"+yyyy+".bin"
-    # fname="/cluster/data6/menaka/ensemble_org/CaMa_out/GLBE2O003/outflw"+yyyy+".bin"
     simfile=np.fromfile(fname,np.float32).reshape([dt,ny,nx])
     #-------------
     for point in np.arange(pnum):
@@ -178,12 +171,16 @@ def read_data(inputlist):
             tmp_sim[st:et,point]=simfile[:,iy1-1,ix1-1]
         else:
             tmp_sim[st:et,point]=simfile[:,iy1-1,ix1-1]+simfile[:,iy2-1,ix2-1]
-#--------
+
+#--read data parallel--
 p   = Pool(4)
 res = p.map(read_data, inputlist)
 sim = np.ctypeslib.as_array(shared_array_sim)
 p.terminate()
 
+#==================================
+#=== function for making figure ===
+#==================================
 def make_fig(point):
     plt.close()
     labels=["Observed","Simulated"]
@@ -226,14 +223,11 @@ def make_fig(point):
 
     plt.legend(lines,labels,ncol=1,loc='upper right') #, bbox_to_anchor=(1.0, 1.0),transform=ax1.transAxes)
     
-    print 'save',rivers[point] , pnames[point]
-    plt.savefig("../fig/discharge/"+rivers[point]+"-"+pnames[point]+".png",dpi=500)
+    print ('save',rivers[point] , pnames[point])
+    plt.savefig("./fig/discharge/"+rivers[point]+"-"+pnames[point]+".png",dpi=500)
     return 0
 
-# make folders for figures
-mk_dir("../fig")
-mk_dir("../fig/discharge")
-
+#--make figures parallel--
 para_flag=1
 # para_flag=0
 #--

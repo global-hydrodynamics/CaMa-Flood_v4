@@ -1,5 +1,3 @@
-#! /usr/python
-# -*- coding: utf-8 -*-
 '''
 Simulated water surface elevation (wse) comparison with observed wse values.
 Some sample data is prepared in ./obs directory.
@@ -23,12 +21,7 @@ from numpy import ma
 import re
 import math
 #========================================
-#========================================
-def mk_dir(sdir):
-  try:
-    os.makedirs(sdir)
-  except:
-    pass
+#====  functions for making figures  ====
 #========================================
 def RMSE(s,o):
     return np.sqrt(np.mean((s-o)**2))
@@ -49,13 +42,13 @@ def NS(s,o):
     s=np.compress(o>0.0,s) 
     return 1 - sum((s-o)**2)/(sum((o-np.mean(o))**2)+1e-20)
 #========================================
-def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,CaMa_dir="../../../"):
+def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,obs_dir="../../obs/wse"):
     # read the sample observation data
     start=datetime.date(syear,smon,sday)
     end=datetime.date(eyear,emon,eday)
     
     # read wse observation
-    fname=CaMa_dir+"obs/wse/"+station+".txt"
+    fname=obs_dir+"/"+station+".txt"
 
     with open(fname,"r") as f:
         lines=f.readlines()
@@ -83,21 +76,20 @@ def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,CaMa_di
         time.append(lag)
     return time, data
 #========================================
-indir = "../../../out/test1-glb_15min" # folder where Simulated discharge
-CaMa_dir="../../../" # CaMa folder
-mapname="glb_15min" # map name [e.g. glb_15min,glb_06min, etc.]
-egm="EGM08" # provide EGM of observations, CaMa-Flood wse is given in EGM96
-fname=CaMa_dir+"map/"+mapname+"/params.txt"
-f=open(fname,"r")
-lines=f.readlines()
-f.close()
+indir ="out"         # folder where Simulated discharge
+syear,smonth,sdate=int(sys.argv[1]),int(sys.argv[2]),int(sys.argv[3])
+eyear,emonth,edate=int(sys.argv[4]),int(sys.argv[5]),int(sys.argv[6])
+CaMa_dir=sys.argv[7] # CaMa folder
+egm=sys.argv[8]      # provide EGM of observations, CaMa-Flood wse is given in EGM96
+#========================================
+fname="./map/params.txt"
+with open(fname,"r") as f:
+    lines=f.readlines()
 #-------
 nx     = int(filter(None, re.split(" ",lines[0]))[0])
 ny     = int(filter(None, re.split(" ",lines[1]))[0])
 gsize  = float(filter(None, re.split(" ",lines[3]))[0])
 #----
-syear,smonth,sdate=2000,1,1
-eyear,emonth,edate=2001,12,31
 start_dt=datetime.date(syear,smonth,sdate)
 end_dt=datetime.date(eyear,emonth,edate)
 size=60
@@ -105,7 +97,7 @@ size=60
 start=0
 last=(end_dt-start_dt).days + 1
 N=int(last)
-print N
+
 #====================
 pnames=[]
 x1list=[]
@@ -187,7 +179,6 @@ def make_fig(point):
         org=np.array(org)+np.array(legm08[point])-np.array(legm96[point])
     else:
        org=np.array(org) 
-    #print org
     lines=[ax1.plot(time,org,label="obs",marker="o",color="black",fillstyle="none",linewidth=0.0,zorder=101)[0]] #,marker = "o",markevery=swt[point])
     
     # draw simulations
@@ -218,13 +209,9 @@ def make_fig(point):
 
     plt.legend(lines,labels,ncol=1,loc='upper right') #, bbox_to_anchor=(1.0, 1.0),transform=ax1.transAxes)
     
-    print 'save',rivers[point] , pnames[point]
-    plt.savefig("../fig/wse/"+rivers[point]+"-"+pnames[point]+".png",dpi=500)
+    print ('save',rivers[point] , pnames[point])
+    plt.savefig("./fig/wse/"+rivers[point]+"-"+pnames[point]+".png",dpi=500)
     return 0
-
-# make folders for figures
-mk_dir("../fig")
-mk_dir("../fig/wse")
 
 # para_flag=1
 para_flag=0
