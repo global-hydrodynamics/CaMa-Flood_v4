@@ -86,7 +86,7 @@ def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,obs_dir
 #========================================
 ##### MAIN calculations ####
 # - set start & end dates from arguments
-# - set map dimention, read discharge simulation files
+# - set map dimension, read discharge simulation files
 # - read station data
 # - plot each station data and save figure
 #========================================
