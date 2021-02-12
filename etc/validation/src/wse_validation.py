@@ -42,7 +42,7 @@ def NS(s,o):
     s=np.compress(o>0.0,s) 
     return 1 - sum((s-o)**2)/(sum((o-np.mean(o))**2)+1e-20)
 #========================================
-def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,obs_dir="../../obs/wse"):
+def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,obs_dir="./obs/wse"):
     # read the sample observation data
     start=datetime.date(syear,smon,sday)
     end=datetime.date(eyear,emon,eday)
@@ -75,12 +75,21 @@ def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,obs_dir
         lag  = int((now-start).days)
         time.append(lag)
     return time, data
+#
+#========================================
+##### MAIN calculations ####
+# - set start & end dates and geoid info from arguments
+# - set map dimention, read surface elevation simulation files
+# - read station data
+# - plot each station data and save figure
 #========================================
 indir ="out"         # folder where Simulated discharge
 syear,smonth,sdate=int(sys.argv[1]),int(sys.argv[2]),int(sys.argv[3])
 eyear,emonth,edate=int(sys.argv[4]),int(sys.argv[5]),int(sys.argv[6])
-CaMa_dir=sys.argv[7] # CaMa folder
-egm=sys.argv[8]      # provide EGM of observations, CaMa-Flood wse is given in EGM96
+egm=sys.argv[7]      # provide EGM of observations, CaMa-Flood wse is given in EGM96
+
+print ("@@@@@ wse_validation.py", syear,smonth,sdate, eyear,emonth,edate, egm )
+
 #========================================
 fname="./map/params.txt"
 with open(fname,"r") as f:
@@ -98,7 +107,11 @@ start=0
 last=(end_dt-start_dt).days + 1
 N=int(last)
 
+print ( '' )
+print ( '# map dim (nx,ny,gsize):', nx, ny, gsize, 'time seriez N=', N )
+
 #====================
+# read SWE station list
 pnames=[]
 x1list=[]
 y1list=[]
@@ -106,7 +119,7 @@ rivers=[]
 legm08=[]
 legm96=[]
 #----------------------------
-fname=CaMa_dir+"/obs/wse/wse_list.txt"
+fname="./obs/wse/wse_list.txt"
 with open(fname,"r") as f:
     lines=f.readlines()
 #----------------------------
@@ -119,6 +132,11 @@ for line in lines[1::]:
     legm08.append(float(line[4]))
     legm08.append(float(line[5]))
 pnum=len(pnames)
+
+print ( '- read station list', fname, 'station num pnum=', pnum )
+
+#========================
+### read simulation files
 #========================
 org=[]
 opn=[]
@@ -134,7 +152,9 @@ for year in np.arange(syear,eyear+1):
     yyyy='%04d' % (year)
     inputlist.append([yyyy,indir])
 
-#========================
+#==============================
+#=== function for read data ===
+#==============================
 def read_data(inputlist):
     yyyy = inputlist[0]
     odir = inputlist[1]
@@ -160,16 +180,29 @@ def read_data(inputlist):
     # simulated discharge
     fname=indir+"/sfcelv"+yyyy+".bin"
     simfile=np.fromfile(fname,np.float32).reshape([dt,ny,nx])
+    print ("-- reading simulation file:", fname )
     #-------------
     for point in np.arange(pnum):
         ix1,iy1=x1list[point],y1list[point]
         tmp_sim[st:et,point]=simfile[:,iy1-1,ix1-1]
-#--------
-p   = Pool(1)
-res = p.map(read_data, inputlist)
-sim = np.ctypeslib.as_array(shared_array_sim)
-p.terminate()
 
+#--read data parallel--
+# para_flag=1
+para_flag=0
+#--
+if para_flag==1:
+    p   = Pool(4)
+    res = p.map(read_data, inputlist)
+    sim = np.ctypeslib.as_array(shared_array_sim)
+    p.terminate()
+else:
+    res = map(read_data, inputlist)
+    sim = np.ctypeslib.as_array(shared_array_sim)
+
+
+#==================================
+#=== function for making figure ===
+#==================================
 def make_fig(point):
     plt.close()
     labels=["Observed","Simulated"]
@@ -179,6 +212,9 @@ def make_fig(point):
         org=np.array(org)+np.array(legm08[point])-np.array(legm96[point])
     else:
        org=np.array(org) 
+
+    print ("reading observation file:", "./obs/wse/", pnames[point] )
+
     lines=[ax1.plot(time,org,label="obs",marker="o",color="black",fillstyle="none",linewidth=0.0,zorder=101)[0]] #,marker = "o",markevery=swt[point])
     
     # draw simulations
@@ -209,10 +245,18 @@ def make_fig(point):
 
     plt.legend(lines,labels,ncol=1,loc='upper right') #, bbox_to_anchor=(1.0, 1.0),transform=ax1.transAxes)
     
-    print ('save',rivers[point] , pnames[point])
+    print ('save:', rivers[point]+"-"+pnames[point]+".png", rivers[point] , pnames[point])
     plt.savefig("./fig/wse/"+rivers[point]+"-"+pnames[point]+".png",dpi=500)
+
+    print ( "" )
     return 0
 
+#========================
+### --make figures parallel--
+#========================
+print ( "" )
+print ( "# making figures" )
+#para_flag=1
 # para_flag=1
 para_flag=0
 #--
@@ -222,3 +266,4 @@ if para_flag==1:
     p.terminate()
 else:
     map(make_fig,np.arange(pnum))
+

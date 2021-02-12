@@ -1,14 +1,17 @@
 #!/bin/sh
-
 ## CaMa-Flood: simulation map directory & simulation output dorectory
 ## Below is the example to prepare graphs for the validation purposes 
 ## for the result of sample simulation "test1"
 ## src/discharge_validation.py : discharge validation
 ## src/wse_validation.py : water surface elevation validation
 ## src/flood_validation.py : flodd extent validation **[to be added soon]
-MAPDIR="../../map/glb_15min/"
-OUTDIR="../../out/test1-glb_15min/"
+MAPDIR="../../map/glb_15min"
+OUTDIR="../../out/test1-glb_15min"
+OBSDIR="./obs_sample_git"
+#OBSDIR="./obs_sample"
 CAMADIR="../../" 
+
+echo "MAPDIR, OUTDIR, OBSDIR= " $MAPDIR, $OUTDIR, $OBSDIR
 
 ## validation project tag
 TAG="glb"
@@ -29,22 +32,26 @@ EGM="EGM08"
 
 rm -f map
 rm -f out
+rm -f obs
 ln -sf $MAPDIR map
 ln -sf $OUTDIR out
+ln -sf $OBSDIR obs
 
 mkdir -p fig/discharge
 mkdir -p fig/wse
 ##########
 
 # make validation figures for discharge
-python src/discharge_validation.py $SYEAR $SMON $SDAY $EYEAR $EMON $EDAY $CAMADIR &
+echo "### DISCHARGE VISUALIZATION"
+python src/discharge_validation.py $SYEAR $SMON $SDAY $EYEAR $EMON $EDAY
+
 
 # make validation figures for wse
-python src/wse_validation.py $SYEAR $SMON $SDAY $EYEAR $EMON $EDAY $CAMADIR $EGM &
+echo "\n\n\n### Water Surface Elevation VISUALIZATION"
+python src/wse_validation.py $SYEAR $SMON $SDAY $EYEAR $EMON $EDAY $CAMADIR $EGM 
 
 ##########
 
-wait
-
 rm -rf fig_${TAG}
 mv     fig         fig_${TAG}
+echo "\n\n\n### figures saved in directory: fig_${TAG}"

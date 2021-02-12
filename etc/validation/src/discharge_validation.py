@@ -20,6 +20,8 @@ from multiprocessing import sharedctypes
 from numpy import ma
 import re
 import math
+
+
 #========================================
 #====  functions for making figures  ====
 #========================================
@@ -39,7 +41,7 @@ def NS(s,o):
     s=np.compress(o>0.0,s) 
     return 1 - sum((s-o)**2)/(sum((o-np.mean(o))**2)+1e-20)
 #========================================
-def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,obs_dir="../../obs/discharge"):
+def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,obs_dir="./obs/discharge"):
     # read the sample observation data
     start_dt=datetime.date(syear,smon,sday)
     last_dt=datetime.date(eyear,emon,eday)
@@ -80,11 +82,21 @@ def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,obs_dir
             else:
                 Q.append(-9900.0)
     return np.array(Q)
+#
 #========================================
+##### MAIN calculations ####
+# - set start & end dates from arguments
+# - set map dimention, read discharge simulation files
+# - read station data
+# - plot each station data and save figure
+#========================================
+
 indir ="out"         # folder where Simulated discharge
 syear,smonth,sdate=int(sys.argv[1]),int(sys.argv[2]),int(sys.argv[3])
 eyear,emonth,edate=int(sys.argv[4]),int(sys.argv[5]),int(sys.argv[6])
-CaMa_dir=sys.argv[7] # CaMa folder
+
+print ("@@@@@ discharge_validation.py", syear,smonth,sdate, eyear,emonth,edate )
+
 #========================================
 fname="./map/params.txt"
 with open(fname,"r") as f:
@@ -102,7 +114,11 @@ start=0
 last=(end_dt-start_dt).days + 1
 N=int(last)
 
+print ( '' )
+print ( '# map dim (nx,ny,gsize):', nx, ny, gsize, 'time seriez N=', N )
+
 #====================
+# read discharge list
 pnames=[]
 x1list=[]
 y1list=[]
@@ -110,7 +126,7 @@ x2list=[]
 y2list=[]
 rivers=[]
 #--
-fname=CaMa_dir+"/obs/discharge/discharge_list.txt"
+fname="./obs/discharge/discharge_list.txt"
 with open(fname,"r") as f:
     lines=f.readlines()
 for line in lines[1::]:
@@ -123,8 +139,12 @@ for line in lines[1::]:
     y2list.append(int(line[5]))
 
 pnum=len(pnames)
-#========================
 
+print ( '- read station list', fname, 'station num pnum=', pnum )
+#
+#========================
+### read simulation files
+#========================
 sim=[]
 # multiprocessing array
 sim=np.ctypeslib.as_ctypes(np.zeros([N,pnum],np.float32))
@@ -142,7 +162,6 @@ for year in np.arange(syear,eyear+1):
 def read_data(inputlist):
     yyyy  = inputlist[0]
     indir = inputlist[1]
-    print (yyyy)
     #--
     tmp_sim  = np.ctypeslib.as_array(shared_array_sim)
 
@@ -164,6 +183,7 @@ def read_data(inputlist):
     # simulated discharge
     fname=indir+"/outflw"+yyyy+".bin"
     simfile=np.fromfile(fname,np.float32).reshape([dt,ny,nx])
+    print ("-- reading simulation file:", fname )
     #-------------
     for point in np.arange(pnum):
         ix1,iy1,ix2,iy2=x1list[point],y1list[point],x2list[point],y2list[point]
@@ -173,10 +193,17 @@ def read_data(inputlist):
             tmp_sim[st:et,point]=simfile[:,iy1-1,ix1-1]+simfile[:,iy2-1,ix2-1]
 
 #--read data parallel--
-p   = Pool(4)
-res = p.map(read_data, inputlist)
-sim = np.ctypeslib.as_array(shared_array_sim)
-p.terminate()
+#para_flag=1
+para_flag=0
+#--
+if para_flag==1:
+    p=Pool(4)
+    res = p.map(read_data, inputlist)
+    sim = np.ctypeslib.as_array(shared_array_sim)
+    p.terminate()
+else:
+    res = map(read_data, inputlist)
+    sim = np.ctypeslib.as_array(shared_array_sim)
 
 #==================================
 #=== function for making figure ===
@@ -187,6 +214,8 @@ def make_fig(point):
     fig, ax1 = plt.subplots()
     org=obs_data(pnames[point],syear=syear,eyear=eyear)
     org=np.array(org)
+
+    print ("reading observation file:", "./obs/discharge/", pnames[point] )
 
     # sample observations
     lines=[ax1.plot(np.arange(start,last),ma.masked_less(org,0.0),label=labels[0],color="black",linewidth=1.5,zorder=101)[0]] #,marker = "o",markevery=swt[point])
@@ -222,14 +251,20 @@ def make_fig(point):
     ax1.text(0.02,0.95,Nash1,ha="left",va="center",transform=ax1.transAxes,fontsize=10)
 
     plt.legend(lines,labels,ncol=1,loc='upper right') #, bbox_to_anchor=(1.0, 1.0),transform=ax1.transAxes)
-    
-    print ('save',rivers[point] , pnames[point])
+
+    print ('save: '+rivers[point]+"-"+pnames[point]+".png", rivers[point] , pnames[point])
     plt.savefig("./fig/discharge/"+rivers[point]+"-"+pnames[point]+".png",dpi=500)
+
+    print ( "" )
     return 0
 
-#--make figures parallel--
-para_flag=1
-# para_flag=0
+#========================
+### --make figures parallel--
+#========================
+print ( "" )
+print ( "# making figures" )
+#para_flag=1
+para_flag=0
 #--
 if para_flag==1:
     p=Pool(4)
