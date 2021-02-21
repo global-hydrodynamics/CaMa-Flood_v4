@@ -1,5 +1,6 @@
-#!/bin/sh
-
+# A sample script to check the results by plot the map
+# This file works for plain binary format
+# 
 ## CaMa-Flood: simulation map directory & simulation output dorectory
 MAPDIR="../../map/glb_15min/"
 OUTDIR="../../out/test1-glb_15min/"
@@ -15,6 +16,4 @@ YSIZE=$(head -n 2 "${MAPDIR}/params.txt" | tail -n 1 | awk '{print $1}') # ysize
 # If the output is in plain binary format
 python plot.py $OUTDIR/outflw2000.bin $YSIZE $XSIZE 
 
-# If the output is in netcdf format
-# python plot_nc.py $OUTDIR/outflw2000.nc outflw
 
