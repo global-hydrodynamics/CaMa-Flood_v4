@@ -7,8 +7,8 @@
 ## src/flood_validation.py : flodd extent validation **[to be added soon]
 MAPDIR="../../map/glb_15min"
 OUTDIR="../../out/test1-glb_15min"
-OBSDIR="./obs_sample_git"
-#OBSDIR="./obs_sample"
+# OBSDIR="./obs_sample_git"
+OBSDIR="../../obs"
 CAMADIR="../../" 
 
 echo "MAPDIR, OUTDIR, OBSDIR= " $MAPDIR, $OUTDIR, $OBSDIR
@@ -28,6 +28,12 @@ EDAY=31
 EGM="EGM08"
 # EGM="EGM96"
 
+## specify the validation domain for flood inundation
+WEST=102
+EAST=108
+SOUTH=9
+NORTH=15
+
 ##########
 
 rm -f map
@@ -41,14 +47,19 @@ mkdir -p fig/discharge
 mkdir -p fig/wse
 ##########
 
-# make validation figures for discharge
-echo "### DISCHARGE VISUALIZATION"
-python src/discharge_validation.py $SYEAR $SMON $SDAY $EYEAR $EMON $EDAY
+# OUTPUT="netcdf"
+# # make validation figures for discharge
+# echo "### DISCHARGE VISUALIZATION"
+# python src/discharge_validation.py $SYEAR $SMON $SDAY $EYEAR $EMON $EDAY $OUTPUT
 
-
+OUTPUT="bin"
 # make validation figures for wse
 echo "\n\n\n### Water Surface Elevation VISUALIZATION"
-python src/wse_validation.py $SYEAR $SMON $SDAY $EYEAR $EMON $EDAY $CAMADIR $EGM 
+python src/wse_validation.py $SYEAR $SMON $SDAY $EYEAR $EMON $EDAY $CAMADIR $EGM $OUTPUT
+
+
+# make validation figures for flood extent
+echo "\n\n\n### Flood Extent VISUALIZATION"
 
 ##########
 

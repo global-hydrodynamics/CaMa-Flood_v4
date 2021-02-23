@@ -1,0 +1,7 @@
+# figures 
+*.png
+*.jpg
+
+etc/validation/txt_*
+
+etc/validation/fig_*

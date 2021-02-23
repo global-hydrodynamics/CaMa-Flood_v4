@@ -10,14 +10,15 @@
 *.o
 
 # map folder
-*/etc/map/*/
-*/glb_15min/
+etc/map/*/
+glb_15min/
+conus_06min/
 
 # out folder
-*/out/
+out/
 
 #obs folder
-*/obs/
+obs/
 
 #fig folders
 */etc/validation/fig_*/
@@ -27,6 +28,6 @@
 *.jpg
 
 # text files
-*.txt
+etc/*.txt
 *.mod
 *.a
