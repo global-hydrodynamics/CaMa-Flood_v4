@@ -84,7 +84,7 @@ LOUTPUT  = .TRUE.            !! true: use standard output (to file)
 LGRIDMAP = .TRUE.            !! true: for standard XY gridded 2D map
 LLEAPYR  = .TRUE.            !! true: neglect leap year (Feb29 skipped)
 LMAPEND  = .FALSE.           !! true: for map data endian conversion
-LBITSAFE = .FALSE.           !! true: for Bit Identical simulation (avoid OSM ATOMIC)
+LBITSAFE = .FALSE.           !! true: for Bit Identical (not used from v410, set in Mkinclude)
 
 !* change
 REWIND(NSETFILE)

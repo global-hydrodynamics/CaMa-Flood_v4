@@ -28,7 +28,7 @@
 
 #*** 0a. Set CaMa-Flood base directory
 BASE=`pwd`/..
-# BASE="/home/yamadai/work/CaMa_v400/cmf_v400_pkg"
+# BASE="/home/yamadai/work/dev_CaMa_v410/cmf_v410_pkg"
 
 echo $BASE
 
