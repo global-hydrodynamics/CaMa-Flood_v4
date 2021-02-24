@@ -48,10 +48,4 @@ REAL(KIND=JPRB),POINTER         :: D2GDWRTN(:,:)         !! Ground water return 
 REAL(KIND=JPRB),ALLOCATABLE     :: D1PTHFLW(:,:)         !! flood path outflow [m3/s]
 REAL(KIND=JPRB),ALLOCATABLE     :: D1PTHFLW_PRE(:,:)     !! flood path outflow [m3/s] (prev t-step)
 
-!================================================
-!!!*** dam variables
-REAL(KIND=JPRB),POINTER         :: D2DAMSTO(:,:)         !! reservoir storage [m3]
-REAL(KIND=JPRB),POINTER         :: D2DAMINF(:,:)         !! reservoir inflow [m3/s]; discharge before operatio
-
-
 END MODULE YOS_CMF_PROG

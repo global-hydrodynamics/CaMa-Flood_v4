@@ -1,8 +1,4 @@
-# A sample script to check the results by plot the map
-# This file works for netCDF file 
-# NOTE that, To read netCDF file, netCDF4 is required
-# Please check the follow website to install netCDF4 before using this sample script. 
-# https://unidata.github.io/netcdf4-python/
+#!/bin/sh
 
 ## CaMa-Flood: simulation map directory & simulation output dorectory
 MAPDIR="../../map/glb_15min/"
@@ -16,6 +12,8 @@ YSIZE=$(head -n 2 "${MAPDIR}/params.txt" | tail -n 1 | awk '{print $1}') # ysize
 
 ##########
 ## plot the discharge map 
+# If the output is in plain binary format
+#python plot.py $OUTDIR/outflw2000.bin $YSIZE $XSIZE 
 
 # If the output is in netcdf format
 python plot_nc.py $OUTDIR/o_outflw2000.nc outflw
