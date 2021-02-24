@@ -17,7 +17,7 @@
 
 #*** PBS setting when needed
 #PBS -q E20
-#PBS -l select=1:ncpus=20:mem=10gb
+#PBS -l select=1:ncpus=20:mem=20gb
 #PBS -j oe
 #PBS -m ea
 #PBS -V
@@ -26,8 +26,9 @@
 # (0) Basic Setting (for workstation)
 
 #*** 0a. Set CaMa-Flood base directory
-BASE=`pwd`/..
-# BASE="/home/yamadai/work/dev_CaMa_v410/cmf_v410_pkg"  # setting for PBS in cluster
+BASE=`pwd`/../..
+#BASE="/home/yamadai/work/dev_CaMa_v410/cmf_v410_pkg"  # setting for PBS in cluster
+#BASE="/cluster/data5/hanazaki/CaMa-Flood_v4/"
 
 echo $BASE
 
@@ -45,7 +46,7 @@ export OMP_NUM_THREADS=16                    # OpenMP cpu num
 
 #============================
 #*** 1a. Experiment directory setting
-EXP="test1-glb_15min"                       # experiment name (output directory name)
+EXP="dam_test"                       # experiment name (output directory name)
 RDIR=${BASE}/out/${EXP}                     # directory to run CaMa-Flood
 EXE="MAIN_cmf"                              # Execute file name
 PROG=${BASE}/src/${EXE}                     # location of Fortran main program
@@ -55,15 +56,17 @@ LOGOUT="./log_CaMa.txt"                     # standard log output
 
 #============================
 #*** 1b. Model physics option
-DT=86400                                    # base DT (modified in physics loop by LADPSTP)
+#DT=10800                                    # base DT (modified in physics loop by LADPSTP)
+DT=3600                                    # base DT (modified in physics loop by LADPSTP)
 LADPSTP=".TRUE."                            # .TRUE. for adaptive time step
 
 LFPLAIN=".TRUE."                            # .TRUE. to activate floodplain storage
 LKINE=".FALSE."                             # .TRUE. to use kinematic wave equation
 LFLDOUT=".TRUE."                            # .TRUE. to activate floodplain discharge
 LPTHOUT=".TRUE."                            # .TRUE. to activate bifurcation flow, mainly for delta simulation
-LDAMOUT=".FALSE."                           # .TRUE. to activate reservoir operation (under development)
+LDAMOUT=".TRUE."                           # .TRUE. to activate reservoir operation (under development)
 
+CDAMFILE="${BASE}/etc/dam_scheme/sample_data/dam_params_sample.csv"
 
 #============================
 #*** 1c. simulation time
@@ -92,15 +95,19 @@ IFRQ_RST="0"                                # output restat frequency.
 #============================
 #*** 1e. forcing setting
 IFRQ_INP="24"                               # input forcing frequency: [1,2,3,...,24] hour
-DROFUNIT="86400000"   # [mm/day->m/s]       # runoff unit conversion
+DROFUNIT="86400000"   # [mm/day->m/s]       # runoff unit conversion   !!!! check
+#IFRQ_INP="1"                               # input forcing frequency: [1,2,3,...,24] hour
+#DROFUNIT="3600"   # [m/hour->m/s]       # runoff unit conversion   !!!! check
 
 #----- for plain binary runoff forcing
 LINPCDF=".FALSE."                           # true for netCDF runoff
-LINTERP=".TRUE."                            # .TRUE. to interporlate with input matrix
+LINTERP=".TRUE."                            # .TRUE. to interporlate with input matri
 LINTERPCDF=".FALSE."                        # .TRUE. to use netCDF input matrix
-CROFDIR="${BASE}/inp/test_1deg/runoff/"     # runoff directory
+CROFDIR="${BASE}/inp/test_1deg/runoff"     # runoff directory
+#CROFDIR="${BASE}/inp/ERA5LAND_6min_hourly_2001_2019_m/"     # runoff directory
 CROFPRE="Roff____"                          # runoff prefix/suffix  
 CROFSUF=".one"                              #   $(CROFPRE)YYYYMMDD$(CROFSUF)
+#CROFSUF=".sixmin"                              #   $(CROFPRE)YYYYMMDD$(CROFSUF)
 
 ###** sub-surface runoff scheme (not available with plain binary runoff)
 LROSPLIT=".FALSE."                          # .TRUE. for sub-surface runoff
@@ -109,18 +116,20 @@ LROSPLIT=".FALSE."                          # .TRUE. for sub-surface runoff
 ###CSUBSUF="NONE"                              #   $(PREFIX)YYYYMMDD$(SUFFIX)
 
 #----- for netCDF runoff forcing ###
-###LINPCDF=".TRUE."                              # true for netCDF runoff
-###LINTERP=".TRUE."                              # .TRUE. to interporlate with input matrix
-###LINTERPCDF=".FALSE."                          # .TRUE. to use netCDF input matrix
-###CROFDIR="${BASE}/inp/test_15min_nc/"          # runoff directory
-###CROFPRE="e2o_ecmwf_wrr2_glob15_day_Runoff_"   # runoff prefix/suffix  
-###CROFCDF=""     # see (3) set each year        # netCDF runoff file
-###CVNROF="Runoff"                               # netCDF runoff    variable name
-###CVNSUB=""                                     # netCDF runoffsub variable name
-###SYEARIN=""     # see (3) set each year        #   netCDF runoff file, start date
-###SMONIN=""      # see (3) set each year
-###SDAYIN=""      # see (3) set each year
-###SHOURIN=""     # see (3) set each year
+#LINPCDF=".TRUE."                              # true for netCDF runoff
+#LINTERP=".TRUE."                              # .TRUE. to interporlate with input matrix
+#LINTERPCDF=".FALSE."                          # .TRUE. to use netCDF input matrix
+#CROFDIR="${BASE}/inp/TE_GSMaP_30min_3hours_2001_2019/"          # runoff directory
+#CROFPRE="YEE2_GMVK03_RUNOFF_H"   # runoff prefix/suffix  
+#CROFSUF="_GLB050"
+#CROFCDF=""     # see (3) set each year        # netCDF runoff file
+#CVNROF="Runoff"                               # netCDF runoff    variable name
+#CVNROF="RUNOFF"                               # netCDF runoff    variable name
+#CVNSUB=""                                     # netCDF runoffsub variable name
+#SYEARIN=""     # see (3) set each year        #   netCDF runoff file, start date
+#SMONIN=""      # see (3) set each year
+#SDAYIN=""      # see (3) set each year
+#SHOURIN=""     # see (3) set each year
 
 
 #============================
@@ -128,6 +137,8 @@ LROSPLIT=".FALSE."                          # .TRUE. for sub-surface runoff
 FMAP="${BASE}/map/glb_15min"                # map directory
 CDIMINFO="${FMAP}/diminfo_test-1deg.txt"    # dimention information file
 CINPMAT=${FMAP}/inpmat_test-1deg.bin        # runoff input matrix for interporlation
+#CDIMINFO="${FMAP}/diminfo_ERA5LAND_0.1deg.txt"    # dimention information file
+#CINPMAT=${FMAP}/inpmat_ERA5LAND_0.1deg.bin           # runoff input matrix for interporlation
 #CDIMINFO="${FMAP}/diminfo_test-15min_nc.txt" # dimention information file
 #CINPMAT=${FMAP}/inpmat_test-15min_nc.bin     # runoff input matrix for interporlation
 
@@ -184,12 +195,16 @@ LSEALEV=".FALSE."                           # .TRUE. to activate dynamic sea lev
 #============================
 #*** 1h. Output Settings 
 LOUTPUT=".TRUE."                            # .TRUE. to use CaMa-Flood standard output
-IFRQ_OUT=24                                 # output frequency: [1,2,3,...,24] hour
+IFRQ_OUT=3                                 # output frequency: [1,2,3,...,24] hour
 
 LOUTCDF=".FALSE."                           # .TRUE. netCDF output, .FALSE. plain binary output
 COUTDIR="./"                                # output directory 
 #CVARSOUT="outflw,storge,fldfrc,maxdph,flddph" # list output variable (comma separated)
-CVARSOUT="rivout,rivsto,rivdph,rivvel,fldout,fldsto,flddph,fldfrc,fldare,sfcelv,outflw,storge,pthflw,pthout,maxsto,maxflw,maxdph" # list output variable (comma separated)
+#CVARSOUT="rivout,rivsto,rivdph,rivvel,fldout,fldsto,flddph,fldfrc,fldare,sfcelv,outflw,storge,pthflw,pthout,maxsto,maxflw,maxdph,damsto,daminf" # list output variable (comma separated)    # dam variables are added!!!!
+
+CVARSOUT="flddph,outflw,rivdph" # list output variable (comma separated)    # dam variables are added!!!!
+#CVARSOUT="flddph,outflw,daminf,damsto,rivdph" # list output variable (comma separated)    # dam variables are added!!!!
+
 COUTTAG=""  # see (3) set each year         #   output tag $(COUTDIR)/$(VARNAME)$(OUTTAG).bin
 
 ##### Model Parameters ################
@@ -241,10 +256,10 @@ do
   else
     LRESTART=".TRUE."
     CRESTSTO="${CVNREST}${CYR}010100.bin"    ## from restart file
-    if [ ${LRESTCDF} = ".TRUE." ]; then
-      CRESTSTO="${CVNREST}${CYR}010100.nc"    ## from restart file
-    fi
+#    CRESTSTO="${CVNREST}${CYR}010100.nc"    ## from restart file
   fi
+
+  echo "LRESTART: ${LRESTART}"  >> log.txt
 
   #*** 3b. update start-end year
   SYEAR=$IYR
@@ -263,11 +278,11 @@ do
   CSYEAR=`printf %04d ${SYEAR}`
   COUTTAG=${CSYEAR}                  # output file tag
 
-  #CROFCDF="${CROFDIR}/${CROFPRE}${CSYEAR}.nc"  # input netCDF runoff file
-  #SYEARIN=$IYR
-  #SMONIN=1
-  #SDAYIN=1
-  #SHOURIN=0
+  CROFCDF="${CROFDIR}/${CROFPRE}${CSYEAR}${CROFSUF}.nc"  # input netCDF runoff file
+  SYEARIN=$IYR
+  SMONIN=1
+  SDAYIN=1
+  SHOURIN=0
 
 
 
@@ -420,7 +435,14 @@ IFRQ_OUT = ${IFRQ_OUT}                 ! output data write frequency (hour)
 /
 EOF
 
-#### 6. sea level (optional) 
+#*** Opt. Reservoir Operation
+cat >> ${NMLIST} << EOF
+&NDAMOUT
+CDAMFILE = "${CDAMFILE}"               ! Reservoir Parameter File
+/
+EOF
+
+#### Opt. sea level (optional) 
 #cat >> ${NMLIST} << EOF
 #&NBOUND
 #LSEALEVCDF =  ${LSEALEVCDF}            ! * true : netCDF sea level boundary

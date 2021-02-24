@@ -7,10 +7,12 @@ CP = /bin/cp
 #======================================
 # Pre-Prosessing options
 # DCDF: activate when using netCDF, comment out when not needed
+# DATM: avoid "OpenMP Atomic parallelization" for bit-identical simulation. (Simulation slow down)
 #======================================
 
 DCDF=-DUseCDF
-CFLAGS=$(DCDF) 
+#DATM=-DNoAtom
+CFLAGS=$(DCDF) $(DATM) 
 
 #======================================
 # gfortran Mac OSX 
