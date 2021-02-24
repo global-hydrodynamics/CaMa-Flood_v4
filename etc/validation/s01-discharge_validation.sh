@@ -23,7 +23,7 @@ echo "MAPDIR, OUTDIR, OBSDIR= " $MAPDIR, $OUTDIR, $OBSDIR
 TAG="conus"
 # TAG="glb"
 
-## specity validation period
+## specify validation period
 SYEAR=2000
 SMON=1
 SDAY=1
@@ -79,7 +79,7 @@ python src/discharge_validation.py $SYEAR $SMON $SDAY $EYEAR $EMON $EDAY $OUTPUT
 
 ## figures
 rm -rf fig_${TAG}/discharge
-mv     fig/discharge    fig_${TAG}/discharge
+mv   -p  fig/discharge    fig_${TAG}/discharge
 echo "\n\n\n### figures saved in directory: fig_${TAG}"
 
 ## validation data
