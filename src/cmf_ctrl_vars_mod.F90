@@ -17,7 +17,7 @@ MODULE CMF_CTRL_VARS_MOD
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
 USE PARKIND1,                ONLY: JPIM, JPRM, JPRB
-USE YOS_CMF_INPUT,           ONLY: LOGNAM
+USE YOS_CMF_INPUT,           ONLY: LOGNAM, LDAMOUT
 IMPLICIT NONE
 CONTAINS 
 !####################################################################
@@ -31,8 +31,12 @@ USE YOS_CMF_PROG,            ONLY: ND2PROG,      D2PROG, &
                                  & D2RUNOFF,     D2ROFSUB,     D2GDWSTO,     D2GDWRTN, &
                                  & D2RIVSTO,     D2FLDSTO,     D2RIVOUT,     D2FLDOUT, &
                                  & D2RIVOUT_PRE, D2FLDOUT_PRE, D2RIVDPH_PRE, D2FLDSTO_PRE, &
-                                 & D1PTHFLW,     D1PTHFLW_PRE
+                                 & D1PTHFLW,     D1PTHFLW_PRE, &
+                                 & D2DAMSTO,     D2DAMINF      !!! added
 IMPLICIT NONE
+!*** LOCAL
+!$ SAVE
+INTEGER(KIND=JPIM)         :: IND
 !================================================
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "!---------------------!"
@@ -40,7 +44,9 @@ WRITE(LOGNAM,*) "!---------------------!"
 WRITE(LOGNAM,*) "CMF::PROG_INIT: prognostic variable initialization"
 
 !*** 1. ALLOCATE 
-ND2PROG=12
+ND2PROG=12                       !! # of standard prognostic variables 
+IF ( LDAMOUT ) ND2PROG=ND2PROG+2 !! dam variables are added (D2DAMSTO, D2DAMINF)
+
 ALLOCATE( D2PROG(NSEQMAX,1,ND2PROG)     )
 ALLOCATE( D1PTHFLW(NPTHOUT,NPTHLEV)     )
 ALLOCATE( D1PTHFLW_PRE(NPTHOUT,NPTHLEV) )
@@ -57,6 +63,15 @@ D2RIVDPH_PRE => D2PROG(:,:,9)
 D2FLDSTO_PRE => D2PROG(:,:,10)
 D2GDWSTO     => D2PROG(:,:,11)
 D2GDWRTN     => D2PROG(:,:,12)
+
+IND=12
+IF( LDAMOUT ) THEN  !! additional prognostics for LDAMOUT
+  IND=IND+1
+  D2DAMSTO     => D2PROG(:,:,IND)
+  IND=IND+1
+  D2DAMINF     => D2PROG(:,:,IND)
+ENDIF
+
 D2PROG(:,:,:) = 0._JPRB
 
 !============================
@@ -74,11 +89,16 @@ D2FLDSTO_PRE(:,:) = 0._JPRB
 D2GDWRTN(:,:)     = 0._JPRB
 D2GDWSTO(:,:)     = 0._JPRB
 D1PTHFLW(:,:)     = 0._JPRB
-D1PTHFLW_PRE(:,:) = 0._JPRB
+D1PTHFLW_PRE(:,:) = 0.
+IF( LDAMOUT )THEN  !! Additional variable for LDAMOUT
+  D2DAMSTO(:,:)     = 0._JPRB
+  D2DAMINF(:,:)     = 0._JPRB
+ENDIF
 
 !***  2b. set initial water surface elevation to sea surface level
 WRITE(LOGNAM,*) 'PROG_INIT: fill channels below downstream boundary'
 CALL STORAGE_SEA_SURFACE
+
 
 WRITE(LOGNAM,*) "CMF::PROG_INIT: end"
 
@@ -131,10 +151,14 @@ USE YOS_CMF_DIAG,       ONLY: N2DIAG, D2DIAG, &
                             &   D2PTHOUT, D2PTHINF, D2SFCELV, D2OUTFLW, D2STORGE, D2OUTINS
 USE YOS_CMF_DIAG,       ONLY: N2DIAG_AVG, D2DIAG_AVG, NADD, &
                             &   D2RIVOUT_AVG, D2FLDOUT_AVG, D2OUTFLW_AVG, D2RIVVEL_AVG, D2PTHOUT_AVG, &
-                            &   D2GDWRTN_AVG, D2RUNOFF_AVG, D2ROFSUB_AVG, D1PTHFLW_AVG
+                            &   D2GDWRTN_AVG, D2RUNOFF_AVG, D2ROFSUB_AVG, D1PTHFLW_AVG, &
+                            &   D2DAMINF_AVG
 USE YOS_CMF_DIAG,       ONLY: N2DIAG_MAX, D2DIAG_MAX, &
                             &   D2STORGE_MAX, D2OUTFLW_MAX, D2RIVDPH_MAX
 IMPLICIT NONE
+!*** LOCAL
+!$ SAVE
+INTEGER(KIND=JPIM)         :: IND
 !================================================
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "!---------------------!"
@@ -143,6 +167,7 @@ WRITE(LOGNAM,*) "CMF::DIAG_INIT: initialize diagnostic variables"
 
 !*** 1. snapshot 2D diagnostics
 N2DIAG=13
+
 ALLOCATE(D2DIAG(NSEQMAX,1,N2DIAG))
 D2DIAG(:,:,:) = 0._JPRB
 D2RIVINF => D2DIAG(:,:,1)
@@ -162,6 +187,8 @@ D2OUTINS => D2DIAG(:,:,13)
 !============================
 !*** 2a. time-average 2D diagnostics
 N2DIAG_AVG=8
+IF ( LDAMOUT ) N2DIAG_AVG=N2DIAG_AVG+1    !!! D2DAMINF_AVG is added
+
 ALLOCATE(D2DIAG_AVG(NSEQMAX,1,N2DIAG_AVG))
 D2DIAG_AVG(:,:,:) = 0._JPRB 
 D2RIVOUT_AVG => D2DIAG_AVG(:,:,1)
@@ -173,6 +200,13 @@ D2PTHOUT_AVG => D2DIAG_AVG(:,:,5)
 D2GDWRTN_AVG => D2DIAG_AVG(:,:,6)
 D2RUNOFF_AVG => D2DIAG_AVG(:,:,7)
 D2ROFSUB_AVG => D2DIAG_AVG(:,:,8)
+
+IND=8
+IF ( LDAMOUT ) THEN
+  IND=IND+1
+  D2DAMINF_AVG => D2DIAG_AVG(:,:,IND)
+ENDIF
+
 NADD=0
 
 !*** 2b time-average 1D Diagnostics (bifurcation channel)
@@ -182,6 +216,7 @@ D1PTHFLW_AVG(:,:) = 0._JPRB
 !============================
 !*** 3. Maximum 2D Diagnostics 
 N2DIAG_MAX=3
+
 ALLOCATE(D2DIAG_MAX(NSEQMAX,1,N2DIAG_MAX))
 D2DIAG_MAX(:,:,:) = 0._JPRB 
 D2STORGE_MAX => D2DIAG_MAX(:,:,1)

@@ -26,12 +26,12 @@ cmf_utils_mod.o   \
 \
 cmf_calc_outflw_mod.o   \
 cmf_calc_pthout_mod.o   \
-cmf_calc_damout_mod.o   \
 cmf_calc_fldstg_mod.o   \
 cmf_calc_stonxt_mod.o   \
 cmf_calc_diag_mod.o     \
 cmf_opt_outflw_mod.o    \
 \
+cmf_ctrl_damout_mod.o \
 cmf_ctrl_forcing_mod.o  \
 cmf_ctrl_boundary_mod.o \
 cmf_ctrl_output_mod.o   \
