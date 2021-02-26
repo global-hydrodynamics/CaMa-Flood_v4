@@ -2,8 +2,8 @@
 Simulated water surface elevation (wse) comparison with observed wse values.
 Some sample data is prepared in ./obs directory.
 Pre-processing of correspoinding to observation location coordinates (x,y) of CaMa-Flood map are needed.
-./obs/wse/wse_list.txt - list of sample discahrge locations
-./obs/wse/{name}.txt - sample discharge observatons
+./obs/wse/wse_list_{mapname}.txt - list of sample virtual stations
+./obs/wse/{name}.txt - sample wse observatons
 '''
 import numpy as np
 import matplotlib.pyplot as plt
@@ -20,6 +20,9 @@ from multiprocessing import sharedctypes
 from numpy import ma
 import re
 import math
+import netCDF4 as nc
+
+
 #========================================
 #====  functions for making figures  ====
 #========================================
@@ -82,13 +85,15 @@ def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,obs_dir
 # - set map dimention, read surface elevation simulation files
 # - read station data
 # - plot each station data and save figure
+# - write a text file with simulated and observed data
 #========================================
 indir ="out"         # folder where Simulated discharge
 syear,smonth,sdate=int(sys.argv[1]),int(sys.argv[2]),int(sys.argv[3])
 eyear,emonth,edate=int(sys.argv[4]),int(sys.argv[5]),int(sys.argv[6])
 egm=sys.argv[7]      # provide EGM of observations, CaMa-Flood wse is given in EGM96
+output = sys.argv[8] # output file type bin/netCDF
 
-print ("@@@@@ wse_validation.py", syear,smonth,sdate, eyear,emonth,edate, egm )
+print ("@@@@@ wse_validation.py", syear,smonth,sdate, eyear,emonth,edate, egm, output )
 
 #========================================
 fname="./map/params.txt"
@@ -119,7 +124,7 @@ rivers=[]
 legm08=[]
 legm96=[]
 #----------------------------
-fname="./obs/wse/wse_list.txt"
+fname="./list.txt"
 with open(fname,"r") as f:
     lines=f.readlines()
 #----------------------------
@@ -177,9 +182,14 @@ def read_data(inputlist):
     if et >= N:
         et=None
 
-    # simulated discharge
-    fname=indir+"/sfcelv"+yyyy+".bin"
-    simfile=np.fromfile(fname,np.float32).reshape([dt,ny,nx])
+    # simulated water surface elevation
+    if output == "bin":
+        fname=indir+"/sfcelv"+yyyy+".bin"
+        simfile=np.fromfile(fname,np.float32).reshape([dt,ny,nx])
+    else:
+        fname=indir+"/o_sfcelv"+yyyy+".nc"
+        with nc.Dataset(fname,"r") as cdf:
+            simfile=cdf.variables["sfcelv"][:]
     print ("-- reading simulation file:", fname )
     #-------------
     for point in np.arange(pnum):
@@ -199,7 +209,36 @@ else:
     res = map(read_data, inputlist)
     sim = np.ctypeslib.as_array(shared_array_sim)
 
-
+#=====================================
+#=== function for saving data file ===
+#=====================================
+def write_text(time,obs,sim,river,pname):
+    fname="./txt/wse/"+river+"-"+pname+".txt"
+    st=0
+    lt=len(obs)
+    with open(fname,"w") as f:
+        f.write("# Validation Data : Water Surface Elevation\n")
+        f.write("# CaMa-Flood version 4.0.0\n")
+        f.write("#============================================================\n")
+        f.write("# River: %12s RIVER\n"%(river))
+        f.write("# Station: %15s\n"%(pname))
+        f.write("#============================================================\n")
+        f.write("#\n")
+        f.write("# MEAN DAILY WATER SURFACE ELEVATION (WSE)\n")
+        f.write("# Unit : m\n")
+        f.write("#\n")
+        f.write("#\n")
+        f.write("YYYY-MM-DD;     Observed     Simulated\n")
+        f.write("#============================================================\n")
+        for date in np.arange(st,lt):
+            target_dt=start_dt+datetime.timedelta(days=time[date])
+            year=target_dt.year
+            mon=target_dt.month
+            day=target_dt.day
+            line = '%04d-%02d-%02d     %10.4f     %10.4f\n'%(year,mon,day,obs[date],sim[date])
+            print (line)
+            f.write(line)
+    return 0
 #==================================
 #=== function for making figure ===
 #==================================
@@ -211,14 +250,14 @@ def make_fig(point):
     if egm=="EGM96":
         org=np.array(org)+np.array(legm08[point])-np.array(legm96[point])
     else:
-       org=np.array(org) 
+        org=np.array(org) 
 
     print ("reading observation file:", "./obs/wse/", pnames[point] )
 
-    lines=[ax1.plot(time,org,label="obs",marker="o",color="black",fillstyle="none",linewidth=0.0,zorder=101)[0]] #,marker = "o",markevery=swt[point])
+    lines=[ax1.plot(time,org,label=labels[0],marker="o",color="#34495e",fillstyle="none",linewidth=0.0,zorder=101)[0]] #,marker = "o",markevery=swt[point])
     
     # draw simulations
-    lines.append(ax1.plot(np.arange(start,last),sim[:,point],label=labels[1],color="blue",linewidth=1.0,alpha=1,zorder=106)[0])
+    lines.append(ax1.plot(np.arange(start,last),sim[:,point],label=labels[1],color="#ff8021",linewidth=3.0,alpha=1,zorder=106)[0])
 
     # Make the y-axis label, ticks and tick labels match the line color.
     ax1.set_ylabel('$WSE (m)$', color='k')
@@ -241,19 +280,22 @@ def make_fig(point):
     RE1=RMSE(sim[time,point],org)
     Rmse1="RMSE: %4.2f"%(RE1)
     #
-    ax1.text(0.02,0.95,Rmse1,ha="left",va="center",transform=ax1.transAxes,fontsize=10)
+    ax1.text(0.02,0.98,Rmse1,ha="left",va="center",transform=ax1.transAxes,fontsize=10)
 
     plt.legend(lines,labels,ncol=1,loc='upper right') #, bbox_to_anchor=(1.0, 1.0),transform=ax1.transAxes)
     
-    print ('save:', rivers[point]+"-"+pnames[point]+".png", rivers[point] , pnames[point])
+    print ('save: '+rivers[point]+"-"+pnames[point]+".png", rivers[point] , pnames[point])
     plt.savefig("./fig/wse/"+rivers[point]+"-"+pnames[point]+".png",dpi=500)
+    print ( "" )
 
+    print ('save: '+rivers[point]+"-"+pnames[point]+".txt", rivers[point] , pnames[point])
+    write_text(time,org,sim[:,point],rivers[point],pnames[point])
     print ( "" )
     return 0
 
-#========================
+#============================
 ### --make figures parallel--
-#========================
+#============================
 print ( "" )
 print ( "# making figures" )
 #para_flag=1
@@ -266,4 +308,3 @@ if para_flag==1:
     p.terminate()
 else:
     map(make_fig,np.arange(pnum))
-

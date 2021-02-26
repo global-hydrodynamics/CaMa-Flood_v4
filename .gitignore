@@ -21,7 +21,8 @@ out/
 obs/
 
 #fig folders
-*/etc/validation/fig_*/
+etc/validation/fig_*/
+etc/validation/txt_*/
 
 # figures 
 *.png

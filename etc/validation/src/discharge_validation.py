@@ -2,7 +2,7 @@
 Simulated discharge comparison with observed discharge values.
 Some sample data is prepared in ./obs directory.
 Pre-processing of correspoinding to observation location coordinates (x,y) of CaMa-Flood map are needed.
-./obs/discharge/discharge_list.txt - list of sample discahrge locations
+./obs/discharge/discharge_list_{mapname}.txt - list of sample discahrge locations
 ./obs/discharge/{name}.txt - sample discharge observatons
 '''
 import numpy as np
@@ -29,20 +29,12 @@ import netCDF4 as nc
 def filter_nan(s,o):
     """
     this functions removed the data  from simulated and observed data
-    whereever the observed data contains nan
-    
-    this is used by all other functions, otherwise they will produce nan as 
-    output
+    where ever the observed data contains nan
     """
     data = np.array([s.flatten(),o.flatten()])
     data = np.transpose(data)
     data = data[~np.isnan(data).any(1)]
 
-    #mask = ~np.isnan(s) & ~np.isnan(o)
-    #o_nonan = o[mask]
-    #s_nonan = s[mask]
-
-    #return o_nonan,s_nonan
     return data[:,0],data[:,1]
 #========================================
 def NS(s,o):
@@ -71,7 +63,6 @@ def NSlog(s,o):
     output:
         ns: Nash Sutcliffe efficient coefficient
     """
-    #s,o = filter_nan(s,o)
     o=ma.masked_where(o<=0.0,o).filled(0.0)
     s=ma.masked_where(o<=0.0,s).filled(0.0)
     o=np.compress(o>0.0,o)
@@ -90,9 +81,6 @@ def KGE(s,o):
     output:
         KGE: Kling Gupta Efficiency
     """
-    # s = s[warmup+1:]
-    # o = o[warmup+1:]
-    # s,o = filter_nan(s,o)
     o=ma.masked_where(o<=0.0,o).filled(0.0)
     s=ma.masked_where(o<=0.0,s).filled(0.0)
     o=np.compress(o>0.0,o)
@@ -155,6 +143,7 @@ def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,obs_dir
 # - set map dimension, read discharge simulation files
 # - read station data
 # - plot each station data and save figure
+# - write a text file with simulated and observed data
 #========================================
 
 indir ="out"         # folder where Simulated discharge
@@ -162,7 +151,7 @@ syear,smonth,sdate=int(sys.argv[1]),int(sys.argv[2]),int(sys.argv[3])
 eyear,emonth,edate=int(sys.argv[4]),int(sys.argv[5]),int(sys.argv[6])
 output = sys.argv[7]
 
-print ("@@@@@ discharge_validation.py", syear,smonth,sdate, eyear,emonth,edate )
+print ("@@@@@ discharge_validation.py", syear,smonth,sdate, eyear,emonth,edate, output )
 
 #========================================
 fname="./map/params.txt"
@@ -283,6 +272,19 @@ else:
 def write_text(obs,sim,river,pname):
     fname="./txt/discharge/"+river+"-"+pname+".txt"
     with open(fname,"w") as f:
+        f.write("# Validation Data : Discharge\n")
+        f.write("# CaMa-Flood version 4.0.0\n")
+        f.write("#============================================================\n")
+        f.write("# River: %12s RIVER\n"%(river))
+        f.write("# Station: %15s\n"%(pname))
+        f.write("#============================================================\n")
+        f.write("#\n")
+        f.write("# MEAN DAILY DISCHARGE (Q)\n")
+        f.write("# Unit : m3/s\n")
+        f.write("#\n")
+        f.write("#\n")
+        f.write("YYYY-MM-DD;     Observed     Simulated\n")
+        f.write("#============================================================\n")
         for date in np.arange(start,last):
             target_dt=start_dt+datetime.timedelta(days=date)
             year=target_dt.year
@@ -304,7 +306,7 @@ def make_fig(point):
 
     print ("reading observation file:", "./obs/discharge/", pnames[point] )
 
-    # sample observations
+    # draw observations
     lines=[ax1.plot(np.arange(start,last),ma.masked_less(org,0.0),label=labels[0],color="#34495e",linewidth=3.0,zorder=101)[0]] #,marker = "o",markevery=swt[point])
     
     # draw simulations
@@ -349,19 +351,20 @@ def make_fig(point):
     #
     ax1.text(0.02,0.88,Kgeh,ha="left",va="center",transform=ax1.transAxes,fontsize=10)
  
-    plt.legend(lines,labels,ncol=1,loc='upper right') #, bbox_to_anchor=(1.0, 1.0),transform=ax1.transAxes)
+    plt.legend(lines,labels,ncol=1,loc='upper right')
 
     print ('save: '+rivers[point]+"-"+pnames[point]+".png", rivers[point] , pnames[point])
     plt.savefig("./fig/discharge/"+rivers[point]+"-"+pnames[point]+".png",dpi=500)
+    print ( "" )
 
     print ('save: '+rivers[point]+"-"+pnames[point]+".txt", rivers[point] , pnames[point])
     write_text(org,sim[:,point],rivers[point],pnames[point])
     print ( "" )
     return 0
 
-#========================
+#============================
 ### --make figures parallel--
-#========================
+#============================
 print ( "" )
 print ( "# making figures" )
 #para_flag=1

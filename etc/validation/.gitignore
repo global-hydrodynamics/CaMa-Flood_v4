@@ -2,6 +2,6 @@
 *.png
 *.jpg
 
-etc/validation/txt_*
+etc/validation/txt_*/
 
-etc/validation/fig_*
+etc/validation/fig_*/
