@@ -22,7 +22,6 @@ import re
 import math
 import netCDF4 as nc
 
-
 #========================================
 #====  functions for making figures  ====
 #========================================
@@ -91,7 +90,7 @@ def KGE(s,o):
     r = np.corrcoef(o, s)[0,1]
     return 1 - np.sqrt((r - 1) ** 2 + (B - 1) ** 2 + (y - 1) ** 2)
 #========================================
-def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,obs_dir="./obs/discharge"):
+def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,obs_dir="./obs"):
     # read the sample observation data
     start_dt=datetime.date(syear,smon,sday)
     last_dt=datetime.date(eyear,emon,eday)
@@ -101,6 +100,7 @@ def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,obs_dir
 
     # read discharge
     fname =obs_dir+"/"+station+".txt"
+    print ( "-- reading observatio file: ", fname)
     head = 19 #header lines
     if not os.path.exists(fname):
         print ("no file", fname)
@@ -111,15 +111,17 @@ def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,obs_dir
         #------
         dis = {}
         for line in lines[head::]:
-            line     = filter(None, re.split(" ",line))
-            yyyymmdd = filter(None, re.split("-",line[0]))
+            line2 = line.split()
+            yyyymmdd = line2[0].split('-')
+#            line     = filter(None, re.split(" ",line))
+#            yyyymmdd = filter(None, re.split("-",line[0]))
             yyyy     = '%04d'%(int(yyyymmdd[0]))
             mm       = '%02d'%(int(yyyymmdd[1]))
             dd       = '%02d'%(int(yyyymmdd[2]))
             #---
             if start_dt <= datetime.date(int(yyyy),int(mm),int(dd)) and \
                 last_dt >= datetime.date(int(yyyy),int(mm),int(dd)):
-                dis[yyyy+mm+dd]=float(line[1])
+                dis[yyyy+mm+dd]=float(line2[1])
             elif last_dt  < datetime.date(yyyy,mm,dd):
                 break
         #---
@@ -127,7 +129,8 @@ def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,obs_dir
         last=(last_dt-start_dt).days + 1
         Q=[]
         for day in np.arange(start,last):
-            target_dt=start_dt+datetime.timedelta(days=day)
+            day2=int(day)
+            target_dt=start_dt+datetime.timedelta(days=day2)
             yyyy='%04d'%(target_dt.year)
             mm='%02d'%(target_dt.month)
             dd='%02d'%(target_dt.day)
@@ -151,16 +154,20 @@ syear,smonth,sdate=int(sys.argv[1]),int(sys.argv[2]),int(sys.argv[3])
 eyear,emonth,edate=int(sys.argv[4]),int(sys.argv[5]),int(sys.argv[6])
 output = sys.argv[7]
 
-print ("@@@@@ discharge_validation.py", syear,smonth,sdate, eyear,emonth,edate, output )
+print ("\n\n@@@@@ discharge_validation.py", syear,smonth,sdate, eyear,emonth,edate, output )
 
 #========================================
 fname="./map/params.txt"
 with open(fname,"r") as f:
     lines=f.readlines()
 #-------
-nx     = int(filter(None, re.split(" ",lines[0]))[0])
-ny     = int(filter(None, re.split(" ",lines[1]))[0])
-gsize  = float(filter(None, re.split(" ",lines[3]))[0])
+nx   =int  ( lines[0].split()[0] )
+ny   =int  ( lines[1].split()[0] )
+gsize=float( lines[3].split()[0] )
+
+#nx     = int(   filter(None, re.split(" ",lines[0])),[0] )
+#ny     = int(   filter(None, re.split(" ",lines[1])),[0] )
+#gsize  = float( filter(None, re.split(" ",lines[3])),[0] )
 #----
 start_dt=datetime.date(syear,smonth,sdate)
 end_dt=datetime.date(eyear,emonth,edate)
@@ -170,8 +177,7 @@ start=0
 last=(end_dt-start_dt).days + 1
 N=int(last)
 
-print ( '' )
-print ( '# map dim (nx,ny,gsize):', nx, ny, gsize, 'time series N=', N )
+print ( '\n #[1] map dim (nx,ny,gsize):', nx, ny, gsize, 'time series N=', N )
 
 #====================
 # read discharge list
@@ -186,17 +192,17 @@ fname="./list.txt"
 with open(fname,"r") as f:
     lines=f.readlines()
 for line in lines[1::]:
-    line = filter(None, re.split(" ",line))
-    rivers.append(line[0].strip())
-    pnames.append(line[1].strip())
-    x1list.append(int(line[2]))
-    y1list.append(int(line[3]))
-    x2list.append(int(line[4]))
-    y2list.append(int(line[5]))
+    line2 = line.split()
+    rivers.append(line2[0].strip())
+    pnames.append(line2[1].strip())
+    x1list.append(int(line2[2]))
+    y1list.append(int(line2[3]))
+    x2list.append(int(line2[4]))
+    y2list.append(int(line2[5]))
 
 pnum=len(pnames)
 
-print ( '- read station list', fname, 'station num pnum=', pnum )
+print ( '-- read station list', fname, 'station num pnum=', pnum )
 #
 #========================
 ### read simulation files
@@ -208,9 +214,12 @@ shared_array_sim  = sharedctypes.RawArray(sim._type_, sim)
 
 # for parallel calcualtion
 inputlist=[]
+inpn=0
 for year in np.arange(syear,eyear+1):
     yyyy='%04d' % (year)
     inputlist.append([yyyy,indir])
+#    print ( inputlist[inpn] )
+    inpn=inpn+1
 
 #==============================
 #=== function for read data ===
@@ -242,6 +251,7 @@ def read_data(inputlist):
         simfile=np.fromfile(fname,np.float32).reshape([dt,ny,nx])
     else:
         fname=indir+"/o_outflw"+yyyy+".nc"
+        print ( fname )
         with nc.Dataset(fname,"r") as cdf:
             simfile=cdf.variables["outflw"][:]
     print ("-- reading simulation file:", fname )
@@ -257,14 +267,17 @@ def read_data(inputlist):
 #para_flag=1
 para_flag=0
 #--
+print ( "\n #[2] Reading simulation file " )
 if para_flag==1:
     p=Pool(4)
     res = p.map(read_data, inputlist)
     sim = np.ctypeslib.as_array(shared_array_sim)
     p.terminate()
 else:
-    res = map(read_data, inputlist)
-    sim = np.ctypeslib.as_array(shared_array_sim)
+#    res = map(read_data, inputlist)
+    for inpi in np.arange(inpn):
+        res = read_data(inputlist[inpi])
+        sim = np.ctypeslib.as_array(shared_array_sim)
 
 #=====================================
 #=== function for saving data file ===
@@ -272,6 +285,7 @@ else:
 def write_text(obs,sim,river,pname):
     fname="./txt/discharge/"+river+"-"+pname+".txt"
     with open(fname,"w") as f:
+        print ("-- write comparison result text:", fname )
         f.write("# Validation Data : Discharge\n")
         f.write("# CaMa-Flood version 4.0.0\n")
         f.write("#============================================================\n")
@@ -286,7 +300,8 @@ def write_text(obs,sim,river,pname):
         f.write("YYYY-MM-DD;     Observed     Simulated\n")
         f.write("#============================================================\n")
         for date in np.arange(start,last):
-            target_dt=start_dt+datetime.timedelta(days=date)
+            date2=int(date)
+            target_dt=start_dt+datetime.timedelta(days=date2)
             year=target_dt.year
             mon=target_dt.month
             day=target_dt.day
@@ -298,13 +313,14 @@ def write_text(obs,sim,river,pname):
 #=== function for making figure ===
 #==================================
 def make_fig(point):
+    print ( "\n make_fig:", point, pnames[point] )
     plt.close()
     labels=["Observed","Simulated"]
     fig, ax1 = plt.subplots()
     org=obs_data(pnames[point],syear=syear,eyear=eyear)
     org=np.array(org)
 
-    print ("reading observation file:", "./obs/discharge/", pnames[point] )
+    print ("-- make figure for:", point, rivers[point], pnames[point] )
 
     # draw observations
     lines=[ax1.plot(np.arange(start,last),ma.masked_less(org,0.0),label=labels[0],color="#34495e",linewidth=3.0,zorder=101)[0]] #,marker = "o",markevery=swt[point])
@@ -353,20 +369,17 @@ def make_fig(point):
  
     plt.legend(lines,labels,ncol=1,loc='upper right')
 
-    print ('save: '+rivers[point]+"-"+pnames[point]+".png", rivers[point] , pnames[point])
+    print ('-- save: '+rivers[point]+"-"+pnames[point]+".png", rivers[point] , pnames[point])
     plt.savefig("./fig/discharge/"+rivers[point]+"-"+pnames[point]+".png",dpi=500)
-    print ( "" )
 
-    print ('save: '+rivers[point]+"-"+pnames[point]+".txt", rivers[point] , pnames[point])
-    write_text(org,sim[:,point],rivers[point],pnames[point])
-    print ( "" )
+#    print ('save: '+rivers[point]+"-"+pnames[point]+".txt", rivers[point] , pnames[point])
+#    write_text(org,sim[:,point],rivers[point],pnames[point])
     return 0
 
 #============================
 ### --make figures parallel--
 #============================
-print ( "" )
-print ( "# making figures" )
+print ( "\n #[3] making figures" )
 #para_flag=1
 para_flag=0
 #--
@@ -375,4 +388,9 @@ if para_flag==1:
     p.map(make_fig,np.arange(pnum))
     p.terminate()
 else:
-    map(make_fig,np.arange(pnum))
+#    map(make_fig,np.arange(pnum))
+    for inum in np.arange(pnum):
+        make_fig(inum)
+
+print ( "@@@@@ end: discharge_validation.py \n\n" )
+

@@ -56,7 +56,7 @@ def correlation(s,o):
         
     return corr
 #========================================
-def obs_data(west,east,south,north,syear=2000,smon=1,eyear=2001,emon=12,obs_dir="./obs/fwe",res=0.25):
+def obs_data(west,east,south,north,syear=2000,smon=1,eyear=2001,emon=12,obs_dir="./obs",res=0.25):
     # read the sample observation data
     st_dt=datetime.date(syear,smon,1)
     start_dt=datetime.date(syear,smon,1)
@@ -74,11 +74,13 @@ def obs_data(west,east,south,north,syear=2000,smon=1,eyear=2001,emon=12,obs_dir=
     epix=int((east-west0)*(1.0/res))
     #---
     fname =obs_dir+"/floodarea_glb_15min.bin"
+    print ( "-- reading observatio file: ", fname)
     fldare = np.fromfile(fname,np.float32).reshape(-1,ny,nx)
     obs=[]
     time=[]
     for day in np.arange(start,last):
-        target_dt=start_dt+datetime.timedelta(days=day)
+        day2=int(day)
+        target_dt=start_dt+datetime.timedelta(days=day2)
         yyyy='%04d'%(target_dt.year)
         mm='%02d'%(target_dt.month)
         dd='%02d'%(target_dt.day)
@@ -103,20 +105,20 @@ eyear,emonth,edate=int(sys.argv[4]),int(sys.argv[5]),int(sys.argv[6])
 west,east,south,north=float(sys.argv[7]),float(sys.argv[8]),float(sys.argv[9]),float(sys.argv[10])
 output = sys.argv[11]
 
-print ("@@@@@ flood_extent_validation.py", syear,smonth,sdate, eyear,emonth,edate, west,east,south,north, output )
+print ("\n\n@@@@@ flood_extent_validation.py", syear,smonth,sdate, eyear,emonth,edate, west,east,south,north, output )
 
 #========================================
 fname="./map/params.txt"
 with open(fname,"r") as f:
     lines=f.readlines()
 #-------
-nx     = int(filter(None, re.split(" ",lines[0]))[0])
-ny     = int(filter(None, re.split(" ",lines[1]))[0])
-gsize  = float(filter(None, re.split(" ",lines[3]))[0])
-west0  = float(filter(None, re.split(" ",lines[4]))[0])
-east0  = float(filter(None, re.split(" ",lines[5]))[0])
-south0 = float(filter(None, re.split(" ",lines[6]))[0])
-north0 = float(filter(None, re.split(" ",lines[7]))[0])
+nx   =int  ( lines[0].split()[0] )
+ny   =int  ( lines[1].split()[0] )
+gsize=float( lines[3].split()[0] )
+west0=float( lines[4].split()[0] )
+east0=float( lines[5].split()[0] )
+south0=float( lines[6].split()[0] )
+north0=float( lines[7].split()[0] )
 #----
 start_dt=datetime.date(syear,smonth,sdate)
 end_dt=datetime.date(eyear,emonth,edate)
@@ -127,20 +129,15 @@ last=(end_dt-start_dt).days + 1
 Ndays=int(last)
 Nmons=(end_dt.year - start_dt.year) * 12 + end_dt.month - start_dt.month + 1
 
-print ( '' )
-print ( '# map dim (nx,ny,gsize):', nx, ny, gsize, 'time series N=', Nmons )
+print ( '\n#[1] map dim (nx,ny,gsize):', nx, ny, gsize, 'time series N=', Nmons )
 
 #====================
 
 if west < west0 or east > east0 or south < south0 or north > north0:
-    print ( '' )
-    print ('******** flood extent large than map dimension ********')
+    print ('\n******** flood extent large than map dimension ********')
     west,east,south,north = west0,east0,south0,north0
-    print ('')
 
-print ( '' )
-print ('Calculate the flood extent for: ', west,east,south,north)
-print ( '' )
+print ('\nCalculate the flood extent for: ', west,east,south,north)
 #========================
 npix=int((north0-north)*(1.0/gsize))
 spix=int((north0-south)*(1.0/gsize))
@@ -157,9 +154,12 @@ shared_array_sim  = sharedctypes.RawArray(sim._type_, sim)
 
 # for parallel calcualtion
 inputlist=[]
+inpn=0
 for year in np.arange(syear,eyear+1):
     yyyy='%04d' % (year)
     inputlist.append([yyyy,indir])
+    #print ( inputlist(inpn))
+    inpn=inpn+1
 
 #==============================
 #=== function for read data ===
@@ -203,14 +203,16 @@ def read_data(inputlist):
 #para_flag=1
 para_flag=0
 #--
+print ( "\n#[2] Reading simulation file " )
 if para_flag==1:
     p=Pool(4)
     res = p.map(read_data, inputlist)
     sim = np.ctypeslib.as_array(shared_array_sim)
     p.terminate()
 else:
-    res = map(read_data, inputlist)
-    sim = np.ctypeslib.as_array(shared_array_sim)
+    for inpi in np.arange(inpn):
+        read_data(inputlist[inpi])
+        sim = np.ctypeslib.as_array(shared_array_sim)
 
 #=====================================
 #=== function for saving data file ===
@@ -218,6 +220,7 @@ else:
 def write_text(obs,sim,west, east, north, south):
     fname="./txt/fwe/flood_water_extent.txt"
     with open(fname,"w") as f:
+        print ("-- write comparison result text:", fname )
         f.write("# Validation Data : Flood Water Extent\n")
         f.write("# CaMa-Flood version 4.0.0\n")
         f.write("#============================================================\n")
@@ -246,12 +249,14 @@ def write_text(obs,sim,west, east, north, south):
 #=== function for making figure ===
 #==================================
 def make_fig():
+    print ( "\n make_fig:" )
     plt.close()
     labels=["Observed","Simulated"]
     fig, ax1 = plt.subplots()
-    org = obs_data(west,east,south,north)
+    org = np.array( obs_data(west,east,south,north) )
 
-    print ("reading observation file:", "./obs/fwe/", west, east, south, north )
+    print ("-- make figure for domain:", west, east, south, north )
+
     time = np.arange(0,Nmons)
 
     # draw observations
@@ -289,18 +294,18 @@ def make_fig():
 
     plt.legend(lines,labels,ncol=1,loc='upper right')
     
-    print ('save: '+'flood_water_extent'+".png", west, east, north, south)
+    print ('-- save: '+'flood_water_extent'+".png", west, east, north, south)
     plt.savefig("./fig/fwe/flood_water_extent.png",dpi=500)
-    print ( "" )
 
-    print ('save: '+'flood_water_extent'+".txt", west, east, north, south)
-    write_text(org,sim,west, east, north, south)
-    print ( "" )
+#    print ('save: '+'flood_water_extent'+".txt", west, east, north, south)
+#    write_text(org,sim,west, east, north, south)
     return 0
 
 #============================
 ###   -- make figures --
 #============================
-print ( "" )
-print ( "# making figures" )
+print ( "\n#[3] making figures" )
 make_fig()
+
+print ( "@@@@@ end: flood extent_validation.py \n\n" )
+
