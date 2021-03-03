@@ -26,7 +26,29 @@ import netCDF4 as nc
 #========================================
 #====  functions for making figures  ====
 #========================================
+def filter_nan(s,o):
+    """
+    this functions removed the data  from simulated and observed data
+    where ever the observed data contains nan
+    """
+    data = np.array([s.flatten(),o.flatten()])
+    data = np.transpose(data)
+    data = data[~np.isnan(data).any(1)]
+
+    return data[:,0],data[:,1]
+#========================================
 def RMSE(s,o):
+    """
+    Root Mean Squre Error
+    input:
+        s: simulated
+        o: observed
+    output:
+        RMSE: Root Mean Squre Error
+    """
+    o=ma.masked_where(o<=0.0,o).filled(0.0)
+    s=ma.masked_where(o<=0.0,s).filled(0.0)
+    s,o = filter_nan(s,o)
     return np.sqrt(np.mean((s-o)**2))
 #========================================    
 def NS(s,o):
@@ -38,24 +60,26 @@ def NS(s,o):
     output:
         ns: Nash Sutcliffe efficient coefficient
     """
-    #s,o = filter_nan(s,o)
     o=ma.masked_where(o<=0.0,o).filled(0.0)
     s=ma.masked_where(o<=0.0,s).filled(0.0)
     o=np.compress(o>0.0,o)
     s=np.compress(o>0.0,s) 
+    s,o = filter_nan(s,o)
     return 1 - sum((s-o)**2)/(sum((o-np.mean(o))**2)+1e-20)
 #========================================
-def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,obs_dir="./obs/wse"):
+def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,obs_dir="./obs"):
     # read the sample observation data
     start=datetime.date(syear,smon,sday)
     end=datetime.date(eyear,emon,eday)
     
     # read wse observation
     fname=obs_dir+"/"+station+".txt"
+    print ( "-- reading observatio file: ", fname)
 
     with open(fname,"r") as f:
         lines=f.readlines()
 
+    # read Water Surface Elevation
     #--
     head=20
     #--
@@ -64,13 +88,15 @@ def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,obs_dir
     for line in lines[head::]:
         if line[0][0] == "#":
             continue
-        line = filter(None,re.split(" ",line))
-        date = line[0]
-        date = re.split("-",date)
+#        line = list(filter(None,re.split(" ",line)))    ####### this works as well 
+#        date = line[0]
+#        date = re.split("-",date)
+        line2 = line.split()
+        date = line2[0].split('-')
         yyyy = int(date[0])
         mm   = int(date[1])
         dd   = int(date[2])
-        wse  = float(line[1])
+        wse  = float(line2[1])
         now  = datetime.date(yyyy,mm,dd)
         if now < start and now > end:
             continue
@@ -93,16 +119,19 @@ eyear,emonth,edate=int(sys.argv[4]),int(sys.argv[5]),int(sys.argv[6])
 egm=sys.argv[7]      # provide EGM of observations, CaMa-Flood wse is given in EGM96
 output = sys.argv[8] # output file type bin/netCDF
 
-print ("@@@@@ wse_validation.py", syear,smonth,sdate, eyear,emonth,edate, egm, output )
+print ("\n\n@@@@@ wse_validation.py", syear,smonth,sdate, eyear,emonth,edate, egm, output )
 
 #========================================
 fname="./map/params.txt"
 with open(fname,"r") as f:
     lines=f.readlines()
 #-------
-nx     = int(filter(None, re.split(" ",lines[0]))[0])
-ny     = int(filter(None, re.split(" ",lines[1]))[0])
-gsize  = float(filter(None, re.split(" ",lines[3]))[0])
+nx   =int  ( lines[0].split()[0] )
+ny   =int  ( lines[1].split()[0] )
+gsize=float( lines[3].split()[0] )
+#nx     = int(filter(None, re.split(" ",lines[0]))[0])
+#ny     = int(filter(None, re.split(" ",lines[1]))[0])
+#gsize  = float(filter(None, re.split(" ",lines[3]))[0])
 #----
 start_dt=datetime.date(syear,smonth,sdate)
 end_dt=datetime.date(eyear,emonth,edate)
@@ -112,8 +141,7 @@ start=0
 last=(end_dt-start_dt).days + 1
 N=int(last)
 
-print ( '' )
-print ( '# map dim (nx,ny,gsize):', nx, ny, gsize, 'time seriez N=', N )
+print ( '\n#[1] map dim (nx,ny,gsize):', nx, ny, gsize, 'time seriez N=', N )
 
 #====================
 # read SWE station list
@@ -129,16 +157,17 @@ with open(fname,"r") as f:
     lines=f.readlines()
 #----------------------------
 for line in lines[1::]:
-    line = filter(None, re.split(" ",line))
-    rivers.append(line[0].strip())
-    pnames.append(line[1].strip())
-    x1list.append(int(line[2]))
-    y1list.append(int(line[3]))
-    legm08.append(float(line[4]))
-    legm08.append(float(line[5]))
+#    line = filter(None, re.split(" ",line))
+    line2 = line.split()
+    rivers.append(line2[0].strip())
+    pnames.append(line2[1].strip())
+    x1list.append(int(line2[2]))
+    y1list.append(int(line2[3]))
+    legm08.append(float(line2[4]))
+    legm08.append(float(line2[5]))
 pnum=len(pnames)
 
-print ( '- read station list', fname, 'station num pnum=', pnum )
+print ( '-- read station list', fname, 'station num pnum=', pnum )
 
 #========================
 ### read simulation files
@@ -153,9 +182,12 @@ shared_array_sim  = sharedctypes.RawArray(sim._type_, sim)
 
 # for parallel calcualtion
 inputlist=[]
+inpn=0
 for year in np.arange(syear,eyear+1):
     yyyy='%04d' % (year)
     inputlist.append([yyyy,indir])
+    #print ( inputlist(inpn))
+    inpn=inpn+1
 
 #==============================
 #=== function for read data ===
@@ -200,23 +232,28 @@ def read_data(inputlist):
 # para_flag=1
 para_flag=0
 #--
+print ( "\n #[2] Reading simulation file " )
 if para_flag==1:
     p   = Pool(4)
-    res = p.map(read_data, inputlist)
+    res = list(p.map(read_data, inputlist))      ##### this will also work
     sim = np.ctypeslib.as_array(shared_array_sim)
     p.terminate()
 else:
-    res = map(read_data, inputlist)
-    sim = np.ctypeslib.as_array(shared_array_sim)
+#    res = list(map(read_data, inputlist))             ##### this will also work
+    for inpi in np.arange(inpn):
+        read_data(inputlist[inpi])
+        sim = np.ctypeslib.as_array(shared_array_sim)
 
 #=====================================
 #=== function for saving data file ===
 #=====================================
 def write_text(time,obs,sim,river,pname):
+    RMSEval=RMSE(sim[time],obs)
     fname="./txt/wse/"+river+"-"+pname+".txt"
     st=0
     lt=len(obs)
     with open(fname,"w") as f:
+        print ("-- write comparison result text:", fname )
         f.write("# Validation Data : Water Surface Elevation\n")
         f.write("# CaMa-Flood version 4.0.0\n")
         f.write("#============================================================\n")
@@ -228,14 +265,20 @@ def write_text(time,obs,sim,river,pname):
         f.write("# Unit : m\n")
         f.write("#\n")
         f.write("#\n")
-        f.write("YYYY-MM-DD;     Observed     Simulated\n")
+        f.write("#============================================================\n")
+        f.write("# Statistics \n")
+        f.write("#\tRMSE : %3.2f\n"%(RMSEval))
+        f.write("#\n")
+        f.write("#\n")
+        f.write("YYYY-MM-DD      Observed     Simulated\n")
         f.write("#============================================================\n")
         for date in np.arange(st,lt):
-            target_dt=start_dt+datetime.timedelta(days=time[date])
+            date2=int(date)
+            target_dt=start_dt+datetime.timedelta(days=time[date2])
             year=target_dt.year
             mon=target_dt.month
             day=target_dt.day
-            line = '%04d-%02d-%02d     %10.4f     %10.4f\n'%(year,mon,day,obs[date],sim[date])
+            line = '%04d-%02d-%02d%14.4f%14.4f\n'%(year,mon,day,obs[date],sim[date])
             print (line)
             f.write(line)
     return 0
@@ -243,6 +286,7 @@ def write_text(time,obs,sim,river,pname):
 #=== function for making figure ===
 #==================================
 def make_fig(point):
+    print ( "\n make_fig:", point, pnames[point] )
     plt.close()
     labels=["Observed","Simulated"]
     fig, ax1 = plt.subplots()
@@ -252,7 +296,7 @@ def make_fig(point):
     else:
         org=np.array(org) 
 
-    print ("reading observation file:", "./obs/wse/", pnames[point] )
+    print ("-- make figure for:", point, rivers[point], pnames[point] )
 
     lines=[ax1.plot(time,org,label=labels[0],marker="o",color="#34495e",fillstyle="none",linewidth=0.0,zorder=101)[0]] #,marker = "o",markevery=swt[point])
     
@@ -284,27 +328,28 @@ def make_fig(point):
 
     plt.legend(lines,labels,ncol=1,loc='upper right') #, bbox_to_anchor=(1.0, 1.0),transform=ax1.transAxes)
     
-    print ('save: '+rivers[point]+"-"+pnames[point]+".png", rivers[point] , pnames[point])
+    print ('-- save: '+rivers[point]+"-"+pnames[point]+".png", rivers[point] , pnames[point])
     plt.savefig("./fig/wse/"+rivers[point]+"-"+pnames[point]+".png",dpi=500)
-    print ( "" )
 
     print ('save: '+rivers[point]+"-"+pnames[point]+".txt", rivers[point] , pnames[point])
     write_text(time,org,sim[:,point],rivers[point],pnames[point])
-    print ( "" )
     return 0
 
 #============================
 ### --make figures parallel--
 #============================
-print ( "" )
-print ( "# making figures" )
-#para_flag=1
+print ( "\n #[3] making figures" )
 # para_flag=1
 para_flag=0
 #--
 if para_flag==1:
     p=Pool(1)
-    p.map(make_fig,np.arange(pnum))
+    list(p.map(make_fig,np.arange(pnum)))
     p.terminate()
 else:
-    map(make_fig,np.arange(pnum))
+    # list(p.map(make_fig,np.arange(pnum))) ### this will also works
+    for inum in np.arange(pnum):
+        make_fig(inum)
+
+print ( "@@@@@ end: wse_validation.py \n\n" )
+
