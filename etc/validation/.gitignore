@@ -1,6 +1,7 @@
 # figures 
 *.png
 *.jpg
+*.txt
 
 etc/validation/txt_*/
 

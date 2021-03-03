@@ -9,7 +9,7 @@
 MAPDIR="../../map/conus_06min"
 OUTDIR="../../out/test2-conus_06min"
 # OBSDIR="./obs_sample_git"
-OBSDIR="../../obs"
+OBSDIR="../../obs/discharge"
 CAMADIR="../../"
 
 ## Discharge location list [as a text file]

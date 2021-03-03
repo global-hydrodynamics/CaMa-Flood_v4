@@ -91,7 +91,7 @@ def KGE(s,o):
     r = np.corrcoef(o, s)[0,1]
     return 1 - np.sqrt((r - 1) ** 2 + (B - 1) ** 2 + (y - 1) ** 2)
 #========================================
-def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,obs_dir="./obs/discharge"):
+def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,obs_dir="./obs"):
     # read the sample observation data
     start_dt=datetime.date(syear,smon,sday)
     last_dt=datetime.date(eyear,emon,eday)
@@ -111,8 +111,8 @@ def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,obs_dir
         #------
         dis = {}
         for line in lines[head::]:
-            line     = filter(None, re.split(" ",line))
-            yyyymmdd = filter(None, re.split("-",line[0]))
+            line     = list(filter(None, re.split(" ",line)))
+            yyyymmdd = list(filter(None, re.split("-",line[0])))
             yyyy     = '%04d'%(int(yyyymmdd[0]))
             mm       = '%02d'%(int(yyyymmdd[1]))
             dd       = '%02d'%(int(yyyymmdd[2]))
@@ -126,7 +126,7 @@ def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,obs_dir
         start=0
         last=(last_dt-start_dt).days + 1
         Q=[]
-        for day in np.arange(start,last):
+        for day in range(start,last):
             target_dt=start_dt+datetime.timedelta(days=day)
             yyyy='%04d'%(target_dt.year)
             mm='%02d'%(target_dt.month)
@@ -158,9 +158,9 @@ fname="./map/params.txt"
 with open(fname,"r") as f:
     lines=f.readlines()
 #-------
-nx     = int(filter(None, re.split(" ",lines[0]))[0])
-ny     = int(filter(None, re.split(" ",lines[1]))[0])
-gsize  = float(filter(None, re.split(" ",lines[3]))[0])
+nx     = int(list(filter(None, re.split(" ",lines[0])))[0])
+ny     = int(list(filter(None, re.split(" ",lines[1])))[0])
+gsize  = float(list(filter(None, re.split(" ",lines[3])))[0])
 #----
 start_dt=datetime.date(syear,smonth,sdate)
 end_dt=datetime.date(eyear,emonth,edate)
@@ -186,7 +186,7 @@ fname="./list.txt"
 with open(fname,"r") as f:
     lines=f.readlines()
 for line in lines[1::]:
-    line = filter(None, re.split(" ",line))
+    line = list(filter(None, re.split(" ",line)))
     rivers.append(line[0].strip())
     pnames.append(line[1].strip())
     x1list.append(int(line[2]))
@@ -259,17 +259,20 @@ para_flag=0
 #--
 if para_flag==1:
     p=Pool(4)
-    res = p.map(read_data, inputlist)
+    res = list(p.map(read_data, inputlist))
     sim = np.ctypeslib.as_array(shared_array_sim)
     p.terminate()
 else:
-    res = map(read_data, inputlist)
+    res = list(map(read_data, inputlist))
     sim = np.ctypeslib.as_array(shared_array_sim)
 
 #=====================================
 #=== function for saving data file ===
 #=====================================
 def write_text(obs,sim,river,pname):
+    NSval=NS(sim,obs)
+    NSLval=NSlog(sim,obs)
+    KGEval=KGE(sim,obs)
     fname="./txt/discharge/"+river+"-"+pname+".txt"
     with open(fname,"w") as f:
         f.write("# Validation Data : Discharge\n")
@@ -283,14 +286,21 @@ def write_text(obs,sim,river,pname):
         f.write("# Unit : m3/s\n")
         f.write("#\n")
         f.write("#\n")
-        f.write("YYYY-MM-DD;     Observed     Simulated\n")
         f.write("#============================================================\n")
-        for date in np.arange(start,last):
+        f.write("# Statistics \n")
+        f.write("#\tNS   : %3.2f\n"%(NSval))
+        f.write("#\tNSlog: %3.2f\n"%(NSLval))
+        f.write("#\tKGE  : %3.2f\n"%(KGEval))
+        f.write("#\n")
+        f.write("#\n")
+        f.write("YYYY-MM-DD      Observed     Simulated\n")
+        f.write("#============================================================\n")
+        for date in range(start,last):
             target_dt=start_dt+datetime.timedelta(days=date)
             year=target_dt.year
             mon=target_dt.month
             day=target_dt.day
-            line = '%04d-%02d-%02d     %10.4f     %10.4f\n'%(year,mon,day,obs[date],sim[date])
+            line = '%04d-%02d-%02d%14.4f%14.4f\n'%(year,mon,day,obs[date],sim[date])
             print (line)
             f.write(line)
     return 0
@@ -367,12 +377,12 @@ def make_fig(point):
 #============================
 print ( "" )
 print ( "# making figures" )
-#para_flag=1
+# para_flag=1
 para_flag=0
 #--
 if para_flag==1:
     p=Pool(4)
-    p.map(make_fig,np.arange(pnum))
+    list(p.map(make_fig,np.arange(pnum)))
     p.terminate()
 else:
-    map(make_fig,np.arange(pnum))
+    list(map(make_fig,set(np.arange(pnum))))
