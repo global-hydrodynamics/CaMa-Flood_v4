@@ -24,4 +24,4 @@ Simulated flood water extent [FWE] (fldare) is comapred with observed FWE values
 ```bash
 sh s02-flood_extent_validation.sh
 ```
-The above program will run ```src/flood_extent_validation.py``` which compares the simulated and observed FWE. The above program will output monthly averaged FWE time series figures (```fig_{tag}/wse```) and data files (```txt_{tag}/wse```) for the region choose. This program will output the correlation coeffient for FWE comaprison.
+The above program will run ```src/flood_extent_validation.py``` which compares the simulated and observed FWE. The above program will output monthly averaged FWE time series figures (```fig_{tag}/fwe```) and data files (```txt_{tag}/fwe```) for the region choose. This program will output the correlation coeffient for FWE comaprison.
