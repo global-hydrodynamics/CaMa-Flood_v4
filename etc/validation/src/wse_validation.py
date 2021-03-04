@@ -26,7 +26,29 @@ import netCDF4 as nc
 #========================================
 #====  functions for making figures  ====
 #========================================
+def filter_nan(s,o):
+    """
+    this functions removed the data  from simulated and observed data
+    where ever the observed data contains nan
+    """
+    data = np.array([s.flatten(),o.flatten()])
+    data = np.transpose(data)
+    data = data[~np.isnan(data).any(1)]
+
+    return data[:,0],data[:,1]
+#========================================
 def RMSE(s,o):
+    """
+    Root Mean Squre Error
+    input:
+        s: simulated
+        o: observed
+    output:
+        RMSE: Root Mean Squre Error
+    """
+    o=ma.masked_where(o<=0.0,o).filled(0.0)
+    s=ma.masked_where(o<=0.0,s).filled(0.0)
+    s,o = filter_nan(s,o)
     return np.sqrt(np.mean((s-o)**2))
 #========================================    
 def NS(s,o):
@@ -38,11 +60,11 @@ def NS(s,o):
     output:
         ns: Nash Sutcliffe efficient coefficient
     """
-    #s,o = filter_nan(s,o)
     o=ma.masked_where(o<=0.0,o).filled(0.0)
     s=ma.masked_where(o<=0.0,s).filled(0.0)
     o=np.compress(o>0.0,o)
     s=np.compress(o>0.0,s) 
+    s,o = filter_nan(s,o)
     return 1 - sum((s-o)**2)/(sum((o-np.mean(o))**2)+1e-20)
 #========================================
 def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,obs_dir="./obs"):
@@ -66,7 +88,7 @@ def obs_data(station,syear=2000,smon=1,sday=1,eyear=2001,emon=12,eday=31,obs_dir
     for line in lines[head::]:
         if line[0][0] == "#":
             continue
-#        line = filter(None,re.split(" ",line))
+#        line = list(filter(None,re.split(" ",line)))    ####### this works as well 
 #        date = line[0]
 #        date = re.split("-",date)
         line2 = line.split()
@@ -213,11 +235,11 @@ para_flag=0
 print ( "\n #[2] Reading simulation file " )
 if para_flag==1:
     p   = Pool(4)
-    res = p.map(read_data, inputlist)
+    res = list(p.map(read_data, inputlist))      ##### this will also work
     sim = np.ctypeslib.as_array(shared_array_sim)
     p.terminate()
 else:
-#    res = map(read_data, inputlist)
+#    res = list(map(read_data, inputlist))             ##### this will also work
     for inpi in np.arange(inpn):
         read_data(inputlist[inpi])
         sim = np.ctypeslib.as_array(shared_array_sim)
@@ -226,6 +248,7 @@ else:
 #=== function for saving data file ===
 #=====================================
 def write_text(time,obs,sim,river,pname):
+    RMSEval=RMSE(sim[time],obs)
     fname="./txt/wse/"+river+"-"+pname+".txt"
     st=0
     lt=len(obs)
@@ -242,7 +265,12 @@ def write_text(time,obs,sim,river,pname):
         f.write("# Unit : m\n")
         f.write("#\n")
         f.write("#\n")
-        f.write("YYYY-MM-DD;     Observed     Simulated\n")
+        f.write("#============================================================\n")
+        f.write("# Statistics \n")
+        f.write("#\tRMSE : %3.2f\n"%(RMSEval))
+        f.write("#\n")
+        f.write("#\n")
+        f.write("YYYY-MM-DD      Observed     Simulated\n")
         f.write("#============================================================\n")
         for date in np.arange(st,lt):
             date2=int(date)
@@ -250,7 +278,7 @@ def write_text(time,obs,sim,river,pname):
             year=target_dt.year
             mon=target_dt.month
             day=target_dt.day
-            line = '%04d-%02d-%02d     %10.4f     %10.4f\n'%(year,mon,day,obs[date],sim[date])
+            line = '%04d-%02d-%02d%14.4f%14.4f\n'%(year,mon,day,obs[date],sim[date])
             print (line)
             f.write(line)
     return 0
@@ -303,23 +331,23 @@ def make_fig(point):
     print ('-- save: '+rivers[point]+"-"+pnames[point]+".png", rivers[point] , pnames[point])
     plt.savefig("./fig/wse/"+rivers[point]+"-"+pnames[point]+".png",dpi=500)
 
-#    print ('save: '+rivers[point]+"-"+pnames[point]+".txt", rivers[point] , pnames[point])
-#    write_text(time,org,sim[:,point],rivers[point],pnames[point])
+    print ('save: '+rivers[point]+"-"+pnames[point]+".txt", rivers[point] , pnames[point])
+    write_text(time,org,sim[:,point],rivers[point],pnames[point])
     return 0
 
 #============================
 ### --make figures parallel--
 #============================
 print ( "\n #[3] making figures" )
-#para_flag=1
 # para_flag=1
 para_flag=0
 #--
 if para_flag==1:
     p=Pool(1)
-    p.map(make_fig,np.arange(pnum))
+    list(p.map(make_fig,np.arange(pnum)))
     p.terminate()
 else:
+    # list(p.map(make_fig,np.arange(pnum))) ### this will also works
     for inum in np.arange(pnum):
         make_fig(inum)
 

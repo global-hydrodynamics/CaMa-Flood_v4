@@ -15,7 +15,7 @@ OUTDIR="../../out/test1-glb_15min"
 OUTPUT="bin"
 # OUTPUT="netcdf"
 
-# OBbservation data dir
+# Observation data dir
 OBSDIR="./obs_sample/wse/"
 ## WSE location list [as a text file]
 LIST="./obs_sample/wse/wse_list_glb_15min.txt"

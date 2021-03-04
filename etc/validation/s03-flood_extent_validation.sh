@@ -12,6 +12,7 @@ CAMADIR="../../"
 MAPDIR="../../map/glb_15min"
 OUTDIR="../../out/test1-glb_15min"
 OBSDIR="./obs_sample/fwe"
+OBSDIR="../../obs_sample/fwe"
 
 # select the output file type [netcdf/bin]
 OUTPUT="bin"

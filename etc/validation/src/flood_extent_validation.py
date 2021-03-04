@@ -206,10 +206,11 @@ para_flag=0
 print ( "\n#[2] Reading simulation file " )
 if para_flag==1:
     p=Pool(4)
-    res = p.map(read_data, inputlist)
+    res = list(p.map(read_data, inputlist))
     sim = np.ctypeslib.as_array(shared_array_sim)
     p.terminate()
 else:
+    # list(p.map(read_data, inputlist))   ####  This will also work
     for inpi in np.arange(inpn):
         read_data(inputlist[inpi])
         sim = np.ctypeslib.as_array(shared_array_sim)
@@ -218,6 +219,7 @@ else:
 #=== function for saving data file ===
 #=====================================
 def write_text(obs,sim,west, east, north, south):
+    CCval=correlation(sim,obs)
     fname="./txt/fwe/flood_water_extent.txt"
     with open(fname,"w") as f:
         print ("-- write comparison result text:", fname )
@@ -235,12 +237,17 @@ def write_text(obs,sim,west, east, north, south):
         f.write("# Unit : km2\n")
         f.write("#\n")
         f.write("#\n")
-        f.write("YYYY-MM     Observed     Simulated\n")
+        f.write("#============================================================\n")
+        f.write("# Statistics \n")
+        f.write("#\tCorr. Coeff   : %3.2f\n"%(CCval))
+        f.write("#\n")
+        f.write("#\n")
+        f.write("YYYY-MM      Observed     Simulated\n")
         f.write("#============================================================\n")
         date=0
         for year in np.arange(syear,eyear):
             for mon in np.arange(1,12+1):
-                line = '%04d-%02d     %10.4f     %10.4f\n'%(year,mon,obs[date],sim[date])
+                line = '%04d-%02d%14.4f%14.4f\n'%(year,mon,obs[date],sim[date])
                 print (line)
                 f.write(line)
                 date = date + 1
@@ -297,8 +304,8 @@ def make_fig():
     print ('-- save: '+'flood_water_extent'+".png", west, east, north, south)
     plt.savefig("./fig/fwe/flood_water_extent.png",dpi=500)
 
-#    print ('save: '+'flood_water_extent'+".txt", west, east, north, south)
-#    write_text(org,sim,west, east, north, south)
+    print ('save: '+'flood_water_extent'+".txt", west, east, north, south)
+    write_text(org,sim,west, east, north, south)
     return 0
 
 #============================
