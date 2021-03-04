@@ -141,7 +141,7 @@ start=0
 last=(end_dt-start_dt).days + 1
 N=int(last)
 
-print ( '\n#[1] map dim (nx,ny,gsize):', nx, ny, gsize, 'time seriez N=', N )
+print ( '\n #[1] map dim (nx,ny,gsize):', nx, ny, gsize, 'time seriez N=', N )
 
 #====================
 # read SWE station list
@@ -250,8 +250,6 @@ else:
 def write_text(time,obs,sim,river,pname):
     RMSEval=RMSE(sim[time],obs)
     fname="./txt/wse/"+river+"-"+pname+".txt"
-    st=0
-    lt=len(obs)
     with open(fname,"w") as f:
         print ("-- write comparison result text:", fname )
         f.write("# Validation Data : Water Surface Elevation\n")
@@ -272,13 +270,22 @@ def write_text(time,obs,sim,river,pname):
         f.write("#\n")
         f.write("YYYY-MM-DD      Observed     Simulated\n")
         f.write("#============================================================\n")
-        for date in np.arange(st,lt):
+        i=0
+        for date in np.arange(start,last):
             date2=int(date)
-            target_dt=start_dt+datetime.timedelta(days=time[date2])
+            time2=time[i]
+            target_dt=start_dt+datetime.timedelta(days=date2)
             year=target_dt.year
             mon=target_dt.month
             day=target_dt.day
-            line = '%04d-%02d-%02d%14.4f%14.4f\n'%(year,mon,day,obs[date],sim[date])
+            sim_val=sim[date2]
+            if date2==time2:
+                obs_val=obs[i]
+                i=i+1
+                i=min(i,len(time)-1)
+            else:
+                obs_val=-9999.0
+            line = '%04d-%02d-%02d%14.4f%14.4f\n'%(year,mon,day,obs_val,sim_val)
             print (line)
             f.write(line)
     return 0
