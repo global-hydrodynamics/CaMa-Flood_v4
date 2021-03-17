@@ -249,8 +249,7 @@ def read_data(inputlist):
 
     # simulated discharge
     if output == "bin":
-        # fname=indir+"/outflw"+yyyy+".bin"
-        fname=indir+"/rivout"+yyyy+".bin"
+        fname=indir+"/outflw"+yyyy+".bin"
         simfile=np.fromfile(fname,np.float32).reshape([dt,ny,nx])
     else:
         fname=indir+"/o_outflw"+yyyy+".nc"
