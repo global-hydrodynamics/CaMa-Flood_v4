@@ -7,26 +7,30 @@
 
 CAMADIR="../../"
 
-##### For test2 simulation #####
-MAPDIR="../../map/conus_06min"
-OUTDIR="../../out/test2-conus_06min"
-OBSDIR="./obs_sample/discharge"
-LIST="./obs_sample/discharge/discharge_list_conus_06min.txt"  ## Discharge location list [as a text file]
-## validation project tag
-TAG="conus"
-#select the output file type [netcdf/bin]
-OUTPUT="netcdf"
+# ##### For test2 simulation #####
+# MAPDIR="../../map/conus_06min"
+# OUTDIR="../../out/test2-conus_06min"
+# OBSDIR="./obs_sample/discharge"
+# LIST="./obs_sample/discharge/discharge_list_conus_06min.txt"  ## Discharge location list [as a text file]
+# ## validation project tag
+# TAG="conus"
+# #select the output file type [netcdf/bin]
+# OUTPUT="netcdf"
 #################################
 
 ##### For test1 simulation #####
-##MAPDIR="../../map/glb_15min"
-##OUTDIR="../../out/test1-glb_15min"
-##OBSDIR="./obs_sample/discharge"
-##LIST="./obs_sample/discharge/discharge_list_glb_15min.txt"  ## Discharge location list [as a text file]
+MAPDIR="../../map/glb_15min"
+# OUTDIR="../../out/test1-glb_15min"
+OUTDIR="../../out/test-dev_HanazakiDam"
+# OBSDIR="../../obs_sample/discharge"
+OBSDIR="/cluster/data6/menaka/GRDC_2019"
+# LIST="../../obs_sample/discharge/discharge_list_glb_15min.txt"  ## Discharge location list [as a text file]
+LIST=${MAPDIR}"/GRDC_alloc.txt"  ## Discharge location list [as a text file]
 #### validation project tag
-##TAG="glb"
+TAG="glb_Dam"
 ###select the output file type [netcdf/bin]
-##OUTPUT="bin"
+OUTPUT="bin"
+# OUTPUT="netcdf"
 #################################
 
 echo "MAPDIR, OUTDIR, OBSDIR= " $MAPDIR, $OUTDIR, $OBSDIR

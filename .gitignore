@@ -13,12 +13,16 @@
 etc/map/*/
 glb_15min/
 conus_06min/
+map/data/
 
 # out folder
 out/
 
 #obs folder
 obs/
+obs_sample/
+
+inp/
 
 #fig folders
 etc/validation/fig_*/
@@ -32,3 +36,6 @@ etc/validation/txt_*/
 etc/*.txt
 *.mod
 *.a
+
+# CaMa-Flood 
+gosh/CaMa-Flood.o*
