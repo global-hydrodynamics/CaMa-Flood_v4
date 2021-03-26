@@ -1,3 +1,4 @@
+# visualize inflow/outflw to reservoirs
 from datetime import datetime
 import os
 import numpy as np
@@ -12,37 +13,30 @@ from dateutil.relativedelta import relativedelta
 import math
 
 #### initial setting ################################################################
-
 # VAR = ['damout', 'daminf', 'damsto', 'natout', 'natinf', 'obsout', 'obsinf', 'obssto']
 VAR = ['damout', 'daminf', 'damsto', 'natout', 'obsout', 'obsinf', 'obssto']
-
 ID_list = ['601','421']
 
+# plot data
 sdate_fig = datetime(2000, 1, 1, 0)
 edate_fig = datetime(2000, 12, 31, 0)
-
 figdir = './fig/'
 
-
 #### simulation setting -------------------------------
-
 nx, ny = 1440, 720
 
+camadir = './out/'
 damsim = 'test_dam'
 natsim = "test_nat"
-
-camadir = '../../out/'
 
 sy,sm,sd,sh = 2000,1,1,0    #start date of simulation
 ey,em,ed,eh = 2001,12,31,23
 dt = 60*60*3  #output frequency
 
+## Observation data
 dtobs = 24*60*60
-obsdir="./obs_GRanD/"
-damfile = "./sample_data/dam_params_sample2.csv"
-
-if not os.path.exists(obsdir):
-    os.symlink("/cluster/data5/hanazaki/data/obs_global/GRanD_reservoir/", obsdir)
+obsdir="./obs_dam/"
+damfile = "./sample_data/damparam_sample_glb_15min.csv"
 
 #####################################################################
 
@@ -316,6 +310,7 @@ def draw_dams(grandid, sdate_fig, edate_fig, obs_l, sim_l, name, Qf, consto, eme
 def main():
     
     global ID_list
+
     ID_list = damloc.query('GRAND_ID==@ID_list')['GRAND_ID'].values.tolist() #sort
     print("ID_list:", ID_list)
     print(' ')

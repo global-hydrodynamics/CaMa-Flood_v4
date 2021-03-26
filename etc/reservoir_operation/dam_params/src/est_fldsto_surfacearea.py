@@ -1,3 +1,4 @@
+# to estimate flood control voluse from ReGeom data
 from datetime import datetime
 from datetime import date
 import os
@@ -8,38 +9,28 @@ from dateutil.relativedelta import relativedelta
 
 print(os.path.basename(__file__))
 
-
 ##### initial setting ------------------------------
 
 tag = sys.argv[1]
-dam_file = '../'+tag+'/damloc_modified_'+tag+'.csv'
+dam_file = './'+tag+'/damloc_modified.csv'
 
 ## link
-GRSADdir = "./inp/GRSAD/"
+GRSADdir  = "./inp/GRSAD/"
 ReGeomdir = "./inp/ReGeom/"
-ReGeom_ErrorFile = "./inp/ReGeom_Error"
+ReGeom_ErrorFile = "./inp/ReGeom_Error.csv"
 
+output_file = './'+tag+'/tmp_p03_fldsto.csv'
+
+#### parameters to calculate flood control volume
 pc = 75    ## percentile of surface area timeseries
-
-# GRSADdir = '/cluster/data5/hanazaki/data/GRSAD/GRSAD_timeseries/'
-# ReGeomdir = '/cluster/data5/hanazaki/data/ReGeom/Area_Strg_Dp/Area_Strg_Dp/'
-# ReGeom_ErrorFile = '/cluster/data5/hanazaki/data/ReGeom/ReGeomData_WOW_V1.csv'
-
 s_yr, s_mon = 1984, 3
 e_yr, e_mon = 2018, 12
 
-output_file = '../'+tag+'/tmp_p03_fldsto.csv'
-
-
 #### read database --------------------------
-
 grand = pd.read_csv(dam_file)
-
 error = pd.read_csv(ReGeom_ErrorFile)
 
-
 #### dam loop -----------------------------
-
 cols = ['damid', 'damname', 'ave_area', 'fldsto_mcm', 'totalsto_mcm']
 df_new = pd.DataFrame(index=[], columns=cols)
 
@@ -49,6 +40,7 @@ for i in range(len(grand)):
     damname = gr['damname'].values[0]
     totalsto = gr['totalsto_mcm'].values[0] 
     print('')
+    print('------')
     print(nm, damname)
 
     #if nm > 6820:
@@ -160,7 +152,8 @@ for i in range(len(grand)):
     df_i = pd.Series(df_i, index=df_new.columns)
     df_new = df_new.append(df_i, ignore_index=True)
 
-print('')
+print('------')
+print('save results')
 print(df_new)
 df_new.to_csv(output_file)
 print(output_file)

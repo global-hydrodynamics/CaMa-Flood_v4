@@ -12,23 +12,20 @@ import matplotlib.pyplot as plt
 import sys
 
 ## initial settings ===============================================
-
-inputfile = sys.argv[1]
-
-mapdir = './inp/map/'
-upareafile = str(mapdir)+'/uparea.bin' 
-# drainage area from cama map dir
+## allocation parameters
+tag  =sys.argv[1]               # projhect name
+minuparea = float(sys.argv[2])  # minimum drainage area to output
 
 # [grandid,lon,lat,x,y,upreal,upreal_cama]
-outputfile = sys.argv[2]
+inputfile  = './'+tag+'/damloc_tmp.txt'
+outputfile = './'+tag+'/damloc_modified.csv'
 
-minuparea = float(sys.argv[3])
-# minimum drainage area to output
+# drainage area from cama map dir
+mapdir = './inp/map/'
+upareafile = str(mapdir)+'/uparea.bin' 
 
-minerror = 0.1
 # minimum uparea error to allow
-
-
+minerror = 0.1
 #===============================================================
 
 ## get map nx, ny --------------------

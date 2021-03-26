@@ -14,28 +14,25 @@ print(os.path.basename(__file__))
 
 #### initial setting =====================================
 
-syear, eyear = int(sys.argv[1]), int(sys.argv[2])
+syear=int(sys.argv[1])
+eyear=int(sys.argv[2])
+dt   =int(sys.argv[3])
+tag  =sys.argv[4]
 
-outdir = './inp/natsim/'
-
-dt = int(sys.argv[3])
-
-tag = sys.argv[4]
-
-mapdir = './inp/map/'
-
-dam_file = '../'+tag+'/damloc_modified_'+tag+'.csv'
-
-####=======================================================
+outdir   = './inp/natsim/'
+mapdir   = './inp/map/'
+dam_file = './'+tag+'/damloc_modified.csv'
 
 ## get map nx, ny ----------------------------------------
 
 f = open(mapdir+'/params.txt', 'r')
 data = f.readline()
-nx = int(data.strip().split(' ')[0])
+nx   = int(data.strip().split(' ')[0])
 data = f.readline()
-ny = int(data.strip().split(' ')[0])
+ny   = int(data.strip().split(' ')[0])
 f.close()
+print('CaMa map dim (nx,ny):', nx,ny)
+
 damcsv = pd.read_csv(dam_file)
 ndams = len(damcsv)
 print('number of dams:', ndams)
@@ -44,9 +41,8 @@ print('number of dams:', ndams)
 
 maxdays = 1   #number of days to consider extreme values in a year
 
-max_outf = '../'+tag+'/tmp_p01_AnnualMax.bin'
-mean_outf = '../'+tag+'/tmp_p01_AnnualMean.bin'
-
+max_outf = './'+tag+'/tmp_p01_AnnualMax.bin'
+mean_outf= './'+tag+'/tmp_p01_AnnualMean.bin'
 
 ### calculate annual maximum -------------------------------
 
@@ -59,7 +55,7 @@ y_arr = damcsv['iy'].values - 1
 
 for i, year in enumerate(range(syear, eyear+1, 1)):
     print(' ')
-    print(year)
+    print('read natsim outflw: year=', year)
 
     ## read NAT outflw
     outflw_file = outdir + '/outflw' + str(year) + '.bin'
@@ -86,13 +82,13 @@ for i, year in enumerate(range(syear, eyear+1, 1)):
             max_finarray[i*maxdays:(i+1)*maxdays, j] = outflw_sorted[0:maxdays]
     print('max:', max_finarray[i*maxdays,:5])
     
-
+print('save flood and mean discharge at dam grids')
 max_finarray.astype('float32').tofile(max_outf)
 
 mean_finarray = np.mean(mean_yeararray, axis=0)
 mean_finarray.astype('float32').tofile(mean_outf)
-print(max_outf)
-print(mean_outf)
+print('-- flood discharge', max_outf)
+print('-- mean  discharge', mean_outf)
 print('#########################')
 print(' ')
     

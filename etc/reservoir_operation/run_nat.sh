@@ -1,6 +1,6 @@
 #!/bin/sh
 #==========================================================
-# CaMa-Flood sample go script for reservoir operation scheme
+# CaMa-Flood sample go script for reservoir operation scheme [No Dam Operation]
 # -- Multi 1-year simulations (2000 spinup -> 2000 -> 2001)
 # -- Daily runoff forcing (plain binary) at 1deg resolution
 #
@@ -47,7 +47,7 @@ export OMP_NUM_THREADS=16                    # OpenMP cpu num
 
 #============================
 #*** 1a. Experiment directory setting
-EXP="test_dam"                       # experiment name (output directory name)
+EXP="test_mat"                       # experiment name (output directory name)
 RDIR=${PWDD}/out/${EXP}                     # directory to run CaMa-Flood
 EXE="MAIN_cmf"                              # Execute file name
 PROG=${BASE}/src/${EXE}                     # location of Fortran main program
@@ -65,7 +65,7 @@ LFPLAIN=".TRUE."                            # .TRUE. to activate floodplain stor
 LKINE=".FALSE."                             # .TRUE. to use kinematic wave equation
 LFLDOUT=".TRUE."                            # .TRUE. to activate floodplain discharge
 LPTHOUT=".TRUE."                            # .TRUE. to activate bifurcation flow, mainly for delta simulation
-LDAMOUT=".TRUE."                           # .TRUE. to activate reservoir operation (under development)
+LDAMOUT=".FALSE."                           # .TRUE. to activate reservoir operation (under development)
 
 CDAMFILE="${BASE}/etc/dam_scheme/sample_data/damparam_sample_glb_15min.csv"
 
@@ -203,8 +203,8 @@ COUTDIR="./"                                # output directory
 #CVARSOUT="outflw,storge,fldfrc,maxdph,flddph" # list output variable (comma separated)
 #CVARSOUT="rivout,rivsto,rivdph,rivvel,fldout,fldsto,flddph,fldfrc,fldare,sfcelv,outflw,storge,pthflw,pthout,maxsto,maxflw,maxdph,damsto,daminf" # list output variable (comma separated)    # dam variables are added!!!!
 
-#CVARSOUT="flddph,outflw,rivdph" # list output variable (comma separated)    # dam variables are added!!!!
-CVARSOUT="flddph,outflw,daminf,damsto,rivdph" # list output variable (comma separated)    # dam variables are added!!!!
+CVARSOUT="flddph,outflw,rivdph" # list output variable (comma separated)    # dam variables are added!!!!
+#CVARSOUT="flddph,outflw,daminf,damsto,rivdph" # list output variable (comma separated)    # dam variables are added!!!!
 
 COUTTAG=""  # see (3) set each year         #   output tag $(COUTDIR)/$(VARNAME)$(OUTTAG).bin
 

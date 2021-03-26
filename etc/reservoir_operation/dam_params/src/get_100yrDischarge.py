@@ -1,3 +1,4 @@
+# to calculate 100yr discharge at dam grids using natsim data
 from datetime import datetime
 import os
 import numpy as np
@@ -12,23 +13,19 @@ print(os.path.basename(__file__))
 
 #### initial setting -------------------------------------
 
-SYEAR, EYEAR = int(sys.argv[1]), int(sys.argv[2])
+syear=int(sys.argv[1])
+eyear=int(sys.argv[2])
+tag  =sys.argv[3]
 
-TAG = sys.argv[3]
-
-PYEAR = 100   # return period
+pyear = 100   # return period
 maxdays = 1
 
-DAM_FILE = '../'+TAG+'/damloc_modified_'+TAG+'.csv'
-
+DAM_FILE = './'+tag+'/damloc_modified.csv'
 #=====================================================
-
 def PlottingPosition(n):
-
     ii=np.arange(n)+1
     pp=(ii-alpha)/(n+1-2*alpha)
     return pp
-
 
 def gum(xx,pp,pyear):
     def func_gum(xx):
@@ -57,17 +54,11 @@ def gum(xx,pp,pyear):
     #print(res,ye,yp,ss)
     return res,ye,yp,ss
 
-
 def main():
-
     finarray = np.zeros((ndams))
-
     pps = PlottingPosition(years)
-
     for dam in range(ndams):
-
         site_arr = readdata[:, dam]
-
         if np.max(site_arr) >= 1e+20:
             finarray[dam] = np.nan
             continue
@@ -77,11 +68,9 @@ def main():
             continue
 
         site_arr = np.where(site_arr<0, 0, site_arr)
-
         site_arr = np.sort(site_arr)
-
-        res, ye, yp, ss = gum(site_arr, pps, PYEAR)
-        #print(str(PYEAR)+'yr discharge=', yp)
+        res, ye, yp, ss = gum(site_arr, pps, pyear)
+        #print(str(pyear)+'yr discharge=', yp)
 
         if yp > 0:
             finarray[dam] = yp
@@ -90,12 +79,10 @@ def main():
 
         print('damID:', dam+1, ", 100yr discharge:", "{:.1f}".format(yp))
 
-
     finarray.astype('float32').tofile(outputpath)
     print('file outputted:', outputpath)
     print('###########################################')
     print(' ')
-
 
 #===========================================================
 
@@ -104,22 +91,16 @@ if __name__ == '__main__':
     df = pd.read_csv(DAM_FILE)
     ndams = len(df)
 
-    years = EYEAR - SYEAR + 1
+    years = eyear - syear + 1
     years = years * maxdays
 
-    alpha = 0.0 #weibull
+    alpha = 0.0  #weibull
     
-    readdatapath = '../' + TAG + '/tmp_p01_AnnualMax.bin'
+    readdatapath = './'+tag+'/tmp_p01_AnnualMax.bin'
     readdata = np.fromfile(str(readdatapath), 'float32').reshape(years, ndams)
 
-    outputpath = '../' + TAG + '/tmp_p02_' + str(PYEAR) + 'year.bin'
+    outputpath = './'+tag+'/tmp_p02_'+str(pyear)+'year.bin'
 
     main()
 
     exit()
-
-
-
-
-
-# %%

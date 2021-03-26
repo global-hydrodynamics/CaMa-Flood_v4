@@ -1,162 +1,151 @@
+!===========================
+! Code to allocate GRanD reservoir on CaMa-Flood river map
+! -- input:  GRanD reservoir list      (inp/damlist.csv)
+! -- output: tentative allocation file (filename = aug1)
+! 
+! written by Risa Hanazaki, 2021Mar
+! ==========================
 module convert_latlon
-  implicit none
-
-  contains
-
-    subroutine calc_ixiy(lon, lat, nx, ny, mapdir, west, east, north, south, ix, iy, nextx)
-      ! calculation type
-      character*256       ::  buf
-
-      ! river network map parameters
-      integer, intent(out)       ::  ix, iy
-      integer             ::  jx, jy, kx, ky, mx,my
-      integer, intent(in)        ::  nx, ny        !! river map grid number
-      real, intent(in)    ::  lat, lon
-      ! river netwrok map
-      integer*2,allocatable:: catmx(:,:), catmy(:,:)
-      real                ::  glon, glat
-      real, intent(in)    ::  west, east, north, south
-      real                ::  gsize, csize
-
-      integer             ::  isHires
-
-      ! file
-      character*256       ::  finp, fparam, floc
-      character*256       ::  tag
-      integer             ::  ios
-
-      character*128, intent(in)       ::  mapdir  !!!
-  
-      integer, intent(in) ::  nextx(nx, ny)      !! downstream 
-      
-      !----------------------------------------------------
-
-        isHires=0
-        print *, ''
-
-        !! check 15sec hires map availability
-        floc=TRIM(mapdir)//'/15sec/location.txt'
-        open(11,file=floc,form='formatted',status='old',iostat=ios)
-        if( ios==0 )then
-          read(11,*)
-          read(11,*)
-          read(11,*) buf, tag, buf, buf, buf, buf, mx, my, csize
+implicit none
+contains
+!! =====================
+!! calculate (ix,iy) coordinate on CaMa river map, for input location (lat,lon)
+!! =====================
+  subroutine calc_ixiy(lon, lat, nx, ny, mapdir, west, east, north, south, ix, iy, nextx)
+    character*256              ::  buf
+    ! river network map parameters
+    integer, intent(out)       ::  ix, iy
+    integer                    ::  jx, jy, kx, ky, mx,my
+    integer, intent(in)        ::  nx, ny           !! river map grid number
+    real, intent(in)           ::  lat, lon
+    ! river netwrok map
+    integer*2,allocatable      ::  catmx(:,:), catmy(:,:)
+    real                       ::  glon, glat
+    real, intent(in)           ::  west, east, north, south
+    real                       ::  gsize, csize
+    integer                    ::  isHires
+    ! file
+    character*256              ::  finp, fparam, floc
+    character*256              ::  tag
+    integer                    ::  ios
+    character*128, intent(in)  ::  mapdir
+    integer, intent(in)        ::  nextx(nx, ny)      !! downstream 
+    !----------------------------------------------------
+    isHires=0
+    print *, ''
+    
+    !! check 15sec hires map availability
+    floc=TRIM(mapdir)//'/15sec/location.txt'
+    open(11,file=floc,form='formatted',status='old',iostat=ios)
+    if( ios==0 )then
+      read(11,*)
+      read(11,*)
+      read(11,*) buf, tag, buf, buf, buf, buf, mx, my, csize
+      close(11)
+      if( trim(tag)=='15sec' )then
+        !print *, 'USE 15sec hires map'
+        isHires=15
+    
+        allocate(catmx(mx,my),catmy(mx,my))
+    
+        finp=TRIM(mapdir)//'/15sec/15sec.catmxy.bin'
+        open(11,file=finp,form='unformatted',access='direct',recl=2*mx*my,status='old',iostat=ios)
+        read(11,rec=1) catmx
+        read(11,rec=2) catmy
+        close(11)
+    
+        jx=int( (lon-west) /csize )+1
+        jy=int( (north-lat)/csize )+1
+        if( jx<=0 .or. jx>mx .or. jy<=0 .or. jy>my )then
+          print *, 'ix,iy cannot be defined'
+          ix=-99
+          iy=-99
+          !stop
+        endif
+        ix=catmx(jx,jy)
+        iy=catmy(jx,jy)
+        if( ix<=0 .or. ix>nx .or. ix<=0 .or. iy>ny )then
+          print *, 'ix,iy cannot be defined'
+          ix=-99
+          iy=-99
+          !stop
+        endif
+      endif
+    endif
+    
+    if( isHires/=15 )then
+    !! check 1min hires map availability
+      floc=TRIM(mapdir)//'/1min/location.txt'
+      open(11,file=floc,form='formatted',status='old',iostat=ios)
+      if( ios==0 )then
+        read(11,*)
+        read(11,*)
+        read(11,*) buf, tag, buf, buf, buf, buf, mx, my, csize
+        close(11)
+        if( trim(tag)=='1min' )then
+          !print *, 'USE 1min hires map'
+          isHires=60
+    
+          allocate(catmx(mx,my),catmy(mx,my))
+    
+          finp=TRIM(mapdir)//'/1min/1min.catmxy.bin'
+          open(11,file=finp,form='unformatted',access='direct',recl=2*mx*my,status='old',iostat=ios)
+          read(11,rec=1) catmx
+          read(11,rec=2) catmy
           close(11)
-          if( trim(tag)=='15sec' )then
-            !print *, 'USE 15sec hires map'
-            isHires=15
-
-            allocate(catmx(mx,my),catmy(mx,my))
-
-            finp=TRIM(mapdir)//'/15sec/15sec.catmxy.bin'
-            open(11,file=finp,form='unformatted',access='direct',recl=2*mx*my,status='old',iostat=ios)
-            read(11,rec=1) catmx
-            read(11,rec=2) catmy
-            close(11)
-
-            jx=int( (lon-west) /csize )+1
-            jy=int( (north-lat)/csize )+1
-            if( jx<=0 .or. jx>mx .or. jy<=0 .or. jy>my )then
-              print *, 'ix,iy cannot be defined'
-              ix=-99
-              iy=-99
-              !stop
-            endif
-            ix=catmx(jx,jy)
-            iy=catmy(jx,jy)
-            if( ix<=0 .or. ix>nx .or. ix<=0 .or. iy>ny )then
-              print *, 'ix,iy cannot be defined'
-              ix=-99
-              iy=-99
-              !stop
-            endif
-          endif
-        endif
-
-        if( isHires/=15 )then
-        !! check 1min hires map availability
-          floc=TRIM(mapdir)//'/1min/location.txt'
-          open(11,file=floc,form='formatted',status='old',iostat=ios)
-          if( ios==0 )then
-            read(11,*)
-            read(11,*)
-            read(11,*) buf, tag, buf, buf, buf, buf, mx, my, csize
-            close(11)
-            if( trim(tag)=='1min' )then
-              !print *, 'USE 1min hires map'
-              isHires=60
-  
-              allocate(catmx(mx,my),catmy(mx,my))
-  
-              finp=TRIM(mapdir)//'/1min/1min.catmxy.bin'
-              open(11,file=finp,form='unformatted',access='direct',recl=2*mx*my,status='old',iostat=ios)
-              read(11,rec=1) catmx
-              read(11,rec=2) catmy
-              close(11)
-  
-              jx=int( (lon-west) /csize )+1
-              jy=int( (north-lat)/csize )+1
-              ! print *, jx, jy, mx, my
-              if( jx<=0 .or. jx>mx .or. jy<=0 .or. jy>my )then
-                print *, 'ix,iy cannot be defined'
-                ix=-99
-                iy=-99
-                !stop
-              endif
-              ix=catmx(jx,jy)
-              iy=catmy(jx,jy)
-              ! print *, ix, iy
-              if( ix<=0 .or. ix>nx .or. ix<=0 .or. iy>ny )then
-                print *, 'ix,iy cannot be defined'
-                ix=-99
-                iy=-99
-                !stop
-              endif
-            endif
-          endif
-        endif
-
-        deallocate(catmx, catmy)
-
-
-        if( isHires==0 )then
-          ix=int( (lon-west) /gsize )+1
-          iy=int( (north-lat)/gsize )+1
-        endif
-
-
-        glon=west +gsize*(ix-0.5)
-        glat=north-gsize*(iy-0.5)
-
-
-        if ( ix>0 .and. iy>0) then
-          !print *, "nextx(ix,iy):", nextx(ix,iy)
-
-          if( nextx(ix,iy)==-9999 )then
-            print *, 'NOT LAND GRID'
-            ix = -99
-            iy = -99
+    
+          jx=int( (lon-west) /csize )+1
+          jy=int( (north-lat)/csize )+1
+          ! print *, jx, jy, mx, my
+          if( jx<=0 .or. jx>mx .or. jy<=0 .or. jy>my )then
+            print *, 'ix,iy cannot be defined'
+            ix=-99
+            iy=-99
             !stop
-          end if
-        end if
-
-    end subroutine calc_ixiy
-      
+          endif
+          ix=catmx(jx,jy)
+          iy=catmy(jx,jy)
+          ! print *, ix, iy
+          if( ix<=0 .or. ix>nx .or. ix<=0 .or. iy>ny )then
+            print *, 'ix,iy cannot be defined'
+            ix=-99
+            iy=-99
+            !stop
+          endif
+        endif
+      endif
+    endif
+    
+    deallocate(catmx, catmy)
+    
+    if( isHires==0 )then
+      ix=int( (lon-west) /gsize )+1
+      iy=int( (north-lat)/gsize )+1
+    endif
+    
+    glon=west +gsize*(ix-0.5)
+    glat=north-gsize*(iy-0.5)
+    
+    if ( ix>0 .and. iy>0) then
+      !print *, "nextx(ix,iy):", nextx(ix,iy)
+      if( nextx(ix,iy)==-9999 )then
+        print *, 'NOT LAND GRID'
+        ix = -99
+        iy = -99
+        !stop
+      end if
+    end if
+  end subroutine calc_ixiy
 end module convert_latlon
-
-
-
 !===================================================================
-
+! MAIN PROGRAM to allocate reservoirs on CaMa-Flood Map
+!===================================================================
 program main
-
-    use convert_latlon
-
-    implicit none
-
-    integer          :: ndams, grand, flag, nx, ny, dam, grandid, ix, iy, dx, dy, is, ios, jx, jy, cnt
-    real             :: gsize, west, east, south, north, upreal, lat, lon, totalsto
-    character*256    :: buf, grandf, mapdir, outf, fparam, finp, grandid_c, catchskm, londd, latdd, fmt, damname, capmcm
+  use convert_latlon
+  implicit none
+    integer             ::  ndams, grand, flag, nx, ny, dam, grandid, ix, iy, dx, dy, is, ios, jx, jy, cnt
+    real                ::  gsize, west, east, south, north, upreal, lat, lon, totalsto
+    character*256       ::  buf, grandf, mapdir, outf, fparam, finp, grandid_c, catchskm, londd, latdd, fmt, damname, capmcm
     integer,allocatable ::  nextx(:,:)      !! downstream x
     integer,allocatable ::  nexty(:,:)      !! downstream y
     integer,allocatable ::  basin(:,:)      !! 
@@ -166,30 +155,26 @@ program main
     real,allocatable    ::  elevtn(:,:)     !! 
     real,allocatable    ::  outlon(:,:)     !! 
     real,allocatable    ::  outlat(:,:)     !! 
-
     !-------------------------------------------------------------------
-
-
-    call getarg(1, buf)
-    read(buf,*) ndams
-    call getarg(2,outf)
-
-    !! link
-    grandf='./inp/damfile'
+    !! linked input list & map
+    grandf='./inp/damlist.csv'
+    outf='./damloc_tmp.txt'
     mapdir='./inp/map/'
 
-    open(150, file=outf, form='formatted', action='write')
-    fmt="(a,x,a,x,a,x,a,x,a,x,a,x,a,x,a,x,a)"
-    write(150,fmt) "damid", "damname", "lon", "lat", "ix", "iy", "upreal", "uparea_cama", "totalsto_mcm"
 
-    if (is/=0) stop 'cannot open file!!!'
-    open(grand, file=grandf, form='formatted', action='read')
-    read(grand,*)
+    fmt="(a,x,a,x,a,x,a,x,a,x,a,x,a,x,a,x,a)" !! output data format
+    open(31, file=outf, form='formatted', action='write')
+    write(31,fmt) "damid", "damname", "lon", "lat", "ix", "iy", "upreal", "uparea_cama", "totalsto_mcm"
 
-    print *, TRIM(grandf)
-    print *, ndams
-    print *, TRIM(mapdir)
-    print *, TRIM(outf)
+!!    if (is/=0) stop 'cannot open file!!!'
+    open(21, file=grandf, form='formatted', action='read')
+    read(21,*) ndams   !! read number of dams to allocate
+    read(21,*)         !! skip header
+
+    print *, "INPUT DAM LIST:  ", TRIM(grandf)
+    print *, "Number of Dams:  ", ndams
+    print *, "CaMa Map Diry:   ", TRIM(mapdir)
+    print *, "Output Filename: ", TRIM(outf)
     print *, " "
 
     flag=0
@@ -206,9 +191,9 @@ program main
     read(11,*) north
     close(11)
   
-    print *, 'Map Domain W-E-S-N:', west, east, south, north
-    print *, 'Map Resolution: ', gsize
-    print *, 'Map NX,NY: ',  nx, ny
+    print *, 'Map Domain W-E-S-N: ', west, east, south, north
+    print *, 'Map Resolution    : ', gsize
+    print *, 'Map NX,NY         : ', nx, ny
     print *, "--------------------------"
 
     ! ------------------------------------------------------------
@@ -217,6 +202,7 @@ program main
     allocate(basin(nx,ny), upgrid(nx,ny),uparea(nx,ny),ctmare(nx,ny),elevtn(nx,ny))
     allocate(outlon(nx,ny),outlat(nx,ny))
 
+    print *, "Read Map Files"
 
     finp=TRIM(mapdir)//'/nextxy.bin'
     open(11,file=finp,form='unformatted',access='direct',recl=4*nx*ny,status='old',iostat=ios)
@@ -255,23 +241,24 @@ program main
     read(11,rec=2) outlat
     close(11)
 
-    print *, ""
-
+    print *, "-- end map read"
     !------------------------------------------------------------
 
     do dam=1, ndams, 1
+      read(21,*) grandid, damname, lon, lat, totalsto, upreal
+!      read(21,*) grandid_c, damname, londd, latdd, capmcm, catchskm
 
-      read(grand,*) grandid_c,damname,londd,latdd,capmcm,catchskm
-      grandid_c=TRIM(grandid_c)
-      londd=TRIM(londd)
-      latdd=TRIM(latdd)
-      catchskm=TRIM(catchskm)
-      damname=TRIM(damname)
-      read(grandid_c,*) grandid
-      read(londd,*) lon
-      read(latdd,*) lat
-      read(catchskm,*) upreal
-      read(capmcm,*) totalsto
+!      grandid_c=TRIM(grandid_c)
+!      londd=TRIM(londd)
+!      latdd=TRIM(latdd)
+!      catchskm=TRIM(catchskm)
+!      damname=TRIM(damname)
+
+!      read(grandid_c,*) grandid
+!      read(londd,*) lon
+!      read(latdd,*) lat
+!      read(catchskm,*) upreal
+!      read(capmcm,*) totalsto
       print *, "grandid:", grandid, " damname:", TRIM(damname), " uparea:", upreal
       print *, " lon:", lon, " lat:", lat, " totalsto:", totalsto
 
@@ -297,15 +284,16 @@ program main
       
       if ( ix < 0 .or. iy < 0 ) then
         print *, grandid, lon, lat, ix, iy, upreal, "undefined"
+
         fmt="(i,x,a,x,f,x,f,x,i,x,i,x,f,x,i,x,f)"
-        write(150,fmt) grandid, damname, lon, lat, ix, iy, upreal, -9999, totalsto
+        write(31,fmt) grandid, damname, lon, lat, ix, iy, upreal, -9999, totalsto
         print *, "---------------------------"
         print *, ""
 
       else if ( ix > 0 .and. iy > 0) then
         !print *, grandid, lon, lat, ix, iy, upreal, uparea(ix,iy)*1e-6
         fmt="(i,x,a,x,f,x,f,x,i,x,i,x,f,x,f,x,f)"
-        write(150,fmt) grandid, damname, lon, lat, ix, iy, upreal, uparea(ix,iy)*1e-6, totalsto
+        write(31,fmt) grandid, damname, lon, lat, ix, iy, upreal, uparea(ix,iy)*1e-6, totalsto
 
         !print *, ''
         !print *, 'Point Information'
@@ -347,9 +335,6 @@ program main
     deallocate(outlon,outlat)
 
     close(grand)
-    close(150)
-
-
-
+    close(31)
 
 end program main

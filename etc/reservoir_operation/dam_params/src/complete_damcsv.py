@@ -9,26 +9,21 @@ from collections import defaultdict
 print(os.path.basename(__file__))
 
 #### initial setting =======================================
-
-TAG = sys.argv[1]
+tag = sys.argv[1]
 MINUPAREA = int(sys.argv[2])
 
-output_file = '../'+TAG+'/dam_params_'+TAG+'.csv'
-
-DAM_FILE = '../'+TAG+'/damloc_modified_'+TAG+'.csv'
-
-####========================================================
+DAM_FILE    = './'+tag+'/damloc_modified.csv'
+output_file = './'+tag+'/dam_params_comp.csv'
 
 #### other file paths -----------------------
-
-Qmean_file = '../'+TAG + '/tmp_p01_AnnualMean.bin'
-Q100_file = '../'+TAG + '/tmp_p02_100year.bin'
-storage_file = '../'+TAG + '/tmp_p03_fldsto.csv'
+Qmean_file   = './'+tag+'/tmp_p01_AnnualMean.bin'
+Q100_file    = './'+tag+'/tmp_p02_100year.bin'
+storage_file = './'+tag+'/tmp_p03_fldsto.csv'
 
 
 #### make dam param csv --------------------------------
 
-Qn_all = np.fromfile(Qmean_file, 'float32')
+Qn_all   = np.fromfile(Qmean_file, 'float32')
 Q100_all = np.fromfile(Q100_file, 'float32')
 
 damcsv = pd.read_csv(DAM_FILE)
@@ -43,7 +38,7 @@ for index, row in damcsv.iterrows():
     damid = row['damid']
 
     ## storage capacity
-    fldsto = stocsv.query('damid == @damid')['fldsto_mcm'].values[0]
+    fldsto   = stocsv.query('damid == @damid')['fldsto_mcm'].values[0]
     totalsto = stocsv.query('damid == @damid')['totalsto_mcm'].values[0]
     if fldsto != fldsto:
         fldsto = totalsto * 0.37

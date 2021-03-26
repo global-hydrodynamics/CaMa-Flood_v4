@@ -1,5 +1,5 @@
 ##################################################
-include   /cluster/data5/hanazaki/CaMa-Flood_v396a_20200514/adm/Mkinclude
+include   ../../../../adm/Mkinclude
 ##################################################
 TARGETS=\
 get_rivinfo_glb
