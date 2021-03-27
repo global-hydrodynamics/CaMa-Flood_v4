@@ -25,7 +25,7 @@ DT=sys.argv[8]
 
 # VAR = ['damout', 'daminf', 'damsto', 'natout', 'natinf', 'obsout', 'obsinf', 'obssto']
 VAR = ['damout', 'daminf', 'damsto', 'natout', 'obsout', 'obsinf', 'obssto']
-ID_list = DAMIDLIST
+ID_list = list(DAMIDLIST.split(','))
 
 # plot data
 sdate_fig = datetime(int(SYEAR), int(SMON), int(SDAY), 0)
@@ -375,6 +375,7 @@ if __name__ == '__main__':
     
     ## read dam loc ---------------------------------------
     damloc = pd.read_csv(damfile, skiprows=1)
+    damloc = damloc.query('GRAND_ID == @ID_list')
     N = len(damloc)
     print('number of dams:', N)
 
