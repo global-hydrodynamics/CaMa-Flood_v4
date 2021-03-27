@@ -41,11 +41,11 @@ damfile = "./sample_data/damparam_sample_glb_15min.csv"
 #####################################################################
 
 def ceil(src,range):
-	return int(math.ceil(src/float(range))*range)
+    return int(math.ceil(src/float(range))*range)
 #print ceil(4.5,1e+0)
 
 def floor(src,range):
-	return int(math.floor(src/float(range))*range)
+    return int(math.floor(src/float(range))*range)
 
 def read_binary(dirr, var, x_arr, y_arr):
 
@@ -311,13 +311,13 @@ def main():
     
     global ID_list
 
-    ID_list = damloc.query('GRAND_ID==@ID_list')['GRAND_ID'].values.tolist() #sort
+    ID_list = damloc['GRAND_ID'].values.tolist() #sort
     print("ID_list:", ID_list)
     print(' ')
     
     ## read simulation output -------------------------
-    x_arr = damloc.query('GRAND_ID==@ID_list')['DamIX'].values.astype('int32') -1
-    y_arr = damloc.query('GRAND_ID==@ID_list')['DamIY'].values.astype('int32') -1
+    x_arr = damloc.query('GRAND_ID == @ID_list')['DamIX'].values.astype('int32') -1
+    y_arr = damloc.query('GRAND_ID == @ID_list')['DamIY'].values.astype('int32') -1
     damout_all, daminf_all, damsto_all, natout_all, natinf_all = read_camaout(x_arr, y_arr)
 
     ## dam loop ----------------------------------------
