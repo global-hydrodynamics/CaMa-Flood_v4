@@ -1,14 +1,19 @@
+#!/usr/bin/env python
+# coding=utf-8
+# store and plot global maps of GSWO
+# Option is the Water Suface Fraction Ratio (as a permanent water surface)
+# and the spatial resolution to store and plot the maps (0.1 degree, 0.5)
 import sys,os 
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import glob
 from netCDF4 import Dataset
+from pylab import *
 import numpy as np
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 from matplotlib import colors
 from matplotlib.ticker import FormatStrFormatter
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -35,14 +40,14 @@ except:
 
 data = o.variables[vname][:]
 
-print ('output shape:', data.shape)
+print 'output shape:', data.shape
 data=np.nanmean( data, axis=0)
 if lat[1]<lat[0]:
     data = np.flipud(data)
 
 data = np.ma.masked_where(data>1e9, data)
 data = np.ma.masked_where(data<0., data)
-print ('max, min, mean, sum :', data.max(),data.min(),np.mean(data), np.sum(data))
+print 'max, min, mean, sum :', data.max(),data.min(),np.mean(data), np.sum(data)
 
 # plots
 
@@ -59,7 +64,7 @@ east = np.max(lon)
 south = np.min(lat)
 north = min(np.max(lat),90)
 
-print (west, east, south, north)
+print west, east, south, north
 
 im2=plt.imshow(data, cmap=cm.YlOrRd, origin='lower', extent=(west, east, south, north), zorder=10)
 
@@ -71,7 +76,11 @@ cbar.set_label('To be set', size=ssize*1.2)
 cbar.ax.tick_params(labelsize=ssize)
 
 
+<<<<<<< HEAD
 plt.savefig("test2.jpg")
+=======
+savefig("test.jpg")
+>>>>>>> merge_test
 pdf.savefig()
 plt.close()
 

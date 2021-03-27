@@ -1,14 +1,17 @@
+#!/usr/bin/env python
+# coding=utf-8
 import sys,os 
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import numpy as np
+from pylab import *
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 from matplotlib import colors
 from matplotlib.ticker import FormatStrFormatter
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from mpl_toolkits.basemap import Basemap
 
 from matplotlib.backends.backend_pdf import PdfPages
 
@@ -23,12 +26,12 @@ ftype='float32'
 # read the data 
 data = np.fromfile(f, ftype).reshape(-1,ny,nx)
 
-print ('output shape:', data.shape)
+print 'output shape:', data.shape
 data=np.nanmean( data, axis=0)
 
 data = np.ma.masked_where(data>1e9, data)
 data = np.ma.masked_where(data<0., data)
-print ('max, min, mean, sum :', data.max(),data.min(),np.mean(data), np.sum(data))
+print 'max, min, mean, sum :', data.max(),data.min(),np.mean(data), np.sum(data)
 #data = data/1000.*365.
 
 # plots
@@ -48,7 +51,11 @@ cbar=plt.colorbar(im2, cax=cax, extend="max")
 cbar.set_label('Label to be set', size=ssize*1.2)
 cbar.ax.tick_params(labelsize=ssize)
 
+<<<<<<< HEAD
 plt.savefig("test1.jpg")
+=======
+savefig("test.jpg")
+>>>>>>> merge_test
 
 pdf.savefig()
 plt.close()

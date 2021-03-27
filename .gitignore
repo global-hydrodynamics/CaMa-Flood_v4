@@ -1,12 +1,6 @@
-*
-!*/
-!*.*
-!LICENSE
-!Mkinclude_*
-!Makefile
 .DS_Store
+
+
 #
 *.bin
 *.o
-*.mod
-*.a

@@ -20,13 +20,7 @@ mv CaMa-Flood_v400_20210119 CaMa-flood_v4
 
 Registration is needed to download the package (or only topography map and later the sample runoff). If you have not registered as a CaMa-Flood user, Please fill the Google Form (https://forms.gle/bhq1qWqybeAk157v9) to get an access (username and password) to CaMa-Flood, or please contact to the developer (yamadai [at] iis.u-tokyo.ac.jp) if Google Form does not work well for you.
 
-For internal users in U-Tokyo, you can quickly copy the package to your own directory. 
-
-```bash
-cp -r /home/yamadai/work/CaMa_v400/cmf_v400_pkg CaMa-flood_v4
-```
-
-If users download the package from GitHub (designed mainly for developers), then additional steps are needed to prepare the topography data and input data. This will be introduction in **3. Download from Github.**
+If users download the package from GitHub, then additional steps are needed to prepare the topography data and input data. This will be introduction in **3. Download from Github.**
 
 ### 1.2 Computation Environment
 
