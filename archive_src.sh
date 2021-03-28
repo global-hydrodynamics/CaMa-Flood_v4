@@ -1,7 +1,7 @@
 #!/bin/sh
 
 TAG=`date '+%Y%m%d'`
-VER="v400"
+VER="v401"
 BASE=`pwd`
 DIR="cmf_${VER}_src"
 
@@ -86,23 +86,12 @@ cd etc
   pwd
 
   PROJ="downscale_flddph"
+  cd $PKGBASE/etc/
   mkdir $PROJ
   cd $PROJ
     cp ${BASE}/etc/$PROJ/*.sh      .
     cp ${BASE}/etc/$PROJ/*.py      .
-    cp -r ${BASE}/etc/$PROJ/src    .
-    cd src
-    make clean
-    cd ..
-    rm -f ./.*                 2> /dev/null
-    rm -f ./src/.*             2> /dev/null
-  cd ..
-
-  PROJ="flood_duration"
-  mkdir $PROJ
-  cd $PROJ
-    cp ${BASE}/etc/$PROJ/*.sh      .
-    cp ${BASE}/etc/$PROJ/*.py      .
+    cp ${BASE}/etc/$PROJ/*.md .
     cp -r ${BASE}/etc/$PROJ/src    .
     cd src
     make clean
@@ -112,16 +101,65 @@ cd etc
   cd ..
 
   PROJ="runoff_preset"
+  cd $PKGBASE/etc/
   mkdir $PROJ
   cd $PROJ
     cp ${BASE}/etc/$PROJ/*.sh      .
     cp ${BASE}/etc/$PROJ/*.py      .
+    cp ${BASE}/etc/$PROJ/*.md .
     cp -r ${BASE}/etc/$PROJ/src    .
+      cd src
+      make clean
+      cd ..
+    rm -f ./.*                 2> /dev/null
+    rm -f ./src/.*             2> /dev/null
+  cd ..
+
+ PROJ="n-year_flood_depth"
+  cd $PKGBASE/etc/
+  mkdir $PROJ
+  cd $PROJ
+    cp -r ${BASE}/etc/$PROJ/script .
+      cd script 
+        cd src
+        make clean
+        cd ..
+      rm -f ./.*                 2> /dev/null
+      rm -f ./src/.*             2> /dev/null
+    cd ..
+  cd ..
+
+
+ PROJ="reservoir_operation"
+  cd $PKGBASE/etc/
+  mkdir $PROJ
+  cd $PROJ
+    cp ${BASE}/etc/$PROJ/*.sh .
+    cp ${BASE}/etc/$PROJ/*.py .
+    cp ${BASE}/etc/$PROJ/*.md .
+    cp -r ${BASE}/etc/$PROJ/sample_data .
+    cp -r ${BASE}/etc/$PROJ/dam_params  .
+
+    rm -f ./.*                 2> /dev/null
+  cd ..
+
+ PROJ="validation"
+  cd $PKGBASE/etc/
+  mkdir $PROJ
+  cd $PROJ
+    cp ${BASE}/etc/$PROJ/*.sh .
+    cp ${BASE}/etc/$PROJ/*.py .
+    cp ${BASE}/etc/$PROJ/*.md .
+    cp -r ${BASE}/etc/$PROJ/src .
+
     cd src
     make clean
     cd ..
     rm -f ./.*                 2> /dev/null
     rm -f ./src/.*             2> /dev/null
+
+    cd ..
+    rm -f ./.*                 2> /dev/null
   cd ..
 
 cd $PKGBASE
