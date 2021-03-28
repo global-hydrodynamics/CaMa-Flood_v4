@@ -11,7 +11,7 @@
       integer             ::  imon
       integer             ::  igetday
 
-      character*256 :: buf
+      character*8 :: buf
 ! ===============================
       call getarg(1,buf)
        read(buf,*) iyear

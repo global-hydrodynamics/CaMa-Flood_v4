@@ -63,12 +63,12 @@ fi
 ## downscale target domain using fortran code
 
 TAG=$YEAR
-./t01-downscale.sh $WEST $EAST $SOUTH $NORTH $RES $FFLDDAY $INTDPH $NREC $TAG
+./t11-downscale.sh $WEST $EAST $SOUTH $NORTH $RES $FFLDDAY $INTDPH $NREC $TAG
 
 ##############################
 ## visualization using PyThon
 TAG=$YEAR
-./t02-draw_fldprd.sh $WEST $EAST $SOUTH $NORTH $RES $TAG
+./t12-draw_duration.sh $WEST $EAST $SOUTH $NORTH $RES $TAG
 
 ##########
 
