@@ -27,7 +27,7 @@ CONTAINS
 SUBROUTINE CMF_CALC_OUTFLW_KINE
 ! Calculate discharge, mix kinematic & local inertial, depending on slope
 USE PARKIND1,           ONLY: JPIM, JPRB
-USE YOS_CMF_INPUT,      ONLY: DT,       LBITSAFE, PMANFLD,  PMINSLP, LFLDOUT
+USE YOS_CMF_INPUT,      ONLY: DT,       PMANFLD,  PMINSLP, LFLDOUT
 USE YOS_CMF_MAP,        ONLY: I1NEXT,   NSEQALL,  NSEQRIV
 USE YOS_CMF_MAP,        ONLY: D2RIVELV, D2ELEVTN, D2NXTDST, D2RIVWTH
 USE YOS_CMF_MAP,        ONLY: D2RIVLEN, D2RIVMAN
@@ -78,24 +78,19 @@ DO ISEQ=1, NSEQRIV
 END DO
 !$OMP END PARALLEL DO
 
-IF( LBITSAFE )THEN  !! Aboid OMP ATOMIC for bit identical simulation
-  DO ISEQ=1, NSEQRIV ! for normal pixels
-    JSEQ=I1NEXT(ISEQ)
-    D2RIVINF(JSEQ,1) = D2RIVINF(JSEQ,1) + D2RIVOUT(ISEQ,1)             !! total inflow to a grid (from upstream)
-    D2FLDINF(JSEQ,1) = D2FLDINF(JSEQ,1) + D2FLDOUT(ISEQ,1)
-  END DO
-ELSE
-!$OMP PARALLEL DO
-  DO ISEQ=1, NSEQRIV ! for normal pixels
-    JSEQ=I1NEXT(ISEQ)
+#ifndef NoAtom
+!$OMP PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
+#endif
+DO ISEQ=1, NSEQRIV ! for normal pixels
+  JSEQ=I1NEXT(ISEQ)
 !$OMP ATOMIC
-    D2RIVINF(JSEQ,1) = D2RIVINF(JSEQ,1) + D2RIVOUT(ISEQ,1)             !! total inflow to a grid (from upstream)
+  D2RIVINF(JSEQ,1) = D2RIVINF(JSEQ,1) + D2RIVOUT(ISEQ,1)             !! total inflow to a grid (from upstream)
 !$OMP ATOMIC
-    D2FLDINF(JSEQ,1) = D2FLDINF(JSEQ,1) + D2FLDOUT(ISEQ,1)
-  END DO
-!$OMP END PARALLEL DO
-ENDIF
-
+  D2FLDINF(JSEQ,1) = D2FLDINF(JSEQ,1) + D2FLDOUT(ISEQ,1)
+END DO
+#ifndef NoAtom
+!$OMP END PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
+#endif
 !============================
 !*** 1b. discharge for river mouth grids
 
@@ -134,7 +129,7 @@ END SUBROUTINE CMF_CALC_OUTFLW_KINE
 SUBROUTINE CMF_CALC_OUTFLW_KINEMIX
 ! Calculate discharge, mix kinematic & local inertial, depending on slope
 USE PARKIND1,           ONLY: JPIM, JPRB
-USE YOS_CMF_INPUT,      ONLY: DT,       LBITSAFE, LFLDOUT
+USE YOS_CMF_INPUT,      ONLY: DT,       LFLDOUT
 USE YOS_CMF_INPUT,      ONLY: PDSTMTH,  PMANFLD,  PGRV , PMINSLP
 USE YOS_CMF_MAP,        ONLY: I1NEXT,   NSEQALL,  NSEQRIV,  NSEQMAX
 USE YOS_CMF_MAP,        ONLY: D2RIVELV, D2ELEVTN, D2NXTDST, D2RIVWTH, D2RIVHGT
@@ -248,35 +243,25 @@ DO ISEQ=1, NSEQRIV                                                    !! for nor
 END DO
 !$OMP END PARALLEL DO
 
-IF( LBITSAFE )THEN  !! Avoid OMP ATOMIC for bit identical simulation
-  DO ISEQ=1, NSEQRIV                                                    !! for normal cells
-    JSEQ=I1NEXT(ISEQ) ! next cell's pixel
-    OUT_R1 = max(  D2RIVOUT(ISEQ,1),0.D0 )
-    OUT_R2 = max( -D2RIVOUT(ISEQ,1),0.D0 )
-    OUT_F1 = max(  D2FLDOUT(ISEQ,1),0.D0 )
-    OUT_F2 = max( -D2FLDOUT(ISEQ,1),0.D0 )
-    DIUP=(OUT_R1+OUT_F1)*DT
-    DIDW=(OUT_R2+OUT_F2)*DT
-    D2STOOUT(ISEQ,1) = D2STOOUT(ISEQ,1) + DIUP
-    D2STOOUT(JSEQ,1) = D2STOOUT(JSEQ,1) + DIDW
-  END DO
-ELSE
-!$OMP PARALLEL DO
-  DO ISEQ=1, NSEQRIV                                                    !! for normal cells
-    JSEQ=I1NEXT(ISEQ) ! next cell's pixel
-    OUT_R1 = max(  D2RIVOUT(ISEQ,1),0.D0 )
-    OUT_R2 = max( -D2RIVOUT(ISEQ,1),0.D0 )
-    OUT_F1 = max(  D2FLDOUT(ISEQ,1),0.D0 )
-    OUT_F2 = max( -D2FLDOUT(ISEQ,1),0.D0 )
-    DIUP=(OUT_R1+OUT_F1)*DT
-    DIDW=(OUT_R2+OUT_F2)*DT
+#ifndef NoAtom
+!$OMP PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
+#endif
+DO ISEQ=1, NSEQRIV                                                    !! for normal cells
+  JSEQ=I1NEXT(ISEQ) ! next cell's pixel
+  OUT_R1 = max(  D2RIVOUT(ISEQ,1),0.D0 )
+  OUT_R2 = max( -D2RIVOUT(ISEQ,1),0.D0 )
+  OUT_F1 = max(  D2FLDOUT(ISEQ,1),0.D0 )
+  OUT_F2 = max( -D2FLDOUT(ISEQ,1),0.D0 )
+  DIUP=(OUT_R1+OUT_F1)*DT
+  DIDW=(OUT_R2+OUT_F2)*DT
 !$OMP ATOMIC
-    D2STOOUT(ISEQ,1) = D2STOOUT(ISEQ,1) + DIUP 
+  D2STOOUT(ISEQ,1) = D2STOOUT(ISEQ,1) + DIUP 
 !$OMP ATOMIC
-    D2STOOUT(JSEQ,1) = D2STOOUT(JSEQ,1) + DIDW 
-  END DO
-!$OMP END PARALLEL DO
-ENDIF
+  D2STOOUT(JSEQ,1) = D2STOOUT(JSEQ,1) + DIDW 
+END DO
+#ifndef NoAtom
+!$OMP END PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
+#endif
 
 
 !$OMP PARALLEL DO                                                     !! for river mouth grids
@@ -368,47 +353,26 @@ DO ISEQ=1, NSEQALL
 END DO
 !$OMP END PARALLEL DO
 
-IF( LBITSAFE )THEN  !! Aboid OMP ATOMIC for bit identical simulation
-  DO ISEQ=1, NSEQRIV ! for normal pixels
-    JSEQ=I1NEXT(ISEQ)
-    IF( D2RIVOUT(ISEQ,1) >= 0.D0 )THEN
-      D2RIVOUT(ISEQ,1) = D2RIVOUT(ISEQ,1)*D2RATE(ISEQ,1)
-      D2FLDOUT(ISEQ,1) = D2FLDOUT(ISEQ,1)*D2RATE(ISEQ,1)
-    ELSE
-      D2RIVOUT(ISEQ,1) = D2RIVOUT(ISEQ,1)*D2RATE(JSEQ,1)
-      D2FLDOUT(ISEQ,1) = D2FLDOUT(ISEQ,1)*D2RATE(JSEQ,1)
-    ENDIF
-    D2RIVINF(JSEQ,1) = D2RIVINF(JSEQ,1) + D2RIVOUT(ISEQ,1)             !! total inflow to a grid (from upstream)
-    D2FLDINF(JSEQ,1) = D2FLDINF(JSEQ,1) + D2FLDOUT(ISEQ,1)
-
-    D2RIVOUT_PRE(ISEQ,1)=D2RIVOUT(ISEQ,1)                              !! save outflow (t)
-    D2RIVDPH_PRE(ISEQ,1)=D2RIVDPH(ISEQ,1)                              !! save depth   (t)
-    D2FLDOUT_PRE(ISEQ,1)=D2FLDOUT(ISEQ,1)                              !! save outflow (t)
-    D2FLDSTO_PRE(ISEQ,1)=D2FLDSTO(ISEQ,1)
-  END DO
-ELSE
-!$OMP PARALLEL DO
-  DO ISEQ=1, NSEQRIV ! for normal pixels
-    JSEQ=I1NEXT(ISEQ)
-    IF( D2RIVOUT(ISEQ,1) >= 0.D0 )THEN
-      D2RIVOUT(ISEQ,1) = D2RIVOUT(ISEQ,1)*D2RATE(ISEQ,1)
-      D2FLDOUT(ISEQ,1) = D2FLDOUT(ISEQ,1)*D2RATE(ISEQ,1)
-    ELSE
-      D2RIVOUT(ISEQ,1) = D2RIVOUT(ISEQ,1)*D2RATE(JSEQ,1)
-      D2FLDOUT(ISEQ,1) = D2FLDOUT(ISEQ,1)*D2RATE(JSEQ,1)
-    ENDIF
+#ifndef NoAtom
+!$OMP PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
+#endif
+DO ISEQ=1, NSEQRIV ! for normal pixels
+  JSEQ=I1NEXT(ISEQ)
+  IF( D2RIVOUT(ISEQ,1) >= 0.D0 )THEN
+    D2RIVOUT(ISEQ,1) = D2RIVOUT(ISEQ,1)*D2RATE(ISEQ,1)
+    D2FLDOUT(ISEQ,1) = D2FLDOUT(ISEQ,1)*D2RATE(ISEQ,1)
+  ELSE
+    D2RIVOUT(ISEQ,1) = D2RIVOUT(ISEQ,1)*D2RATE(JSEQ,1)
+    D2FLDOUT(ISEQ,1) = D2FLDOUT(ISEQ,1)*D2RATE(JSEQ,1)
+  ENDIF
 !$OMP ATOMIC
-    D2RIVINF(JSEQ,1) = D2RIVINF(JSEQ,1) + D2RIVOUT(ISEQ,1)             !! total inflow to a grid (from upstream)
+  D2RIVINF(JSEQ,1) = D2RIVINF(JSEQ,1) + D2RIVOUT(ISEQ,1)             !! total inflow to a grid (from upstream)
 !$OMP ATOMIC
-    D2FLDINF(JSEQ,1) = D2FLDINF(JSEQ,1) + D2FLDOUT(ISEQ,1)
-
-    D2RIVOUT_PRE(ISEQ,1)=D2RIVOUT(ISEQ,1)                              !! save outflow (t)
-    D2RIVDPH_PRE(ISEQ,1)=D2RIVDPH(ISEQ,1)                              !! save depth   (t)
-    D2FLDOUT_PRE(ISEQ,1)=D2FLDOUT(ISEQ,1)                              !! save outflow (t)
-    D2FLDSTO_PRE(ISEQ,1)=D2FLDSTO(ISEQ,1)
-  END DO
-!$OMP END PARALLEL DO
-ENDIF
+  D2FLDINF(JSEQ,1) = D2FLDINF(JSEQ,1) + D2FLDOUT(ISEQ,1)
+END DO
+#ifndef NoAtom
+!$OMP END PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
+#endif
 
 !$OMP PARALLEL DO
 DO ISEQ=NSEQRIV+1, NSEQALL ! for river mouth
@@ -416,11 +380,6 @@ DO ISEQ=NSEQRIV+1, NSEQALL ! for river mouth
   D2FLDOUT(ISEQ,1) = D2FLDOUT(ISEQ,1)*D2RATE(ISEQ,1)
 END DO
 !$OMP END PARALLEL DO
-
-D2RIVOUT_PRE(:,1)=D2RIVOUT(:,1)                              !! save outflow (t)
-D2RIVDPH_PRE(:,1)=D2RIVDPH(:,1)                              !! save depth   (t)
-D2FLDOUT_PRE(:,1)=D2FLDOUT(:,1)                              !! save outflow (t)
-D2FLDSTO_PRE(:,1)=D2FLDSTO(:,1)
 
 END SUBROUTINE CMF_CALC_OUTFLW_KINEMIX
 !####################################################################

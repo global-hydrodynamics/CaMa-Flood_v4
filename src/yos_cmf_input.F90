@@ -51,7 +51,7 @@ LOGICAL                         :: LOUTPUT                 !! true: use standard
 LOGICAL                         :: LGRIDMAP                !! true: for standard XY gridded 2D map
 LOGICAL                         :: LLEAPYR                 !! true: neglect leap year (Feb29 skipped)
 LOGICAL                         :: LMAPEND                 !! true: for map data endian conversion
-LOGICAL                         :: LBITSAFE                !! true: for Bit Identical simulation (avoid OSM ATOMIC)
+LOGICAL                         :: LBITSAFE                !! true: for Bit Identical (removed from v410, set in Mkinclude)
 
 !================================================
 !*** NAMELIST/NCONF/

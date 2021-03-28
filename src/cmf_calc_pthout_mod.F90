@@ -20,7 +20,7 @@ CONTAINS
 !####################################################################
 SUBROUTINE CMF_CALC_PTHOUT
 USE PARKIND1,           ONLY: JPIM, JPRB
-USE YOS_CMF_INPUT,      ONLY: DT, PGRV, LBITSAFE
+USE YOS_CMF_INPUT,      ONLY: DT, PGRV
 USE YOS_CMF_MAP,        ONLY: NSEQMAX, NPTHOUT, NPTHLEV, PTH_UPST, PTH_DOWN, PTH_DST, &
                             & PTH_ELV, PTH_WTH, PTH_MAN, I2MASK
 USE YOS_CMF_MAP,        ONLY: D2RIVELV
@@ -80,35 +80,26 @@ DO IPTH=1, NPTHOUT
 END DO
 !$OMP END PARALLEL DO
 
-IF( LBITSAFE )THEN  !! Aboid OMP ATOMIC for bit identical simulation
-  DO IPTH=1, NPTHOUT  
-    ISEQP=PTH_UPST(IPTH)
-    JSEQP=PTH_DOWN(IPTH)
-    DO ILEV=1, NPTHLEV
-      IF( D1PTHFLW(IPTH,ILEV) >= 0.D0 )THEN                                  !! total outflow from each grid
-        D2PTHOUT(ISEQP,1) = D2PTHOUT(ISEQP,1) + D1PTHFLW(IPTH,ILEV)
-      ELSE
-        D2PTHOUT(JSEQP,1) = D2PTHOUT(JSEQP,1) - D1PTHFLW(IPTH,ILEV)
-      ENDIF
-    END DO
-  END DO
-ELSE
-!$OMP PARALLEL DO
-  DO IPTH=1, NPTHOUT  
-    ISEQP=PTH_UPST(IPTH)
-    JSEQP=PTH_DOWN(IPTH)
-    DO ILEV=1, NPTHLEV
-      IF( D1PTHFLW(IPTH,ILEV) >= 0.D0 )THEN                                  !! total outflow from each grid
+#ifndef NoAtom
+!$OMP PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
+#endif
+DO IPTH=1, NPTHOUT  
+  ISEQP=PTH_UPST(IPTH)
+  JSEQP=PTH_DOWN(IPTH)
+  DO ILEV=1, NPTHLEV
+    IF( D1PTHFLW(IPTH,ILEV) >= 0.D0 )THEN                                  !! total outflow from each grid
 !$OMP ATOMIC
-        D2PTHOUT(ISEQP,1) = D2PTHOUT(ISEQP,1) + D1PTHFLW(IPTH,ILEV)
-      ELSE
+      D2PTHOUT(ISEQP,1) = D2PTHOUT(ISEQP,1) + D1PTHFLW(IPTH,ILEV)
+    ELSE
 !$OMP ATOMIC
-        D2PTHOUT(JSEQP,1) = D2PTHOUT(JSEQP,1) - D1PTHFLW(IPTH,ILEV)
-      ENDIF
-    END DO
+      D2PTHOUT(JSEQP,1) = D2PTHOUT(JSEQP,1) - D1PTHFLW(IPTH,ILEV)
+    ENDIF
   END DO
-!$OMP END PARALLEL DO
-ENDIF
+END DO
+#ifndef NoAtom
+!$OMP END PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
+#endif
+
 
 !$OMP PARALLEL DO                                              !! calculate total outflow from a grid
 DO ISEQ=1, NSEQMAX
@@ -124,41 +115,28 @@ END DO
 !$OMP END PARALLEL DO
 
 
-IF( LBITSAFE )THEN  !! Aboid OMP ATOMIC for bit identical simulation
-  DO IPTH=1, NPTHOUT
-    ISEQP=PTH_UPST(IPTH)
-    JSEQP=PTH_DOWN(IPTH)
-    DO ILEV=1, NPTHLEV
-      IF( D1PTHFLW(IPTH,ILEV) >= 0.D0 )THEN
-        D1PTHFLW(IPTH,ILEV) = D1PTHFLW(IPTH,ILEV)*D2RATE(ISEQP,1)
-        D2PTHINF(JSEQP,1) = D2PTHINF(JSEQP,1) + D1PTHFLW(IPTH,ILEV)             !! total inflow [m3/s] (from upstream)
-      ELSE
-        D1PTHFLW(IPTH,ILEV) = D1PTHFLW(IPTH,ILEV)*D2RATE(JSEQP,1)
-        D2PTHINF(ISEQP,1) = D2PTHINF(ISEQP,1) - D1PTHFLW(IPTH,ILEV)             !! total inflow [m3/s] (from upstream)
-      ENDIF
-      D1PTHFLW_PRE(IPTH,ILEV)=D1PTHFLW(IPTH,ILEV)
-    END DO
-  END DO
-ELSE
-!$OMP PARALLEL DO   
-  DO IPTH=1, NPTHOUT
-    ISEQP=PTH_UPST(IPTH)
-    JSEQP=PTH_DOWN(IPTH)
-    DO ILEV=1, NPTHLEV
-      IF( D1PTHFLW(IPTH,ILEV) >= 0.D0 )THEN
-        D1PTHFLW(IPTH,ILEV) = D1PTHFLW(IPTH,ILEV)*D2RATE(ISEQP,1)
+#ifndef NoAtom
+!$OMP PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
+#endif
+DO IPTH=1, NPTHOUT
+  ISEQP=PTH_UPST(IPTH)
+  JSEQP=PTH_DOWN(IPTH)
+  DO ILEV=1, NPTHLEV
+    IF( D1PTHFLW(IPTH,ILEV) >= 0.D0 )THEN
+      D1PTHFLW(IPTH,ILEV) = D1PTHFLW(IPTH,ILEV)*D2RATE(ISEQP,1)
 !$OMP ATOMIC
-        D2PTHINF(JSEQP,1) = D2PTHINF(JSEQP,1) + D1PTHFLW(IPTH,ILEV)             !! total inflow [m3/s] (from upstream)
-      ELSE
-        D1PTHFLW(IPTH,ILEV) = D1PTHFLW(IPTH,ILEV)*D2RATE(JSEQP,1)
+      D2PTHINF(JSEQP,1) = D2PTHINF(JSEQP,1) + D1PTHFLW(IPTH,ILEV)             !! total inflow [m3/s] (from upstream)
+    ELSE
+      D1PTHFLW(IPTH,ILEV) = D1PTHFLW(IPTH,ILEV)*D2RATE(JSEQP,1)
 !$OMP ATOMIC
-        D2PTHINF(ISEQP,1) = D2PTHINF(ISEQP,1) - D1PTHFLW(IPTH,ILEV)             !! total inflow [m3/s] (from upstream)
-      ENDIF
-      D1PTHFLW_PRE(IPTH,ILEV)=D1PTHFLW(IPTH,ILEV)
-    END DO
+      D2PTHINF(ISEQP,1) = D2PTHINF(ISEQP,1) - D1PTHFLW(IPTH,ILEV)             !! total inflow [m3/s] (from upstream)
+    ENDIF
+    D1PTHFLW_PRE(IPTH,ILEV)=D1PTHFLW(IPTH,ILEV)
   END DO
-!$OMP END PARALLEL DO
-ENDIF
+END DO
+#ifndef NoAtom
+!$OMP END PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
+#endif
 
 END SUBROUTINE CMF_CALC_PTHOUT
 !####################################################################
