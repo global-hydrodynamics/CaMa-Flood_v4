@@ -78,4 +78,9 @@ REAL(KIND=JPRB)                 :: DGLBRIVINF              !! global inflow     
 REAL(KIND=JPRB)                 :: DGLBRIVOUT              !! global outflow            [m3] (rivout + fldout)
 REAL(KIND=JPRB)                 :: DGLBFLDARE              !! global flooded area       [m2]
 
+!================================================
+!*** dam variable
+REAL(KIND=JPRB),POINTER         :: d2daminf_avg(:,:)       !! average reservoir inflow [m3/s]  !!!added
+
+
 END MODULE YOS_CMF_DIAG
