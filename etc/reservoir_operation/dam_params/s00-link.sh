@@ -10,10 +10,7 @@ BASE=`pwd`/../../../
 ## Please prepare DAMLIST file based on GRanD data
 ## columns should be [DAM_ID, DAMNAME, LON, LAT, CATCH_SKM (catchment area in km2), CAP_MCM (capacity in million m3)]
 DAMLIST=${PWDD}/GRanD_sample/dam_inplist_sample.csv
-<<<<<<< HEAD
-# DAMLIST=/cluster/data5/hanazaki/to_others/dam_params/inp/GRanD_v1_1_inp.csv   ## full list
-=======
->>>>>>> merge_test
+#DAMLIST=/home/yamadai/work/data/Dam+Lake/GRanD/inp/GRanD_v1_1_inp.csv   ## full list
 
 ## CaMa-Flood map directory to allocate dams
 MAPDIR=${BASE}/map/glb_15min
