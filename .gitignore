@@ -8,27 +8,3 @@
 #
 *.bin
 *.o
-
-# map folder
-etc/map/*/
-glb_15min/
-conus_06min/
-
-# out folder
-out/
-
-#obs folder
-obs/
-
-#fig folders
-etc/validation/fig_*/
-etc/validation/txt_*/
-
-# figures 
-*.png
-*.jpg
-
-# text files
-etc/*.txt
-*.mod
-*.a
