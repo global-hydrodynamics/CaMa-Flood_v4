@@ -36,7 +36,7 @@ print 'max, min, mean, sum :', data.max(),data.min(),np.mean(data), np.sum(data)
 
 # plots
 ssize=12
-pdf = PdfPages('test.pdf')
+pdf = PdfPages('test1.pdf')
 
 fig=plt.figure(figsize=(ssize,ssize*0.8),dpi=300)
 fig.subplots_adjust(left=0.05,right=0.85,top=0.90,bottom=0.05)
@@ -51,7 +51,11 @@ cbar=plt.colorbar(im2, cax=cax, extend="max")
 cbar.set_label('Label to be set', size=ssize*1.2)
 cbar.ax.tick_params(labelsize=ssize)
 
+<<<<<<< HEAD
+plt.savefig("test1.jpg")
+=======
 savefig("test.jpg")
+>>>>>>> merge_test
 
 pdf.savefig()
 plt.close()

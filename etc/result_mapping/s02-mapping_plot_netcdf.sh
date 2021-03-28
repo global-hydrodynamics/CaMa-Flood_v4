@@ -1,7 +1,7 @@
 #!/bin/sh
 
 ## CaMa-Flood: simulation map directory & simulation output dorectory
-MAPDIR="../../map/glb_15min/"
+MAPDIR="../../map/conus_06min/"
 OUTDIR="../../out/test2-conus_06min/"
 
 

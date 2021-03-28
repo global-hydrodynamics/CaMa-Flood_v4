@@ -13,6 +13,30 @@ from dateutil.relativedelta import relativedelta
 import math
 
 #### initial setting ################################################################
+<<<<<<< HEAD
+
+SYEAR=sys.argv[1]
+SMON=sys.argv[2]
+SDAY=sys.argv[3]
+EYEAR=sys.argv[4]
+EMON=sys.argv[5]
+EDAY=sys.argv[6]
+DAMIDLIST=sys.argv[7]
+DT=sys.argv[8]
+
+# VAR = ['damout', 'daminf', 'damsto', 'natout', 'natinf', 'obsout', 'obsinf', 'obssto']
+VAR = ['damout', 'daminf', 'damsto', 'natout', 'obsout', 'obsinf', 'obssto']
+ID_list = list(DAMIDLIST.split(','))
+
+# plot data
+sdate_fig = datetime(int(SYEAR), int(SMON), int(SDAY), 0)
+edate_fig = datetime(int(EYEAR), int(EMON), int(EDAY), 0)
+figdir = './fig/'
+
+#### simulation setting -------------------------------
+
+dt = int(DT)
+=======
 # VAR = ['damout', 'daminf', 'damsto', 'natout', 'natinf', 'obsout', 'obsinf', 'obssto']
 VAR = ['damout', 'daminf', 'damsto', 'natout', 'obsout', 'obsinf', 'obssto']
 ID_list = ['601','421']
@@ -32,11 +56,16 @@ natsim = "test_nat"
 sy,sm,sd,sh = 2000,1,1,0    #start date of simulation
 ey,em,ed,eh = 2001,12,31,23
 dt = 60*60*3  #output frequency
+>>>>>>> merge_test
 
 ## Observation data
 dtobs = 24*60*60
 obsdir="./obs_dam/"
+<<<<<<< HEAD
+damfile = "./damlist.csv"
+=======
 damfile = "./sample_data/damparam_sample_glb_15min.csv"
+>>>>>>> merge_test
 
 #####################################################################
 
@@ -118,6 +147,14 @@ def get_dam_info(grandid):
 
 def read_dam_obs(grandid, sdate_f, edate_f):
 
+<<<<<<< HEAD
+    obsfile = str(obsdir) + '/' + str(grandid) + '.csv'
+    obs = pd.read_csv(obsfile)
+   
+    obs['date'] = pd.to_datetime(obs['date'])
+    obs = obs.set_index('date')
+    
+=======
     sdate = datetime(sy,sm,sd,sh)
 
     obsfile = str(obsdir) + '/' + str(grandid) + '.csv'
@@ -135,6 +172,7 @@ def read_dam_obs(grandid, sdate_f, edate_f):
         edate = datetime(ey, em, ed, eh)
         obs = obs[:edate]
 
+>>>>>>> merge_test
     return obs
 
 
@@ -185,9 +223,15 @@ def slice_camaout(o_arr, index, sdate_f, edate_f):
 
     o_slice = o_arr[:,index]
 
+<<<<<<< HEAD
+    s_delta = sdate_f - datetime(sdate_fig.year, 1, 1, 0)
+    s_idx = s_delta.total_seconds() // dt
+    e_delta = edate_f - datetime(sdate_fig.year, 1, 1, 0)
+=======
     s_delta = sdate_f - datetime(sdate_fig.year, sm, sd, sh)
     s_idx = s_delta.total_seconds() // dt
     e_delta = edate_f - datetime(sdate_fig.year, sm, sd, sh)
+>>>>>>> merge_test
     e_idx = e_delta.total_seconds() // dt
     s_idx, e_idx = int(s_idx), int(e_idx)
     o_slice = o_slice[s_idx:e_idx+1]
@@ -367,15 +411,34 @@ if __name__ == '__main__':
 
     print(VAR)
 
+<<<<<<< HEAD
+    fname="./map/params.txt"
+    with open(fname,"r") as f:
+        lines=f.readlines()
+    nx = int( lines[0].split()[0] )
+    ny = int( lines[1].split()[0] )
+    print('nx:', nx, " ny:", ny)
+
+    ## simulation output --------------------------------------
+    damdir = "damsim"
+    natdir = "natsim"
+    # print('damdir:', damdir)
+    # print('natdir:', natdir)
+=======
     ## simulation output --------------------------------------
     damdir = camadir + damsim
     natdir = camadir + natsim
     print('damdir:', damdir)
     print('natdir:', natdir)
+>>>>>>> merge_test
     print('figdir:', figdir)
     
     ## read dam loc ---------------------------------------
     damloc = pd.read_csv(damfile, skiprows=1)
+<<<<<<< HEAD
+    damloc = damloc.query('GRAND_ID == @ID_list')
+=======
+>>>>>>> merge_test
     N = len(damloc)
     print('number of dams:', N)
 
