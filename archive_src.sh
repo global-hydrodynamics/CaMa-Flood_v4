@@ -34,14 +34,6 @@ cp ${BASE}/archive_src .
 cp ${BASE}/archive_pkg .
 cp ${BASE}/.gitignore  .
 
-####
-cd $PKGBASE
-rm -f ./.DS_Store
-rm -f ./*/.DS_Store
-rm -f ./*/.DS_Store
-rm -f ./*/.DS_Store
-rm -f ./*/.DS_Store
-
 #===========
 
 cd ${BASE}

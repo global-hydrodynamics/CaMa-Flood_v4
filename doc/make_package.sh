@@ -3,9 +3,9 @@
 BASE=`pwd`
 VER="v401"
 
-PKG="cmf_${VAR}_pkg"
-SRC="cmf_${VAR}_src"
-DAT="cmf_${VAR}_data"
+PKG="cmf_${VER}_pkg"
+SRC="cmf_${VER}_src"
+DAT="cmf_${VER}_data"
 
 # copy src to pkg
 rm -rf $PKG
