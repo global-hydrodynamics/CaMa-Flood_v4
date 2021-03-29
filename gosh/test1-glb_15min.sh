@@ -27,7 +27,7 @@
 
 #*** 0a. Set CaMa-Flood base directory
 BASE=`pwd`/..
-# BASE="/home/yamadai/work/CaMa_v400/cmf_v400_pkg"  # setting for PBS in cluster
+# BASE="/home/yamadai/work/CaMa_v401/cmf_v401_pkg"  # setting for PBS in cluster
 
 echo $BASE
 
@@ -38,6 +38,7 @@ export DYLD_LIBRARY_PATH="${HDF5LIB}:${IFORTLIB}:${DYLD_LIBRARY_PATH}"
 
 #*** 0c. OpenMP thread number
 export OMP_NUM_THREADS=16                    # OpenMP cpu num
+#export OMP_NUM_THREADS=20                    # OpenMP cpu num
 
 #================================================
 # (1) Experiment setting

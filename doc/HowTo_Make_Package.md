@@ -88,9 +88,11 @@ Currently in v401, sample add-on data contains
 
 [3.3c] test3-jpn_fcast.sh simulation
  - Go to map/tej_01min/src_regions
- - Edit the regionalization domain in s01 script (sample prepared).
+ - **Edit the regionalization domain** in s01 script (sample prepared).
  - Compile codes. Execute s01 script.
- - Confirm the tej_01min map data is generated.
+ - Go to map/tej_01min/src_params
+ - **Edit input matrix info domain** in s02 script (sample prepared).
+- Confirm the tej_01min map data is generated.
 
 ### 3b: Execute test simulations to confirm everything is OK.
 (3.4) Copy cmf_v401_pkg/ as cmf_v401_test/, and goto cmf_v401_test/

@@ -51,11 +51,7 @@ cbar=plt.colorbar(im2, cax=cax, extend="max")
 cbar.set_label('Label to be set', size=ssize*1.2)
 cbar.ax.tick_params(labelsize=ssize)
 
-<<<<<<< HEAD
 plt.savefig("test1.jpg")
-=======
-savefig("test.jpg")
->>>>>>> merge_test
 
 pdf.savefig()
 plt.close()

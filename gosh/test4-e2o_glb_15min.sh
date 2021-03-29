@@ -29,7 +29,7 @@
 
 #*** 0a. Set CaMa-Flood base directory
 BASE=`pwd`/..
-# BASE="/home/yamadai/work/CaMa_v400/cmf_v400_pkg"  # setting for PBS in cluster
+# BASE="/home/yamadai/work/CaMa_v401/cmf_v401_pkg"  # setting for PBS in cluster
 
 echo $BASE
 
@@ -39,7 +39,9 @@ export HDF5LIB="/opt/local/hdf5-1.10.5/lib"
 export DYLD_LIBRARY_PATH="${HDF5LIB}:${IFORTLIB}:${DYLD_LIBRARY_PATH}"
 
 #*** 0c. OpenMP thread number
-export OMP_NUM_THREADS=16                    # OpenMP cpu num
+export OMP_NUM_THREADS=16                  # OpenMP cpu num
+#export OMP_NUM_THREADS=20                  # OpenMP cpu num
+
 
 #================================================
 # (1) Experiment setting
@@ -114,7 +116,7 @@ LROSPLIT=".FALSE."                          # .TRUE. for sub-surface runoff
 LINPCDF=".TRUE."                              # true for netCDF runoff
 LINTERP=".TRUE."                              # .TRUE. to interporlate with input matrix
 LINTERPCDF=".FALSE."                          # .TRUE. to use netCDF input matrix
-CROFDIR="${BASE}/inp/E2O_ecmwf/"          # runoff directory
+CROFDIR="${BASE}/inp/E2O/"          # runoff directory
 CROFPRE="e2o_ecmwf_wrr2_glob15_day_Runoff_"   # runoff prefix/suffix  
 CROFCDF=""     # see (3) set each year        # netCDF runoff file
 CVNROF="Runoff"                               # netCDF runoff    variable name

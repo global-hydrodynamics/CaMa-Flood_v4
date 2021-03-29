@@ -21,7 +21,10 @@ cp -r  $SRC $PKG
 echo "copy sample input data"
 cd ${BASE}/${PKG}/
 pwd
-cp -r ${BASE}/${DAT}/inp            ${BASE}/${PKG}/
+mkdir -p inp
+cp -r ${BASE}/${DAT}/inp/test_1deg      ${BASE}/${PKG}/inp/
+cp -r ${BASE}/${DAT}/inp/test_15min_nc  ${BASE}/${PKG}/inp/
+cp -r ${BASE}/${DAT}/inp/test_jpn_1hr   ${BASE}/${PKG}/inp/
 
 ########## copy or link map data ##########
 echo "copy/link maps"
@@ -82,7 +85,7 @@ cp -r src/src_region tej_01min/
   pwd
   make all
   ./s01-channel_params.sh
-  ./s02-generate_inpmat.sh
+  ./sample_tej_s02-generate_inpmat.sh
   make clean
 
 ########## prepare sample data for etc/dir ##########

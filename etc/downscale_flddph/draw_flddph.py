@@ -82,7 +82,7 @@ plt.xticks( np.arange(west,east+0.000001,xlint) )
 plt.yticks( np.arange(south,north+0.000001,ylint) )
 
 ysf=(north-south)*0.05
-ctext="CaMa-Flood v3.9: Floodplain Water Depth [ "+cdate+" ]"
+ctext="CaMa-Flood: Floodplain Water Depth [ "+cdate+" ]"
 plt.text(west,north+ysf,ctext,fontsize=fsize)
 
 #===================================
