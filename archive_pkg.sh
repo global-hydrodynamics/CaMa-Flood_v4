@@ -1,4 +1,8 @@
 #!/bin/sh
+# Archiving source codes, scripts, and minimum data for test simulation.
+# To be used in working directory, before executing test simulations.
+# Make sure only required files are included.
+
 
 TAG=`date '+%Y%m%d'`
 VER="v401"
@@ -15,40 +19,28 @@ cd $PKGBASE
 #tar czvf ${DIR}.tar.gz --exclude='.DS_Store' ${DIR}
 #exit
 
-##### Adm #####
-cp -r ${BASE}/adm .
-cd adm
-  pwd
-  rm -f ./.*  2> /dev/null
-cd $PKGBASE
-
-##### Util #####
+##### Dirs treated simply #####
+cp -r ${BASE}/adm  .
+cp -r ${BASE}/doc  .
+cp -r ${BASE}/etc  .
+cp -r ${BASE}/gosh .
+cp -r ${BASE}/src  .
 cp -r ${BASE}/util .
-cd util
-  pwd
-  rm -f ./.*  2> /dev/null
-cd $PKGBASE
+mkdir -p out
 
-##### Src #####
-mkdir -p src
-cd src
-  pwd
-  cp ${BASE}/src/Makefile .
-  cp ${BASE}/src/*.F90    .
-  rm -f ./.*  2> /dev/null
-
-  cp -r ${BASE}/src/MOJ   .
-  rm -f ./MOJ/.*          2> /dev/null
-
-cd $PKGBASE
+cp ${BASE}/LICENSE     .
+cp ${BASE}/README.md   .
+cp ${BASE}/versions.md .
+cp ${BASE}/archive_src .
+cp ${BASE}/archive_pkg .
+cp ${BASE}/.gitignore  .
 
 ##### Map #####
 mkdir -p map
-cd map
+cd ${PKGBASE}/map
   pwd
   cp -r ${BASE}/map/data           .
   rm -f ./data/.*   2> /dev/null
-
 
   mkdir -p src
   cd src
@@ -91,18 +83,9 @@ cd map
   rm -f ./${MAPDIR}/*/.*             2> /dev/null
 cd $PKGBASE
 
-##### gosh #####
-mkdir -p gosh
-cd gosh
-  pwd
-  cp ${BASE}/gosh/compile.sh    .
-  cp ${BASE}/gosh/test*.sh      .
-  rm -f ./.*                         2> /dev/null
-cd $PKGBASE
-
 ##### Input #####
 mkdir -p inp
-cd inp
+cd ${PKGBASE}/inp
   pwd
 
   ROFF="test_1deg"
@@ -120,105 +103,6 @@ cd inp
   cp -r ${BASE}/inp/$ROFF .
   rm -f ./${ROFF}/.*             2> /dev/null
 cd $PKGBASE
-
-##### Output #####
-mkdir -p out
-cd out
-  pwd
-#  cp -r ${BASE}/out/src      .
-#  rm -f .*
-cd $PKGBASE
-
-##### etc #####
-mkdir -p etc
-cd etc
-  pwd
-
-  PROJ="downscale_flddph"
-  cd $PKGBASE/etc/
-  mkdir $PROJ
-  cd $PROJ
-    cp ${BASE}/etc/$PROJ/*.sh      .
-    cp ${BASE}/etc/$PROJ/*.py      .
-    cp ${BASE}/etc/$PROJ/*.md .
-    cp -r ${BASE}/etc/$PROJ/src    .
-    cd src
-    make clean
-    cd ..
-    rm -f ./.*                 2> /dev/null
-    rm -f ./src/.*             2> /dev/null
-  cd ..
-
-  PROJ="runoff_preset"
-  cd $PKGBASE/etc/
-  mkdir $PROJ
-  cd $PROJ
-    cp ${BASE}/etc/$PROJ/*.sh      .
-    cp ${BASE}/etc/$PROJ/*.py      .
-    cp ${BASE}/etc/$PROJ/*.md .
-    cp -r ${BASE}/etc/$PROJ/src    .
-      cd src
-      make clean
-      cd ..
-    rm -f ./.*                 2> /dev/null
-    rm -f ./src/.*             2> /dev/null
-  cd ..
-
- PROJ="n-year_flood_depth"
-  cd $PKGBASE/etc/
-  mkdir $PROJ
-  cd $PROJ
-    cp -r ${BASE}/etc/$PROJ/script .
-      cd script 
-        cd src
-        make clean
-        cd ..
-      rm -f ./.*                 2> /dev/null
-      rm -f ./src/.*             2> /dev/null
-    cd ..
-  cd ..
-
-
- PROJ="reservoir_operation"
-  cd $PKGBASE/etc/
-  mkdir $PROJ
-  cd $PROJ
-    cp ${BASE}/etc/$PROJ/*.sh .
-    cp ${BASE}/etc/$PROJ/*.py .
-    cp ${BASE}/etc/$PROJ/*.md .
-    cp -r ${BASE}/etc/$PROJ/sample_data .
-    cp -r ${BASE}/etc/$PROJ/dam_params  .
-
-    rm -f ./.*                 2> /dev/null
-  cd ..
-
- PROJ="validation"
-  cd $PKGBASE/etc/
-  mkdir $PROJ
-  cd $PROJ
-    cp ${BASE}/etc/$PROJ/*.sh .
-    cp ${BASE}/etc/$PROJ/*.py .
-    cp ${BASE}/etc/$PROJ/*.md .
-    cp -r ${BASE}/etc/$PROJ/src .
-
-    cd src
-    make clean
-    cd ..
-    rm -f ./.*                 2> /dev/null
-    rm -f ./src/.*             2> /dev/null
-
-    cd ..
-    rm -f ./.*                 2> /dev/null
-  cd ..
-
-cd $PKGBASE
-###
-
-cp -r ${BASE}/doc             .
-rm -f ./doc/.*                 2> /dev/null
-
-cp ${BASE}/archive_pkg.sh         .
-cp ${BASE}/archive_src.sh         .
 
 #===========
 
