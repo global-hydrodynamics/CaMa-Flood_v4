@@ -13,16 +13,18 @@ echo "Making package starts in 3 seconds..."
 sleep 2
 ###
 
-# copy src to pkg
+########## copy src to pkg ##########
 rm -rf $PKG
 cp -r  $SRC $PKG
 
-# copy sample input
+########## copy sample input ##########
 cd ${BASE}/${PKG}/
+pwd
 cp -r ${BASE}/${DAT}/inp            ${BASE}/${PKG}/
 
-# copy or link map data
+########## copy or link map data ##########
 cd ${BASE}/${PKG}/map
+pwd
 cp -r ${BASE}/${DAT}/map/data       ${BASE}/${PKG}/map/
 
 cp -r ${BASE}/${DAT}/map/glb_15min  ${BASE}/${PKG}/map/
@@ -34,6 +36,7 @@ cd ${BASE}/${PKG}/map
 cp -r src/src_param glb_15min/
 ## prepare map parameters
   cd ${BASE}/${PKG}/map/glb_15min/src_param/
+  pwd
   make all
   ./s01-channel_params.sh
   ./s02-generate_inpmat.sh
@@ -45,12 +48,13 @@ cp -r src/src_region conus_06min/
 cp -r src/src_param  conus_06min/
 ## prepare regional map
   cd ${BASE}/${PKG}/map/conus_06min/src_region/
+  pwd
   make all
   ./s01-regional_map.sh
   make clean
 ## prepare map parameters
-cd ${BASE}/${PKG}/map
   cd ${BASE}/${PKG}/map/conus_06min/src_param/
+  pwd
   make all
   ./s01-channel_params.sh
   ./s02-generate_inpmat.sh
@@ -62,18 +66,22 @@ cp -r src/src_param  tej_01min/
 cp -r src/src_region tej_01min/
 ## prepare regional map
   cd ${BASE}/${PKG}/map/tej_01min/src_region/
+  pwd
   make all
   ./sample_tej_s01-regional_map.sh
   make clean
 ## prepare map parameters
 cd ${BASE}/${PKG}/map
   cd ${BASE}/${PKG}/map/tej_01min/src_param/
+  pwd
   make all
   ./s01-channel_params.sh
   ./s02-generate_inpmat.sh
   make clean
 
-# prepare sample data for etc/dir
+########## prepare sample data for etc/dir ##########
+cd ${BASE}/${PKG}/etc
+pwd
 cp -r ${BASE}/${DAT}/etc/validation/obs_sample ${BASE}/${PKG}/etc/validation/
 
 ######
