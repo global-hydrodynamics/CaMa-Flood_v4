@@ -6,9 +6,9 @@
 TAG=`date '+%Y%m%d'`
 VER="v401"
 BASE=`pwd`
-DIR="cmf_${VER}_pkg"
+PKG="cmf_${VER}_pkg"
 
 export COPYFILE_DISABLE=1
-tar czvf ${DIR}_${TAG}.tar.gz --exclude='.DS_Store' ${DIR}
+tar czvf ${PKG}_${TAG}.tar.gz --exclude='.DS_Store' ${PKG}
 
 

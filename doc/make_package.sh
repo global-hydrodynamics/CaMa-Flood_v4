@@ -9,8 +9,8 @@ DAT="cmf_${VER}_data"
 
 ####
 echo "First, Please edir ${SRC}/adm/Mkinclude before executing this file"
-echo "Making package starts in 3 seconds..."
-sleep 2
+echo "-- Making package starts in 3 seconds --"
+sleep 3
 ###
 
 ########## copy src to pkg ##########
@@ -97,3 +97,4 @@ cp -r ${BASE}/${DAT}/etc/validation/obs_sample ${BASE}/${PKG}/etc/validation/
 ######
 echo "Copy complete"
 echo "Prepare regionalized map, and then make package by archive_pkg.sh"
+
