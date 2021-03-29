@@ -14,7 +14,7 @@ The code is managed on GitHub, while the data (e.g. map, sample input) is manage
 The latest version of CaMa-Flood source code is managed on GitHub.
 When making a new release version, create a branch, e.g. “release_v4.01”, to make sure which branch is used as the code included in the release package.
 
-Execute archive_src.sh in GitHub directory, and copy the codes to “CaMa_v401/cmf_v401_src/”
+Execute **archive_src.sh** in GitHub directory, and copy the codes to “CaMa_v401/cmf_v401_src/”
 
 ## 2. Model data
 The model data is managed in the lab server. We have to prepare “basic map data”, “sample input data”, “runoff climatology data for channel parameter calculation”, and some sample data for etc/ add-on.
@@ -64,7 +64,6 @@ Currently in v401, sample add-on data contains
 ~~~
 
 ## 3. Creating CaMa-Flood package
-### 3a: Copy and process required data to make package
 (3.1) Please copy cmf_v401_src to cmf_v401_pkg
 
 (3.2) Edit Mkinclude
@@ -94,24 +93,28 @@ Currently in v401, sample add-on data contains
  - **Edit input matrix info domain** in s02 script (sample prepared).
 - Confirm the tej_01min map data is generated.
 
-### 3b: Execute test simulations to confirm everything is OK.
-(3.4) Copy cmf_v401_pkg/ as cmf_v401_test/, and goto cmf_v401_test/
+## 4. Execute test simulations to confirm everything is OK.
+Execute sample simulations and analysis in cmf_v401_pkg.
+If error is found, please modify the corresponding code on GitHub, and repeat this testing procedure.
 
-(3.5) Compile codes
+(4.1) Compile codes
 -  Go to adm/, and edit Mkinclude
 -  Go to gosh/, and execute compile.sh
 
-(3.5) Prepare and execute test simulations
+(4.2) Prepare and execute test simulations
  - Check whether test1, test2, test3 simulations works OK.
  - link E2O runoff input, and check test4 simulation works OK.
 
-(3.6) Test etc/ directory add-ons
+(4.3) Test etc/ directory add-ons
  - Downscaling of test1 simulation (downscale_flddph/)
  - Map visualization of test1, test2 simulation (result_mapping/)
  - Sample validation of test1, test2 simulations (validation/)
  - Return-period caluclation of test4 simulations (nyear-flood_depth/)
  -Test reservoir operation scheme (reservoir_operation/))
 
-## 4/ Make package when everything is OK
-When everything works, go to cmf_v401_pkg directory. Execute archive_pkg.sh.
+## 5. Make package when everything is OK
+When everything works, please rename cmf_v400_pkg as cmv_v400_test.
+Then, repeat the procedure in "3. Creating CaMa-Flood package", and then make a tar archive for distribution.
+
+
 
