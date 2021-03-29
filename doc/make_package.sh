@@ -1,26 +1,27 @@
 #!/bin/sh
 
 BASE=`pwd`
+VER="v401"
 
-PKG="cmf_v400_pkg"
-SRC="cmf_v400_src"
-DAT="cmf_v400_data"
+PKG="cmf_${VAR}_pkg"
+SRC="cmf_${VAR}_src"
+DAT="cmf_${VAR}_data"
 
 # copy src to pkg
 rm -rf $PKG
-cp -r $SRC $PKG
+cp -r  $SRC $PKG
 
 # copy sample input
 cd ${BASE}/${PKG}/
-cp -r ${BASE}/${DAT}/inp .
+cp -r ${BASE}/${DAT}/inp            ${BASE}/${PKG}/
 
 # copy or link map data
 cd ${BASE}/${PKG}/map
-cp -r ${BASE}/${DAT}/dat_map/data .
+cp -r ${BASE}/${DAT}/map/data       ${BASE}/${PKG}/map/
 
-cp -r ${BASE}/${DAT}/dat_map/glb_15min .
-ln -s ${BASE}/${DAT}/dat_map/glb_06min .
-ln -s ${BASE}/${DAT}/dat_map/jpn_01min .
+cp -r ${BASE}/${DAT}/map/glb_15min  ${BASE}/${PKG}/map/
+ln -s ${BASE}/${DAT}/map/glb_06min  ${BASE}/${PKG}/map/
+ln -s ${BASE}/${DAT}/map/jpn_01min  ${BASE}/${PKG}/map/
 
 
 # prepare sample regional map for test similations
@@ -35,3 +36,10 @@ cp -r src/src_region conus_06min/
 mkdir -p tej_01min
 cp -r src/src_param  tej_01min/
 cp -r src/src_region tej_01min/
+
+# prepare sample data for etc/dir
+cp -r ${BASE}/${DAT}/etc/validation/obs_sample ${BASE}/${PKG}/etc/validation/
+
+######
+echo "Copy complete"
+echo "Prepare regionalized map, and then make package by archive_pkg.sh"
