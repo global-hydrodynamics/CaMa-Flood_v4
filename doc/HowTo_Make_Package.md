@@ -52,8 +52,8 @@ It contains below files:
 
 ### 2.3 Sample data for etc/ add-on
 Sample data for etc/ directory add-ons should be copied to package as well.
-* Note: some small-size sample are included in GitHub repo.Large-size sample data should be kept in servers, and cpied when making a package.
-* Note2: when preparing sample data, please take care on data copyright and check whether re-distribution is permitted or not.
+*Note: some small-size sample are included in GitHub repo.Large-size sample data should be kept in servers, and cpied when making a package.*
+*Note2: when preparing sample data, please take care on data copyright and check whether re-distribution is permitted or not.*
 
 
 Currently in v401, sample add-on data contains
@@ -67,15 +67,14 @@ Currently in v401, sample add-on data contains
 ### 3a: Copy and process required data to make package
 (3.1) Please copy cmf_v401_src to cmf_v401_pkg
 
+(3.2) Edit Mkinclude
+-  Go to cmf_v401_src/adm/, and edit Mkinclude
+
+**Step (3.3) and (a.4) can be done automaticapy by make_package.sh scrpt.**
+
 (3.2) Copy or link required data from cmf_v401_data
 -  Basic map data, sample input runoff
-The above steps (3.1) (3.2) can be done by make_package.sh script in doc/ directory.
 
-(3.5) Compile codes
--  Go to gosh/, and execute compile.sh
-
-(3.3) Prepare map data
--  Go to adm/, and edit Mkinclude
 
 [3.3a]test1-glb_15min.sh simulation
 - Go to map/glb_15min/src_param
