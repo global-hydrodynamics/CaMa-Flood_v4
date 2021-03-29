@@ -67,7 +67,7 @@ LFLDOUT=".TRUE."                            # .TRUE. to activate floodplain disc
 LPTHOUT=".TRUE."                            # .TRUE. to activate bifurcation flow, mainly for delta simulation
 LDAMOUT=".TRUE."                           # .TRUE. to activate reservoir operation (under development)
 
-CDAMFILE="${BASE}/etc/dam_scheme/sample_data/damparam_sample_glb_15min.csv"
+CDAMFILE="${PWDD}/sample_data/damparam_sample_glb_15min.csv"
 
 #============================
 #*** 1c. simulation time

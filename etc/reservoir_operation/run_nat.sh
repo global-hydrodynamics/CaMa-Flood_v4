@@ -47,7 +47,7 @@ export OMP_NUM_THREADS=16                    # OpenMP cpu num
 
 #============================
 #*** 1a. Experiment directory setting
-EXP="test_mat"                       # experiment name (output directory name)
+EXP="test_nat"                       # experiment name (output directory name)
 RDIR=${PWDD}/out/${EXP}                     # directory to run CaMa-Flood
 EXE="MAIN_cmf"                              # Execute file name
 PROG=${BASE}/src/${EXE}                     # location of Fortran main program
@@ -67,7 +67,7 @@ LFLDOUT=".TRUE."                            # .TRUE. to activate floodplain disc
 LPTHOUT=".TRUE."                            # .TRUE. to activate bifurcation flow, mainly for delta simulation
 LDAMOUT=".FALSE."                           # .TRUE. to activate reservoir operation (under development)
 
-CDAMFILE="${BASE}/etc/dam_scheme/sample_data/damparam_sample_glb_15min.csv"
+CDAMFILE="${PWDD}/sample_data/damparam_sample_glb_15min.csv"
 
 #============================
 #*** 1c. simulation time
