@@ -5,7 +5,6 @@
 GRanD_obs="./sample_data/GRanD_reservoir"
 #GRanD_obs="/home/yamadai/work/data/Dam+Lake/GRanD/GRanD_reservoir"
 
-<<<<<<< HEAD
 #### simulation 
 MAPDIR="../../map/glb_15min"
 DAMSIM="./out/test_dam"
@@ -32,10 +31,5 @@ ln -sf $NATSIM natsim
 ln -sf $DAMLIST damlist.csv
 
 python hydrograph_dam.py $SYEAR $SMON $SDAY $EYEAR $EMON $EDAY $DAMIDLIST $DT
-=======
-ln -sf $GRanD_obs ./obs_dam
-
-python hydrograph_dam.py
->>>>>>> merge_test
 
 exit 0
