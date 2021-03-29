@@ -18,11 +18,13 @@ rm -rf $PKG
 cp -r  $SRC $PKG
 
 ########## copy sample input ##########
+echo "copy sample input data"
 cd ${BASE}/${PKG}/
 pwd
 cp -r ${BASE}/${DAT}/inp            ${BASE}/${PKG}/
 
 ########## copy or link map data ##########
+echo "copy/link maps"
 cd ${BASE}/${PKG}/map
 pwd
 cp -r ${BASE}/${DAT}/map/data       ${BASE}/${PKG}/map/
@@ -35,6 +37,7 @@ ln -s ${BASE}/${DAT}/map/jpn_01min  ${BASE}/${PKG}/map/
 cd ${BASE}/${PKG}/map
 cp -r src/src_param glb_15min/
 ## prepare map parameters
+  echo "channel param for glb_15min"
   cd ${BASE}/${PKG}/map/glb_15min/src_param/
   pwd
   make all
@@ -47,12 +50,14 @@ mkdir -p conus_06min
 cp -r src/src_region conus_06min/
 cp -r src/src_param  conus_06min/
 ## prepare regional map
+  echo "regional map for conus_06min"
   cd ${BASE}/${PKG}/map/conus_06min/src_region/
   pwd
   make all
   ./s01-regional_map.sh
   make clean
 ## prepare map parameters
+  echo "channel param for conus_06min"
   cd ${BASE}/${PKG}/map/conus_06min/src_param/
   pwd
   make all
@@ -65,13 +70,14 @@ mkdir -p tej_01min
 cp -r src/src_param  tej_01min/
 cp -r src/src_region tej_01min/
 ## prepare regional map
+  echo "regional map for tej_01min"
   cd ${BASE}/${PKG}/map/tej_01min/src_region/
   pwd
   make all
   ./sample_tej_s01-regional_map.sh
   make clean
 ## prepare map parameters
-cd ${BASE}/${PKG}/map
+  echo "channel param for tej_01min"
   cd ${BASE}/${PKG}/map/tej_01min/src_param/
   pwd
   make all
@@ -80,6 +86,7 @@ cd ${BASE}/${PKG}/map
   make clean
 
 ########## prepare sample data for etc/dir ##########
+echo "sample data for etc/ add on"
 cd ${BASE}/${PKG}/etc
 pwd
 cp -r ${BASE}/${DAT}/etc/validation/obs_sample ${BASE}/${PKG}/etc/validation/
