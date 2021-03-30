@@ -63,13 +63,13 @@ cmf_drv_advance_mod.o
 #=============================
 #*** for main program
 TARGET = MAIN_cmf_ici
-BINNAME = exe_cama395
+BINNAME = exe_cama400
 LIBNAME = src.a
 
 all: $(LIBNAME) $(TARGET)
 
 $(TARGET): $(TARGET).o $(LIBNAME) ${ICILIB} ${CMMNLIB} ${JCUPLIB}
-	$(LD) $(LDFLAGS) -o $@ $^ $(CMMNDIR)/palmtime.o
+	$(LD) $(LDFLAGS) -o $@ $^
 	@echo "Complete making cama"
 	$(INSTALL) $@ $(BINDIR)/$(BINNAME)
 
