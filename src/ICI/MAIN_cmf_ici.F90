@@ -22,6 +22,7 @@ USE CMF_DRV_ADVANCE_MOD,     ONLY: CMF_DRV_ADVANCE
 !
 USE CMF_CTRL_ICI_MOD,        ONLY: CMF_ICI_INPUT,      CMF_ICI_INIT,        CMF_ICI_END
 USE CMF_CTRL_ICI_MOD,        ONLY: CMF_ICI_FORCING_GET,CMF_ICI_OUTPUT
+USE palmtime,                ONLY: palm_TimeStart, palm_TimeEnd
 !$ USE OMP_LIB
 IMPLICIT NONE
 ! Local variables
@@ -47,19 +48,28 @@ ALLOCATE(ZBUFF(NXIN,NYIN,2))
 !ISTEPADV=INT(DTIN/DT,JPIM)
 !DO ISTEP=1,NSTEPS,ISTEPADV
 
+CALL palm_TimeStart( 'Main' )
+
 ISTEPADV=1
 DO ISTEP=1,NSTEPS,1
 
   !*  2a Get forcing from ICI
+  CALL palm_TimeStart( 'CAMA_forcing' )
   CALL CMF_ICI_FORCING_GET
+  CALL palm_TimeEnd  ( 'CAMA_forcing' )
 
   !*  2b  Advance CaMa-Flood model for ISTEPADV
+  CALL palm_TimeStart( 'CAMA_driver' )
   CALL CMF_DRV_ADVANCE(ISTEPADV)
+  CALL palm_TimeEnd  ( 'CAMA_driver' )
   
   !*  2c  Output data with ICI
+  CALL palm_TimeStart( 'CAMA_output' )
   CALL CMF_ICI_OUTPUT
+  CALL palm_TimeEnd  ( 'CAMA_output' )
 
 ENDDO
+CALL palm_TimeEnd  ( 'Main' )
 !================================================
 
 !*** 3a. Finalize 
