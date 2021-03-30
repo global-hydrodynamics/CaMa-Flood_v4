@@ -27,12 +27,11 @@ cp -r ${BASE}/out  .
 cp -r ${BASE}/src  .
 cp -r ${BASE}/util .
 
-cp ${BASE}/LICENSE     .
-cp ${BASE}/README.md   .
-cp ${BASE}/versions.md .
-cp ${BASE}/archive_src .
-cp ${BASE}/archive_pkg .
-cp ${BASE}/.gitignore  .
+cp ${BASE}/LICENSE        .
+cp ${BASE}/README.md      .
+cp ${BASE}/Versions.md    .
+cp ${BASE}/archive_src.sh .
+cp ${BASE}/.gitignore     .
 
 #===========
 
