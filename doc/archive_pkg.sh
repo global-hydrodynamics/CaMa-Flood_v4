@@ -8,7 +8,11 @@ VER="v401"
 BASE=`pwd`
 PKG="cmf_${VER}_pkg"
 
+mv ${PKG} ${PKG}_${TAG}
+
 export COPYFILE_DISABLE=1
-tar czvf ${PKG}_${TAG}.tar.gz --exclude='.DS_Store' ${PKG}
+tar czvf ${PKG}_${TAG}.tar.gz --exclude='.DS_Store' ${PKG}_${PKG}
+
+mv ${PKG}_${TAG} ${PKG} 
 
 
