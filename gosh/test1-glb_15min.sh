@@ -27,7 +27,7 @@
 
 #*** 0a. Set CaMa-Flood base directory
 BASE=`pwd`/..
-# BASE="/home/yamadai/work/CaMa_v401/cmf_v401_pkg"  # setting for PBS in cluster
+# BASE="/home/yamadai/work/CaMa_v402/cmf_v402_pkg"  # setting for PBS in cluster
 
 echo $BASE
 
@@ -38,7 +38,6 @@ export DYLD_LIBRARY_PATH="${HDF5LIB}:${IFORTLIB}:${DYLD_LIBRARY_PATH}"
 
 #*** 0c. OpenMP thread number
 export OMP_NUM_THREADS=16                    # OpenMP cpu num
-#export OMP_NUM_THREADS=20                    # OpenMP cpu num
 
 #================================================
 # (1) Experiment setting
@@ -299,6 +298,7 @@ LGRIDMAP = .TRUE.                      ! true: for standard XY gridded 2D map
 LLEAPYR  = .TRUE.                      ! true: neglect leap year (Feb29 skipped)
 LMAPEND  = .FALSE.                     ! true: for map data endian conversion
 LBITSAFE = .FALSE.                     ! true: for Bit Identical simulation (avoid OSM ATOMIC)
+LSTG_ES  = .FALSE.                     ! true: for Vector Processor optimization (CMF_OPT_FLDSTG_ES) 
 /
 &NDIMTIME
 CDIMINFO = "${CDIMINFO}"               ! text file for dimention information

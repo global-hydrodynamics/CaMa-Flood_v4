@@ -32,7 +32,8 @@ USE YOS_CMF_INPUT,      ONLY: TMPNAM,   NSETFILE,   CSETFILE
 ! run version
 USE YOS_CMF_INPUT,      ONLY: LADPSTP,  LFPLAIN,  LKINE,    LFLDOUT,  LPTHOUT,  LDAMOUT,  &
                             & LROSPLIT, LGDWDLY,  LSLPMIX,  LMEANSL,  LSEALEV,  LOUTPUT,  &
-                            & LRESTART, LSTOONLY, LGRIDMAP, LLEAPYR,  LMAPEND,  LBITSAFE
+                            & LRESTART, LSTOONLY, LGRIDMAP, LLEAPYR,  LMAPEND,  LBITSAFE, &
+                            & LSTG_ES
 ! dimention & time
 USE YOS_CMF_INPUT,      ONLY: CDIMINFO, DT,       NX,NY,    NLFP,     NXIN,NYIN,    INPN, &
                             & IFRQ_INP, DTIN,     WEST,EAST,NORTH,SOUTH
@@ -42,9 +43,10 @@ USE YOS_CMF_INPUT,      ONLY: PMANRIV,  PMANFLD,  PDSTMTH,  PMINSLP,  PGRV, PCAD
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
 IMPLICIT NONE
 !
-NAMELIST/NRUNVER/  LADPSTP,  LFPLAIN,  LKINE,    LFLDOUT,  LPTHOUT,  LDAMOUT, &
-                   LROSPLIT, LGDWDLY,  LSLPMIX,  LMEANSL,  LSEALEV,  LOUTPUT, &
-                   LRESTART, LSTOONLY, LGRIDMAP, LLEAPYR,  LMAPEND,  LBITSAFE
+NAMELIST/NRUNVER/  LADPSTP,  LFPLAIN,  LKINE,    LFLDOUT,  LPTHOUT,  LDAMOUT,  &
+                   LROSPLIT, LGDWDLY,  LSLPMIX,  LMEANSL,  LSEALEV,  LOUTPUT,  &
+                   LRESTART, LSTOONLY, LGRIDMAP, LLEAPYR,  LMAPEND,  LBITSAFE, &
+                   LSTG_ES
 
 NAMELIST/NDIMTIME/ CDIMINFO, DT, IFRQ_INP
 
@@ -85,6 +87,7 @@ LGRIDMAP = .TRUE.            !! true: for standard XY gridded 2D map
 LLEAPYR  = .TRUE.            !! true: neglect leap year (Feb29 skipped)
 LMAPEND  = .FALSE.           !! true: for map data endian conversion
 LBITSAFE = .FALSE.           !! true: for Bit Identical (not used from v410, set in Mkinclude)
+LSTG_ES  = .FALSE.           !! true: for Vector Processor optimization (CMF_OPT_FLDSTG_ES) 
 
 !* change
 REWIND(NSETFILE)
@@ -113,6 +116,7 @@ WRITE(LOGNAM,*) "LGRIDMAP ", LGRIDMAP
 WRITE(LOGNAM,*) "LLEAPYR  ", LLEAPYR
 WRITE(LOGNAM,*) "LMAPEND  ", LMAPEND
 WRITE(LOGNAM,*) "LBITSAFE ", LBITSAFE
+WRITE(LOGNAM,*) "LSTG_ES " , LSTG_ES
 
 !============================
 !*** 2. set model dimention & time
