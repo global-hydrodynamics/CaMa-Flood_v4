@@ -471,7 +471,7 @@ IMPLICIT NONE
 REAL(KIND=JPRB), INTENT(IN)     :: PBUFF(:,:,:)
 !============================
 ! Runoff interpolation & unit conversion (mm/dt -> m3/sec)
-IF (LINTERP) THEN ! mass conservation
+IF (LINTERP) THEN ! mass conservation using "input matrix table (inpmat)"
   CALL ROFF_INTERP(PBUFF(:,:,1),D2RUNOFF)
   IF (LROSPLIT) THEN
     CALL ROFF_INTERP(PBUFF(:,:,2),D2ROFSUB)
@@ -489,7 +489,8 @@ ENDIF
 
 CONTAINS
 !==========================================================
-!+ ROFF_INTERP : runoff interpolation with mass conservation
+!+ ROFF_INTERP : runoff interpolation with mass conservation using "input matrix table (inpmat)"
+!+ CONV_RESOL : nearest point runoff interpolation
 !==========================================================
 SUBROUTINE ROFF_INTERP(PBUFFIN,PBUFFOUT)
 ! interporlate runoff using "input matrix"
@@ -527,9 +528,8 @@ END DO
 !$OMP END PARALLEL DO
 END SUBROUTINE ROFF_INTERP
 !==========================================================
-
-!==========================================================
-!+ CONV_RESOL : nearest point runoff interpolation
+!+
+!+
 !==========================================================
 SUBROUTINE CONV_RESOL(PBUFFIN,PBUFFOUT)
 USE YOS_CMF_MAP,             ONLY: NSEQALL, D2GRAREA
