@@ -470,17 +470,26 @@ IMPLICIT NONE
 ! Declaration of arguments 
 REAL(KIND=JPRB), INTENT(IN)     :: PBUFF(:,:,:)
 !============================
-CALL ROFF_INTERP(PBUFF(:,:,1),D2RUNOFF)        !!  Interporlate runoff
-
-IF (LROSPLIT) THEN
-  CALL ROFF_INTERP(PBUFF(:,:,2),D2ROFSUB)
-ELSE
-  D2ROFSUB(:,:) = 0._JPRB
-ENDIF
+! Runoff interpolation & unit conversion (mm/dt -> m3/sec)
+IF (LINTERP) THEN ! mass conservation
+  CALL ROFF_INTERP(PBUFF(:,:,1),D2RUNOFF)
+  IF (LROSPLIT) THEN
+    CALL ROFF_INTERP(PBUFF(:,:,2),D2ROFSUB)
+  ELSE
+    D2ROFSUB(:,:) = 0._JPRB
+  ENDIF
+ELSE !  nearest point
+  CALL CONV_RESOL(PBUFF(:,:,1),D2RUNOFF)
+  IF (LROSPLIT) THEN
+    CALL CONV_RESOL(PBUFF(:,:,2),D2ROFSUB)
+  ELSE
+    D2ROFSUB(:,:) = 0._JPRB
+  ENDIF
+ENDIF 
 
 CONTAINS
 !==========================================================
-!+ ROFF_INTERP
+!+ ROFF_INTERP : runoff interpolation with mass conservation
 !==========================================================
 SUBROUTINE ROFF_INTERP(PBUFFIN,PBUFFOUT)
 ! interporlate runoff using "input matrix"
@@ -517,6 +526,38 @@ DO ISEQ=1, NSEQALL
 END DO
 !$OMP END PARALLEL DO
 END SUBROUTINE ROFF_INTERP
+!==========================================================
+
+!==========================================================
+!+ CONV_RESOL : nearest point runoff interpolation
+!==========================================================
+SUBROUTINE CONV_RESOL(PBUFFIN,PBUFFOUT)
+USE YOS_CMF_MAP,             ONLY: NSEQALL, D2GRAREA
+USE YOS_CMF_INPUT,           ONLY: RMIS
+USE CMF_UTILS_MOD,           ONLY: MAP2VECD
+IMPLICIT NONE
+
+REAL(KIND=JPRB),INTENT(IN)      :: PBUFFIN(:,:)     !! default [mm/dt] 
+REAL(KIND=JPRB),INTENT(OUT)     :: PBUFFOUT(:,:)    !! m3/s
+
+REAL(KIND=JPRB),ALLOCATABLE     :: D2TEMP(:,:)
+
+!$ SAVE
+INTEGER(KIND=JPIM)  ::  ISEQ
+! ================================================
+ALLOCATE(D2TEMP(NSEQALL,1))
+CALL MAP2VECD(PBUFFIN,D2TEMP)
+!$OMP PARALLEL DO
+DO ISEQ=1, NSEQALL
+  IF( D2TEMP(ISEQ,1).NE.RMIS )THEN
+    PBUFFOUT(ISEQ,1) = D2TEMP(ISEQ,1) * D2GRAREA(ISEQ,1) / DROFUNIT
+    PBUFFOUT(ISEQ,1) = MAX(PBUFFOUT(ISEQ,1), 0.D0)
+  ELSE
+    PBUFFOUT(ISEQ,1)=0.D0
+  ENDIF
+END DO
+!$OMP END PARALLEL DO
+END SUBROUTINE CONV_RESOL
 !==========================================================
 
 END SUBROUTINE CMF_FORCING_PUT
