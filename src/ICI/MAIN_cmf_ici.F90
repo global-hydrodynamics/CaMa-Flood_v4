@@ -32,8 +32,8 @@ REAL(KIND=JPRB),ALLOCATABLE     :: ZBUFF(:,:,:)       ! Buffer to store forcing 
 !================================================
 
 !*** 1a. Namelist handling
-CALL CMF_DRV_INPUT
 CALL CMF_ICI_INPUT
+CALL CMF_DRV_INPUT
 
 !*** 1b. INITIALIZATION
 CALL CMF_DRV_INIT
