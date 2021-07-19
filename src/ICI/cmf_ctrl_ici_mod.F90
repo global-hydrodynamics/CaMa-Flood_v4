@@ -76,7 +76,7 @@ CONTAINS
 !####################################################################
 SUBROUTINE CMF_ICI_INPUT
 ! Set ici namelist
-USE YOS_CMF_INPUT,           ONLY: NSETFILE
+USE YOS_CMF_INPUT,           ONLY: NSETFILE, CLOGOUT
 USE YOS_CMF_MAP,             ONLY: REGIONALL,REGIONTHIS
 USE CMF_UTILS_MOD,           ONLY: INQUIRE_FID
 USE ici_api,                 ONLY: ici_split_world, ici_set_my_world, &
@@ -110,6 +110,8 @@ Nid   = ici_get_irank_local()
 comm = ici_get_comm_local()
 REGIONALL = Nproc
 REGIONTHIS = Nid+1
+
+WRITE(CLOGOUT,"('./log_CaMa.txt-',i4.4)") REGIONTHIS
 
 END SUBROUTINE CMF_ICI_INPUT
 !####################################################################
@@ -171,8 +173,6 @@ IMPLICIT NONE
 !* local variables
 INTEGER(KIND=JPIM)              :: ix,iy,iseq,i
 INTEGER(KIND=JPIM)              :: cama_grid(NSEQALL)
-INTEGER(KIND=JPIM), ALLOCATABLE :: send_grid_index(:),recv_grid_index(:)
-REAL(KIND=JPRB), ALLOCATABLE    :: coef(:)
 !================================================
 DO iseq=1,NSEQALL
   ix=I1SEQX(ISEQ)
@@ -198,22 +198,7 @@ DO i=1,intpl_num
   IF (map_file=="") THEN
     CALL ici_set_interpolation_table(send_comp,send_grid,recv_comp,recv_grid)
   ELSE
-    ALLOCATE(send_grid_index(intpl_map))
-    ALLOCATE(recv_grid_index(intpl_map))
-    ALLOCATE(coef(intpl_map))
-    OPEN(8,FILE=map_file,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*intpl_map)
-    READ(8,REC=1) send_grid_index
-    READ(8,REC=2) recv_grid_index
-    CLOSE(8)
-    IF (intpl_file=="") THEN
-      coef(:)=1.d0
-    ELSE
-      OPEN(8,FILE=intpl_file,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=8*intpl_map)
-      READ(8,REC=1) coef
-      CLOSE(8)
-    ENDIF
-    CALL ici_set_interpolation_table(send_comp,send_grid,recv_comp,recv_grid,send_grid_index,recv_grid_index,coef)
-    DEALLOCATE(send_grid_index,recv_grid_index,coef)
+    CALL ici_set_interpolation_table(send_comp,send_grid,recv_comp,recv_grid,trim(map_file),trim(intpl_file))
   ENDIF
 ENDDO
 CLOSE(NSETFILE)
@@ -263,6 +248,7 @@ END SUBROUTINE ICI_LAKE_INIT
 !==========================================================
 SUBROUTINE ICI_OUTPUT_INIT
 ! Create first data output
+USE YOS_CMF_INPUT,      ONLY: LOUTPUT, IFRQ_OUT
 USE YOS_CMF_PROG,       ONLY: D2RIVSTO,     D2FLDSTO,     D2GDWSTO
 USE YOS_CMF_DIAG,       ONLY: D2RIVDPH,     D2FLDDPH,     D2FLDFRC,     D2FLDARE,     D2SFCELV,     D2STORGE, &
                             & D2OUTFLW_AVG, D2RIVOUT_AVG, D2FLDOUT_AVG, D2PTHOUT_AVG, D1PTHFLW_AVG, &
@@ -298,6 +284,10 @@ IF (LLAKEIN) THEN
   call ici_put_data("lkfrac" , D2LAKEFRC(:NSEQALL,1))
   call ici_put_data("runin" , D2RUNIN_AVG(:NSEQALL,1))
   call ici_put_data("runin_2m",D2RUNIN_AVG(:NSEQALL,1))
+ENDIF
+
+IF ( .not. LOUTPUT ) THEN
+  IFRQ_OUT = -1
 ENDIF
 
 END SUBROUTINE ICI_OUTPUT_INIT
@@ -521,6 +511,7 @@ USE YOS_CMF_DIAG,       ONLY: D2RIVDPH,     D2FLDDPH,     D2FLDFRC,     D2FLDARE
                             & D2OUTFLW_MAX, D2STORGE_MAX, D2RIVDPH_MAX
 USE YOS_CMF_MAP,        ONLY: NSEQALL
 USE YOS_CMF_ICI,        ONLY: D2RUNIN_AVG, D2LAKEFRC
+USE YOS_CMF_TIME,       ONLY: JYYYY, JMM, JDD, JHOUR, JMIN
 USE CMF_CALC_LAKEIN_MOD,ONLY: CMF_LAKEIN_AVERAGE, CMF_RESET_LAKEIN
 USE CMF_CALC_DIAG_MOD,  ONLY: CMF_DIAG_AVERAGE, CMF_DIAG_RESET
 USE ici_api,            ONLY: ici_put_data
@@ -558,6 +549,12 @@ IF (LLAKEIN) THEN
   call CMF_RESET_LAKEIN
 ENDIF
 call CMF_DIAG_RESET
+
+time_array(1) = JYYYY
+time_array(2) = JMM
+time_array(3) = JDD
+time_array(4) = JHOUR
+time_array(5) = JMIN
 
 CONTAINS
 !==========================================================
