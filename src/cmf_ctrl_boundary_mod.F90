@@ -39,12 +39,13 @@ INTEGER(KIND=JPIM)              :: SMONSL              !! Start MONTH of netCDF 
 INTEGER(KIND=JPIM)              :: SDAYSL              !! Start DAY   of netCDF sea level
 INTEGER(KIND=JPIM)              :: SHOURSL             !! Start DAY   of netCDF sea level
 ! for interporlation (netCDF only)
-INTEGER(KIND=JPIM)              :: NSTATIONS           !! Number of ser level station
+INTEGER(KIND=JPIM)              :: NLINKS, NCDFSTAT  !! Number of ser level station
 CHARACTER(LEN=256)              :: CSLMAP              !! Conversion table (Sta -> XY)
 
 NAMELIST/NBOUND/   LSEALEVCDF, CSEALEVDIR, CSEALEVPRE, CSEALEVSUF,&
                      CSEALEVCDF, CVNSEALEV, SYEARSL, SMONSL, SDAYSL, SHOURSL, &
-                     NSTATIONS,  CSLMAP
+                     CSLMAP, IFRQ_SL       
+
 !*** local variables
 #ifdef UseCDF
 TYPE TYPESL
@@ -117,7 +118,6 @@ IF( LSEALEV )THEN
     WRITE(LOGNAM,*) "SMONSL:     ", SMONSL
     WRITE(LOGNAM,*) "SDAYSL:     ", SDAYSL
     WRITE(LOGNAM,*) "SHOURSL:    ", SHOURSL
-    WRITE(LOGNAM,*) "NSTATIONS:  ", NSTATIONS
     WRITE(LOGNAM,*) "CSLMAP:     ", TRIM(CSLMAP)
   ELSE
     WRITE(LOGNAM,*) "CSEALEVDIR: ", TRIM(CSEALEVDIR)
@@ -148,12 +148,15 @@ END SUBROUTINE CMF_BOUNDARY_NMLIST
 
 !####################################################################
 SUBROUTINE CMF_BOUNDARY_INIT
+USE YOS_CMF_MAP,        ONLY: NSEQMAX, D2SEALEV
+
 IMPLICIT NONE
 !####################################################################
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "!---------------------!"
 WRITE(LOGNAM,*) "CMF::BOUNDARY_INIT: initialize boundary" 
 
+ALLOCATE( D2SEALEV(NSEQMAX,1) )
 
 IF( LSEALEVCDF )THEN
 #ifdef UseCDF
@@ -171,7 +174,8 @@ CONTAINS
 !+ CMF_BOUNDARY_INIT_CDF
 !==========================================================
 SUBROUTINE CMF_BOUNDARY_INIT_CDF
-USE YOS_CMF_INPUT,           ONLY: TMPNAM,  DTSL, DT
+USE YOS_CMF_INPUT,           ONLY: TMPNAM, DTSL
+USE YOS_CMF_MAP,             ONLY: I2NEXTX
 USE YOS_CMF_TIME,            ONLY: KMINSTASL, KMINSTART, KMINEND
 USE CMF_UTILS_MOD,           ONLY: NCERROR, INQUIRE_FID, DATE2MIN
 USE NETCDF
@@ -179,6 +183,7 @@ IMPLICIT NONE
 !* Local Variables 
 INTEGER(KIND=JPIM)              :: NTIMEID,NCDFSTP
 INTEGER(KIND=JPIM)              :: KMINENDSL
+INTEGER(KIND=JPIM)              :: IX, IY, IS, ILNK
 ! ===============================================
 !*** 1. calculate KMINSTASL (START KMIN for boundary)
 KMINSTASL = DATE2MIN(SYEARSL*10000+SMONSL*100+SDAYSL,SHOURSL*100)
@@ -188,38 +193,55 @@ SLCDF%CNAME=TRIM(CSEALEVCDF)
 SLCDF%CVAR=TRIM(CVNSEALEV)
 SLCDF%NSTART=KMINSTASL
 WRITE(LOGNAM,*) "CMF::BOUNRARY_INIT_CDF:", SLCDF%CNAME, SLCDF%NSTART
-
 !*** Open netCDF sea level File 
 CALL NCERROR( NF90_OPEN(SLCDF%CNAME,NF90_NOWRITE,SLCDF%NCID),'OPENING :'//SLCDF%CNAME )
 CALL NCERROR( NF90_INQ_VARID(SLCDF%NCID,SLCDF%CVAR,SLCDF%NVARID) )
 CALL NCERROR( NF90_INQ_DIMID(SLCDF%NCID,'time',NTIMEID),'GETTING TIME ID Sea Level Boundary')
 CALL NCERROR( NF90_INQUIRE_DIMENSION(NCID=SLCDF%NCID,DIMID=NTIMEID,LEN=NCDFSTP),'GETTING TIME LENGTH')
-
 CALL NCERROR( NF90_INQ_DIMID(SLCDF%NCID, 'stations', SLCDF%NSTAID ), 'GETTING STATION ID' ) 
-CALL NCERROR( NF90_INQUIRE_DIMENSION(SLCDF%NCID, DIMID=SLCDF%NSTAID, LEN=NSTATIONS ), 'GETTING STATION NUMBER' )
+CALL NCERROR( NF90_INQUIRE_DIMENSION(SLCDF%NCID, DIMID=SLCDF%NSTAID, LEN=NCDFSTAT ), 'GETTING STATION NUMBER' )
+ALLOCATE( R1SLIN(NCDFSTAT)    ) ! 1D input boundary condition (m)
 
 WRITE(LOGNAM,*) "CMF::BOUNDARY_INIT_CDF: CNAME,NCID,VARID", TRIM(SLCDF%CNAME),SLCDF%NCID,SLCDF%NVARID
-WRITE(LOGNAM,*) "STATION NUMBER:", NSTATIONS
 
 !*** 4. check sealev forcing time 
 IF ( KMINSTART .LT. KMINSTASL ) THEN 
-  WRITE(LOGNAM,*) "Run start earlier than boundary data", TRIM(SLCDF%CNAME), KMINSTART, KMINSTASL
-  STOP 9
+    WRITE(LOGNAM,*) "Run start earlier than boundary data", TRIM(SLCDF%CNAME), KMINSTART, KMINSTASL
+    STOP 9
 ENDIF
 
 KMINENDSL=KMINSTASL + NCDFSTP*INT(DTSL/60,JPIM)
 IF ( KMINEND .GT. KMINENDSL  ) THEN 
-  WRITE(LOGNAM,*) "Run end later than sealev data", TRIM(SLCDF%CNAME), KMINEND, KMINENDSL
-  STOP 9
+    WRITE(LOGNAM,*) "Run end later than sealev data", TRIM(SLCDF%CNAME), KMINEND, KMINENDSL
+    STOP 9
 ENDIF
 
 !*** 4. conversion table
-ALLOCATE( R1SLIN(NSTATIONS)    ) ! 1D input boundary condition (m)
-ALLOCATE( I2SLMAP(2,NSTATIONS) ) ! conversion matrix (Station -> XY )
 
+!! suggested new mapping format with X Y STATION columns
+!! read formated  mapping file and check if at river outlet and in NETCDF
 TMPNAM=INQUIRE_FID()
-OPEN(TMPNAM,FILE=CSLMAP,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*2*NSTATIONS)
-READ(TMPNAM,REC=1) I2SLMAP
+OPEN(TMPNAM,FILE=CSLMAP,FORM='FORMATTED')
+READ(TMPNAM,*) NLINKS
+
+WRITE(LOGNAM,*) "Dynamic sea level links", NLINKS
+
+ALLOCATE( I2SLMAP(3,NLINKS) ) ! conversion matrix (X Y STATION )
+DO ILNK=1, NLINKS
+    READ(TMPNAM,*) IX, IY, IS
+    ! check if links with river outlet cells
+    IF( I2NEXTX(IX, IY) .NE. -9 ) THEN
+        WRITE(LOGNAM,*) "Sealev link not at river outlet cell", IX, IY
+        STOP 9
+    ! check if station index in netcdf
+    ELSEIF (IS .LT. 1 .or. IS .GT. NCDFSTAT) THEN
+        WRITE(LOGNAM,*) "Sealev link outside netcdf index", IS
+        STOP 9
+    ENDIF
+    I2SLMAP(1,ILNK) = IX
+    I2SLMAP(2,ILNK) = IY
+    I2SLMAP(3,ILNK) = IS
+END DO
 CLOSE(TMPNAM)
 
 
@@ -315,7 +337,7 @@ USE CMF_UTILS_MOD,           ONLY: NCERROR, MAP2VEC
 USE NETCDF
 IMPLICIT NONE
 !* Local variables
-INTEGER(KIND=JPIM)              :: IRECSL, IX, IY, ISTAT
+INTEGER(KIND=JPIM)              :: IRECSL, IX, IY, IS, ILNK
 REAL(KIND=JPRM)                 :: R2TMP(NX,NY)
 !===============
 !*** 1. calculate irec
@@ -323,14 +345,15 @@ IRECSL = ( KMIN-SLCDF%NSTART )*60_JPIM / INT(DTSL,JPIM) + 1     !! (second from 
 WRITE(LOGNAM,*) "CMF::BOUNDARY_GET_CDF:", TRIM(SLCDF%CNAME), IRECSL
 
 !*** 2. read sea level
-CALL NCERROR( NF90_GET_VAR(SLCDF%NCID,SLCDF%NVARID,R1SLIN,(/1,IRECSL/),(/NSTATIONS,1/)),'READING SEA LEVEL' )
+CALL NCERROR( NF90_GET_VAR(SLCDF%NCID,SLCDF%NVARID,R1SLIN,(/1,IRECSL/),(/NCDFSTAT,1/)),'READING SEA LEVEL' )
 
 !*** 3. convert 1D station data -> 2D map
 R2TMP(:,:)=0.E0
-DO ISTAT = 1, NSTATIONS
-  IX = I2SLMAP(1,ISTAT)
-  IY = I2SLMAP(2,ISTAT)
-  IF( (IX .GT. 0) .AND. (IY .GT. 0) ) R2TMP(IX,IY) = R1SLIN(ISTAT)
+DO ILNK = 1, NLINKS
+    IX = I2SLMAP(1,ILNK)
+    IY = I2SLMAP(2,ILNK)
+    IS = I2SLMAP(3,ILNK)
+    R2TMP(IX,IY) = R1SLIN(IS)
 END DO
 CALL MAP2VEC(R2TMP,D2SEALEV)
 
