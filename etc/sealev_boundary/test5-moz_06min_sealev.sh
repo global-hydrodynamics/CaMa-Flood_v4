@@ -29,17 +29,15 @@
 
 #*** 0a. Set CaMa-Flood base directory
 #BASE=`pwd`/..
-#INPDIR="${BASE}/inp/test_moz_06min_sealev"  # contains runoff / waterlevels and restart file.
-# BASE="/Users/yamadai/work/CaMa_v402/cmf_v402_pkg"  # setting for PBS in cluster
-BASE="/home/yamadai/work/CaMa_v402/cmf_v402_pkg"
-INPDIR="/home/yamadai/work/CaMa_v402/cmf_v402_pkg/etc/sealev_boundary/test_moz_06min_sealev"
+BASE="/home/yamadai/work/CaMa_v401/cmf_v401_test"
+INPDIR="${BASE}/etc/sealev_boundary/test_moz_06min_sealev"
 
 echo $BASE
 
 #*** 0b. Set dynamic library if needed
-export IFORTLIB="/opt/intel/lib:/opt/intel/mkl/lib"
-export HDF5LIB="/opt/local/hdf5-1.10.5/lib"
-export DYLD_LIBRARY_PATH="${HDF5LIB}:${IFORTLIB}:${DYLD_LIBRARY_PATH}"
+#export IFORTLIB="/opt/intel/lib:/opt/intel/mkl/lib"
+#export HDF5LIB="/opt/local/hdf5-1.10.5/lib"
+#export DYLD_LIBRARY_PATH="${HDF5LIB}:${IFORTLIB}:${DYLD_LIBRARY_PATH}"
 
 #*** 0c. OpenMP thread number
 export OMP_NUM_THREADS=16                  # OpenMP cpu num
@@ -139,7 +137,7 @@ SHOURIN=0
 #============================
 #*** 1f. river map & topography
 #FMAP="${BASE}/map/moz_06min"                 # map directory
-FMAP="/Users/yamadai/work/CaMa_v402/cmf_v402_pkg/etc/sealev_boundary/moz_06min"
+FMAP="${BASE}/etc/sealev_boundary/moz_06min"
 #CDIMINFO="${FMAP}/diminfo_test-1deg.txt"    # dimention information file
 #CINPMAT=${FMAP}/inpmat_test-1deg.bin        # runoff input matrix for interporlation
 CDIMINFO="${FMAP}/diminfo_ERA5_ro_moz.txt" # dimention information file
