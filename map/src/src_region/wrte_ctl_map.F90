@@ -28,8 +28,8 @@
       call getarg(9,buf)
       read(buf,*) gsize
 
-      nx=nint( (east -west )/gsize + 0.0001 )
-      ny=nint( (north-south)/gsize + 0.0001 )
+      nx=nint( (east -west )/gsize )
+      ny=nint( (north-south)/gsize )
 
       shift=gsize*dble(0.5)
 

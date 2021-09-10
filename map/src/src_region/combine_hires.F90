@@ -5,8 +5,8 @@
 
       character*256          ::  global_dir                    !! global map directory
       integer                ::  nXX, nYY
-      real                   ::  lon_ori, lat_ori              !! west and north edge of global map
-      real                   ::  lon_end, lat_end              !! east and south edge of global map
+      real*8                 ::  lon_ori, lat_ori              !! west and north edge of global map
+      real*8                 ::  lon_end, lat_end              !! east and south edge of global map
       real*8                 ::  csize                         !! hires map pixel size [deg]
       integer                ::  cnum
 
@@ -14,8 +14,8 @@
       parameter                 (region_param='../params.txt')
       integer                ::  mXX, mYY                      !! river map grid numbers
       integer                ::  dXX, dYY                      !! river map domain shift from global map
-      real                   ::  gsize                         !! river map grid size [deg]
-      real                   ::  west, east, north, south      !! domain
+      real*8                 ::  gsize                         !! river map grid size [deg]
+      real*8                 ::  west, east, north, south      !! domain
 
       integer                ::  ix, iy                
       integer                ::  nx, ny                        !! pixel number of regional hires map
@@ -25,7 +25,7 @@
       integer                ::  i, narea                      !! area ID
 
       integer                ::  ix0, iy0, nx0, ny0            !! input hires map dimention
-      real                   ::  west0, north0, east0, south0
+      real*8                 ::  west0, north0, east0, south0
 
       integer                ::  isTile
       integer                ::  ilon, ilat, nlon, nlat

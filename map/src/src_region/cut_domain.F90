@@ -5,12 +5,12 @@
       character*256          ::  region_info
       parameter                 (region_info='./region_info.txt')
       character*256          ::  global_dir
-      real                   ::  west, east, north, south
-      real                   ::  west2, east2, north2, south2
+      real*8                 ::  west, east, north, south
+      real*8                 ::  west2, east2, north2, south2
 
       character*256          ::  global_param, cut_param
-      real                   ::  lon_ori, lat_ori, lon_end, lat_end
-      real                   ::  glon, glat, d1, d2
+      real*8                 ::  lon_ori, lat_ori, lon_end, lat_end
+      real*8                 ::  glon, glat, d1, d2
 
       character*256          ::  region_dir, region_param
       parameter                 (region_dir='../')
@@ -18,7 +18,7 @@
 !
       integer                ::  ix, iy, jx, jy, kx, ky
       integer                ::  nx, ny, mx, my, dx, dy
-      real                   ::  gsize
+      real*8                 ::  gsize
       integer                ::  iflp, nflp                  !! number of floodplain layer
 !
       character*256          ::  fnextxy0, fdownxy0, felevtn0, ffldhgt0, fctmare0, fgrdare0, fuparea0
@@ -118,10 +118,10 @@
 
       print *, 'output: ', west, east, north, south
 
-      mx=nint( dble(east-west)    /dble(gsize) +0.001 )    !!  add 0.001 to avoid rounding error
-      my=nint( dble(north-south)  /dble(gsize) +0.001 )
-      dx=nint( dble(west-lon_ori) /dble(gsize) +0.001 )
-      dy=nint( dble(lat_ori-north)/dble(gsize) +0.001 )
+      mx=nint( dble(east-west)    /dble(gsize) )
+      my=nint( dble(north-south)  /dble(gsize) )
+      dx=nint( dble(west-lon_ori) /dble(gsize) )
+      dy=nint( dble(lat_ori-north)/dble(gsize) )
 
       cut_param='./dim_change.txt'
       open(11,file=cut_param,form='formatted')

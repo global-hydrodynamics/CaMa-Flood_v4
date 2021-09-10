@@ -57,7 +57,13 @@ do
         for fun in $FUNCS
         do 
             echo '\n### calculate and store the parameter, also the statistics for the fitting###'
-            paranum=`ls './../result/'$GLBNAME/para/$fun* 2> /dev/null | grep $fun | wc -l `
+
+            if [ $VAR = 'storge' ] ; then
+                paranum=`ls './../result/'$GLBNAME/STO2DPH/para/$fun* 2> /dev/null | grep $fun | wc -l `
+            else
+                paranum=`ls './../result/'$GLBNAME/para/$fun* 2> /dev/null | grep $fun | wc -l `
+            fi
+
             echo $paranum
 
             if [ $paranum -gt 0 ]; then

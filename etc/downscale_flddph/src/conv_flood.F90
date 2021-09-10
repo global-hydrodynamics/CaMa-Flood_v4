@@ -2,11 +2,11 @@
 ! ===============================================
       implicit none
 ! CaMa-Flood parameters
-      real                     ::  west, east, north, south      !! domain (river network map)
+      real*8                   ::  west, east, north, south      !! domain (river network map)
 
       integer                  ::  ix, iy, jx, jy, dx, dy, dd, nd
       integer                  ::  mx, my
-      real                     ::  csize                         !! size of pixel [deg]
+      real*8                   ::  csize                         !! size of pixel [deg]
 
       real,allocatable         ::  flddif(:,:)                   !! height above channel [m]
       real,allocatable         ::  flood(:,:)                    !! downscaled flood depth [m]
@@ -53,8 +53,8 @@
         stop
       endif
 
-      mx=int( (east -west )/csize +0.01 )
-      my=int( (north-south)/csize +0.01 )
+      mx=nint( (east -west )/csize )
+      my=nint( (north-south)/csize )
 
 
       allocate(flddif(mx,my),flood(mx,my))

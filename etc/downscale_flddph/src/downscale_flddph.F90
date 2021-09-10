@@ -6,21 +6,21 @@
       integer                  ::  iXX, iYY
       integer                  ::  nXX, nYY                      !! grid number (river network map)
       integer                  ::  nflp                          !! floodplain layers
-      real                     ::  gsize                         !! grid size [deg]
-      real                     ::  west, east, north, south      !! domain (river network map)
+      real*8                   ::  gsize                         !! grid size [deg]
+      real*8                   ::  west, east, north, south      !! domain (river network map)
 
 ! HydroSHEDS parameters                                        !! (from location.txt)
       integer                  ::  i, narea               !! area ID
       character*256            ::  area                          !! area code
       integer                  ::  ix, iy, jx, jy                        
       integer                  ::  nx, ny                        !! grid number (hires data)
-      real                     ::  csize                         !! size of pixel [deg]
-      real                     ::  lon_ori                       !! west  edge
-      real                     ::  lon_end                       !! east  edge
-      real                     ::  lat_ori                       !! north edge
-      real                     ::  lat_end                       !! south edge
+      real*8                   ::  csize                         !! size of pixel [deg]
+      real*8                   ::  lon_ori                       !! west  edge
+      real*8                   ::  lon_end                       !! east  edge
+      real*8                   ::  lat_ori                       !! north edge
+      real*8                   ::  lat_end                       !! south edge
 
-      real                     ::  west2, east2, north2, south2      !! output domain 
+      real*8                   ::  west2, east2, north2, south2      !! output domain 
       integer                  ::  mx, my
 
       character*256            ::  list_loc
@@ -94,8 +94,8 @@
       endif
 
 ! calculate number of cell size
-      mx=int( (east2 -west2 )/csize +0.001 )   !! downscale domain x*y
-      my=int( (north2-south2)/csize +0.001 )
+      mx=nint( (east2 -west2 )/csize )   !! downscale domain x*y
+      my=nint( (north2-south2)/csize )
 
       if( mx*my>525000000 )then
         print *, 'downscale domain too large: mx*my*4>integer limit'

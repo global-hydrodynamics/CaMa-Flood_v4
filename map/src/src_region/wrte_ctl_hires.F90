@@ -31,8 +31,8 @@
 
       csize=1./dble(cnum)
 
-      nx=int( (east -west )/csize + 0.0001 )
-      ny=int( (north-south)/csize + 0.0001 )
+      nx=nint( (east -west )/csize )
+      ny=nint( (north-south)/csize )
 
       shift=gsize*dble(0.5)
 
