@@ -11,7 +11,8 @@ wrte_ctl_map \
 get_rivinfo \
 get_vecmap \
 get_upbasin \
-get_subbasin
+get_subbasin \
+calc_prmwat
 
 all: $(TARGETS)
 
