@@ -26,7 +26,7 @@
 
 ! input hires map
       integer*2,allocatable  ::  catmXX0(:,:), catmYY0(:,:)
-      real,allocatable       ::  rivwth0(:,:), grdare0(:,:)
+      real,allocatable       ::  rivwth0(:,:), grdare0(:,:), flddif0(:,:)
 
 ! files
       character*256          ::  rfile1, wfile1
@@ -100,7 +100,7 @@
       do i=1, narea
         read(11,*) buf, area, west0, east0, south0, north0, nx0, ny0, buf
 
-        allocate(catmXX0(nx0,ny0),catmYY0(nx0,ny0),rivwth0(nx0,ny0),grdare0(nx0,ny0))
+        allocate(catmXX0(nx0,ny0),catmYY0(nx0,ny0),rivwth0(nx0,ny0),grdare0(nx0,ny0),flddif0(nx0,ny0))
 
         rfile1=trim(hires)//trim(area)//'.catmxy.bin'
         print *, trim(rfile1)
@@ -126,20 +126,27 @@
         read(21,rec=1) grdare0
         close(21)
 
+        rfile1=trim(hires)//trim(area)//'.flddif.bin'
+        open(21,file=rfile1,form='unformatted',access='direct',recl=4*nx0*ny0,status='old',iostat=ios)
+        read(21,rec=1) flddif0
+        close(21)
+
         do iy0=1, ny0
           do ix0=1, nx0
             if( catmXX0(ix0,iy0)>0 )then
               if( rivwth0(ix0,iy0)>0 .or. rivwth0(ix0,iy0)==-1 )then
-                iXX=catmXX0(ix0,iy0)
-                iYY=catmYY0(ix0,iy0)
-                prmwat(iXX,iYY)=prmwat(iXX,iYY)+grdare0(ix0,iy0)*1000000  !!  km2 -> m2
+                if( flddif0(ix0,iy0)<=5 )then  !! exclude parmanent water pixel on the hill (above flddif>5m)
+                  iXX=catmXX0(ix0,iy0)
+                  iYY=catmYY0(ix0,iy0)
+                  prmwat(iXX,iYY)=prmwat(iXX,iYY)+grdare0(ix0,iy0)*1000000  !!  km2 -> m2
+                endif
               endif
             endif
           end do
         end do
 
  1000   continue
-        deallocate(catmxx0,catmyy0,rivwth0,grdare0)
+        deallocate(catmxx0,catmyy0,rivwth0,grdare0,flddif0)
       end do
       close(11)
 
