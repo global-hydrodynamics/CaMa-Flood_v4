@@ -22,6 +22,7 @@ EMON=9
 
 ## specify downscale resolution (high resolution file directory should exist in the used map directory)
 RES=1min
+#RES=30sec
 #RES=15sec
 #RES=5sec
 

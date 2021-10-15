@@ -52,6 +52,9 @@
       if( trim(tag)=="1min" )then
         cnum=60
         csize=1./dble(cnum)
+      elseif( trim(tag)=="30sec" )then
+        cnum=120
+        csize=1./dble(cnum)
       elseif( trim(tag)=="15sec" )then
         cnum=240
         csize=1./dble(cnum)

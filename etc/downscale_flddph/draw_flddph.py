@@ -1,6 +1,8 @@
 import sys
 import os
 
+import matplotlib 
+matplotlib.use('Agg')
 import numpy as np
 from numpy import *
 
@@ -44,6 +46,8 @@ if( hires=="3sec" ):
     csize=1./1200.
 if( hires=="15sec" ):
     csize=1./240.
+if( hires=="30sec" ):
+    csize=1./120.
 if( hires=="1min" ):
     csize=1./60.
 
