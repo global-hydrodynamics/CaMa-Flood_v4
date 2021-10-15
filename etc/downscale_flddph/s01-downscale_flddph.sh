@@ -2,11 +2,11 @@
 
 ## CaMa-Flood: simulation map directory & simulation output dorectory
 ## Below is the example to downscale the result of sample simulation "test1"
-MAPDIR="../../map/glb_06min/"
-OUTDIR="../../out/test1-glb_06min/"
+MAPDIR="../../map/glb_15min/"
+OUTDIR="../../out/test1-glb_15min/"
 
 ## downscale project tag
-TAG="mek_30s"
+TAG="mek"
 
 ## specify tartget downscale domain 
 WEST=102
@@ -21,7 +21,8 @@ EYEAR=2000
 EMON=9
 
 ## specify downscale resolution (high resolution file directory should exist in the used map directory)
-RES=30sec
+RES=1min
+#RES=30sec
 #RES=15sec
 #RES=5sec
 
