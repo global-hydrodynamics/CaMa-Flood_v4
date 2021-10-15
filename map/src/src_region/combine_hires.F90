@@ -85,6 +85,9 @@
       if( trim(tag)=="1min" )then
         cnum=60
         csize=1./dble(cnum)
+      elseif( trim(tag)=="30sec" )then
+        cnum=120
+        csize=1./dble(cnum)
       elseif( trim(tag)=="15sec" )then
         cnum=240
         csize=1./dble(cnum)
@@ -327,7 +330,11 @@
 !###########################################################
 
       if( isTile==1 )then
-        if( trim(tag)=="15sec" )then
+        if( trim(tag)=="30sec" )then
+          cnum=120
+          csize=1./dble(cnum)
+          mwin=30
+        elseif( trim(tag)=="15sec" )then
           cnum=240
           csize=1./dble(cnum)
           mwin=30

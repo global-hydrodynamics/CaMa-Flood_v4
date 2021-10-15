@@ -26,7 +26,7 @@ echo "$NORTH"      >> region_info.txt
 ./cut_bifway
 ./set_map
 
-HDIRS="1min 15sec 3sec"
+HDIRS="1min 30sec 15sec 3sec"
 for HIRES in $HDIRS
 do
   echo  $SOURCE/$HIRES/location.txto
@@ -38,6 +38,8 @@ done
 
 if [ -f ../1min/location.txt ]; then
   ./generate_inpmat 1min
+elif [ -f ../30sec/location.txt ]; then
+  ./generate_inpmat 30sec
 elif [ -f ../15sec/location.txt ]; then
   ./generate_inpmat 15sec
 elif [ -f ../3sec/location.txt ]; then
@@ -46,7 +48,7 @@ fi
 
 ./s02-wrte_ctl_map.sh
 
-HIRES="1min 15sec 3sec"
+HIRES="1min 30sec 15sec 3sec"
 for RES in $HIRES
 do
   if [ -f ../${RES}/location.txt ]; then

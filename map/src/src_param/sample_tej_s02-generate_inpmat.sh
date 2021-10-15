@@ -50,7 +50,7 @@ OLAT="NtoS"        # north-south order of input data
 #+++++++++++++++++++++++++++++++++++++++++++
 
 
-TAG="1min"          # tag for hires data dir (1min / 15sec / 3sec)
+TAG="1min"          # tag for hires data dir (1min / 30sec / 15sec / 3sec)
 if [ -f ./1min/location.txt ]; then
   TAG="1min"
 elif [ -f ./15sec/location.txt ]; then

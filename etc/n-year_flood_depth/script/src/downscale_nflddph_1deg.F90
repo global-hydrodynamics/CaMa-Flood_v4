@@ -90,6 +90,8 @@
         csize=1./1200.
       elseif( trim(hires)=='15sec' )then
         csize=1./240.
+      elseif( trim(hires)=='30sec' )then
+        csize=1./120.
       elseif( trim(hires)=='1min' )then
         csize=1./60.
       endif
