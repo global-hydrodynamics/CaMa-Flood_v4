@@ -50,6 +50,7 @@ USE NETCDF
       real                ::  gsize                   !! grid size [deg]
 
 ! input matrix
+      integer             ::  i
       integer             ::  inpn                    !! max number of input grid for one river grid
       integer,allocatable ::  inpx(:,:,:),inpy(:,:,:) !! input grid (ixin,iyin) of river map grid (ix,iy)
       real,allocatable    ::  inpa(:,:,:)             !! input area [m2]
@@ -166,10 +167,12 @@ USE NETCDF
       if( intp/='near' )then
 print *, 'set input matrix'
         allocate(inpx(nx,ny,inpn),inpy(nx,ny,inpn),inpa(nx,ny,inpn))
-        open(11,file=cinpmat,form='unformatted',access='direct',recl=4*nx*ny*inpn)
-        read(11,rec=1) inpx
-        read(11,rec=2) inpy
-        read(11,rec=3) inpa
+        open(11,file=cinpmat,form='unformatted',access='direct',recl=4*nx*ny)
+        do i=1, inpn
+          read(11,rec=       i) inpx(:,:,i:i)
+          read(11,rec=  inpn+i) inpy(:,:,i:i)
+          read(11,rec=2*inpn+i) inpa(:,:,i:i)
+        end do
         close(11)
       endif
 ! ==========

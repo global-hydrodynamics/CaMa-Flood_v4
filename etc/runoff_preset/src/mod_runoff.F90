@@ -77,10 +77,13 @@
 
 print *, 'set input matrix'
       allocate(inpx(nx,ny,inpn),inpy(nx,ny,inpn))
-      open(11,file=cinpmat,form='unformatted',access='direct',recl=4*nx*ny*inpn)
-      read(11,rec=1) inpx
-      read(11,rec=2) inpy
+      open(11,file=cinpmat,form='unformatted',access='direct',recl=4*nx*ny)
+      do i=1, inpn
+        read(11,rec=       i) inpx(:,:,i:i)
+        read(11,rec=  inpn+i) inpy(:,:,i:i)
+      end do
       close(11)
+
 ! ==========
       open(11,file=crunoff,form='unformatted',access='direct',recl=4*nxin*nyin,status='old',iostat=ios)
       read(11,rec=1) roffin
