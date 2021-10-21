@@ -1,5 +1,9 @@
       program calc_rivout
 ! ================================================
+! calculate annual mean discharge (and 30day maximum discharge)
+! using runoff climatology (daily mean over 20~30 years)
+! -- 30day max discharge calculation is deactivated in CaMa-Flood v4. Please set lout30=.true.
+! ================================================
 #ifdef UseCDF
 USE NETCDF
 #endif
@@ -25,6 +29,9 @@ USE NETCDF
       data                    crofcdf /'../data/rofcdf.nc'/
       data                    crofvar /'RO'/
 
+      logical             ::  lout30                  !! set lout30=.true. if 30day max discharge should be calculated.
+      parameter              (lout30=.false.)
+
 #ifdef UseCDF
       integer             ::  ncid, varid
 #endif
@@ -42,12 +49,16 @@ USE NETCDF
 
 ! river network map
       integer,allocatable ::  nextx(:,:), nexty(:,:)  !! downstream xy
-      integer,allocatable ::  rivseq(:,:)             !! river sequence
       real,allocatable    ::  ctmare(:,:)             !! unit-catchment area [m2]
 
       real,allocatable    ::  lon(:), lat(:)          !! longitude, latidude [deg]
       real                ::  west,east,north,south   !! domain boundary [deg]
       real                ::  gsize                   !! grid size [deg]
+
+      integer,allocatable ::  upst(:,:)             !! # of upstreams
+      integer,allocatable ::  upnow(:,:)             !! count upstream
+      integer,allocatable ::  xseq(:), yseq(:)       !! calculation sequence from upstream
+      integer             ::  iseq, jseq, nseqpre, nseqnow, again
 
 ! input matrix
       integer             ::  i
@@ -62,12 +73,6 @@ USE NETCDF
       real,allocatable    ::  runoff(:,:)             !! runof (converted) [m3/s]     
       real,allocatable    ::  rivout(:,:)             !! discharge [m3/s]
       real,allocatable    ::  rivout30(:,:)           !! annual max discharge, calculated from 30day mean
-
-! 1d sequence for faster calculation
-      integer,allocatable ::  i1seqx(:), i1seqy(:)
-      integer             ::  iseq, nseq
-      integer             ::  seqnow, seqmax, next
-
 !
       integer             ::  iday, irec
       real,allocatable    ::  r2tmp(:,:), r2max1(:,:)
@@ -87,7 +92,9 @@ USE NETCDF
       parameter              (imis = -9999)
       parameter              (rmis = 1.e+20)
 ! ================================================
-! read parameters from arguments
+print *, 'CALC_OUTCLM - calculate annual mean discharge from runoff climatology'
+
+print *, 'calc_outclm: read parameters from arguments'
 
       call getarg(1,buf)
        if( buf/='' ) read(buf,*) type
@@ -120,7 +127,6 @@ USE NETCDF
 
 ! ===============================
 ! read river network and input file dimentions
-
       if( type=='cdf')then
         print *, 'calculation for netCDF map'
       else
@@ -145,13 +151,11 @@ USE NETCDF
       print *, trim(cinpmat)
       print *, nx, ny, nxin, nyin, inpn
 
-      allocate(nextx(nx,ny),nexty(nx,ny),rivseq(nx,ny),ctmare(nx,ny))
+      allocate(nextx(nx,ny),nexty(nx,ny),ctmare(nx,ny))
       allocate(roffin(nxin,nyin,365+mday))
       allocate(runoff(nx,ny),rivout(nx,ny),rivout30(nx,ny))
 
       allocate(r2tmp(nxin,nyin),r2max1(nx,ny))
-
-      allocate(i1seqx(nx*ny),i1seqy(nx*ny))
 
 ! ===========================================
       allocate(lon(nx),lat(ny))
@@ -163,9 +167,8 @@ USE NETCDF
         lat(iy)=north-(real(iy)-0.5)*gsize
       enddo
 ! =========
-
+print *, 'calc_outclm: read input matrix'
       if( intp/='near' )then
-print *, 'set input matrix'
         allocate(inpx(nx,ny,inpn),inpy(nx,ny,inpn),inpa(nx,ny,inpn))
         open(11,file=cinpmat,form='unformatted',access='direct',recl=4*nx*ny)
         do i=1, inpn
@@ -176,6 +179,7 @@ print *, 'set input matrix'
         close(11)
       endif
 ! ==========
+print *, 'calc_outclm: read nextxy.bin'
       cnextxy='./nextxy.bin'
       open(11,file=cnextxy,form='unformatted',access='direct',recl=4*nx*ny,status='old',iostat=ios)
       read(11,rec=1) nextx
@@ -187,58 +191,66 @@ print *, 'set input matrix'
       read(13,rec=1) ctmare
       close(13)
 ! ==========
-print *, 'calculate river sequence'
-      rivseq(:,:)=1
+print *, 'calc_outclm: calculate river sequence'
+      allocate(upst(nx,ny),upnow(nx,ny),xseq(nx*ny),yseq(nx*ny))
+      upst(:,:)=0
+      upnow(:,:)=0
+      xseq(:)=-9999
+      yseq(:)=-9999
+
+! count number of upstreams
       do iy=1, ny
         do ix=1, nx
           if( nextx(ix,iy)>0 )then
             jx=nextx(ix,iy)
             jy=nexty(ix,iy)
-            rivseq(jx,jy)=0
+            upst(jx,jy)=upst(jx,jy)+1
           elseif( nextx(ix,iy)==-9999 )then
-            rivseq(ix,iy)=-9999
+            upst(ix,iy)=-9999
           endif
         end do
       end do
 
-      seqnow=0
-      next=1
-      do while(next>0 )
-        seqnow=seqnow+1
-        next=0
-        do iy=1, ny
-          do ix=1, nx
-            if( rivseq(ix,iy)==seqnow )then
-              if( nextx(ix,iy)>0 )then
-                jx=nextx(ix,iy)
-                jy=nexty(ix,iy)
-                if( rivseq(jx,jy)<=seqnow )then
-                  next=next+1
-                  rivseq(jx,jy)=seqnow+1
-                endif
-              endif
-            endif
-          end do
-        enddo
+! find topmost grid, and register to xseq & yseq
+      nseqpre=0
+      iseq=nseqpre
+      do iy=1, ny
+        do ix=1, nx
+          if( upst(ix,iy)==0 )then
+            iseq=iseq+1
+            xseq(iseq)=ix   !! sort from upstream to downstream
+            yseq(iseq)=iy
+          endif
+        end do
       end do
-      seqmax=seqnow
-print *, seqmax
+      nseqnow=iseq
 
-      iseq=0
-      do seqnow=1, seqmax
-        do iy=1, ny
-          do ix=1, nx
-            if( rivseq(ix,iy)==seqnow )then
-              iseq=iseq+1
-              i1seqx(iseq)=ix
-              i1seqy(iseq)=iy
+! find the next downstream, register to xseq & yseq when upst=upnow
+      again=1
+      do while( again==1 )
+        again=0
+        jseq=nseqnow
+        do iseq=nseqpre+1, nseqnow
+          ix=xseq(iseq)
+          iy=yseq(iseq)
+          if( nextx(ix,iy)>0 )then
+            jx=nextx(ix,iy)
+            jy=nexty(ix,iy)
+            upnow(jx,jy)=upnow(jx,jy)+1
+            if( upnow(jx,jy)==upst(jx,jy) )then  !! if all upstream are registered, then target downstream can be registered
+              again=1
+              jseq=jseq+1
+              xseq(jseq)=jx
+              yseq(jseq)=jy
             endif
-          end do
-        enddo
+          endif
+        end do
+        nseqpre=nseqnow
+        nseqnow=jseq
       end do
-      nseq=iseq
+
 ! ==========
-print *, 'read runoff climatology file'
+print *, 'calc_outclm: read runoff climatology file'
       if( type=='bin' )then
 print *, trim(crofbin)
         open(14,file=crofbin,form='unformatted',access='direct',recl=4*nxin*nyin)
@@ -276,51 +288,11 @@ print *, trim(crofcdf)
 
       roffin(:,:,:)=roffin(:,:,:)/(24.*60.*60.)
 
-! =======================================
-print *, 'calc mday maximum: mday=', mday
-      r2max1(:,:)=-9999
-      do irec=1, 365, dday
-        r2tmp(:,:)=0
-        do iday=1, mday
-          r2tmp(:,:)=r2tmp(:,:)+roffin(:,:,irec+iday-1)/real(mday)
-        end do
-        if( intp=='near' )then
-          call conv_resol(nx,ny,nxin,nyin,imis,rmis,nextx,ctmare,r2tmp,runoff)
-        else
-          call intp_roff(nx,ny,nxin,nyin,imis,rmis,nextx,inpn,inpx,inpy,inpa,r2tmp,runoff)
-        endif
-
-        do iseq=1, nseq
-          ix=i1seqx(iseq)
-          iy=i1seqy(iseq)
-          rivout(ix,iy)=runoff(ix,iy)
-        end do
-
-        do iseq=1, nseq
-          ix=i1seqx(iseq)
-          iy=i1seqy(iseq)
-          if( nextx(ix,iy)>0 )then
-            jx=nextx(ix,iy)
-            jy=nexty(ix,iy)
-            rivout(jx,jy)=rivout(jx,jy)+rivout(ix,iy)
-          endif
-        end do
-
-        do iseq=1, nseq
-          ix=i1seqx(iseq)
-          iy=i1seqy(iseq)
-          r2max1(ix,iy)=max(r2max1(ix,iy),rivout(ix,iy))
-        end do
-      end do
-
-      rivout(:,:)=r2max1(:,:)
-      rivout30(:,:)=rivout
-
 ! ============================================================
-print *, 'calc annual average'
+print *, 'calc_outclm: calc annual average'
       r2tmp(:,:)=0.
       do irec=1, 365
-        r2tmp(:,:)=r2tmp(:,:)+roffin(:,:,irec)/365.
+        r2tmp(:,:)=r2tmp(:,:)+roffin(:,:,irec)/365.  !! read all daily data, and take annual average
       end do
       if( intp=='near' )then
         call conv_resol(nx,ny,nxin,nyin,imis,rmis,nextx,ctmare,r2tmp,runoff)
@@ -328,16 +300,12 @@ print *, 'calc annual average'
         call intp_roff(nx,ny,nxin,nyin,imis,rmis,nextx,inpn,inpx,inpy,inpa,r2tmp,runoff)
       endif
 
-      rivout(:,:)=-9999
-      do iseq=1, nseq
-        ix=i1seqx(iseq)
-        iy=i1seqy(iseq)
-        rivout(ix,iy)=runoff(ix,iy)
-      end do
-
-      do iseq=1, nseq
-        ix=i1seqx(iseq)
-        iy=i1seqy(iseq)
+      !! sum runoff from upstream to downstream
+      rivout(:,:)=0
+      do iseq=1, nseqnow
+        ix=xseq(iseq)
+        iy=yseq(iseq)
+        rivout(ix,iy)=rivout(ix,iy)+runoff(ix,iy)
         if( nextx(ix,iy)>0 )then
           jx=nextx(ix,iy)
           jy=nexty(ix,iy)
@@ -345,11 +313,70 @@ print *, 'calc annual average'
         endif
       end do
 
+      do iy=1, ny
+        do ix=1, nx
+          if( nextx(ix,iy)==-9999 )then
+            rivout(ix,iy)=-9999
+          endif
+        end do
+      end do
+
 !! annual average
       open(21,file=crivout,form='unformatted',access='direct',recl=4*nx*ny)
       write(21,rec=1) rivout       !! rec=1, annual average
-      write(21,rec=2) rivout30     !! rec=2, max of 30day moving ave
       close(21)
+
+! =======================================
+      if (lout30 )then
+print *, 'calc_outclm: calc mday maximum: mday=', mday
+
+        r2max1(:,:)=-9999
+        do irec=1, 365, dday  !! for each day (with dday interval to reduce computational cost)
+          r2tmp(:,:)=0
+          do iday=1, mday
+            r2tmp(:,:)=r2tmp(:,:)+roffin(:,:,irec+iday-1)/real(mday) !! take m-day average runoff
+          end do
+          if( intp=='near' )then
+            call conv_resol(nx,ny,nxin,nyin,imis,rmis,nextx,ctmare,r2tmp,runoff)
+          else
+            call intp_roff(nx,ny,nxin,nyin,imis,rmis,nextx,inpn,inpx,inpy,inpa,r2tmp,runoff)
+          endif
+  
+          rivout(:,:)=0
+          do iseq=1, nseqnow
+            ix=xseq(iseq)
+            iy=yseq(iseq)
+            rivout(ix,iy)=rivout(ix,iy)+runoff(ix,iy)
+            if( nextx(ix,iy)>0 )then
+              jx=nextx(ix,iy)
+              jy=nexty(ix,iy)
+              rivout(jx,jy)=rivout(jx,jy)+rivout(ix,iy)
+            endif
+          end do
+  
+          do iy=1, ny
+            do ix=1, nx
+              if( nextx(ix,iy)/=-9999 )then
+                r2max1(ix,iy)=max(r2max1(ix,iy),rivout(ix,iy))
+              else
+                r2max1(ix,iy)=-9999
+              endif
+            end do
+          end do
+  
+        end do
+  
+        rivout(:,:)=r2max1(:,:)
+        rivout30(:,:)=rivout
+  
+  !! annual average
+        open(21,file=crivout,form='unformatted',access='direct',recl=4*nx*ny)
+        write(21,rec=2) rivout30     !! rec=2, max of 30day moving ave
+        close(21)
+
+      endif
+
+
 ! ============================================================
 
 #ifdef UseCDF

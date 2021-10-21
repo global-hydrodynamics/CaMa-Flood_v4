@@ -1,5 +1,9 @@
       program calc_rivwth
 ! ================================================
+! calculate river channel width and depth (rivwth.bin and rivhgt.bin) 
+! using power-law function of annual mean discharge (outclm.bin)
+! + distributed manning roughness is also generated (rivman.bin)
+! ================================================
 #ifdef UseCDF
 USE NETCDF
 #endif
@@ -62,7 +66,7 @@ USE NETCDF
       parameter              (imis = -9999)
       parameter              (rmis = 1.e+20)
 ! ================================================
-! read parameters from arguments
+print *, 'calc_rivwth :read parameters from arguments'
 
       call getarg(1,buf)
        if( buf/='' ) read(buf,*) type
@@ -118,7 +122,6 @@ USE NETCDF
       close(11)
 
 ! ==============================
-
       print *, nx, ny
 
       allocate(nextx(nx,ny),nexty(nx,ny))
@@ -135,7 +138,7 @@ USE NETCDF
       enddo
 
 ! ===================
-
+print *, 'calc_rivwth: read nextxy.bin'
       cnextxy='./nextxy.bin'
       open(11,file=cnextxy,form='unformatted',access='direct',recl=4*nx*ny,status='old',iostat=ios)
       read(11,rec=1) nextx
@@ -147,6 +150,7 @@ USE NETCDF
       close(13)
 
 ! =============================
+print *, 'calc_rivwth: width & depth calculation'
       do iy=1, ny
         do ix=1, nx
           if( nextx(ix,iy)/=imis )then
@@ -174,7 +178,7 @@ USE NETCDF
 
       do iy=1, ny
         do ix=1, nx
-          rivhgt_inf(ix,iy)=100000.e0
+          rivhgt_inf(ix,iy)=100000.e0   !! very large rivhgt data, used for non-floodplain simulation
         end do
       end do
 

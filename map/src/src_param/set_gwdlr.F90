@@ -1,5 +1,8 @@
       program calc_rivwth
 ! ================================================
+! fuse power-law width (rivwth.bin) and satellite width (width.bin)
+! to create width parameter data for simulation (rivwth_gwdlr.bin)
+! ================================================
       implicit none
 ! ===================
 ! river network map parameters
@@ -64,13 +67,13 @@ print *, trim(cwidth)
           if( nextx(ix,iy)/=imis )then
             if( gwdlr(ix,iy)<50 )then
               gwdlr(ix,iy)=max(gwdlr(ix,iy),rivwth(ix,iy))
-            elseif( gwdlr(ix,iy)<rivwth(ix,iy)*0.5 )then
+            elseif( gwdlr(ix,iy)<rivwth(ix,iy)*0.5 )then   !!! if satellite width is very small compated to power-law width, modify
               gwdlr(ix,iy)=rivwth(ix,iy)*0.5
             else
-              if( gwdlr(ix,iy)>rivwth(ix,iy)*5.0 )then
+              if( gwdlr(ix,iy)>rivwth(ix,iy)*5.0 )then    !! if satellite width is very large, mnodify
                 gwdlr(ix,iy)=rivwth(ix,iy)*5.0
               endif
-              if( gwdlr(ix,iy)>10000. )then
+              if( gwdlr(ix,iy)>10000. )then   !! set max value for river width
                 gwdlr(ix,iy)=10000.
               endif
             endif

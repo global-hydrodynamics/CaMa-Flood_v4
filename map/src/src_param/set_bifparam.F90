@@ -1,5 +1,10 @@
       program calc_rivwth
 ! ================================================
+! original file: bifori.txt
+! bifucation parameter (bifurcation channle depth = bifdph) is added by analyzing river network
+! (if needed, number of bifurcation layers can be modified.)
+! -- 10 layer exist in original. Reduced to 5 by s01-*sh script to reduce computation cost
+! ================================================
 #ifdef UseCDF
 USE NETCDF
 #endif
@@ -43,7 +48,7 @@ USE NETCDF
 
       character*256          ::  cfmt, clen
 ! ================================================
-! read parameters from arguments
+print *, 'set_bifparam: read parameters from arguments'
       call getarg(1,crivhgt)
       call getarg(2,cbifprm)
       call getarg(3,buf)
@@ -73,7 +78,7 @@ USE NETCDF
       allocate(rivhgt(nx,ny),bifdph(nx,ny),bifwth(nx,ny))
 
 ! ===================
-
+print *, 'set_bifparam: read nextxy.bin'
       cnextxy='./nextxy.bin'
       open(11,file=cnextxy,form='unformatted',access='direct',recl=4*nx*ny,status='old',iostat=ios)
       read(11,rec=1) nextx
@@ -85,6 +90,8 @@ USE NETCDF
       close(13)
 
 ! =============================
+print *, 'set_bifparam: read bifori.txt'
+
       bifdph(:,:)=-9999
       bifwth(:,:)=-9999
 
@@ -131,10 +138,10 @@ USE NETCDF
           if( wth(1)<=0 )then
             dph=-9999
             wth(1)=0.0
-          else
+          else                           !! if channel connectivity exist, set depth following bifurcation channel width.
             dph=log10(wth(1))*2.5-4.0
             dph=max(0.5,dph)
-            dph0=max(rivhgt(ix,iy),rivhgt(jx,jy))
+            dph0=max(rivhgt(ix,iy),rivhgt(jx,jy))  !! modify is nearby channel depth is bigger
             dph=min(dph,dph0)
   
             bifdph(ix,iy)=dph
@@ -150,6 +157,8 @@ USE NETCDF
       close(12)
       close(21)
 
+! ------
+! 'set_bifparam: save 2d map of bifucation depth and width (just for checking, not used in simulation)'
       cbifdph='./bifdph.bin'
       open(13,file=cbifdph,form='unformatted',access='direct',recl=4*nx*ny)
       write(13,rec=1) bifdph
