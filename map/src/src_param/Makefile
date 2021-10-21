@@ -12,7 +12,8 @@ get_rivinfo \
 get_vecmap \
 get_upbasin \
 get_subbasin \
-calc_prmwat
+set_bif_basin \
+set_mpi_region
 
 all: $(TARGETS)
 

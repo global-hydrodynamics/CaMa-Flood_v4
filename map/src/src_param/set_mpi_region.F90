@@ -1,0 +1,148 @@
+      program set_mpi_region
+! ================================================
+! set MPI region mask
+      implicit none
+! ===================
+! calculation type
+      character*256       ::  buf
+      integer             ::  nMPI
+! river network map parameters
+      integer             ::  ix, iy
+      integer             ::  nx, ny                  !! river map grid number
+      real                ::  west, east, north, south
+      real                ::  gsize
+
+
+! river netwrok map
+      integer,allocatable ::  basin(:,:)   
+      real,allocatable    ::  nxtdst(:,:)  
+      real,allocatable    ::  rivhgt(:,:)  
+
+      integer,allocatable ::  mpireg(:,:)   
+
+! local
+      integer             ::  ibsn, nbsn
+      integer,allocatable ::  bnum(:), bmpi(:)
+!
+      integer             ::  iMPI, jMPI, imin
+      integer,allocatable ::  mpgrid(:)
+! 
+      character*256       ::  finp, fparam, fout
+      integer             ::  ios
+! ================================================
+      print *, 'Set MPI region mask'
+
+      print *, '######################################################'
+      print *, 'USAGE: Input number of MPI regions :   ./set_mpi_region $NMPI'
+
+      nMPI=1
+      call getarg(1,buf)
+      if( trim(buf)=='' )then
+        stop
+      else
+        read(buf,*) nMPI
+      endif
+
+! read parameters from arguments
+
+      fparam='../params.txt'
+      open(11,file=fparam,form='formatted')
+      read(11,*) nx
+      read(11,*) ny
+      read(11,*) 
+      read(11,*) gsize
+      read(11,*) west
+      read(11,*) east
+      read(11,*) south
+      read(11,*) north
+      close(11)
+
+      print *, 'Map Domain W-E-S-N:', west, east, south, north
+      print *, 'Map Resolution: ', gsize
+      print *, 'Map NX,NY: ',  nx, ny
+
+! ==============================
+
+      allocate(basin(nx,ny), nxtdst(nx,ny), rivhgt(nx,ny), mpireg(nx,ny) )
+
+! ===================
+
+      finp='../bifbsn.bin'
+      open(11,file=finp,form='unformatted',access='direct',recl=4*nx*ny,status='old',iostat=ios)
+      read(11,rec=1) basin
+      close(11)
+
+      imin=0
+      nbsn=0
+      do iy=1, ny
+        do ix=1, nx
+          if( basin(ix,iy)>0 )then
+            nbsn=max(nbsn,basin(ix,iy))
+            imin=imin+1
+          endif
+        end do
+      end do
+
+      print *,  'numnber of basins', nbsn
+      print *,  'numnber of grids',  imin
+
+      allocate(bnum(nbsn),bmpi(nbsn))
+      bnum(:)=0
+      bmpi(:)=0
+      do iy=1, ny
+        do ix=1, nx
+          if( basin(ix,iy)>0 )then
+            ibsn=basin(ix,iy)
+            bnum(ibsn)=bnum(ibsn)+1
+          endif
+        end do
+      end do
+
+      allocate(mpgrid(nMPI))
+      mpgrid(:)=0
+
+      do ibsn=1, nbsn
+        if( bnum(ibsn)>0 )then
+          imin=nx*ny
+          do iMPI=1, nMPI
+            if( mpgrid(iMPI)<imin )then
+              jMPI=iMPI
+              imin=mpgrid(iMPI)
+            endif
+          end do
+
+          bmpi(ibsn)  =jMPI
+          mpgrid(jMPI)=mpgrid(jMPI)+bnum(ibsn)
+        endif
+      end do
+
+      do iMPI=1, nMPI
+        print *, iMPI, mpgrid(iMPI)
+      end do
+
+      mpireg(:,:)=-9999
+      do iy=1, ny
+        do ix=1, nx
+          if( basin(ix,iy)>0 )then
+            mpireg(ix,iy)=0
+            ibsn=basin(ix,iy)
+            if( bmpi(ibsn)>0 )then
+              mpireg(ix,iy)=bmpi(ibsn)
+            endif
+          endif
+        end do
+      end do
+
+!======
+
+
+! ==========
+
+      fout='../mpireg.bin'
+      open(11,file=fout,form='unformatted',access='direct',recl=4*nx*ny)
+      write(11,rec=1) mpireg
+      close(11)
+
+!!================================================
+
+      end program set_mpi_region
