@@ -54,6 +54,7 @@ LOGICAL                         :: LMAPEND                 !! true: for map data
 LOGICAL                         :: LBITSAFE                !! true: for Bit Identical (removed from v410, set in Mkinclude)
 LOGICAL                         :: LSTG_ES                 !! true: for Vector Processor optimization (CMF_OPT_FLDSTG_ES) 
 
+
 !================================================
 !*** NAMELIST/NCONF/
 CHARACTER(LEN=256)              :: CDIMINFO                !! Dimention Information

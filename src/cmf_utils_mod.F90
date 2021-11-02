@@ -71,6 +71,7 @@ DO ISEQ=1,NSEQALL
   R2MAP(IX,IY) = REAL(D2VEC(ISEQ,1),KIND=JPRM)
 ENDDO
 !$OMP END PARALLEL DO
+
 END SUBROUTINE VEC2MAP
 !==========================================================
 !+

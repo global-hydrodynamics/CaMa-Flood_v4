@@ -16,7 +16,7 @@
       integer,allocatable ::  nexty(:,:)      !! downstream y
       integer,allocatable ::  basin(:,:)      !! downstream y
 
-      integer,allocatable ::  bifmod(:,:)      !! downstream y
+      integer,allocatable ::  bsnori(:,:), bifmod(:,:)      !! downstream y
 ! bifurcation
       integer             ::  ipth, npth, nlev
       integer,allocatable ::  bnew(:), bmod(:)
@@ -26,7 +26,7 @@
       integer             ::  color_this, color_max, grid
       integer             ::  col_used(10), icol
 ! local
-      integer             ::  ibsn, nbsn, jbsn, kbsn
+      integer             ::  ibsn, nbsn, jbsn, kbsn, again
 ! 
       character*256       ::  finp, fparam, fout, fbifori
       integer             ::  ios
@@ -53,7 +53,7 @@
 
 ! ==============================
 
-      allocate(nextx(nx,ny), nexty(nx,ny), basin(nx,ny), bifmod(nx,ny),color(nx,ny))
+      allocate(nextx(nx,ny), nexty(nx,ny), basin(nx,ny), bifmod(nx,ny), bsnori(nx,ny ), color(nx,ny))
 
 ! ===================
 
@@ -67,6 +67,8 @@
       open(11,file=finp,form='unformatted',access='direct',recl=4*nx*ny,status='old',iostat=ios)
       read(11,rec=1) basin
       close(11)
+
+      bsnori(:,:)=basin(:,:)
 
       nbsn=0
       do iy=1, ny
@@ -82,7 +84,11 @@
       bmod(:)=-9999
 
 ! --------
+
 print *, 'read bifurcation channel data, and list basins to be merged'
+
+1000 continue
+
       fbifori='../bifori.txt'
       open(12,file=fbifori,form='formatted')
       read(12,*) npth, nlev
@@ -112,6 +118,7 @@ print *, 'read bifurcation channel data, and list basins to be merged'
             kbsn=bnew(jbsn)
             jbsn=kbsn
           end do
+          print *, ibsn, 'merged to ->', jbsn
           bnew(ibsn)=jbsn
         endif
       end do
@@ -119,8 +126,8 @@ print *, 'read bifurcation channel data, and list basins to be merged'
       do ibsn=1, nbsn
         if( bnew(ibsn)/=-9999 )then
           jbsn=bnew(ibsn)
-          bmod(ibsn)=1   !! basins to be merged
-          bmod(jbsn)=2   !! basins to be expanded
+          bmod(ibsn)=1   !! basins modified
+          bmod(jbsn)=1   !! basins modified
         endif
       end do
 
@@ -151,7 +158,33 @@ print *, 'read bifurcation channel data, and list basins to be merged'
         end do
       end do
 
+print *, 'check all bifurcation passway merged or not' !! if one basin has multiple connection, avobe method does not work
+      fbifori='../bifori.txt'
+      open(12,file=fbifori,form='formatted')
+      read(12,*) npth, nlev
+
+      again=0
+      do ipth=1, npth
+        read(12,*) ix,iy,jx,jy
+
+        if( basin(ix,iy)/=basin(jx,jy) )then
+          again=again+1
+        endif
+      end do
+      close(12)
+
+      if( again>0 ) goto 1000
+
+print *, 'update basin color map'
       call set_color
+
+      do iy=1, ny
+        do ix=1, nx
+          if( basin(ix,iy)/=bsnori(ix,iy) )then
+            bifmod(ix,iy)=2
+          endif
+        end do
+      end do
 
 
 ! ==========

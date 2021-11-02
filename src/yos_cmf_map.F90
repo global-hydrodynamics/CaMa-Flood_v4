@@ -18,7 +18,6 @@ SAVE
 !*** river network
 INTEGER(KIND=JPIM),ALLOCATABLE           ::  I2NEXTX(:,:)       !! POINT DOWNSTREAM HORIZONTAL
 INTEGER(KIND=JPIM),ALLOCATABLE           ::  I2NEXTY(:,:)       !! POINT DOWNSTREAM VERTICAL
-INTEGER(KIND=JPIM),ALLOCATABLE           ::  I2RIVSEQ(:,:)      !! river sequence map:# of cellls from the hilltop cell
 
 INTEGER(KIND=JPIM),ALLOCATABLE           ::  I1SEQX(:)          !! 1D SEQUENCE HORIZONTAL
 INTEGER(KIND=JPIM),ALLOCATABLE           ::  I1SEQY(:)          !! 1D SEQUENCE VERTICAL
@@ -31,8 +30,6 @@ INTEGER(KIND=JPIM),ALLOCATABLE           ::  I2VECTOR(:,:)      !! VECTOR INDEX
 INTEGER(KIND=JPIM),ALLOCATABLE           ::  I2REGION(:,:)      !! REGION INDEX
 INTEGER(KIND=JPIM)                       ::  REGIONALL          !! REGION TOTAL
 INTEGER(KIND=JPIM)                       ::  REGIONTHIS         !! REGION THIS CPU
-
-INTEGER(KIND=JPIM)                       ::  RIVSEQMAX          !! MAX. OF CATCH. IN A RIVER
 
 !================================================
 !*** lat, lon

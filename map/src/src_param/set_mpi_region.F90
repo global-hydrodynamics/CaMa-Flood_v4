@@ -27,7 +27,7 @@
       integer             ::  iMPI, jMPI, imin
       integer,allocatable ::  mpgrid(:)
 ! 
-      character*256       ::  finp, fparam, fout
+      character*256       ::  finp, fparam, fout, cMPI
       integer             ::  ios
 ! ================================================
       print *, 'Set MPI region mask'
@@ -138,7 +138,8 @@
 
 ! ==========
 
-      fout='../mpireg.bin'
+      write(cMPI,'(i0)') nMPI
+      fout='../mpireg-'//trim(cMPI)//'.bin'
       open(11,file=fout,form='unformatted',access='direct',recl=4*nx*ny)
       write(11,rec=1) mpireg
       close(11)

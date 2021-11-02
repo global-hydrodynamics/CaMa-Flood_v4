@@ -36,6 +36,7 @@ USE CMF_CTRL_DAMOUT_MOD,   ONLY: CMF_DAMOUT_CALC
 USE YOS_CMF_ICI,           ONLY: LLAKEIN
 USE CMF_CALC_LAKEIN_MOD,   ONLY: CMF_CALC_LAKEIN, CMF_LAKEIN_AVE
 #endif
+
 IMPLICIT NONE
 !! LOCAL
 INTEGER(KIND=JPIM)            ::  IT, NT
@@ -75,7 +76,6 @@ DO IT=1, NT
 
 ! --- save value for next tstet
   CALL CALC_VARS_PRE
-
 
 !=== 2.  Calculate the storage in the next time step in FTCS diff. eq.
   CALL CMF_CALC_STONXT
@@ -124,11 +124,15 @@ USE YOS_CMF_INPUT,      ONLY: PGRV, PDSTMTH, PCADP
 USE YOS_CMF_MAP,        ONLY: D2NXTDST
 USE YOS_CMF_MAP,        ONLY: NSEQALL,NSEQRIV
 USE YOS_CMF_DIAG,       ONLY: D2RIVDPH
+#ifdef UseMPI
+USE CMF_CTRL_MPI_MOD,   ONLY: MPI_ADPSTP
+#endif
 IMPLICIT NONE
+! MPI setting
 !$ SAVE
-INTEGER(KIND=JPIM)         :: ISEQ
-REAL(KIND=JPRB)            :: DT_MIN
-REAL(KIND=JPRB)            :: DDPH, DDST
+INTEGER(KIND=JPIM)              :: ISEQ
+REAL(KIND=JPRB)                 :: DT_MIN
+REAL(KIND=JPRB)                 :: DDPH, DDST
 !$OMP THREADPRIVATE(DDPH,DDST)
 !================================================
 
@@ -148,6 +152,13 @@ DO ISEQ=NSEQRIV+1, NSEQALL
   DT_MIN=min( DT_MIN, PCADP*DDST * (PGRV*DDPH)**(-0.5) )
 END DO
 !$OMP END PARALLEL DO
+
+!*** MPI: use same DT in all node
+#ifdef UseMPI
+CALL MPI_ADPSTP(DT_MIN)
+#endif
+!*********************************
+
 NT=INT( DT_DEF * DT_MIN**(-1.) -0.01 )+1
 DT=DT_DEF * REAL(NT)**(-1.)
 
