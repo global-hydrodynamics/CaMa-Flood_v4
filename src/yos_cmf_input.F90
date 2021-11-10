@@ -58,6 +58,12 @@ LOGICAL                         :: LSTG_ES                 !! true: for Vector P
 !*** NAMELIST/NCONF/
 CHARACTER(LEN=256)              :: CDIMINFO                !! Dimention Information
 
+LOGICAL                         :: LINFLOW
+CHARACTER(LEN=256)              :: CINFLOW                 !! Stung Toreng daily discharge
+REAL(KIND=JPRB)                 :: DINFLOW                 !! Stung Toreng daily discharge
+INTEGER(KIND=JPIM)              :: INFSEQ                !! Stung Toreng 1dsequence
+
+
 REAL(KIND=JPRB)                 :: DT                      !! Time Step Length [SEC] (should be multiple of 60)
 
 INTEGER(KIND=JPIM)              :: IFRQ_OUT                !! [hour]: frequency to write output     e.g. (1,2,3,6,12,24) hour

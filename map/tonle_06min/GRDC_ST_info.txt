@@ -1,0 +1,6 @@
+ID	lat_MERIT	lon_MERIT	area_MERIT	Bsn_cnt_lat	Bsn_cnt_lon	river	station	country	lat_SHEDS	lon_SHEDS	area_GRDC	Error	Comment
+2569005	13.525	105.942	637428.3	20.068	102.234	MEKONG	STUNG TRENG	KH	13.531	105.944	639579.4	0.01
+
+
+X,Y = 160, 215 <- upstream including this grid is masked
+x,y = 160, 216 <- point discharge should be given to this grid 

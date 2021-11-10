@@ -13,8 +13,9 @@ PROGRAM MAIN_cmf
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
 USE PARKIND1,                ONLY: JPRB, JPRM, JPIM
-USE YOS_CMF_INPUT,           ONLY: NXIN, NYIN, DT,DTIN
+USE YOS_CMF_INPUT,           ONLY: NXIN, NYIN, DT,DTIN, CINFLOW, DINFLOW, INFSEQ, LINFLOW
 USE YOS_CMF_TIME,            ONLY: NSTEPS
+USE YOS_CMF_MAP,             ONLY: I2VECTOR
 !
 USE CMF_DRV_CONTROL_MOD,     ONLY: CMF_DRV_INPUT,   CMF_DRV_INIT,    CMF_DRV_END
 USE CMF_DRV_ADVANCE_MOD,     ONLY: CMF_DRV_ADVANCE
@@ -25,6 +26,9 @@ IMPLICIT NONE
 INTEGER(KIND=JPIM)              :: ISTEP              ! total time step
 INTEGER(KIND=JPIM)              :: ISTEPADV           ! time step to be advanced within DRV_ADVANCE
 REAL(KIND=JPRB),ALLOCATABLE     :: ZBUFF(:,:,:)       ! Buffer to store forcing runoff
+
+INTEGER(KIND=JPIM)              :: iiYY, iiMM, iiDD
+
 !================================================
 
 !*** 1a. Namelist handling
@@ -39,8 +43,16 @@ ALLOCATE(ZBUFF(NXIN,NYIN,2))
 !============================
 !*** 2. MAIN TEMPORAL LOOP / TIME-STEP (NSTEPS calculated by DRV_INIT)
 
+IF( LINFLOW )THEN
+  open(151,file=CINFLOW,form='formatted')
+  INFSEQ=I2VECTOR(160,216) !! Stung Treng rivseq
+  print *, 'Stung Treng rivseq', INFSEQ
+ENDIF
+
 ISTEPADV=INT(DTIN/DT,JPIM)
 DO ISTEP=1,NSTEPS,ISTEPADV
+
+IF( LINFLOW) read(151,*) iiYY, iiMM, iiDD, Dinflow
 
   !*  2a Read forcing from file, This is only relevant in Stand-alone mode 
   CALL CMF_FORCING_GET(ZBUFF(:,:,:))
@@ -53,6 +65,8 @@ DO ISTEP=1,NSTEPS,ISTEPADV
 
 ENDDO
 !============================
+
+IF( LINFLOW ) close(151)
 
 !*** 3a. finalize CaMa-Flood 
 DEALLOCATE(ZBUFF)

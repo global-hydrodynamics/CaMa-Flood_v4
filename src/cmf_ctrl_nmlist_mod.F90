@@ -35,7 +35,8 @@ USE YOS_CMF_INPUT,      ONLY: LADPSTP,  LFPLAIN,  LKINE,    LFLDOUT,  LPTHOUT,  
                             & LRESTART, LSTOONLY, LGRIDMAP, LLEAPYR,  LMAPEND,  LBITSAFE, &
                             & LSTG_ES
 ! dimention & time
-USE YOS_CMF_INPUT,      ONLY: CDIMINFO, DT,       NX,NY,    NLFP,     NXIN,NYIN,    INPN, &
+USE YOS_CMF_INPUT,      ONLY: CDIMINFO, CINFLOW,  LINFLOW,  DT,       NX,NY,    NLFP,     &
+                            & NXIN,NYIN,    INPN, &
                             & IFRQ_INP, DTIN,     WEST,EAST,NORTH,SOUTH
 ! parameters
 USE YOS_CMF_INPUT,      ONLY: PMANRIV,  PMANFLD,  PDSTMTH,  PMINSLP,  PGRV, PCADP, &
@@ -48,7 +49,7 @@ NAMELIST/NRUNVER/  LADPSTP,  LFPLAIN,  LKINE,    LFLDOUT,  LPTHOUT,  LDAMOUT,  &
                    LRESTART, LSTOONLY, LGRIDMAP, LLEAPYR,  LMAPEND,  LBITSAFE, &
                    LSTG_ES
 
-NAMELIST/NDIMTIME/ CDIMINFO, DT, IFRQ_INP
+NAMELIST/NDIMTIME/ CDIMINFO, CINFLOW, LINFLOW, DT, IFRQ_INP
 
 NAMELIST/NPARAM/   PMANRIV, PMANFLD, PGRV,    PDSTMTH, PCADP,   PMINSLP, &
                    IMIS, RMIS, DMIS, CSUFBIN, CSUFVEC, CSUFPTH, CSUFCDF
@@ -126,6 +127,10 @@ CDIMINFO ="NONE"
 DT       = 24*60*60          !! dt = 1day (automatically set by adaptive time step)
 IFRQ_INP = 24                !! daily (24h) input
 
+CINFLOW ="NONE"
+LINFLOW =.FALSE.
+
+
 !* change
 REWIND(NSETFILE)
 READ(NSETFILE,NML=NDIMTIME)
@@ -138,6 +143,9 @@ WRITE(LOGNAM,*) "CDIMINFO  ", TRIM(CDIMINFO)
 WRITE(LOGNAM,*) "DT        ", DT
 WRITE(LOGNAM,*) "DTIN      ", DTIN
 WRITE(LOGNAM,*) "IFRQ_INP  ", IFRQ_INP
+WRITE(LOGNAM,*) "LINFLOW  ", LINFLOW
+WRITE(LOGNAM,*) "CINCLOW  ", TRIM(CINFLOW)
+
 
 !==========
 !* default (from diminfo)
