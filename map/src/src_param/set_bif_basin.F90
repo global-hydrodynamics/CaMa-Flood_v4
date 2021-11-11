@@ -14,12 +14,14 @@
 ! river netwrok map
       integer,allocatable ::  nextx(:,:)      !! downstream x
       integer,allocatable ::  nexty(:,:)      !! downstream y
-      integer,allocatable ::  basin(:,:)      !! downstream y
+      integer,allocatable ::  basin(:,:)      !! basin
 
-      integer,allocatable ::  bsnori(:,:), bifmod(:,:)      !! downstream y
+      integer,allocatable ::  bsnori(:,:), bifmod(:,:), bpoint(:,:)      !! downstream y
 ! bifurcation
       integer             ::  ipth, npth, nlev
-      integer,allocatable ::  bnew(:), bmod(:)
+      integer,allocatable ::  bnew(:), bmod(:), bnum(:)
+      real                ::  len, elv, dph, wth
+      integer             ::  mark
 ! color for mpi basins
       integer,allocatable ::  color(:,:)      !! downstream y
       integer,allocatable ::  bsn_mask(:,:)
@@ -27,6 +29,7 @@
       integer             ::  col_used(10), icol
 ! local
       integer             ::  ibsn, nbsn, jbsn, kbsn, again
+      integer             ::  allgrid, maxgrid, grid_thrs
 ! 
       character*256       ::  finp, fparam, fout, fbifori
       integer             ::  ios
@@ -53,7 +56,8 @@
 
 ! ==============================
 
-      allocate(nextx(nx,ny), nexty(nx,ny), basin(nx,ny), bifmod(nx,ny), bsnori(nx,ny ), color(nx,ny))
+      allocate(nextx(nx,ny), nexty(nx,ny), basin(nx,ny), bsnori(nx,ny ), color(nx,ny))
+      allocate(bifmod(nx,ny),bpoint(nx,ny))
 
 ! ===================
 
@@ -79,22 +83,34 @@
 
       print *,  'numnber of basins', nbsn
 
-      allocate(bnew(nbsn),bmod(nbsn))
+      allocate(bnew(nbsn),bmod(nbsn),bnum(nbsn))
       bnew(:)=-9999
       bmod(:)=-9999
+      bnum(:)=0
+
+      allgrid=0
+      do iy=1, ny
+        do ix=1, nx
+          ibsn=basin(ix,iy)
+          if( ibsn>0 )then
+            bnum(ibsn)=bnum(ibsn)+1
+            allgrid=allgrid+1
+          endif
+        end do
+      end do
 
 ! --------
+ 500 continue
 
-print *, 'read bifurcation channel data, and list basins to be merged'
+print *, 'STEP-1: merge basins with river bifurcation connectivity'
 
-1000 continue
-
-      fbifori='../bifori.txt'
+      fbifori='../bifprm.txt'
       open(12,file=fbifori,form='formatted')
       read(12,*) npth, nlev
 
       do ipth=1, npth
-        read(12,*) ix,iy,jx,jy
+        read(12,*) ix,iy,jx,jy, len, elv, dph, wth
+        if( wth<=0 ) cycle                      !! no river bifurcation
 
         if( basin(ix,iy)/=basin(jx,jy) )then
           if( basin(ix,iy)<basin(jx,jy) )then
@@ -104,13 +120,16 @@ print *, 'read bifurcation channel data, and list basins to be merged'
             ibsn=basin(jx,jy)
             jbsn=basin(ix,iy)
           endif
-          bnew(jbsn)=ibsn  !! jsbn should be integrated to ibsn
+          if( bnew(jbsn)==-9999 )then
+            bnew(jbsn)=ibsn  !! jsbn should be integrated to ibsn
+          elseif( bnew(jbsn)>ibsn )then
+            bnew(jbsn)=ibsn  !! jsbn should be integrated to ibsn
+          endif
         endif
       end do
 
       close(12)
 
-! --------
       do ibsn=1, nbsn
         if( bnew(ibsn)/=-9999 )then
           jbsn=bnew(ibsn)
@@ -120,6 +139,132 @@ print *, 'read bifurcation channel data, and list basins to be merged'
           end do
           print *, ibsn, 'merged to ->', jbsn
           bnew(ibsn)=jbsn
+
+          bnum(jbsn)=bnum(jbsn)+bnum(ibsn)  !! update number of grids in each basin
+          bnum(ibsn)=0
+        endif
+      end do
+
+! check merged grids
+      bifmod(:,:)=-9999
+      do iy=1, ny
+        do ix=1, nx
+          if( basin(ix,iy)>0 )then
+            bifmod(ix,iy)=0
+            ibsn=basin(ix,iy)
+            if( bmod(ibsn)/=-9999 ) then
+              bifmod(ix,iy)=bmod(ibsn)
+            endif
+          endif
+        end do
+      end do
+
+! update basin number
+      do iy=1, ny
+        do ix=1, nx
+          if( basin(ix,iy)>0 )then
+            ibsn=basin(ix,iy)
+            if( bnew(ibsn)/=-9999 ) then
+              jbsn=bnew(ibsn)
+              basin(ix,iy)=jbsn
+            endif
+          endif
+        end do
+      end do
+
+      bnew(:)=-9999
+
+
+print *, 'check all bifurcation merged or not' !! if one basin has multiple connection, avobe method does not work
+
+      open(12,file=fbifori,form='formatted')
+      read(12,*) npth, nlev
+
+      again=0
+      do ipth=1, npth
+        read(12,*) ix,iy,jx,jy, len, elv, dph, wth
+        if( wth<=0 ) cycle
+
+        if( basin(ix,iy)/=basin(jx,jy) )then
+          again=again+1
+        endif
+      end do
+      close(12)
+
+      if( again>0 )then
+        print *, '-- repeat'
+        goto 500
+      endif
+
+      maxgrid=0
+      do ibsn=1, nbsn
+        maxgrid=max(maxgrid,bnum(ibsn))
+      end do
+
+      print *, 'max grid number (river bif is merged)', maxgrid, allgrid, maxgrid/real(allgrid)
+      do ibsn=1, 20
+        print *, ibsn, bnum(ibsn)
+      end do
+
+!**********************
+
+print *, '*****************'
+print *, 'STEP-2: merge basins with river bifurcation connectivity'
+
+      grid_thrs=int(allgrid*0.06)
+
+1000 continue
+
+      fbifori='../bifprm.txt'
+      open(12,file=fbifori,form='formatted')
+      read(12,*) npth, nlev
+
+      do ipth=npth, 1, -1
+        read(12,*) ix,iy,jx,jy, len, elv, dph, wth
+
+        if( basin(ix,iy)/=basin(jx,jy) )then
+          if( basin(ix,iy)<basin(jx,jy) )then
+            ibsn=basin(ix,iy)
+            jbsn=basin(jx,jy)
+          else
+            ibsn=basin(jx,jy)
+            jbsn=basin(ix,iy)
+          endif
+          
+          if( bnum(ibsn)+bnum(jbsn) < grid_thrs )then
+            if( bnew(jbsn)==-9999 )then
+              bnew(jbsn)=ibsn  !! jsbn should be integrated to ibsn
+            elseif( bnew(jbsn)>ibsn )then
+              bnew(jbsn)=ibsn  !! jsbn should be integrated to ibsn
+            endif
+          else
+            print *, 'not merged', ibsn, jbsn, bnum(ibsn), bnum(jbsn)
+          endif
+
+        endif
+      end do
+
+      close(12)
+
+! --------
+      do ibsn=nbsn, 1, -1
+        if( bnew(ibsn)/=-9999 )then
+          jbsn=bnew(ibsn)
+          do while( bnew(jbsn)>0 )  !! if target basin is further merged to new basins
+            kbsn=bnew(jbsn)
+            jbsn=kbsn
+          end do
+
+          if( bnum(ibsn)+bnum(jbsn) < grid_thrs )then
+            print *, ibsn, 'merged to ->', jbsn
+            bnew(ibsn)=jbsn
+
+            bnum(jbsn)=bnum(jbsn)+bnum(ibsn)  !! update number of grids in each basin
+            bnum(ibsn)=0
+          else
+            print *, 'not merged', ibsn, jbsn, bnum(ibsn), bnum(jbsn)
+            bnew(ibsn)=-9999
+          endif
         endif
       end do
 
@@ -158,24 +303,46 @@ print *, 'read bifurcation channel data, and list basins to be merged'
         end do
       end do
 
+      bnew(:)=-9999
+
 print *, 'check all bifurcation passway merged or not' !! if one basin has multiple connection, avobe method does not work
-      fbifori='../bifori.txt'
+
       open(12,file=fbifori,form='formatted')
       read(12,*) npth, nlev
 
       again=0
       do ipth=1, npth
-        read(12,*) ix,iy,jx,jy
+        read(12,*) ix,iy,jx,jy, len, elv, dph, wth
 
-        if( basin(ix,iy)/=basin(jx,jy) )then
-          again=again+1
+        ibsn=basin(ix,iy)
+        jbsn=basin(jx,jy)
+        if( ibsn/=jbsn )then
+          if( bnum(ibsn)+bnum(jbsn) < grid_thrs  )then
+            again=again+1
+          endif
         endif
       end do
       close(12)
 
-      if( again>0 ) goto 1000
+      if( again>0 )then
+        print *, '-- repeat'
+        goto 1000
+      endif
 
-print *, 'update basin color map'
+      maxgrid=0
+      do ibsn=1, nbsn
+        maxgrid=max(maxgrid,bnum(ibsn))
+      end do
+
+      print *, 'max grid number (river bif is merged)', maxgrid, allgrid, maxgrid/real(allgrid)
+      do ibsn=1, 20
+        print *, ibsn, bnum(ibsn)
+      end do
+
+
+!***************
+print *, '*************'
+print *, 'Post Process: update basin color map'
       call set_color
 
       do iy=1, ny
@@ -186,7 +353,20 @@ print *, 'update basin color map'
         end do
       end do
 
-
+      bpoint(:,:)=-9999
+      open(12,file=fbifori,form='formatted')
+      read(12,*) npth, nlev
+      again=0
+      do ipth=1, npth
+        read(12,*) ix,iy,jx,jy, len, elv, dph, wth
+        if( bsnori(ix,iy)/=bsnori(jx,jy) )then
+          mark=1
+          if( wth>0 ) mark=2
+          bpoint(ix,iy)=max(mark,bpoint(ix,iy))
+          bpoint(jx,jy)=max(mark,bpoint(jx,jy))
+        endif
+      end do
+      close(12)
 ! ==========
 
       fout='../bifbsn.bin'
@@ -196,7 +376,7 @@ print *, 'update basin color map'
 
       fout='../bifmod.bin'
       open(11,file=fout,form='unformatted',access='direct',recl=4*nx*ny)
-      write(11,rec=1) bifmod
+      write(11,rec=1) bpoint
       close(11)
 
       fout='../bifcol.bin'

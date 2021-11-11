@@ -330,7 +330,7 @@ END SUBROUTINE CMF_BOUNDARY_GET_BIN
 !==========================================================
 #ifdef UseCDF
 SUBROUTINE CMF_BOUNDARY_GET_CDF
-USE YOS_CMF_INPUT,           ONLY: DTSL, NX,NY
+USE YOS_CMF_INPUT,           ONLY: DTSL, NX, NY
 USE YOS_CMF_TIME,            ONLY: KMIN
 USE YOS_CMF_MAP,             ONLY: D2SEALEV
 USE CMF_UTILS_MOD,           ONLY: NCERROR, MAP2VEC

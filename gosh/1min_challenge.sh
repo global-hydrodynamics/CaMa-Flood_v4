@@ -37,9 +37,9 @@ export HDF5LIB="/opt/local/hdf5-1.10.5/lib"
 export DYLD_LIBRARY_PATH="${HDF5LIB}:${IFORTLIB}:${DYLD_LIBRARY_PATH}"
 
 #*** 0c. OpenMP thread number
-export OMP_NUM_THREADS=2                   # OpenMP cpu num
+export OMP_NUM_THREADS=1                   # OpenMP cpu num
 
-MPI_NP=1                             #   MPI cpu num
+MPI_NP=2                             #   MPI cpu num
 
 TMP="np${MPI_NP}_om${OMP_NUM_THREADS}"
 
@@ -49,7 +49,7 @@ TMP="np${MPI_NP}_om${OMP_NUM_THREADS}"
 
 #============================
 #*** 1a. Experiment directory setting
-EXP="mpi_${TMP}"                       # experiment name (output directory name)
+EXP="1min_mpi${MPI_NP}"                       # experiment name (output directory name)
 RDIR=${BASE}/out/${EXP}                     # directory to run CaMa-Flood
 EXE="MAIN_cmf"                              # Execute file name
 PROG=${BASE}/src/${EXE}                     # location of Fortran main program
@@ -124,7 +124,7 @@ LROSPLIT=".FALSE."                          # .TRUE. for sub-surface runoff
 
 #============================
 #*** 1f. river map & topography
-FMAP="${BASE}/map/glb_15min"                # map directory
+FMAP="${BASE}/map/glb_01min"                # map directory
 CDIMINFO="${FMAP}/diminfo_test-1deg.txt"    # dimention information file
 CINPMAT=${FMAP}/inpmat_test-1deg.bin        # runoff input matrix for interporlation
 #CDIMINFO="${FMAP}/diminfo_test-15min_nc.txt" # dimention information file
@@ -149,7 +149,7 @@ CRIVMAN="${FMAP}/rivman.bin"                # manning coefficient river (The one
 #** bifurcation channel info
 CPTHOUT="${FMAP}/bifprm.txt"                #   bifurcation channel list
 
-CMPIREG="${FMAP}/mpireg-${MPI_NP}.bin"                #   bifurcation channel list
+CMPIREG="${FMAP}/mpireg-16.bin"                #   bifurcation channel list
 
 
 ###** groundwater delay (not available in plain binary runoff/map)
@@ -186,7 +186,7 @@ LSEALEV=".FALSE."                           # .TRUE. to activate dynamic sea lev
 #============================
 #*** 1h. Output Settings 
 LOUTPUT=".TRUE."                            # .TRUE. to use CaMa-Flood standard output
-IFRQ_OUT=24                                  # output frequency: [1,2,3,...,24] hour
+IFRQ_OUT=1                                  # output frequency: [1,2,3,...,24] hour
 
 LOUTCDF=".FALSE."                           # .TRUE. netCDF output, .FALSE. plain binary output
 COUTDIR="./"                                # output directory 
@@ -486,6 +486,7 @@ then
     mv -f ./o_*${CYR}.nc                             ${CYR}-sp${ISP}  2> /dev/null
     mv -f ./*${CYR}.log                              ${CYR}-sp${ISP}  2> /dev/null
     mv -f ./log_CaMa-${CYR}.txt                      ${CYR}-sp${ISP}  2> /dev/null
+    mv -f ./log_CaMa-${CYR}.txt-*                    ${CYR}-sp${ISP}  2> /dev/null
 
     ISP=`expr ${ISP} + 1`
   else
