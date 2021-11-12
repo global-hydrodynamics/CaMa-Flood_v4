@@ -37,7 +37,7 @@ export HDF5LIB="/opt/local/hdf5-1.10.5/lib"
 export DYLD_LIBRARY_PATH="${HDF5LIB}:${IFORTLIB}:${DYLD_LIBRARY_PATH}"
 
 #*** 0c. OpenMP thread number
-export OMP_NUM_THREADS=1                   # OpenMP cpu num
+export OMP_NUM_THREADS=8                   # OpenMP cpu num
 
 MPI_NP=2                             #   MPI cpu num
 
@@ -49,7 +49,7 @@ TMP="np${MPI_NP}_om${OMP_NUM_THREADS}"
 
 #============================
 #*** 1a. Experiment directory setting
-EXP="1min_mpi${MPI_NP}"                       # experiment name (output directory name)
+EXP="1min_test"                       # experiment name (output directory name)
 RDIR=${BASE}/out/${EXP}                     # directory to run CaMa-Flood
 EXE="MAIN_cmf"                              # Execute file name
 PROG=${BASE}/src/${EXE}                     # location of Fortran main program

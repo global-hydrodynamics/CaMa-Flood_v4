@@ -175,7 +175,7 @@ CONTAINS
 !==========================================================
 SUBROUTINE CMF_BOUNDARY_INIT_CDF
 USE YOS_CMF_INPUT,           ONLY: TMPNAM, DTSL
-USE YOS_CMF_MAP,             ONLY: I2NEXTX
+USE YOS_CMF_MAP,             ONLY: I1NEXT, I2VECTOR
 USE YOS_CMF_TIME,            ONLY: KMINSTASL, KMINSTART, KMINEND
 USE CMF_UTILS_MOD,           ONLY: NCERROR, INQUIRE_FID, DATE2MIN
 USE NETCDF
@@ -183,7 +183,7 @@ IMPLICIT NONE
 !* Local Variables 
 INTEGER(KIND=JPIM)              :: NTIMEID,NCDFSTP
 INTEGER(KIND=JPIM)              :: KMINENDSL
-INTEGER(KIND=JPIM)              :: IX, IY, IS, ILNK
+INTEGER(KIND=JPIM)              :: IX, IY, IS, ILNK, ISEQ
 ! ===============================================
 !*** 1. calculate KMINSTASL (START KMIN for boundary)
 KMINSTASL = DATE2MIN(SYEARSL*10000+SMONSL*100+SDAYSL,SHOURSL*100)
@@ -228,9 +228,11 @@ WRITE(LOGNAM,*) "Dynamic sea level links", NLINKS
 
 ALLOCATE( I2SLMAP(3,NLINKS) ) ! conversion matrix (X Y STATION )
 DO ILNK=1, NLINKS
-    READ(TMPNAM,*) IX, IY, IS
-    ! check if links with river outlet cells
-    IF( I2NEXTX(IX, IY) .NE. -9 ) THEN
+  READ(TMPNAM,*) IX, IY, IS
+  ! check if links with river outlet cells
+  ISEQ=I2VECTOR(IX,IY)
+  IF( ISEQ>0 )THEN
+    IF( I1NEXT(ISEQ) .NE. -9 ) THEN
         WRITE(LOGNAM,*) "Sealev link not at river outlet cell", IX, IY
         STOP 9
     ! check if station index in netcdf
@@ -238,9 +240,14 @@ DO ILNK=1, NLINKS
         WRITE(LOGNAM,*) "Sealev link outside netcdf index", IS
         STOP 9
     ENDIF
-    I2SLMAP(1,ILNK) = IX
-    I2SLMAP(2,ILNK) = IY
-    I2SLMAP(3,ILNK) = IS
+  ELSE
+    WRITE(LOGNAM,*) "Sealev link outside land grids", IX,IY
+    STOP 9
+  ENDIF
+
+  I2SLMAP(1,ILNK) = IX
+  I2SLMAP(2,ILNK) = IY
+  I2SLMAP(3,ILNK) = IS
 END DO
 CLOSE(TMPNAM)
 

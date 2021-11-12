@@ -18,9 +18,12 @@
 
       integer,allocatable ::  bsnori(:,:), bifmod(:,:), bpoint(:,:)      !! downstream y
 ! bifurcation
-      integer             ::  ipth, npth, nlev
+      integer             ::  ipth, npth, ilev, nlev, npth_mpi
       integer,allocatable ::  bnew(:), bmod(:), bnum(:)
-      real                ::  len, elv, dph, wth
+      real                ::  len, elv, dph
+      real,allocatable    ::  wth(:)            !! bifurcation width
+      real                ::  lat, lon
+
       integer             ::  mark
 ! color for mpi basins
       integer,allocatable ::  color(:,:)      !! downstream y
@@ -31,8 +34,9 @@
       integer             ::  ibsn, nbsn, jbsn, kbsn, again
       integer             ::  allgrid, maxgrid, grid_thrs
 ! 
-      character*256       ::  finp, fparam, fout, fbifori
+      character*256       ::  finp, fparam, fout, fbifori, fbifmpi
       integer             ::  ios
+      character*256       ::  cfmt, clen
 ! ================================================
       print *, 'Update basin data considering bifurcation channel connectivity:'
 
@@ -99,6 +103,13 @@
         end do
       end do
 
+      fbifori='../bifprm.txt'
+      open(12,file=fbifori,form='formatted')
+      read(12,*) npth, nlev
+      close(12)
+
+      allocate( wth(nlev) )
+
 ! --------
  500 continue
 
@@ -109,8 +120,8 @@ print *, 'STEP-1: merge basins with river bifurcation connectivity'
       read(12,*) npth, nlev
 
       do ipth=1, npth
-        read(12,*) ix,iy,jx,jy, len, elv, dph, wth
-        if( wth<=0 ) cycle                      !! no river bifurcation
+        read(12,*) ix,iy,jx,jy, len, elv, dph, (wth(ilev),ilev=1,nlev), lat, lon
+        if( wth(1)<=0 ) cycle                      !! no river bifurcation
 
         if( basin(ix,iy)/=basin(jx,jy) )then
           if( basin(ix,iy)<basin(jx,jy) )then
@@ -121,9 +132,9 @@ print *, 'STEP-1: merge basins with river bifurcation connectivity'
             jbsn=basin(ix,iy)
           endif
           if( bnew(jbsn)==-9999 )then
-            bnew(jbsn)=ibsn  !! jsbn should be integrated to ibsn
+            bnew(jbsn)=ibsn  !! jbsn should be integrated to ibsn
           elseif( bnew(jbsn)>ibsn )then
-            bnew(jbsn)=ibsn  !! jsbn should be integrated to ibsn
+            bnew(jbsn)=ibsn  !! jbsn should be integrated to ibsn
           endif
         endif
       end do
@@ -182,8 +193,8 @@ print *, 'check all bifurcation merged or not' !! if one basin has multiple conn
 
       again=0
       do ipth=1, npth
-        read(12,*) ix,iy,jx,jy, len, elv, dph, wth
-        if( wth<=0 ) cycle
+        read(12,*) ix,iy,jx,jy, len, elv, dph, (wth(ilev),ilev=1,nlev), lat, lon
+        if( wth(1)<=0 ) cycle
 
         if( basin(ix,iy)/=basin(jx,jy) )then
           again=again+1
@@ -220,7 +231,7 @@ print *, 'STEP-2: merge basins with river bifurcation connectivity'
       read(12,*) npth, nlev
 
       do ipth=npth, 1, -1
-        read(12,*) ix,iy,jx,jy, len, elv, dph, wth
+        read(12,*) ix,iy,jx,jy, len, elv, dph, (wth(ilev),ilev=1,nlev), lat, lon
 
         if( basin(ix,iy)/=basin(jx,jy) )then
           if( basin(ix,iy)<basin(jx,jy) )then
@@ -233,9 +244,9 @@ print *, 'STEP-2: merge basins with river bifurcation connectivity'
           
           if( bnum(ibsn)+bnum(jbsn) < grid_thrs )then
             if( bnew(jbsn)==-9999 )then
-              bnew(jbsn)=ibsn  !! jsbn should be integrated to ibsn
+              bnew(jbsn)=ibsn  !! jbsn should be integrated to ibsn
             elseif( bnew(jbsn)>ibsn )then
-              bnew(jbsn)=ibsn  !! jsbn should be integrated to ibsn
+              bnew(jbsn)=ibsn  !! jbsn should be integrated to ibsn
             endif
           else
             print *, 'not merged', ibsn, jbsn, bnum(ibsn), bnum(jbsn)
@@ -310,13 +321,16 @@ print *, 'check all bifurcation passway merged or not' !! if one basin has multi
       open(12,file=fbifori,form='formatted')
       read(12,*) npth, nlev
 
+      npth_mpi=0
       again=0
       do ipth=1, npth
-        read(12,*) ix,iy,jx,jy, len, elv, dph, wth
+        read(12,*) ix,iy,jx,jy, len, elv, dph, (wth(ilev),ilev=1,nlev), lat, lon
 
         ibsn=basin(ix,iy)
         jbsn=basin(jx,jy)
-        if( ibsn/=jbsn )then
+        if( ibsn==jbsn )then
+          npth_mpi=npth_mpi+1
+        else
           if( bnum(ibsn)+bnum(jbsn) < grid_thrs  )then
             again=again+1
           endif
@@ -358,16 +372,18 @@ print *, 'Post Process: update basin color map'
       read(12,*) npth, nlev
       again=0
       do ipth=1, npth
-        read(12,*) ix,iy,jx,jy, len, elv, dph, wth
+        read(12,*) ix,iy,jx,jy, len, elv, dph, (wth(ilev),ilev=1,nlev), lat, lon
         if( bsnori(ix,iy)/=bsnori(jx,jy) )then
           mark=1
-          if( wth>0 ) mark=2
+          if( wth(1)>0 ) mark=2
           bpoint(ix,iy)=max(mark,bpoint(ix,iy))
           bpoint(jx,jy)=max(mark,bpoint(jx,jy))
         endif
       end do
       close(12)
 ! ==========
+
+print *, 'Write to Files'
 
       fout='../bifbsn.bin'
       open(11,file=fout,form='unformatted',access='direct',recl=4*nx*ny)
@@ -384,6 +400,32 @@ print *, 'Post Process: update basin color map'
       write(11,rec=1) color
       close(11)
 
+print *, 'Update Bifparam file for MPI use'
+
+      fbifmpi='../bifprm_mpi.txt'
+      open(21,file=fbifmpi,form='formatted')
+      write(21,'(2i8,a)') npth_mpi, nlev, &
+               '   npath, nlev, (ix,iy), (jx,jy), length, elevtn, depth, (width1, width2, ... wodth_nlev), (lat,lon), basin'
+
+      write(clen,'(i2)') 3+nlev
+      cfmt='(4i8,'//trim(clen)//'f12.2,2f10.3,i8)'
+
+!===
+      open(12,file=fbifori,form='formatted')
+      read(12,*) npth, nlev
+
+      do ipth=1, npth
+        read(12,*) ix,iy,jx,jy, len, elv, dph, (wth(ilev),ilev=1,nlev), lat, lon
+        ibsn=basin(ix,iy)
+        jbsn=basin(jx,jy)
+        if( ibsn==jbsn ) then  !! write active bifurcation path after updating basins
+          write(21,cfmt) ix, iy, jx, jy, len, elv, dph, (wth(ilev),ilev=1,nlev), lat, lon, ibsn
+        endif
+      end do
+!===
+
+      close(12)
+      close(21)
 
 CONTAINS
       subroutine set_color

@@ -135,7 +135,7 @@ print *, 'set_bifparam: read bifori.txt'
 
       open(21,file=cbifprm,form='formatted')
       write(21,'(2i8,a)') npth_new, nlev_new, &
-               '   npath_new, nlev_new, (ix,iy), (jx,jy), length, elevtn, depth, (width1, width2, ... wodth_nlev), (lon,lat)'
+      '  npath_new, nlev_new, (ix,iy), (jx,jy), length, elevtn, depth, (width1, width2, ... wodth_nlev), (lat,lon), (basins)'
 
       cbifway='./bifori.txt'
       open(12,file=cbifway,form='formatted')

@@ -212,8 +212,11 @@ ENDIF
 CALL CPU_TIME(ZTT1)
 !$ ZTT1=OMP_GET_WTIME()
 
-WRITE(LOGNAM,*) "CMF::DRV_INIT: initialization finished in:",ZTT1-ZTT0,' Seconds'
+WRITE(LOGNAM,*) "CMF::DRV_INIT: initialization finished:"
+WRITE(LOGNAM,*) "Elapsed cpu time (Init)", ZTT1-ZTT0,"Seconds"
 WRITE(LOGNAM,*) "CMF::DRV_INIT: end"
+WRITE(LOGNAM,*) "***********************************"
+
 
 END SUBROUTINE CMF_DRV_INIT
 !####################################################################

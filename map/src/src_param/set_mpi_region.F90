@@ -101,6 +101,7 @@
       allocate(mpgrid(nMPI))
       mpgrid(:)=0
 
+      jMPI=0
       do ibsn=1, nbsn
         if( bnum(ibsn)>0 )then
           imin=nx*ny
