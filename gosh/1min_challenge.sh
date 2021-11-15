@@ -1,8 +1,6 @@
 #!/bin/sh
 #==========================================================
-# CaMa-Flood sample go script (1) global 15min simulation
-# -- Multi 1-year simulations (2000 spinup -> 2000 -> 2001)
-# -- Daily runoff forcing (plain binary) at 1deg resolution
+# CaMa-Flood sample go script (global 1min experiment)
 #
 # (C) D.Yamazaki & E. Dutra  (U-Tokyo/FCUL)  Aug 2019
 #
@@ -16,8 +14,8 @@
 #==========================================================
 
 #*** PBS setting when needed
-#PBS -q E20
-#PBS -l select=1:ncpus=20:mem=10gb
+#PBS -q E80
+#PBS -l select=2:ncpus=40:mpiprocs=2:mem=150gb
 #PBS -j oe
 #PBS -m ea
 #PBS -V
@@ -26,8 +24,11 @@
 # (0) Basic Setting (for workstation)
 
 #*** 0a. Set CaMa-Flood base directory
-BASE=`pwd`/..
-# BASE="/home/yamadai/work/CaMa_v402/cmf_v402_pkg"  # setting for PBS in cluster
+# BASE=`pwd`/..
+BASE="/home/yamadai/cluster/cmf_v402_mpi"  # setting for PBS in cluster
+
+#MPIEXEC="mpirun"
+MPIEXEC="mpiexec_mpt omplace"
 
 echo $BASE
 
@@ -37,11 +38,9 @@ export HDF5LIB="/opt/local/hdf5-1.10.5/lib"
 export DYLD_LIBRARY_PATH="${HDF5LIB}:${IFORTLIB}:${DYLD_LIBRARY_PATH}"
 
 #*** 0c. OpenMP thread number
-export OMP_NUM_THREADS=8                   # OpenMP cpu num
+export OMP_NUM_THREADS=20                  # OpenMP cpu num
 
-MPI_NP=2                             #   MPI cpu num
-
-TMP="np${MPI_NP}_om${OMP_NUM_THREADS}"
+MPI_NP=4                             #   MPI cpu num
 
 #================================================
 # (1) Experiment setting
@@ -449,7 +448,7 @@ EOF
 
 echo "start: ${SYEAR}" `date`  >> log.txt
 #time ./${EXE}                  >> log.txt 
-time mpirun -np $MPI_NP ./${EXE} >> log.txt 
+time ${MPIEXEC} ./${EXE} >> log.txt 
 echo "end:   ${SYEAR}" `date`  >> log.txt
 
 mv ${LOGOUT} log_CaMa-${CYR}.txt
