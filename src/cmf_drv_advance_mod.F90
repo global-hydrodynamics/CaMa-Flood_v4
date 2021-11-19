@@ -103,7 +103,7 @@ DO ISTEP=1,KSTEPS
   CALL CPU_TIME(ZTT2)
   !$ ZTT2=OMP_GET_WTIME()
   WRITE(LOGNAM,*) "CMF::DRV_ADVANCE END: KSTEP, time (end of Tstep):", KSTEP, JYYYYMMDD, JHHMM
-  WRITE(LOGNAM,*) "Elapsed cpu time", ZTT2-ZTT0,"Sec. // File output ", ZTT2-ZTT1, "Sec"
+  WRITE(LOGNAM,'(a,f8.1,a,f8.1,a') "Elapsed cpu time", ZTT2-ZTT0,"Sec. // File output ", ZTT2-ZTT1, "Sec"
 
 ENDDO
 !*** END:time step loop
