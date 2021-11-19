@@ -124,7 +124,7 @@ SUBROUTINE CMF_OUTPUT_INIT
 ! -- Called from CMF_DRV_INIT
 USE YOS_CMF_INPUT,           ONLY: NX,NY
 USE YOS_CMF_TIME,            ONLY: ISYYYY, ISMM,   ISDD,   ISHOUR, ISMIN
-USE YOS_CMF_MAP,             ONLY: NSEQMAX,NPTHOUT,NPTHLEV
+USE YOS_CMF_MAP,             ONLY: NSEQMAX,NPTHOUT,NPTHLEV,REGIONTHIS
 USE CMF_UTILS_MOD,           ONLY: INQUIRE_FID
 #ifdef IFS
 USE ABORT_SURF_MOD,          ONLY: ABORT_SURF
@@ -296,7 +296,9 @@ DO JF=1,NVARSOUT
   VAROUT(JF)%BINID=INQUIRE_FID()
 
   IF( LOUTCDF )THEN
-    CALL CREATE_OUTCDF
+    IF( REGIONTHIS==1 )THEN
+      CALL CREATE_OUTCDF
+    ENDIF
   ELSE
     CALL CREATE_OUTBIN
   ENDIF
@@ -313,17 +315,23 @@ SUBROUTINE CREATE_OUTBIN
 IMPLICIT NONE
 !================================================
 IF( TRIM(VAROUT(JF)%CVNAME)=='pthflw' ) THEN   !! bifurcation channel
-  VAROUT(JF)%CFILE=TRIM(COUTDIR)//TRIM(VAROUT(JF)%CVNAME)//TRIM(COUTTAG)//TRIM(CSUFPTH)
-  OPEN(VAROUT(JF)%BINID,FILE=VAROUT(JF)%CFILE,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NPTHOUT*NPTHLEV)
+  IF( REGIONTHIS==1 )THEN
+    VAROUT(JF)%CFILE=TRIM(COUTDIR)//TRIM(VAROUT(JF)%CVNAME)//TRIM(COUTTAG)//TRIM(CSUFPTH)
+    OPEN(VAROUT(JF)%BINID,FILE=VAROUT(JF)%CFILE,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NPTHOUT*NPTHLEV)
+    WRITE(LOGNAM,*) "output file opened in unit: ", TRIM(VAROUT(JF)%CFILE), VAROUT(JF)%BINID
+  ENDIF
 ELSEIF( LOUTVEC )THEN   !!  1D land only output
   VAROUT(JF)%CFILE=TRIM(COUTDIR)//TRIM(VAROUT(JF)%CVNAME)//TRIM(COUTTAG)//TRIM(CSUFVEC)
   OPEN(VAROUT(JF)%BINID,FILE=VAROUT(JF)%CFILE,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NSEQMAX)
-ELSE                    !!  2D default map output
-  VAROUT(JF)%CFILE=TRIM(COUTDIR)//TRIM(VAROUT(JF)%CVNAME)//TRIM(COUTTAG)//TRIM(CSUFBIN)
-  WRITE(LOGNAM,*) "  -- ", TRIM(VAROUT(JF)%CFILE)
-  OPEN(VAROUT(JF)%BINID,FILE=VAROUT(JF)%CFILE,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NX*NY)
+  WRITE(LOGNAM,*) "output file opened in unit: ", TRIM(VAROUT(JF)%CFILE), VAROUT(JF)%BINID
+ELSE                   !!  2D default map output
+  IF( REGIONTHIS==1 )THEN
+    VAROUT(JF)%CFILE=TRIM(COUTDIR)//TRIM(VAROUT(JF)%CVNAME)//TRIM(COUTTAG)//TRIM(CSUFBIN)
+    WRITE(LOGNAM,*) "  -- ", TRIM(VAROUT(JF)%CFILE)
+    OPEN(VAROUT(JF)%BINID,FILE=VAROUT(JF)%CFILE,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NX*NY)
+    WRITE(LOGNAM,*) "output file opened in unit: ", TRIM(VAROUT(JF)%CFILE), VAROUT(JF)%BINID
+  ENDIF
 ENDIF
-WRITE(LOGNAM,*) "output file opened in unit: ", TRIM(VAROUT(JF)%CFILE), VAROUT(JF)%BINID
 
 
 END SUBROUTINE CREATE_OUTBIN
@@ -397,13 +405,16 @@ END SUBROUTINE CMF_OUTPUT_INIT
 
 !####################################################################
 SUBROUTINE CMF_OUTPUT_WRITE
+!======
 #ifdef IFS
 USE ABORT_SURF_MOD,     ONLY: ABORT_SURF 
 #endif
+!======
+USE CMF_UTILS_MOD,           ONLY: VEC2MAP
 ! save results to output files
 ! -- Called either from "MAIN/Coupler" or CMF_DRV_ADVANCE
-USE YOS_CMF_INPUT,      ONLY: NX,NY
-USE YOS_CMF_MAP,        ONLY: NSEQMAX, NPTHOUT, NPTHLEV
+USE YOS_CMF_INPUT,      ONLY: NX, NY
+USE YOS_CMF_MAP,        ONLY: NSEQMAX, NPTHOUT, NPTHLEV, REGIONTHIS
 USE YOS_CMF_TIME,       ONLY: JYYYYMMDD, JHHMM, JHOUR, JMIN
 USE YOS_CMF_PROG,       ONLY: D2RIVSTO,     D2FLDSTO,     D2GDWSTO, &
                             & d2damsto !!! added
@@ -412,9 +423,15 @@ USE YOS_CMF_DIAG,       ONLY: D2RIVDPH,     D2FLDDPH,     D2FLDFRC,     D2FLDARE
                             & D2RIVVEL_AVG, D2GDWRTN_AVG, D2RUNOFF_AVG, D2ROFSUB_AVG,               &
                             & D2OUTFLW_MAX, D2STORGE_MAX, D2RIVDPH_MAX, &
                             & d2daminf_avg   !!! added
+#ifdef UseMPI
+USE CMF_CTRL_MPI_MOD,   ONLY: CMF_MPI_REDUCE_R2MAP, CMF_MPI_REDUCE_R1PTH
+#endif
 IMPLICIT NONE
-INTEGER(KIND=JPIM)      ::    JF
-REAL(KIND=JPRB),POINTER ::    D2VEC(:,:) ! point data location to output
+INTEGER(KIND=JPIM)          :: JF
+REAL(KIND=JPRB),POINTER     :: D2VEC(:,:) ! point data location to output
+!*** LOCAL
+REAL(KIND=JPRM)             :: R2OUT(NX,NY)
+REAL(KIND=JPRM)             :: R1POUT(NPTHOUT,NPTHLEV)
 !================================================
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "!---------------------!"
@@ -500,16 +517,31 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
 #endif
     END SELECT   !! variable name select
 
+!! convert 1Dvector to 2Dmap
+    IF( VAROUT(JF)%CVNAME/='pthflw' ) THEN  !! usual 2D map variable
+      CALL VEC2MAP(D2VEC,R2OUT)             !! MPI node data is gathered by VEC2MAP
+#ifdef UseMPI
+      CALL CMF_MPI_REDUCE_R2MAP(R2OUT)
+#endif
+    ELSE
+      R1POUT(:,:)=REAL(D1PTHFLW_AVG(:,:))
+#ifdef UseMPI
+      CALL CMF_MPI_REDUCE_R1PTH(R1POUT)
+#endif
+    ENDIF
+
     !*** 3. write D2VEC to output file
     IF ( LOUTCDF ) THEN
-      CALL WRTE_OUTCDF  !! netCDFG
+      IF ( REGIONTHIS==1 ) CALL WRTE_OUTCDF  !! netCDFG
     ELSE
       IF( VAROUT(JF)%CVNAME=='pthflw' ) THEN
-        CALL WRTE_OUTPTH(VAROUT(JF)%BINID,IRECOUT,D1PTHFLW_AVG)  !! 1D bifu channel
-      ELSEIF( LOUTVEC )THEN
-        CALL WRTE_OUTVEC(VAROUT(JF)%BINID,IRECOUT,D2VEC)         !! 1D vector (optional)
+        IF ( REGIONTHIS==1 ) CALL WRTE_OUTPTH(VAROUT(JF)%BINID,IRECOUT,R1POUT)        !! 1D bifu channel
       ELSE
-        CALL WRTE_OUTBIN(VAROUT(JF)%BINID,IRECOUT,D2VEC)         !! 2D map
+        IF( LOUTVEC )THEN
+          CALL WRTE_OUTVEC(VAROUT(JF)%BINID,IRECOUT,D2VEC)         !! 1D vector (optional)
+        ELSE
+          IF ( REGIONTHIS==1 ) CALL WRTE_OUTBIN(VAROUT(JF)%BINID,IRECOUT,R2OUT)         !! 2D map
+        ENDIF
       ENDIF
     ENDIF
   END DO
@@ -528,17 +560,13 @@ CONTAINS
 !+ WRITE_OUTVEC
 !+ WRITE_OUTCFD
 !==========================================================
-SUBROUTINE WRTE_OUTBIN(IFN,IREC,D2OUTDAT)
-USE CMF_UTILS_MOD,           ONLY: VEC2MAP
+SUBROUTINE WRTE_OUTBIN(IFN,IREC,R2OUTDAT)
 IMPLICIT NONE
 !*** INPUT
 INTEGER(KIND=JPIM),INTENT(IN)   :: IFN                 !! FILE NUMBER
 INTEGER(KIND=JPIM),INTENT(IN)   :: IREC                !! RECORD
-REAL(KIND=JPRB),INTENT(IN)      :: D2OUTDAT(NSEQMAX,1) !! OUTPUT DATA
-!*** LOCAL
 REAL(KIND=JPRM)                 :: R2OUTDAT(NX,NY)
 !================================================
-CALL VEC2MAP(D2OUTDAT,R2OUTDAT)
 WRITE(IFN,REC=IREC) R2OUTDAT
 
 END SUBROUTINE WRTE_OUTBIN
@@ -547,16 +575,13 @@ END SUBROUTINE WRTE_OUTBIN
 !+
 !+
 !==========================================================
-SUBROUTINE WRTE_OUTPTH(IFN,IREC,D2OUTDAT)
+SUBROUTINE WRTE_OUTPTH(IFN,IREC,R2OUTDAT)
 IMPLICIT NONE
 !*** INPUT
 INTEGER(KIND=JPIM),INTENT(IN)   :: IFN                 !! FILE NUMBER
 INTEGER(KIND=JPIM),INTENT(IN)   :: IREC                !! RECORD
-REAL(KIND=JPRB),INTENT(IN)      :: D2OUTDAT(NPTHOUT,NPTHLEV) !! OUTPUT DATA
-!*** LOCAL
 REAL(KIND=JPRM)                 :: R2OUTDAT(NPTHOUT,NPTHLEV)
 !================================================
-R2OUTDAT(:,:)=REAL(D2OUTDAT(:,:))
 WRITE(IFN,REC=IREC) R2OUTDAT
 
 END SUBROUTINE WRTE_OUTPTH
@@ -587,16 +612,15 @@ SUBROUTINE WRTE_OUTCDF
 #ifdef UseCDF
 USE NETCDF 
 USE YOS_CMF_TIME,            ONLY: KMINSTART,KMINNEXT
-USE CMF_UTILS_MOD,           ONLY: NCERROR,VEC2MAP
+USE CMF_UTILS_MOD,           ONLY: NCERROR
 IMPLICIT NONE
 REAL(KIND=JPRB)                 :: XTIME ! seconds since start of the run !
-REAL(KIND=JPRM)                 :: Z2MAP(NX,NY)
+
 !================================================
 XTIME=REAL( (KMINNEXT-KMINSTART),JPRB) *60._JPRB      !! for netCDF
 CALL NCERROR( NF90_PUT_VAR(VAROUT(JF)%NCID,VAROUT(JF)%TIMID,XTIME,(/IRECOUT/)) )
 
-CALL VEC2MAP(D2VEC,Z2MAP)
-CALL NCERROR( NF90_PUT_VAR(VAROUT(JF)%NCID,VAROUT(JF)%VARID,Z2MAP(1:NX,1:NY),(/1,1,IRECOUT/),(/NX,NY,1/)) )
+CALL NCERROR( NF90_PUT_VAR(VAROUT(JF)%NCID,VAROUT(JF)%VARID,R2OUT(1:NX,1:NY),(/1,1,IRECOUT/),(/NX,NY,1/)) )
 ! Comment out this as it slows down significantly the writting in the cray  
 !CALL NCERROR( NF90_SYNC(VAROUT(JF)%NCID) )  
 #endif
@@ -618,6 +642,7 @@ SUBROUTINE CMF_OUTPUT_END
 USE NETCDF
 USE CMF_UTILS_MOD,           ONLY: NCERROR
 #endif
+USE YOS_CMF_MAP,             ONLY: REGIONTHIS
 IMPLICIT NONE
 ! Local variables
 INTEGER(KIND=JPIM)              :: JF
@@ -626,20 +651,22 @@ WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "!---------------------!"
 WRITE(LOGNAM,*) "CMF::OUTPUT_END: finalize output module"
 
-IF (LOUTCDF) THEN
+IF( REGIONTHIS==1 )THEN
+  IF (LOUTCDF) THEN
 #ifdef UseCDF
-  DO JF=1,NVARSOUT
-    CALL NCERROR( NF90_CLOSE(VAROUT(JF)%NCID))
-    WRITE(LOGNAM,*) "Output netcdf output unit closed:",VAROUT(JF)%NCID
-  ENDDO
+    DO JF=1,NVARSOUT
+      CALL NCERROR( NF90_CLOSE(VAROUT(JF)%NCID))
+      WRITE(LOGNAM,*) "Output netcdf output unit closed:",VAROUT(JF)%NCID
+    ENDDO
 #endif
-ELSE
-  DO JF=1,NVARSOUT
-    CLOSE(VAROUT(JF)%BINID)
-    WRITE(LOGNAM,*) "Output binary output unit closed:",VAROUT(JF)%BINID
-  ENDDO
-  IF( LOUTVEC )THEN
-    CALL WRTE_MAP2VEC
+  ELSE !! binary output
+    DO JF=1,NVARSOUT
+      CLOSE(VAROUT(JF)%BINID)
+      WRITE(LOGNAM,*) "Output binary output unit closed:",VAROUT(JF)%BINID
+    ENDDO
+    IF( LOUTVEC )THEN
+      CALL WRTE_MAP2VEC  !! write map-vector conversion file
+    ENDIF
   ENDIF
 ENDIF
 
@@ -652,29 +679,21 @@ CONTAINS
 !+
 !+
 !==========================================================
-SUBROUTINE WRTE_MAP2VEC       !! 1D sequence vector informtion required to convert vector output to 2D map
-USE YOS_CMF_INPUT,      ONLY: TMPNAM, NX, NY
-USE YOS_CMF_MAP,        ONLY: I2REGION, I1SEQX, I1SEQY, NSEQMAX
+SUBROUTINE WRTE_MAP2VEC       !! 1D sequence vector informtion required to convert MPI distributed vector output to 2D map
+USE YOS_CMF_INPUT,      ONLY: TMPNAM
+USE YOS_CMF_MAP,        ONLY: I1SEQX, I1SEQY, NSEQMAX
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
 IMPLICIT NONE
 !* local variable
-CHARACTER(LEN=256)         :: CFILE1, CFILE2
+CHARACTER(LEN=256)         :: CFILE1
 !================================================
 IF( LOUTVEC )THEN
+  CFILE1='./ind_xy'//TRIM(CSUFVEC)
 
-  !! only in binary output
-  CFILE1='./region'//TRIM(CSUFBIN)
-  CFILE2='./ind_xy'//TRIM(CSUFVEC)
+  WRITE(LOGNAM,*) "LOUTVEC: write map2vec conversion table", TRIM(CFILE1)
 
-  WRITE(LOGNAM,*) "LOUTVEC: write map2vec conversion table", TRIM(CFILE1), TRIM(CFILE2)
-
-  
   TMPNAM=INQUIRE_FID()
-  OPEN(TMPNAM,FILE=CFILE1,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NX*NY)
-  WRITE(TMPNAM,REC=1) I2REGION
-  CLOSE(TMPNAM)
-  
-  OPEN(TMPNAM,FILE=CFILE2,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NSEQMAX)
+  OPEN(TMPNAM,FILE=CFILE1,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NSEQMAX)
   WRITE(TMPNAM,REC=1) I1SEQX
   WRITE(TMPNAM,REC=2) I1SEQY
   CLOSE(TMPNAM)

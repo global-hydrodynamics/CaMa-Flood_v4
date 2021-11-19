@@ -20,8 +20,8 @@ CONTAINS
 !####################################################################
 SUBROUTINE CMF_CALC_PTHOUT
 USE PARKIND1,           ONLY: JPIM, JPRB
-USE YOS_CMF_INPUT,      ONLY: DT, PGRV
-USE YOS_CMF_MAP,        ONLY: NSEQMAX, NPTHOUT, NPTHLEV, PTH_UPST, PTH_DOWN, PTH_DST, &
+USE YOS_CMF_INPUT,      ONLY: DT, PGRV, DMIS
+USE YOS_CMF_MAP,        ONLY: NSEQALL, NSEQMAX, NPTHOUT, NPTHLEV, PTH_UPST, PTH_DOWN, PTH_DST, &
                             & PTH_ELV, PTH_WTH, PTH_MAN, I2MASK
 USE YOS_CMF_MAP,        ONLY: D2RIVELV
 USE YOS_CMF_PROG,       ONLY: D2RIVSTO, D2FLDSTO, D1PTHFLW, D2RIVOUT, D2FLDOUT
@@ -38,7 +38,7 @@ IMPLICIT NONE
 !$OMP THREADPRIVATE         (DSLOPE, DFLW, DOUT_PRE, DFLW_PRE, DFLW_IMP, DSTO_TMP, ILEV, ISEQP, JSEQP)
 !================================================
 !$OMP PARALLEL DO
-DO ISEQ=1, NSEQMAX
+DO ISEQ=1, NSEQALL
   D2SFCELV_PRE(ISEQ,1) = D2RIVELV(ISEQ,1)+D2RIVDPH_PRE(ISEQ,1)
   D2PTHOUT(ISEQ,1) = 0.D0
   D2PTHINF(ISEQ,1) = 0.D0
@@ -46,7 +46,7 @@ DO ISEQ=1, NSEQMAX
 END DO
 !$OMP END PARALLEL DO
 
-D1PTHFLW(:,:) = 0._JPRB 
+D1PTHFLW(:,:) = DMIS
 !$OMP PARALLEL DO
 DO IPTH=1, NPTHOUT  
   ISEQP=PTH_UPST(IPTH)
@@ -86,6 +86,10 @@ END DO
 DO IPTH=1, NPTHOUT  
   ISEQP=PTH_UPST(IPTH)
   JSEQP=PTH_DOWN(IPTH)
+  !! Avoid calculation outside of domain
+  IF (ISEQP == 0 .OR. JSEQP== 0 ) CYCLE
+  IF (I2MASK(ISEQP,1) == 1 .OR. I2MASK(JSEQP,1) == 1 ) CYCLE
+
   DO ILEV=1, NPTHLEV
     IF( D1PTHFLW(IPTH,ILEV) >= 0.D0 )THEN                                  !! total outflow from each grid
 !$OMP ATOMIC
@@ -100,9 +104,8 @@ END DO
 !$OMP END PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
 #endif
 
-
 !$OMP PARALLEL DO                                              !! calculate total outflow from a grid
-DO ISEQ=1, NSEQMAX
+DO ISEQ=1, NSEQALL
   IF( D2PTHOUT(ISEQ,1) > 1.D-10 )THEN
     DSTO_TMP = ( D2RIVSTO(ISEQ,1)+D2FLDSTO(ISEQ,1) ) &
                   - D2RIVOUT(ISEQ,1)*DT + D2RIVINF(ISEQ,1)*DT - D2FLDOUT(ISEQ,1)*DT + D2FLDINF(ISEQ,1)*DT
@@ -114,13 +117,16 @@ DO ISEQ=1, NSEQMAX
 END DO
 !$OMP END PARALLEL DO
 
-
 #ifndef NoAtom
 !$OMP PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
 #endif
 DO IPTH=1, NPTHOUT
   ISEQP=PTH_UPST(IPTH)
   JSEQP=PTH_DOWN(IPTH)
+  !! Avoid calculation outside of domain
+  IF (ISEQP == 0 .OR. JSEQP== 0 ) CYCLE
+  IF (I2MASK(ISEQP,1) == 1 .OR. I2MASK(JSEQP,1) == 1 ) CYCLE
+  
   DO ILEV=1, NPTHLEV
     IF( D1PTHFLW(IPTH,ILEV) >= 0.D0 )THEN
       D1PTHFLW(IPTH,ILEV) = D1PTHFLW(IPTH,ILEV)*D2RATE(ISEQP,1)

@@ -18,7 +18,7 @@ MODULE CMF_CTRL_DAMOUT_MOD
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
 USE PARKIND1,                ONLY: JPIM, JPRB, JPRM
-USE YOS_CMF_INPUT,           ONLY: LOGNAM
+USE YOS_CMF_INPUT,           ONLY: LOGNAM, IMIS
 !============================
 IMPLICIT NONE
 SAVE
@@ -134,7 +134,7 @@ ALLOCATE(FldVol(NDAM),ConVol(NDAM),EmeVol(NDAM),NorVol(NDAM))
 !! dam map, dam variable
 ALLOCATE(I1DAM(NSEQMAX))
 !! =================
-DamSeq(:)=-9999
+DamSeq(:)=IMIS
 I1DAM(:)=0
 !! read dam parameters
 DO IDAM = 1, NDAM

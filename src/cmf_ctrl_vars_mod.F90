@@ -89,7 +89,7 @@ D2FLDSTO_PRE(:,:) = 0._JPRB
 D2GDWRTN(:,:)     = 0._JPRB
 D2GDWSTO(:,:)     = 0._JPRB
 D1PTHFLW(:,:)     = 0._JPRB
-D1PTHFLW_PRE(:,:) = 0.
+D1PTHFLW_PRE(:,:) = 0._JPRB
 IF( LDAMOUT )THEN  !! Additional variable for LDAMOUT
   D2DAMSTO(:,:)     = 0._JPRB
   D2DAMINF(:,:)     = 0._JPRB
@@ -110,27 +110,56 @@ CONTAINS
 ! ==================================================
 SUBROUTINE STORAGE_SEA_SURFACE
 ! set initial storage, assuming water surface not lower than downstream sea surface elevation
-USE YOS_CMF_MAP,  ONLY: NSEQALL,  I1NEXT
+USE YOS_CMF_MAP,  ONLY: NSEQRIV,  NSEQALL,  I1NEXT
 USE YOS_CMF_MAP,  ONLY: D2DWNELV, D2RIVELV,D2RIVHGT,D2RIVWTH,D2RIVLEN
 IMPLICIT NONE
 ! local variables
-INTEGER(KIND=JPIM) ::  ISEQ, JSEQ, KSEQ
+INTEGER(KIND=JPIM) ::  ISEQ, JSEQ
+!$ SAVE
 REAL(KIND=JPRB)    ::  DSEAELV, DDPH
+!$OMP THREADPRIVATE   (DSEAELV, DDPH)
 !!=================
-DO ISEQ=1, NSEQALL
-  JSEQ=ISEQ
-  DO WHILE( I1NEXT(JSEQ)>0 )
-    KSEQ=JSEQ
-    JSEQ=I1NEXT(KSEQ)
-  END DO
-
-  DSEAELV=D2DWNELV(JSEQ,1) !! downstream boundary elevation
+! For River Mouth Grid
+!$OMP PARALLEL DO
+DO ISEQ=NSEQRIV+1,NSEQALL
+  DSEAELV=D2DWNELV(ISEQ,1) !! downstream boundary elevation
 
   !! set initial water level to sea level if river bed is lower than sea level
   DDPH=MAX( DSEAELV-D2RIVELV(ISEQ,1),0._JPRB )
   DDPH=MIN( DDPH,D2RIVHGT(ISEQ,1) )
   D2RIVSTO(ISEQ,1)=DDPH*D2RIVLEN(ISEQ,1)*D2RIVWTH(ISEQ,1)
+  D2RIVDPH_PRE(ISEQ,1)=DDPH
 END DO
+!$OMP END PARALLEL DO
+
+!! For Usual River Grid (from downstream to upstream). OMP cannot be applied
+DO ISEQ=NSEQRIV,1, -1
+  JSEQ=I1NEXT(ISEQ)
+  DSEAELV=D2RIVELV(JSEQ,1)+D2RIVDPH_PRE(JSEQ,1)
+
+  !! set initial water level to sea level if river bed is lower than sea level
+  DDPH=MAX( DSEAELV-D2RIVELV(ISEQ,1),0._JPRB )
+  DDPH=MIN( DDPH,D2RIVHGT(ISEQ,1) )
+
+  D2RIVSTO(ISEQ,1)=DDPH*D2RIVLEN(ISEQ,1)*D2RIVWTH(ISEQ,1)
+  D2RIVDPH_PRE(ISEQ,1)=DDPH
+END DO
+
+  
+! old version before v4.02 (too slow)
+!DO ISEQ=1, NSEQALL
+!  JSEQ=ISEQ
+!  DO WHILE( I1NEXT(JSEQ)>0 )
+!    KSEQ=JSEQ
+!    JSEQ=I1NEXT(KSEQ)
+!  END DO
+!
+!  DSEAELV=D2DWNELV(JSEQ,1) !! downstream boundary elevation
+!  !! set initial water level to sea level if river bed is lower than sea level
+!  DDPH=MAX( DSEAELV-D2RIVELV(ISEQ,1),0._JPRB )
+!  DDPH=MIN( DDPH,D2RIVHGT(ISEQ,1) )
+!  D2RIVSTO(ISEQ,1)=DDPH*D2RIVLEN(ISEQ,1)*D2RIVWTH(ISEQ,1)
+!END DO
     
 END SUBROUTINE STORAGE_SEA_SURFACE
 ! ==================================================

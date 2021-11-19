@@ -20,6 +20,7 @@ MODULE CMF_DRV_CONTROL_MOD
 !** shared variables in module
 USE PARKIND1,                ONLY: JPIM, JPRB, JPRM
 USE YOS_CMF_INPUT,           ONLY: LOGNAM
+USE YOS_CMF_MAP,             ONLY: REGIONALL, REGIONTHIS
 IMPLICIT NONE
 !** local variables
 SAVE
@@ -46,11 +47,19 @@ USE CMF_CTRL_OUTPUT_MOD,     ONLY: CMF_OUTPUT_NMLIST
 USE CMF_CTRL_MAPS_MOD,       ONLY: CMF_MAPS_NMLIST
 USE CMF_UTILS_MOD,           ONLY: INQUIRE_FID
 IMPLICIT NONE
+!* local
+CHARACTER(LEN=8)              :: CREG                 !! 
 !================================================
 
 !*** 0a. Set log file & namelist
 ! Preset in YOS_INPUT:  LLOGOUT=.TRUE.   CLOGOUT='./log_CaMa.txt'
 ! It can be modified in MAIN program before DRV_INPUT
+
+IF (REGIONALL>=2 )then 
+  WRITE(CREG,'(I0)') REGIONTHIS                                    !! Distributed Log Output for MPI run
+  CLOGOUT=TRIM(CLOGOUT)//'-'//TRIM(CREG)                           !! Change suffix of output file for each calculation node
+ENDIF
+
 IF( LLOGOUT )THEN
   LOGNAM=INQUIRE_FID()
   OPEN(LOGNAM,FILE=CLOGOUT,FORM='FORMATTED')  
@@ -203,8 +212,11 @@ ENDIF
 CALL CPU_TIME(ZTT1)
 !$ ZTT1=OMP_GET_WTIME()
 
-WRITE(LOGNAM,*) "CMF::DRV_INIT: initialization finished in:",ZTT1-ZTT0,' Seconds'
+WRITE(LOGNAM,*) "CMF::DRV_INIT: initialization finished:"
+WRITE(LOGNAM,*) "Elapsed cpu time (Init)", ZTT1-ZTT0,"Seconds"
 WRITE(LOGNAM,*) "CMF::DRV_INIT: end"
+WRITE(LOGNAM,*) "***********************************"
+
 
 END SUBROUTINE CMF_DRV_INIT
 !####################################################################
@@ -244,5 +256,6 @@ CLOSE(LOGNAM)
 
 END SUBROUTINE CMF_DRV_END
 !####################################################################
+
 
 END MODULE CMF_DRV_CONTROL_MOD

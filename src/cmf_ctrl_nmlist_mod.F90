@@ -20,6 +20,8 @@ MODULE CMF_CTRL_NMLIST_MOD
 ! shared variables in module
 USE PARKIND1,                ONLY: JPIM, JPRB, JPRM
 USE YOS_CMF_INPUT,           ONLY: LOGNAM
+USE YOS_CMF_MAP,             ONLY: REGIONTHIS, REGIONALL
+
 IMPLICIT NONE
 CONTAINS
 !####################################################################
@@ -42,6 +44,8 @@ USE YOS_CMF_INPUT,      ONLY: PMANRIV,  PMANFLD,  PDSTMTH,  PMINSLP,  PGRV, PCAD
                             & IMIS, RMIS, DMIS,   CSUFBIN,  CSUFVEC,  CSUFPTH,  CSUFCDF
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
 IMPLICIT NONE
+!* local
+CHARACTER(LEN=8)              :: CREG                 !! 
 !
 NAMELIST/NRUNVER/  LADPSTP,  LFPLAIN,  LKINE,    LFLDOUT,  LPTHOUT,  LDAMOUT,  &
                    LROSPLIT, LGDWDLY,  LSLPMIX,  LMEANSL,  LSEALEV,  LOUTPUT,  &
@@ -233,6 +237,12 @@ WRITE(LOGNAM,*) "CMF::CONFIG_NMLIST: end "
 WRITE(LOGNAM,*) "--------------------!"
 WRITE(LOGNAM,*) ""
 
+IF (REGIONALL>=2 )then 
+  WRITE(CREG,'(I0)') REGIONTHIS                                   !! Regional Output for MPI run
+  CSUFVEC=TRIM(CSUFVEC)//'-'//TRIM(CREG)                          !! Change suffix of output file for each MPI node (only vector output)
+ENDIF
+
+
 END SUBROUTINE CMF_CONFIG_NMLIST
 !####################################################################
 
@@ -275,16 +285,13 @@ ENDIF
 
 IF ( .not.LFPLAIN .AND. .not.LKINE ) THEN
   WRITE(LOGNAM,*) "LFPLAIN=.false. & LKINE=.false."
-  WRITE(LOGNAM,*) "NO FLOODPLAIN OPTION only available with kinematic wave (LKINE=.true.)"
-  WRITE(LOGNAM,*) "stop"
-  STOP 9
+  WRITE(LOGNAM,*) "CAUTION: NO FLOODPLAIN OPTION reccomended to be used with kinematic wave (LKINE=.true.)"
 ENDIF
 
 IF ( LKINE .AND. LADPSTP ) THEN
   WRITE(LOGNAM,*) "LKINE=.true. & LADPSTP=.true."
-  WRITE(LOGNAM,*) "adaptive time step only available with local inertial equation (LKINE=.false.)"
-  WRITE(LOGNAM,*) "STOP"
-  STOP 9
+  WRITE(LOGNAM,*) "adaptive time step reccoomended only with local inertial equation (LKINE=.false.)"
+  WRITE(LOGNAM,*) "Set appropriate fixed time step for Kinematic Wave"
 ENDIF
 
 IF ( LKINE .AND. LPTHOUT ) THEN
