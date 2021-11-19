@@ -15,7 +15,7 @@ MODULE CMF_CALC_FLDSTG_MOD
 CONTAINS
 !####################################################################
 ! -- CMF_CALC_FLDSTG
-! -- CMF_OPT_FLDSTG_ES
+! -- CMF_OPT_FLDSTG_ES !! optimized code for vector processor (such as Earth Simulator), activated using LSTG_ES=.TRUE. option).
 ! --
 !####################################################################
 SUBROUTINE CMF_CALC_FLDSTG

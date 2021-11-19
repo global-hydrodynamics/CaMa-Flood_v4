@@ -31,7 +31,22 @@ cd src_param/
 echo "" 
 echo "@@@ set_bif_basin"
 
-./set_bif_basin
+#######################################################'
+#If you want to use more MPI nodes : please add argument MaxMPI'
+#% ./set_bif_basin MaxMPI '
+# '
+
+#When MaxMPI is specified:'
+# - a few inter-basin channels neglected, such as Amazon-Orinoco connection' 
+# - most inter-basin bifurcations in delta regions are still represented' 
+#'       
+#Up to 16 MPI nodes available for usual case' 
+#When MaxMPI is specified, up to 30 MPI nodes are available' 
+#######################################################'
+TAG=''
+#TAG='MaxMPI'
+
+./set_bif_basin $TAG
 
 ########################################
 echo "" 

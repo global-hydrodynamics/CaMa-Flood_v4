@@ -44,7 +44,7 @@ SAVE
 INTEGER(KIND=JPIM)              :: KSTEPS             !! Number of timesteps to advance 
 !* Local variables 
 INTEGER(KIND=JPIM)              :: ISTEP              !! Time Step
-REAL(KIND=JPRB)                 :: ZTT0, ZTT1         !! Time elapsed related 
+REAL(KIND=JPRB)                 :: ZTT0, ZTT1, ZTT2   !! Time elapsed related 
 !$ INTEGER(KIND=JPIM)           :: NTHREADS           !! OpenMP thread number
 !==========================================================
 
@@ -74,6 +74,9 @@ DO ISTEP=1,KSTEPS
   !*** 2. Advance model integration 
   CALL CMF_ADVANCE_PHYSICS
 
+  CALL CPU_TIME(ZTT1)
+  !$ ZTT1=OMP_GET_WTIME()
+
   !============================
   !*** 3. Write output file (when needed)
   IF( LOUTPUT .and. MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 )then
@@ -97,10 +100,10 @@ DO ISTEP=1,KSTEPS
 
   !============================
   !*** 6. Check CPU time 
-  CALL CPU_TIME(ZTT1)
-  !$ ZTT1=OMP_GET_WTIME()
+  CALL CPU_TIME(ZTT2)
+  !$ ZTT2=OMP_GET_WTIME()
   WRITE(LOGNAM,*) "CMF::DRV_ADVANCE END: KSTEP, time (end of Tstep):", KSTEP, JYYYYMMDD, JHHMM
-  WRITE(LOGNAM,*) "Elapsed cpu time", ZTT1-ZTT0,"Seconds"
+  WRITE(LOGNAM,*) "Elapsed cpu time", ZTT2-ZTT0,"Sec. // File output ", ZTT2-ZTT1, "Sec"
 
 ENDDO
 !*** END:time step loop

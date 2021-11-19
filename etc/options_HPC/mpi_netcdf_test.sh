@@ -1,6 +1,8 @@
 #!/bin/sh
 #==========================================================
-# CaMa-Flood sample go script (global 1min experiment)
+# CaMa-Flood sample go script (1) global 15min simulation
+# -- Multi 1-year simulations (2000 spinup -> 2000 -> 2001)
+# -- Daily runoff forcing (plain binary) at 1deg resolution
 #
 # (C) D.Yamazaki & E. Dutra  (U-Tokyo/FCUL)  Aug 2019
 #
@@ -14,8 +16,8 @@
 #==========================================================
 
 #*** PBS setting when needed
-#PBS -q E80
-#PBS -l select=2:ncpus=40:mpiprocs=2:mem=150gb
+#PBS -q E40
+#PBS -l select=1:ncpus=40:mpiprocs=8:mem=150gb
 #PBS -j oe
 #PBS -m ea
 #PBS -V
@@ -27,9 +29,6 @@
 # BASE=`pwd`/..
 BASE="/home/yamadai/cluster/cmf_v402_mpi"  # setting for PBS in cluster
 
-#MPIEXEC="mpirun"
-MPIEXEC="mpiexec_mpt omplace"
-
 echo $BASE
 
 #*** 0b. Set dynamic library if needed
@@ -38,9 +37,11 @@ export HDF5LIB="/opt/local/hdf5-1.10.5/lib"
 export DYLD_LIBRARY_PATH="${HDF5LIB}:${IFORTLIB}:${DYLD_LIBRARY_PATH}"
 
 #*** 0c. OpenMP thread number
-export OMP_NUM_THREADS=20                  # OpenMP cpu num
+export OMP_NUM_THREADS=5                  # OpenMP cpu num
 
-MPI_NP=4                             #   MPI cpu num
+MPI_NP=8                                 #   MPI cpu num
+
+TMP="np${MPI_NP}_om${OMP_NUM_THREADS}"
 
 #================================================
 # (1) Experiment setting
@@ -48,7 +49,7 @@ MPI_NP=4                             #   MPI cpu num
 
 #============================
 #*** 1a. Experiment directory setting
-EXP="1min_test"                       # experiment name (output directory name)
+EXP="mpi_cdf_${TMP}"                       # experiment name (output directory name)
 RDIR=${BASE}/out/${EXP}                     # directory to run CaMa-Flood
 EXE="MAIN_cmf"                              # Execute file name
 PROG=${BASE}/src/${EXE}                     # location of Fortran main program
@@ -57,7 +58,7 @@ LOGOUT="./log_CaMa.txt"                     # standard log output
 
 #============================
 #*** 1b. Model physics option
-DT=3600                                    # base DT (modified in physics loop by LADPSTP)
+DT=86400                                    # base DT (modified in physics loop by LADPSTP)
 LADPSTP=".TRUE."                            # .TRUE. for adaptive time step
 
 LFPLAIN=".TRUE."                            # .TRUE. to activate floodplain storage
@@ -85,8 +86,8 @@ LSTOONLY=".FALSE."                          # .TRUE. for storage only restart (f
 #* output restart file
 CRESTDIR="./"                               # output restart file directory
 CVNREST="restart"                           # output restart file prefix
-LRESTCDF=".FALSE."                          # .TRUE. to use netCDF restart file
-IFRQ_RST="0"                                # output restat frequency.
+LRESTCDF=".TRUE."                          # .TRUE. to use netCDF restart file
+IFRQ_RST="30"                                # output restat frequency.
                                             # [0]: only at last time, [1,2,3,...,24] hourly restart, [30]: monthly restart
 #============================
 #*** 1e. forcing setting
@@ -94,36 +95,38 @@ IFRQ_INP="24"                               # input forcing frequency: [1,2,3,..
 DROFUNIT="86400000"   # [mm/day->m/s]       # runoff unit conversion
 
 #----- for plain binary runoff forcing
-LINPCDF=".FALSE."                           # true for netCDF runoff
-LINTERP=".TRUE."                            # .TRUE. to interporlate with input matrix
-LINTERPCDF=".FALSE."                        # .TRUE. to use netCDF input matrix
-CROFDIR="${BASE}/inp/test_1deg/runoff/"     # runoff directory
-CROFPRE="Roff____"                          # runoff prefix/suffix  
-CROFSUF=".one"                              #   $(CROFPRE)YYYYMMDD$(CROFSUF)
+###LINPCDF=".FALSE."                           # true for netCDF runoff
+###LINTERP=".TRUE."                            # .TRUE. to interporlate with input matrix
+###LINTERPCDF=".FALSE."                        # .TRUE. to use netCDF input matrix
+###CROFDIR="${BASE}/inp/test_1deg/runoff/"     # runoff directory
+###CROFPRE="Roff____"                          # runoff prefix/suffix  
+###CROFSUF=".one"                              #   $(CROFPRE)YYYYMMDD$(CROFSUF)
 
 ###** sub-surface runoff scheme (not available with plain binary runoff)
-LROSPLIT=".FALSE."                          # .TRUE. for sub-surface runoff
-###CSUBDIR="NONE"                              # sub-surface runoff directory
-###CSUBPRE="NONE"                              # sub-surface runoff prefix/suffix  
-###CSUBSUF="NONE"                              #   $(PREFIX)YYYYMMDD$(SUFFIX)
+###LROSPLIT=".FALSE."                          # .TRUE. for sub-surface runoff
+###CSUBDIR=""                                  # sub-surface runoff directory
+###CSUBPRE=""                                  # sub-surface runoff prefix/suffix  
+###CSUBSUF=""                                  #   $(PREFIX)YYYYMMDD$(SUFFIX)
 
 #----- for netCDF runoff forcing ###
-###LINPCDF=".TRUE."                              # true for netCDF runoff
-###LINTERP=".TRUE."                              # .TRUE. to interporlate with input matrix
-###LINTERPCDF=".FALSE."                          # .TRUE. to use netCDF input matrix
-###CROFDIR="${BASE}/inp/test_15min_nc/"          # runoff directory
-###CROFPRE="e2o_ecmwf_wrr2_glob15_day_Runoff_"   # runoff prefix/suffix  
-###CROFCDF=""     # see (3) set each year        # netCDF runoff file
-###CVNROF="Runoff"                               # netCDF runoff    variable name
-###CVNSUB=""                                     # netCDF runoffsub variable name
-###SYEARIN=""     # see (3) set each year        #   netCDF runoff file, start date
-###SMONIN=""      # see (3) set each year
-###SDAYIN=""      # see (3) set each year
-###SHOURIN=""     # see (3) set each year
+LINPCDF=".TRUE."                               # true for netCDF runoff
+LINTERP=".TRUE."                               # .TRUE. to interporlate with input matrix
+LINTERPCDF=".FALSE."                           # .TRUE. to use netCDF input matrix
+CROFDIR="${BASE}/inp/test_15min_nc/"           # runoff directory
+CROFPRE="e2o_ecmwf_wrr2_glob15_day_Runoff_"    # runoff prefix/suffix  
+
+LROSPLIT=".FALSE."                             # .TRUE. for sub-surface runoff
+CROFCDF=""       # see (3) set each year       # netCDF runoff file
+CVNROF="Runoff"                                # netCDF runoff    variable name
+#CVNSUB=""                                     # netCDF runoffsub variable name
+#SYEARIN=""      # see (3) set each year       #   netCDF runoff file, start date
+#SMONIN=""       # see (3) set each year
+#SDAYIN=""       # see (3) set each year
+#SHOURIN=""      # see (3) set each year
 
 #============================
 #*** 1f. river map & topography
-FMAP="${BASE}/map/glb_01min"                # map directory
+FMAP="${BASE}/map/glb_15min"                # map directory
 CDIMINFO="${FMAP}/diminfo_test-1deg.txt"    # dimention information file
 CINPMAT=${FMAP}/inpmat_test-1deg.bin        # runoff input matrix for interporlation
 #CDIMINFO="${FMAP}/diminfo_test-15min_nc.txt" # dimention information file
@@ -148,7 +151,7 @@ CRIVMAN="${FMAP}/rivman.bin"                # manning coefficient river (The one
 #** bifurcation channel info
 CPTHOUT="${FMAP}/bifprm.txt"                #   bifurcation channel list
 
-CMPIREG="${FMAP}/mpireg-16.bin"                #   bifurcation channel list
+CMPIREG="${FMAP}/mpireg-${MPI_NP}.bin"                #   bifurcation channel list
 
 
 ###** groundwater delay (not available in plain binary runoff/map)
@@ -185,9 +188,9 @@ LSEALEV=".FALSE."                           # .TRUE. to activate dynamic sea lev
 #============================
 #*** 1h. Output Settings 
 LOUTPUT=".TRUE."                            # .TRUE. to use CaMa-Flood standard output
-IFRQ_OUT=1                                  # output frequency: [1,2,3,...,24] hour
+IFRQ_OUT=24                                  # output frequency: [1,2,3,...,24] hour
 
-LOUTCDF=".FALSE."                           # .TRUE. netCDF output, .FALSE. plain binary output
+LOUTCDF=".TRUE."                           # .TRUE. netCDF output, .FALSE. plain binary output
 COUTDIR="./"                                # output directory 
 #CVARSOUT="outflw,storge,fldfrc,maxdph,flddph" # list output variable (comma separated)
 #CVARSOUT="rivout,rivsto,rivdph,rivvel,fldout,fldsto,flddph,fldfrc,fldare,sfcelv,outflw,storge,pthflw,pthout,maxsto,maxflw,maxdph" # list output variable (comma separated)
@@ -199,8 +202,6 @@ PMANRIV="0.03D0"                            # manning coefficient river
 PMANFLD="0.10D0"                            # manning coefficient floodplain
 PCADP="0.7"                                 # satety coefficient for CFL condition
 PDSTMTH="10000.D0"                          # downstream distance at river mouth [m]
-
-
 
 #================================================
 # (2) Initial setting
@@ -265,13 +266,11 @@ do
   CSYEAR=`printf %04d ${SYEAR}`
   COUTTAG=${CSYEAR}                  # output file tag
 
-  #CROFCDF="${CROFDIR}/${CROFPRE}${CSYEAR}.nc"  # input netCDF runoff file
-  #SYEARIN=$IYR
-  #SMONIN=1
-  #SDAYIN=1
-  #SHOURIN=0
-
-
+  CROFCDF="${CROFDIR}/${CROFPRE}${CSYEAR}.nc"  # input netCDF runoff file
+  SYEARIN=$IYR
+  SMONIN=1
+  SDAYIN=1
+  SHOURIN=0
 
 #================================================
 # (4) Create NAMELIST for simulation year
@@ -373,7 +372,7 @@ IFRQ_RST = ${IFRQ_RST}                 ! restart write frequency (1-24: hour, 0:
 EOF
 
 #*** 4. forcing
-if [ ${LINPCDF} = ".FALSE." ]; then
+if [ "$LINPCDF" = ".FALSE." ]; then
 cat >> ${NMLIST} << EOF
 &NFORCE
 LINPCDF  = ${LINPCDF}                  ! true for netCDF runoff
@@ -390,7 +389,7 @@ CSUBSUF  = "${CSUBSUF}"                ! sub-surface runoff input suffix
 /
 EOF
 
-elif [ ${LINPCDF} = ".TRUE." ]; then
+elif [ "$LINPCDF" = ".TRUE." ]; then
 cat >> ${NMLIST} << EOF
 &NFORCE
 LINPCDF  = ${LINPCDF}                  ! true for netCDF runoff
@@ -448,10 +447,12 @@ EOF
 
 echo "start: ${SYEAR}" `date`  >> log.txt
 #time ./${EXE}                  >> log.txt 
-time ${MPIEXEC} ./${EXE} >> log.txt 
+#time mpirun -np $MPI_NP ./${EXE} >> log.txt 
+time mpiexec_mpt omplace ./${EXE} >> log.txt 
+
 echo "end:   ${SYEAR}" `date`  >> log.txt
 
-mv ${LOGOUT} log_CaMa-${CYR}.txt
+# mv ${LOGOUT} log_CaMa-${CYR}.txt
 
 #================================================
 # (6) manage spin up
@@ -484,13 +485,16 @@ then
     mv -f ./*${CYR}.pth                              ${CYR}-sp${ISP}  2> /dev/null
     mv -f ./o_*${CYR}.nc                             ${CYR}-sp${ISP}  2> /dev/null
     mv -f ./*${CYR}.log                              ${CYR}-sp${ISP}  2> /dev/null
-    mv -f ./log_CaMa-${CYR}.txt                      ${CYR}-sp${ISP}  2> /dev/null
-    mv -f ./log_CaMa-${CYR}.txt-*                    ${CYR}-sp${ISP}  2> /dev/null
+    mv -f ./${LOGOUT}*                               ${CYR}-sp${ISP}  2> /dev/null
+    mv -f ./${NMLIST}                                ${CYR}-sp${ISP}  2> /dev/null
 
     ISP=`expr ${ISP} + 1`
   else
     ISP=0
     IYR=`expr ${IYR} + 1`
+    mkdir -p log_${CYR}
+    mv -f ./${LOGOUT}*                               log_${CYR}       2> /dev/null
+    mv -f ./${NMLIST}                                log_${CYR}       2> /dev/null
   fi
 else
   IYR=`expr ${IYR} + 1`

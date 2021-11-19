@@ -125,7 +125,7 @@ USE YOS_CMF_MAP,        ONLY: D2NXTDST
 USE YOS_CMF_MAP,        ONLY: NSEQALL,NSEQRIV
 USE YOS_CMF_DIAG,       ONLY: D2RIVDPH
 #ifdef UseMPI
-USE CMF_CTRL_MPI_MOD,   ONLY: MPI_ADPSTP
+USE CMF_CTRL_MPI_MOD,   ONLY: CMF_MPI_ADPSTP
 #endif
 IMPLICIT NONE
 ! MPI setting
@@ -155,7 +155,7 @@ END DO
 
 !*** MPI: use same DT in all node
 #ifdef UseMPI
-CALL MPI_ADPSTP(DT_MIN)
+CALL CMF_MPI_ADPSTP(DT_MIN)
 #endif
 !*********************************
 

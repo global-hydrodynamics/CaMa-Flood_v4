@@ -19,6 +19,7 @@ MODULE CMF_CTRL_MPI_MOD
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
 !** shared variables in module
+USE MPI
 USE PARKIND1,                ONLY: JPIM, JPRB, JPRM
 USE YOS_CMF_INPUT,           ONLY: LOGNAM
 USE YOS_CMF_MAP,             ONLY: REGIONALL, REGIONTHIS
@@ -38,7 +39,6 @@ CONTAINS
 !
 !####################################################################
 SUBROUTINE CMF_MPI_INIT
-USE MPI
 IMPLICIT NONE
 !================================================
 !*** 0. MPI specific setting
@@ -53,14 +53,14 @@ REGIONTHIS=Nid+1
 
 ! For BUGFIX: Check MPI  / OpenMPI is working or not.
 ! Write to standard output (log file is not opened yet)
-#ifdef _OPENMP
-nOMP = omp_get_max_threads();
-!$OMP PARALLEL DO
-DO iOMP=1, nOMP
-  print *, 'MPI: ', REGIONTHIS, REGIONALL, ' OMP: ', omp_get_thread_num(), nOMP
-END DO
-!$OMP END PARALLEL DO
-#endif
+!!!!!#ifdef _OPENMP
+!!!!!nOMP = omp_get_max_threads();
+!!!!!!$OMP PARALLEL DO
+!!!!!DO iOMP=1, nOMP
+!!!!!  print *, 'MPI: ', REGIONTHIS, REGIONALL, ' OMP: ', omp_get_thread_num(), nOMP
+!!!!!END DO
+!!!!!!$OMP END PARALLEL DO
+!!!!!#endif
 
 END SUBROUTINE CMF_MPI_INIT
 !####################################################################
@@ -69,7 +69,6 @@ END SUBROUTINE CMF_MPI_INIT
 
 !####################################################################
 SUBROUTINE CMF_MPI_END
-USE MPI
 IMPLICIT NONE
 INTEGER(KIND=JPIM)              :: ierr
 !================================================
@@ -79,8 +78,7 @@ END SUBROUTINE CMF_MPI_END
 
 
 !####################################################################
-SUBROUTINE MPI_REDUCE_R2MAP(R2MAP)
-USE MPI
+SUBROUTINE CMF_MPI_REDUCE_R2MAP(R2MAP)
 USE YOS_CMF_INPUT,           ONLY: RMIS, NX,NY
 IMPLICIT NONE
 !* input/output
@@ -92,15 +90,14 @@ REAL(KIND=JPRM)                 :: R2TMP(NX,NY)
   R2TMP(:,:)=RMIS
   CALL MPI_Reduce(R2MAP,R2TMP,NX*NY,MPI_REAL4,MPI_MIN,0,mpi_comm_world,ierr)
   R2MAP(:,:)=R2TMP(:,:)
-END SUBROUTINE MPI_REDUCE_R2MAP
+END SUBROUTINE CMF_MPI_REDUCE_R2MAP
 !####################################################################
 
 
 
 
 !####################################################################
-SUBROUTINE MPI_REDUCE_R1PTH(R1PTH)
-USE MPI
+SUBROUTINE CMF_MPI_REDUCE_R1PTH(R1PTH)
 USE YOS_CMF_INPUT,           ONLY: RMIS
 USE YOS_CMF_MAP,             ONLY: NPTHOUT, NPTHLEV
 IMPLICIT NONE
@@ -113,13 +110,52 @@ REAL(KIND=JPRM)                 :: R1PTMP(NPTHOUT,NPTHLEV)
   R1PTMP(:,:)=RMIS
   CALL MPI_Reduce(R1PTH,R1PTMP,NPTHOUT*NPTHLEV,MPI_REAL4,MPI_MIN,0,mpi_comm_world,ierr)
   R1PTH(:,:)=R1PTMP(:,:)
-END SUBROUTINE MPI_REDUCE_R1PTH
+END SUBROUTINE CMF_MPI_REDUCE_R1PTH
+!####################################################################
+
+
+#ifdef UseCDF
+!####################################################################
+SUBROUTINE CMF_MPI_REDUCE_D2MAP(D2MAP)
+! only used in netCDF restart file. (cannot be compiled due to a bug in MacOS mpif90)
+USE YOS_CMF_INPUT,           ONLY: DMIS, NX,NY
+IMPLICIT NONE
+!* input/output
+REAL(KIND=JPRB),INTENT(INOUT)   :: D2MAP(NX,NY)
+!* local variable
+REAL(KIND=JPRB)                 :: D2TMP(NX,NY)
+!================================================
+! gather to master node
+  D2TMP(:,:)=DMIS
+  CALL MPI_Reduce(D2MAP,D2TMP,NX*NY,MPI_REAL8,MPI_MIN,0,mpi_comm_world,ierr)
+  D2MAP(:,:)=D2TMP(:,:)
+END SUBROUTINE CMF_MPI_REDUCE_D2MAP
 !####################################################################
 
 
 !####################################################################
-SUBROUTINE MPI_ADPSTP(DT_MIN)
-USE MPI
+SUBROUTINE CMF_MPI_REDUCE_D1PTH(D1PTH)
+USE YOS_CMF_INPUT,           ONLY: DMIS
+USE YOS_CMF_MAP,             ONLY: NPTHOUT, NPTHLEV
+IMPLICIT NONE
+!* input/output
+REAL(KIND=JPRB),INTENT(INOUT)   :: D1PTH(NPTHOUT,NPTHLEV)
+!* local variable
+REAL(KIND=JPRB)                 :: D1PTMP(NPTHOUT,NPTHLEV)
+!================================================
+! gather to master node
+  D1PTMP(:,:)=DMIS
+  CALL MPI_Reduce(D1PTH,D1PTMP,NPTHOUT*NPTHLEV,MPI_REAL8,MPI_MIN,0,mpi_comm_world,ierr)
+  D1PTH(:,:)=D1PTMP(:,:)
+END SUBROUTINE CMF_MPI_REDUCE_D1PTH
+!####################################################################
+#endif
+
+
+
+
+!####################################################################
+SUBROUTINE CMF_MPI_ADPSTP(DT_MIN)
 USE YOS_CMF_INPUT,           ONLY: LOGNAM
 IMPLICIT NONE
 !* input/output
@@ -133,7 +169,7 @@ DT_LOC=DT_MIN
 CALL MPI_AllReduce(DT_LOC, DT_MIN, 1, MPI_DOUBLE_PRECISION, MPI_MIN, MPI_COMM_WORLD,ierr)
 WRITE(LOGNAM,'(A,2F10.2)') "ADPSTP (MPI_AllReduce): DT_LOC->DTMIN", DT_LOC, DT_MIN
 
-END SUBROUTINE MPI_ADPSTP
+END SUBROUTINE CMF_MPI_ADPSTP
 !####################################################################
 
 #endif

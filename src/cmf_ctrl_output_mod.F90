@@ -424,7 +424,7 @@ USE YOS_CMF_DIAG,       ONLY: D2RIVDPH,     D2FLDDPH,     D2FLDFRC,     D2FLDARE
                             & D2OUTFLW_MAX, D2STORGE_MAX, D2RIVDPH_MAX, &
                             & d2daminf_avg   !!! added
 #ifdef UseMPI
-USE CMF_CTRL_MPI_MOD,   ONLY: MPI_REDUCE_R2MAP, MPI_REDUCE_R1PTH
+USE CMF_CTRL_MPI_MOD,   ONLY: CMF_MPI_REDUCE_R2MAP, CMF_MPI_REDUCE_R1PTH
 #endif
 IMPLICIT NONE
 INTEGER(KIND=JPIM)          :: JF
@@ -521,12 +521,12 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
     IF( VAROUT(JF)%CVNAME/='pthflw' ) THEN  !! usual 2D map variable
       CALL VEC2MAP(D2VEC,R2OUT)             !! MPI node data is gathered by VEC2MAP
 #ifdef UseMPI
-      CALL MPI_REDUCE_R2MAP(R2OUT)
+      CALL CMF_MPI_REDUCE_R2MAP(R2OUT)
 #endif
     ELSE
       R1POUT(:,:)=REAL(D1PTHFLW_AVG(:,:))
 #ifdef UseMPI
-      CALL MPI_REDUCE_R1PTH(R1POUT)
+      CALL CMF_MPI_REDUCE_R1PTH(R1POUT)
 #endif
     ENDIF
 
@@ -642,6 +642,7 @@ SUBROUTINE CMF_OUTPUT_END
 USE NETCDF
 USE CMF_UTILS_MOD,           ONLY: NCERROR
 #endif
+USE YOS_CMF_MAP,             ONLY: REGIONTHIS
 IMPLICIT NONE
 ! Local variables
 INTEGER(KIND=JPIM)              :: JF
@@ -650,20 +651,22 @@ WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "!---------------------!"
 WRITE(LOGNAM,*) "CMF::OUTPUT_END: finalize output module"
 
-IF (LOUTCDF) THEN
+IF( REGIONTHIS==1 )THEN
+  IF (LOUTCDF) THEN
 #ifdef UseCDF
-  DO JF=1,NVARSOUT
-    CALL NCERROR( NF90_CLOSE(VAROUT(JF)%NCID))
-    WRITE(LOGNAM,*) "Output netcdf output unit closed:",VAROUT(JF)%NCID
-  ENDDO
+    DO JF=1,NVARSOUT
+      CALL NCERROR( NF90_CLOSE(VAROUT(JF)%NCID))
+      WRITE(LOGNAM,*) "Output netcdf output unit closed:",VAROUT(JF)%NCID
+    ENDDO
 #endif
-ELSE
-  DO JF=1,NVARSOUT
-    CLOSE(VAROUT(JF)%BINID)
-    WRITE(LOGNAM,*) "Output binary output unit closed:",VAROUT(JF)%BINID
-  ENDDO
-  IF( LOUTVEC )THEN
-    CALL WRTE_MAP2VEC
+  ELSE !! binary output
+    DO JF=1,NVARSOUT
+      CLOSE(VAROUT(JF)%BINID)
+      WRITE(LOGNAM,*) "Output binary output unit closed:",VAROUT(JF)%BINID
+    ENDDO
+    IF( LOUTVEC )THEN
+      CALL WRTE_MAP2VEC  !! write map-vector conversion file
+    ENDIF
   ENDIF
 ENDIF
 

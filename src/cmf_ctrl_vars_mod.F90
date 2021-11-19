@@ -89,7 +89,7 @@ D2FLDSTO_PRE(:,:) = 0._JPRB
 D2GDWRTN(:,:)     = 0._JPRB
 D2GDWSTO(:,:)     = 0._JPRB
 D1PTHFLW(:,:)     = 0._JPRB
-D1PTHFLW_PRE(:,:) = 0.
+D1PTHFLW_PRE(:,:) = 0._JPRB
 IF( LDAMOUT )THEN  !! Additional variable for LDAMOUT
   D2DAMSTO(:,:)     = 0._JPRB
   D2DAMINF(:,:)     = 0._JPRB

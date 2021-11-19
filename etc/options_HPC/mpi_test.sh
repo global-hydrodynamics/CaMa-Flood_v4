@@ -1,6 +1,8 @@
 #!/bin/sh
 #==========================================================
-# CaMa-Flood sample go script: MPU+OpenMP Hybrid si,mulation
+# CaMa-Flood sample go script (1) global 15min simulation
+# -- Multi 1-year simulations (2000 spinup -> 2000 -> 2001)
+# -- Daily runoff forcing (plain binary) at 1deg resolution
 #
 # (C) D.Yamazaki & E. Dutra  (U-Tokyo/FCUL)  Aug 2019
 #
@@ -26,9 +28,6 @@
 #*** 0a. Set CaMa-Flood base directory
 # BASE=`pwd`/..
 BASE="/home/yamadai/cluster/cmf_v402_mpi"  # setting for PBS in cluster
-
-#MPIEXEC="mpirun"
-MPIEXEC="mpiexec_mpt omplace"
 
 echo $BASE
 
@@ -451,11 +450,9 @@ EOF
 echo "start: ${SYEAR}" `date`  >> log.txt
 #time ./${EXE}                  >> log.txt 
 #time mpirun -np $MPI_NP ./${EXE} >> log.txt 
-time ${MPIEXEC} ./${EXE} >> log.txt 
+time mpiexec_mpt omplace ./${EXE} >> log.txt 
 
 echo "end:   ${SYEAR}" `date`  >> log.txt
-
-mv ${LOGOUT} log_CaMa-${CYR}.txt
 
 #================================================
 # (6) manage spin up
@@ -488,12 +485,16 @@ then
     mv -f ./*${CYR}.pth                              ${CYR}-sp${ISP}  2> /dev/null
     mv -f ./o_*${CYR}.nc                             ${CYR}-sp${ISP}  2> /dev/null
     mv -f ./*${CYR}.log                              ${CYR}-sp${ISP}  2> /dev/null
-    mv -f ./log_CaMa-${CYR}.txt                      ${CYR}-sp${ISP}  2> /dev/null
+    mv -f ./${LOGOUT}*                               ${CYR}-sp${ISP}  2> /dev/null
+    mv -f ./${NMLIST}                                ${CYR}-sp${ISP}  2> /dev/null
 
     ISP=`expr ${ISP} + 1`
   else
     ISP=0
     IYR=`expr ${IYR} + 1`
+    mkdir -p log_${CYR}
+    mv -f ./${LOGOUT}*                               log_${CYR}       2> /dev/null
+    mv -f ./${NMLIST}                                log_${CYR}       2> /dev/null
   fi
 else
   IYR=`expr ${IYR} + 1`
