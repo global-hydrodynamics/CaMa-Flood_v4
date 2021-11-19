@@ -85,12 +85,12 @@
       d1=1.e20
       d2=1.e20
       do ix=1, nx
-        glon=lon_ori+real(ix-1)*gsize
-        if( west2>=glon .and. west2< glon+gsize .and. abs(west2-glon)<d1 )then
+        glon=lon_ori+dble(ix-1)*gsize
+        if( west2>=glon-gsize*0.1 .and. west2< glon+gsize*1.1 .and. abs(west2-glon)<d1 )then
           west=glon
           d1=abs(west2-glon)
         endif
-        if( east2> glon .and. east2<=glon+gsize .and. abs(east2-glon-gsize)<d2 )then
+        if( east2> glon-gsize*0.1 .and. east2<=glon+gsize*1.1 .and. abs(east2-glon-gsize)<d2 )then
           east=glon+gsize
           d2=abs(east2-glon-gsize)
         endif
@@ -99,12 +99,12 @@
       d1=1.e20
       d2=1.e20
       do iy=1, ny
-        glat=lat_ori-real(iy-1)*gsize
-        if( north2> glat-gsize .and. north2<=glat .and. abs(north2-glat)<d1 )then
+        glat=lat_ori-dble(iy-1)*gsize
+        if( north2> glat-gsize*1.1 .and. north2<=glat+gsize*0.1 .and. abs(north2-glat)<d1 )then
           north=glat
           d1=abs(north2-glat)
         endif
-        if( south2>=glat-gsize .and. south2< glat .and. abs(south2-glat+gsize)<d2 )then
+        if( south2>=glat-gsize*1.1 .and. south2< glat+gsize*0.1 .and. abs(south2-glat+gsize)<d2 )then
           south=glat-gsize
           d2=abs(south2-glat+gsize)
         endif
