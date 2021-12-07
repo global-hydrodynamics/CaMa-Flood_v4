@@ -85,6 +85,7 @@ LSTOONLY=".FALSE."                          # .TRUE. for storage only restart (f
 CRESTDIR="./"                               # output restart file directory
 CVNREST="restart"                           # output restart file prefix
 LRESTCDF=".FALSE."                          # .TRUE. to use netCDF restart file
+LRESTDBL=".FALSE."                           # .TRUE. for binary restart double precision
 IFRQ_RST="0"                                # output restat frequency.
                                             # [0]: only at last time, [1,2,3,...,24] hourly restart, [30]: monthly restart
 
@@ -297,7 +298,6 @@ LOUTPUT  = ${LOUTPUT}                  ! true: use standard output (to file)
 LGRIDMAP = .TRUE.                      ! true: for standard XY gridded 2D map
 LLEAPYR  = .TRUE.                      ! true: neglect leap year (Feb29 skipped)
 LMAPEND  = .FALSE.                     ! true: for map data endian conversion
-LBITSAFE = .FALSE.                     ! true: for Bit Identical simulation (avoid OSM ATOMIC)
 LSTG_ES  = .FALSE.                     ! true: for Vector Processor optimization (CMF_OPT_FLDSTG_ES) 
 /
 &NDIMTIME
@@ -364,7 +364,8 @@ cat >> ${NMLIST} << EOF
 CRESTSTO = "${CRESTSTO}"               ! restart file
 CRESTDIR = "${CRESTDIR}"               ! restart directory
 CVNREST  = "${CVNREST}"                ! restart variable name
-LRESTCDF = ${LRESTCDF}                 ! * true for netCDF restart file
+LRESTCDF = ${LRESTCDF}                 ! * true for netCDF restart file (double precision)
+LRESTDBL = ${LRESTDBL}                 ! * true for double precision binary restart
 IFRQ_RST = ${IFRQ_RST}                 ! restart write frequency (1-24: hour, 0:end of run)
 /
 EOF

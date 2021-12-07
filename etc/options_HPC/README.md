@@ -92,7 +92,7 @@ NOTE: The subroutine (CMF_OPT_FLDSTG_ES) is significantly slower when used for s
 
 ## Bit-idential simulation
 
-If you need to get bit-identical results (i.e. exactly same value, even considering rounding error in double precision), please specify LBITSAFE=.TRUE. option.
+If you need to get bit-identical results (i.e. exactly same value, even considering rounding error in double precision), please specify activate DATM=-DNoAtom option in MkInclude
 When this option is turned on, OMP_ATOMIC parallelization is avoided (no parallelization for loops with OMP_ATOMIC function).
 
-
+Note: OMP_ATMIC used to be controlled by LBITSAFE option, but it was switched to #ifdef DNoAtom in order to avoid complex way of coding

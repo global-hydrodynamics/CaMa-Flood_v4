@@ -6,22 +6,29 @@ CP = /bin/cp
 
 #======================================
 # Pre-Prosessing options
-# DCDF: activate when using netCDF, comment out when not needed
+# DMPI=-DUseMPI: activate when MPI parallelization is used
+# DCDF=-DUseCDF: activate when using netCDF, comment out when not needed
+# DATM=-DNoAtom: activate when OMP ATOMIC calculation should be avoided (bit identical simulation)
 #======================================
 
-DCDF=-DUseCDF
-CFLAGS=$(DCDF) 
+#DMPI=-DUseMPI
+#DCDF=-DUseCDF
+#DATM=-DNoAtom
+CFLAGS=$(DMPI) $(DCDF) $(DATM) 
+
 
 #======================================
 # gfortran Mac OSX 
 #======================================
 
 INC = -I/usr/local/include 
-LIB = -L/usr/local/lib -lnetcdff
+LIB = -L/usr/local/lib
 
 #==============================
 # FCMP: main program (src/), FC: pre/post process (map/ etc/)
 FCMP = gfortran -fopenmp
+#FCMP = mpif90 -fopenmp
+#FCMP = mpif90
 FC = gfortran
 
 LFLAGS =

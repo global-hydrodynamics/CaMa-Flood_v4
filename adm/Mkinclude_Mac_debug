@@ -6,11 +6,16 @@ CP = /bin/cp
 
 #======================================
 # Pre-Prosessing options
-# DCDF: activate when using netCDF, comment out when not needed
+# DMPI=-DUseMPI: activate when MPI parallelization is used
+# DCDF=-DUseCDF: activate when using netCDF, comment out when not needed
+# DATM=-DNoAtom: activate when OMP ATOMIC calculation should be avoided (bit identical simulation)
 #======================================
 
+#DMPI=-DUseMPI
 #DCDF=-DUseCDF
-CFLAGS=$(DCDF) 
+#DATM=-DNoAtom
+CFLAGS=$(DMPI) $(DCDF) $(DATM) 
+
 
 #======================================
 # Intel Fortran: Mac OSX 

@@ -114,7 +114,6 @@ END SUBROUTINE CMF_MPI_REDUCE_R1PTH
 !####################################################################
 
 
-#ifdef UseCDF
 !####################################################################
 SUBROUTINE CMF_MPI_REDUCE_D2MAP(D2MAP)
 ! only used in netCDF restart file. (cannot be compiled due to a bug in MacOS mpif90)
@@ -149,7 +148,6 @@ REAL(KIND=JPRB)                 :: D1PTMP(NPTHOUT,NPTHLEV)
   D1PTH(:,:)=D1PTMP(:,:)
 END SUBROUTINE CMF_MPI_REDUCE_D1PTH
 !####################################################################
-#endif
 
 
 

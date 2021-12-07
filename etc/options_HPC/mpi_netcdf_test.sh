@@ -298,7 +298,6 @@ LOUTPUT  = ${LOUTPUT}                  ! true: use standard output (to file)
 LGRIDMAP = .TRUE.                      ! true: for standard XY gridded 2D map
 LLEAPYR  = .TRUE.                      ! true: neglect leap year (Feb29 skipped)
 LMAPEND  = .FALSE.                     ! true: for map data endian conversion
-LBITSAFE = .FALSE.                     ! true: for Bit Identical simulation (avoid OSM ATOMIC)
 LSTG_ES  = .FALSE.                     ! true: for Vector Processor optimization (CMF_OPT_FLDSTG_ES) 
 /
 &NDIMTIME
