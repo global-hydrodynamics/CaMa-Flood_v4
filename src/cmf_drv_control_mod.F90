@@ -183,6 +183,14 @@ CALL CMF_PROG_INIT
 !*** 4b. Initialize (allocate) diagnostic arrays
 CALL CMF_DIAG_INIT
 
+!v4.03 CALC_FLDSTG for zero storage restart
+IF( LSTG_ES )THEN
+  CALL CMF_OPT_FLDSTG_ES  !! Alternative subroutine optimized for vector processor
+ELSE 
+  CALL CMF_CALC_FLDSTG     !! Default
+ENDIF
+
+
 !*** 4c. Restart file
 IF( LRESTART )THEN
   CALL CMF_RESTART_INIT
@@ -195,15 +203,17 @@ ENDIF
 !================================================
 WRITE(LOGNAM,*) "CMF::DRV_INIT: (5) set flood stage at initial condition"
 
-!*** 5a. Set flood stage
-IF( LSTG_ES )THEN
-  CALL CMF_OPT_FLDSTG_ES  !! Alternative subroutine optimized for vector processor
-ELSE 
-  CALL CMF_CALC_FLDSTG     !! Default
-ENDIF
+!** v4.03 CALC_FLDSTG moved to the top of CTRL_PHYSICS for strict restart configulation (Hatono & Yamazaki)
 
-!*** 5b. reconstruct previous t-step flow 
+!*** 5 reconstruct previous t-step flow (if needed)
 IF( LRESTART .AND. LSTOONLY )THEN
+  !** v4.03 CALC_FLDSTG for storagy only restart (v4.03)
+  IF( LSTG_ES )THEN
+    CALL CMF_OPT_FLDSTG_ES  !! Alternative subroutine optimized for vector processor
+  ELSE 
+    CALL CMF_CALC_FLDSTG     !! Default
+  ENDIF
+
   CALL CMF_CALC_OUTPRE
 ENDIF
 !================================================
