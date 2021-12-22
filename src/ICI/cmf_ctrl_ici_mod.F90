@@ -256,7 +256,7 @@ call ici_put_data("maxsto", D2STORGE_MAX(:NSEQALL,1))
 call ici_put_data("maxdph", D2RIVDPH_MAX(:NSEQALL,1))
 IF (LPTHOUT) THEN
   call ici_put_data("pthout", D2PTHOUT_AVG(:NSEQALL,1))
-  call ici_put_data("pthflw", D1PTHFLW_AVG(:NSEQALL,1))
+  !call ici_put_data("pthflw", D1PTHFLW_AVG(:,:))
 ENDIF
 IF (LGDWDLY) THEN
   call ici_put_data("gdwsto", D2GDWSTO(:NSEQALL,1))
@@ -409,7 +409,7 @@ call ici_put_data("maxsto", D2STORGE_MAX(:NSEQALL,1))
 call ici_put_data("maxdph", D2RIVDPH_MAX(:NSEQALL,1))
 IF (LPTHOUT) THEN
   call ici_put_data("pthout", D2PTHOUT_AVG(:NSEQALL,1))
-  call ici_put_data("pthflw", D1PTHFLW_AVG(:NSEQALL,1))
+  !call ici_put_data("pthflw", D1PTHFLW_AVG(:,:))
 ENDIF
 IF (LGDWDLY) THEN
   call ici_put_data("gdwsto", D2GDWSTO(:NSEQALL,1))
