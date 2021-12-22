@@ -22,7 +22,7 @@ MODULE CMF_CTRL_MPI_MOD
 USE MPI
 USE PARKIND1,                ONLY: JPIM, JPRB, JPRM
 USE YOS_CMF_INPUT,           ONLY: LOGNAM
-USE YOS_CMF_MAP,             ONLY: REGIONALL, REGIONTHIS
+USE YOS_CMF_MAP,             ONLY: REGIONALL, REGIONTHIS, MPI_COMM_CAMA
 !$ USE OMP_LIB
 IMPLICIT NONE
 !** local variables
@@ -45,8 +45,9 @@ IMPLICIT NONE
 REGIONTHIS=1
 CALL MPI_Init(ierr)
 
-CALL MPI_Comm_size(MPI_COMM_WORLD, Nproc, ierr)
-CALL MPI_Comm_rank(MPI_COMM_WORLD, Nid, ierr)
+MPI_COMM_CAMA=MPI_COMM_WORLD
+CALL MPI_Comm_size(MPI_COMM_CAMA, Nproc, ierr)
+CALL MPI_Comm_rank(MPI_COMM_CAMA, Nid, ierr)
 
 REGIONALL =Nproc
 REGIONTHIS=Nid+1
@@ -88,7 +89,7 @@ REAL(KIND=JPRM)                 :: R2TMP(NX,NY)
 !================================================
 ! gather to master node
   R2TMP(:,:)=RMIS
-  CALL MPI_Reduce(R2MAP,R2TMP,NX*NY,MPI_REAL4,MPI_MIN,0,mpi_comm_world,ierr)
+  CALL MPI_Reduce(R2MAP,R2TMP,NX*NY,MPI_REAL4,MPI_MIN,0,MPI_COMM_CAMA,ierr)
   R2MAP(:,:)=R2TMP(:,:)
 END SUBROUTINE CMF_MPI_REDUCE_R2MAP
 !####################################################################
@@ -108,7 +109,7 @@ REAL(KIND=JPRM)                 :: R1PTMP(NPTHOUT,NPTHLEV)
 !================================================
 ! gather to master node
   R1PTMP(:,:)=RMIS
-  CALL MPI_Reduce(R1PTH,R1PTMP,NPTHOUT*NPTHLEV,MPI_REAL4,MPI_MIN,0,mpi_comm_world,ierr)
+  CALL MPI_Reduce(R1PTH,R1PTMP,NPTHOUT*NPTHLEV,MPI_REAL4,MPI_MIN,0,MPI_COMM_CAMA,ierr)
   R1PTH(:,:)=R1PTMP(:,:)
 END SUBROUTINE CMF_MPI_REDUCE_R1PTH
 !####################################################################
@@ -126,7 +127,7 @@ REAL(KIND=JPRB)                 :: D2TMP(NX,NY)
 !================================================
 ! gather to master node
   D2TMP(:,:)=DMIS
-  CALL MPI_Reduce(D2MAP,D2TMP,NX*NY,MPI_REAL8,MPI_MIN,0,mpi_comm_world,ierr)
+  CALL MPI_Reduce(D2MAP,D2TMP,NX*NY,MPI_REAL8,MPI_MIN,0,MPI_COMM_CAMA,ierr)
   D2MAP(:,:)=D2TMP(:,:)
 END SUBROUTINE CMF_MPI_REDUCE_D2MAP
 !####################################################################
@@ -144,7 +145,7 @@ REAL(KIND=JPRB)                 :: D1PTMP(NPTHOUT,NPTHLEV)
 !================================================
 ! gather to master node
   D1PTMP(:,:)=DMIS
-  CALL MPI_Reduce(D1PTH,D1PTMP,NPTHOUT*NPTHLEV,MPI_REAL8,MPI_MIN,0,mpi_comm_world,ierr)
+  CALL MPI_Reduce(D1PTH,D1PTMP,NPTHOUT*NPTHLEV,MPI_REAL8,MPI_MIN,0,MPI_COMM_CAMA,ierr)
   D1PTH(:,:)=D1PTMP(:,:)
 END SUBROUTINE CMF_MPI_REDUCE_D1PTH
 !####################################################################
@@ -164,7 +165,7 @@ REAL(KIND=JPRB)                 :: DT_LOC
 !*** MPI: use same DT in all node
 DT_LOC=DT_MIN
 
-CALL MPI_AllReduce(DT_LOC, DT_MIN, 1, MPI_DOUBLE_PRECISION, MPI_MIN, MPI_COMM_WORLD,ierr)
+CALL MPI_AllReduce(DT_LOC, DT_MIN, 1, MPI_DOUBLE_PRECISION, MPI_MIN, MPI_COMM_CAMA,ierr)
 WRITE(LOGNAM,'(A,2F10.2)') "ADPSTP (MPI_AllReduce): DT_LOC->DTMIN", DT_LOC, DT_MIN
 
 END SUBROUTINE CMF_MPI_ADPSTP

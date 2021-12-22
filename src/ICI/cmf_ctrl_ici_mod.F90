@@ -21,7 +21,7 @@ MODULE CMF_CTRL_ICI_MOD
 !==========================================================
 ! shared variables in module
 USE MPI
-USE PARKIND1,                ONLY: JPIM, JPRB, JPRM
+USE PARKIND1,                ONLY: JPIM, JPRB
 USE YOS_CMF_INPUT,           ONLY: LOGNAM
 USE YOS_CMF_ICI,             ONLY: LLAKEIN
 USE palmtime,                ONLY: palm_TimeInit, palm_TimeStart, palm_TimeEnd, palm_TimeFinalize
@@ -53,19 +53,11 @@ NAMELIST/cama_ici_force/  mrofunit
 LOGICAL                         :: nm_llakein = .true.
 NAMELIST/cama_ici_lake/  nm_llakein
 
-!*** NAMELIST/cama_ici_restart/
-CHARACTER(LEN=256)              ::  restart_infile
-CHARACTER(LEN=256)              ::  restart_outdir
-CHARACTER(LEN=256)              ::  restart_outpre
-CHARACTER(LEN=256)              ::  restart_outsuf
-INTEGER(KIND=JPIM)              ::  ifrq_rst_ici
-NAMELIST/cama_ici_restart/  restart_infile, restart_outdir, restart_outpre, restart_outsuf, ifrq_rst_ici
-
 ! local variables
 INTEGER(KIND=JPIM)              :: time_array(6) = (/2000,1,1,0,0,0/)          ! simulation time step
 
 REAL(KIND=JPRB)                 :: ZTT0, ZTT1, ZTT2                            ! Time elapsed related
-INTEGER(KIND=JPIM)              :: ierr, Nproc, Nid, my_comm, comm             ! MPI related
+INTEGER(KIND=JPIM)              :: ierr, Nproc, Nid, my_comm                   ! MPI related
 !==========================================================
 CONTAINS
 !####################################################################
@@ -77,7 +69,7 @@ CONTAINS
 SUBROUTINE CMF_ICI_INPUT
 ! Set ici namelist
 USE YOS_CMF_INPUT,           ONLY: NSETFILE, CLOGOUT
-USE YOS_CMF_MAP,             ONLY: REGIONALL,REGIONTHIS
+USE YOS_CMF_MAP,             ONLY: REGIONALL,REGIONTHIS, MPI_COMM_CAMA
 USE CMF_UTILS_MOD,           ONLY: INQUIRE_FID
 USE ici_api,                 ONLY: ici_split_world, ici_set_my_world, &
                                 &  ici_init, ici_get_numpe_local, ici_get_irank_local, ici_get_comm_local
@@ -93,8 +85,6 @@ READ(NSETFILE,NML=cama_ici_force)
 REWIND(NSETFILE)
 READ(NSETFILE,NML=cama_ici_lake)
 LLAKEIN = nm_llakein
-REWIND(NSETFILE)
-READ(NSETFILE,NML=cama_ici_restart)
 CLOSE(NSETFILE)
 
 !*** Initialize MPI
@@ -107,11 +97,9 @@ CALL palm_TimeInit("CAMA",comm=ici_get_comm_local())
 
 Nproc = ici_get_numpe_local()
 Nid   = ici_get_irank_local()
-comm = ici_get_comm_local()
+MPI_COMM_CAMA = ici_get_comm_local()
 REGIONALL = Nproc
 REGIONTHIS = Nid+1
-
-WRITE(CLOGOUT,"('./log_CaMa.txt-',i4.4)") REGIONTHIS
 
 END SUBROUTINE CMF_ICI_INPUT
 !####################################################################
@@ -147,26 +135,17 @@ WRITE(LOGNAM,*) "CMF::ICI_INIT: (2) Set Output, Forcing, Boundary"
 CALL ICI_OUTPUT_INIT
 
 !===============================================
-WRITE(LOGNAM,*) "CMF::ICI_INIT: (3) Read Restart"
-
-!*** 3. Read restart
-CALL ICI_RESTART_INIT
-
-!===============================================
 CALL palm_TimeEnd  ( 'Setup' )
 
 CONTAINS
 !==========================================================
 !+ ICI_MAPTABLE_INIT : Define CaMa grids and set mapping table
-!+ CMF_INPMAT_INIT_CDF      :  open runoff interporlation matrix (inpmat)
-!+ CMF_INPMAT_INIT_BIN      :  open runoff interporlation matrix (inpmat)
 !==========================================================
 SUBROUTINE ICI_MAPTABLE_INIT
 ! Define CaMa grids and set mapping table
 ! -- call from CMF_ICI_INIT
-USE YOS_CMF_INPUT,           ONLY: NSETFILE,NX,NY
-USE YOS_CMF_MAP,             ONLY: REGIONTHIS, I2REGION
-USE YOS_CMF_MAP,             ONLY: I1SEQX, I1SEQY, I2NEXTX, I2NEXTY, NSEQALL
+USE YOS_CMF_INPUT,           ONLY: NSETFILE,NX
+USE YOS_CMF_MAP,             ONLY: I1SEQX, I1SEQY, NSEQALL
 USE CMF_UTILS_MOD,           ONLY: INQUIRE_FID
 USE ici_api,                 ONLY: ici_def_grid, ici_end_grid_def, ici_set_interpolation_table
 IMPLICIT NONE
@@ -198,7 +177,7 @@ DO i=1,intpl_num
   IF (map_file=="") THEN
     CALL ici_set_interpolation_table(send_comp,send_grid,recv_comp,recv_grid)
   ELSE
-    CALL ici_set_interpolation_table(send_comp,send_grid,recv_comp,recv_grid,trim(map_file),trim(intpl_file))
+    CALL ici_set_interpolation_table(send_comp,send_grid,recv_comp,recv_grid,trim(map_file),trim(intpl_file), intpl_map)
   ENDIF
 ENDDO
 CLOSE(NSETFILE)
@@ -248,7 +227,7 @@ END SUBROUTINE ICI_LAKE_INIT
 !==========================================================
 SUBROUTINE ICI_OUTPUT_INIT
 ! Create first data output
-USE YOS_CMF_INPUT,      ONLY: LOUTPUT, IFRQ_OUT
+USE YOS_CMF_INPUT,      ONLY: LOUTPUT,      IFRQ_OUT,     LPTHOUT,      LGDWDLY,      LROSPLIT
 USE YOS_CMF_PROG,       ONLY: D2RIVSTO,     D2FLDSTO,     D2GDWSTO
 USE YOS_CMF_DIAG,       ONLY: D2RIVDPH,     D2FLDDPH,     D2FLDFRC,     D2FLDARE,     D2SFCELV,     D2STORGE, &
                             & D2OUTFLW_AVG, D2RIVOUT_AVG, D2FLDOUT_AVG, D2PTHOUT_AVG, D1PTHFLW_AVG, &
@@ -265,21 +244,27 @@ call ici_put_data("rivdph", D2RIVDPH(:NSEQALL,1))
 call ici_put_data("rivvel", D2RIVVEL_AVG(:NSEQALL,1))
 call ici_put_data("fldout", D2FLDOUT_AVG(:NSEQALL,1))
 call ici_put_data("fldsto", D2FLDSTO(:NSEQALL,1))
-call ici_put_data("flddph", D2FLDDPH(:nseqall,1))
-call ici_put_data("fldfrc", D2FLDFRC(:nseqall,1))
-call ici_put_data("fldare", D2FLDARE(:nseqall,1))
-call ici_put_data("sfcelv", D2SFCELV(:nseqall,1))
-call ici_put_data("outflw", D2OUTFLW_AVG(:nseqall,1))
-!call ici_put_data("gdwsto", D2GDWSTO(:NSEQALL,1))
+call ici_put_data("flddph", D2FLDDPH(:NSEQALL,1))
+call ici_put_data("fldfrc", D2FLDFRC(:NSEQALL,1))
+call ici_put_data("fldare", D2FLDARE(:NSEQALL,1))
+call ici_put_data("sfcelv", D2SFCELV(:NSEQALL,1))
+call ici_put_data("outflw", D2OUTFLW_AVG(:NSEQALL,1))
 call ici_put_data("storge", D2STORGE(:NSEQALL,1))
-call ici_put_data("pthout", D2PTHOUT_AVG(:NSEQALL,1))
-call ici_put_data("pthflw", D1PTHFLW_AVG(:NSEQALL,1))
-!call ici_put_data("gdwrtn", D2GDWRTN_AVG(:NSEQALL,1))
-!call ici_put_data("runoff", D2RUNOFF_AVG(:NSEQALL,1))
-!call ici_put_data("rofsub", D2ROFSUB_AVG(:NSEQALL,1))
+call ici_put_data("runoff", D2RUNOFF_AVG(:NSEQALL,1))
 call ici_put_data("maxflw", D2OUTFLW_MAX(:NSEQALL,1))
 call ici_put_data("maxsto", D2STORGE_MAX(:NSEQALL,1))
 call ici_put_data("maxdph", D2RIVDPH_MAX(:NSEQALL,1))
+IF (LPTHOUT) THEN
+  call ici_put_data("pthout", D2PTHOUT_AVG(:NSEQALL,1))
+  !call ici_put_data("pthflw", D1PTHFLW_AVG(:,:))
+ENDIF
+IF (LGDWDLY) THEN
+  call ici_put_data("gdwsto", D2GDWSTO(:NSEQALL,1))
+  call ici_put_data("gdwrtn", D2GDWRTN_AVG(:NSEQALL,1))
+ENDIF
+IF (LROSPLIT) THEN
+  call ici_put_data("rofsub", D2ROFSUB_AVG(:NSEQALL,1))
+ENDIF
 IF (LLAKEIN) THEN
   call ici_put_data("lkfrac" , D2LAKEFRC(:NSEQALL,1))
   call ici_put_data("runin" , D2RUNIN_AVG(:NSEQALL,1))
@@ -291,126 +276,6 @@ IF ( .not. LOUTPUT ) THEN
 ENDIF
 
 END SUBROUTINE ICI_OUTPUT_INIT
-!==========================================================
-!+
-!+
-!+
-!==========================================================
-SUBROUTINE ICI_RESTART_INIT
-! Set restart conditions
-USE YOS_CMF_INPUT,      ONLY: TMPNAM, NX, NY, LPTHOUT, LSTOONLY, LGDWDLY
-USE YOS_CMF_MAP,        ONLY: REGIONTHIS, NPTHOUT, NPTHLEV
-USE YOS_CMF_PROG,       ONLY: D2RIVSTO,     D2FLDSTO,     D2RIVOUT,     D2FLDOUT,     D2GDWSTO,     &
-                            & D2RIVOUT_PRE, D2FLDOUT_PRE, D2RIVDPH_PRE, D2FLDSTO_PRE, D1PTHFLW, D1PTHFLW_PRE
-USE CMF_CALC_FLDSTG_MOD,     ONLY: CMF_CALC_FLDSTG
-USE CMF_OPT_OUTFLW_MOD,      ONLY: CMF_CALC_OUTPRE
-USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID, MAP2VEC
-IMPLICIT NONE
-REAL(KIND=JPRM)           ::  R2TEMP(NX,NY)
-REAL(KIND=JPRM)           ::  R1PTH(NPTHOUT,NPTHLEV)
-INTEGER(KIND=JPIM)        ::  ierr, IREC
-CHARACTER(LEN=256)        ::  CFILE
-!================================================
-IF ( restart_infile=="" ) THEN
-  WRITE(LOGNAM,*) "Start with spinup"
-  IF ( maxval(D2RIVOUT_PRE) /= 0._JPRB .or. minval(D2RIVOUT_PRE) /= 0._JPRB ) THEN
-    WRITE(LOGNAM,*) "Read CaMa restart is correct?",maxval(D2RIVOUT_PRE),minval(D2RIVOUT_PRE)
-    !stop
-  ENDIF
-ELSE
-  D2RIVSTO(:,:)=0._JPRB
-  D2FLDSTO(:,:)=0._JPRB
-  D2RIVOUT(:,:)=0._JPRB
-  D2FLDOUT(:,:)=0._JPRB
-
-  D2RIVOUT_PRE(:,:)=0._JPRB
-  D2FLDOUT_PRE(:,:)=0._JPRB
-  D2RIVDPH_PRE(:,:)=0._JPRB
-  D2FLDSTO_PRE(:,:)=0._JPRB
-
-  D2GDWSTO(:,:)=0._JPRB
-
-  D1PTHFLW(:,:)=0._JPRB
-  D1PTHFLW_PRE(:,:)=0._JPRB
-
-  IF ( REGIONTHIS == 1 ) THEN
-    WRITE(LOGNAM,*) 'READ_REST_ICI: read restart binary:  ',TRIM(restart_infile)
-    TMPNAM=INQUIRE_FID()
-    OPEN(TMPNAM,FILE=trim(restart_infile),FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NX*NY)
-  ENDIF
-
-  DO IREC = 1, 2
-    IF ( REGIONTHIS == 1 ) READ(TMPNAM,REC=IREC) R2TEMP
-    CALL MPI_Bcast(R2TEMP(1,1),NX*NY,MPI_REAL4,0,comm,ierr)
-    SELECT CASE (IREC)
-      CASE (1)
-        CALL MAP2VEC(R2TEMP,D2RIVSTO)
-      CASE (2)
-        CALL MAP2VEC(R2TEMP,D2FLDSTO)
-    END SELECT
-  ENDDO
-
-  IF ( LSTOONLY .and. LGDWDLY ) THEN
-    IF ( REGIONTHIS == 1 ) READ(TMPNAM,REC=3) R2TEMP
-     CALL MPI_Bcast(R2TEMP(1,1),NX*NY,MPI_REAL4,0,comm,ierr)
-     CALL MAP2VEC(R2TEMP,D2GDWSTO)
-  ENDIF
-
-  IF ( .not. LSTOONLY ) THEN
-    DO IREC = 3, 6
-      IF ( REGIONTHIS == 1 ) READ(TMPNAM,REC=IREC) R2TEMP
-       CALL MPI_Bcast(R2TEMP(1,1),NX*NY,MPI_REAL4,0,comm,ierr)
-       SELECT CASE (IREC)
-         CASE (3)
-           CALL MAP2VEC(R2TEMP,D2RIVOUT_PRE)
-           D2RIVOUT=D2RIVOUT_PRE
-         CASE (4)
-           CALL MAP2VEC(R2TEMP,D2FLDOUT_PRE)
-           D2FLDOUT=D2FLDOUT_PRE
-         CASE (5)
-           CALL MAP2VEC(R2TEMP,D2RIVDPH_PRE)
-         CASE (6)
-           CALL MAP2VEC(R2TEMP,D2FLDSTO_PRE)
-       END SELECT
-    ENDDO
-    IF ( LGDWDLY ) THEN
-      IF ( REGIONTHIS == 1 ) READ(TMPNAM,REC=7) R2TEMP
-       CALL MPI_Bcast(R2TEMP(1,1),NX*NY,MPI_REAL4,0,comm,ierr)
-       CALL MAP2VEC(R2TEMP,D2GDWSTO)
-    ENDIF
-  ENDIF
-  IF ( REGIONTHIS == 1 ) CLOSE(TMPNAM)
-
-  IF ( LSTOONLY ) THEN
-    D2FLDSTO_PRE(:,:) = D2FLDSTO(:,:)
-  ENDIF
-
-  !*** Reset flood stage
-  CALL CMF_CALC_FLDSTG
-
-  !*** Reconstruct previous t-step flow
-  IF ( LSTOONLY ) THEN
-    CALL CMF_CALC_OUTPRE
-  ENDIF
-
-  IF ( LPTHOUT ) THEN
-    IF ( .not. LSTOONLY ) THEN
-      CFILE=TRIM(restart_infile)//'.pth'
-      WRITE(LOGNAM,*)'READ_REST: read restart binary: ', TRIM(CFILE)
-
-      TMPNAM=INQUIRE_FID()
-      OPEN(TMPNAM,FILE=CFILE,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NPTHOUT*NPTHLEV)
-      READ(TMPNAM,REC=1) R1PTH
-      D1PTHFLW_PRE(:,:)=R1PTH(:,:)
-      CLOSE(TMPNAM)
-    ENDIF
-  ENDIF
-
-ENDIF
-
-
-
-END SUBROUTINE ICI_RESTART_INIT
 !==========================================================
 
 
@@ -425,25 +290,32 @@ END SUBROUTINE CMF_ICI_INIT
 SUBROUTINE CMF_ICI_FORCING_GET
 ! -- CMF_ICI_FORCING_GET    : Update time, read forcing data from file and convert unit
 ! read runoff from file
-USE YOS_CMF_INPUT,           ONLY: DT
+USE YOS_CMF_INPUT,           ONLY: DT, LROSPLIT
 USE YOS_CMF_MAP,             ONLY: NSEQALL
-USE YOS_CMF_PROG,            ONLY: D2RUNOFF
+USE YOS_CMF_PROG,            ONLY: D2RUNOFF, D2ROFSUB
 USE ici_api,                 ONLY: ici_set_time, ici_get_data
 USE YOS_CMF_ICI,             ONLY: D2LAKEFRC
 IMPLICIT NONE
-REAL(KIND=JPRB)                 :: PBUFF(NSEQALL,2)
+REAL(KIND=JPRB)                 :: PBUFF(NSEQALL,1)
 LOGICAL                         :: is_get_ok
 
 
 !================================================
 CALL palm_TimeStart( 'ICI_sync' )
-CALL ici_set_time(time_array, int(dt))
+CALL ici_set_time(time_array, int(DT))
 CALL palm_TimeEnd  ( 'ICI_sync' )
 
 CALL ici_get_data("runoff",PBUFF(:,1),IS_GET_OK=is_get_ok)
-if (is_get_ok) then
+IF (is_get_ok) THEN
   CALL roff_convert_ici(PBUFF,D2RUNOFF)
 endif
+IF (LROSPLIT) THEN
+  CALL ici_get_data("rofsub",PBUFF(:,1),IS_GET_OK=is_get_ok)
+  IF (is_get_ok) THEN
+    CALL roff_convert_ici(PBUFF,D2ROFSUB)
+  ENDIF
+ENDIF
+
 IF (LLAKEIN) THEN
   CALL ici_get_data("lakefrc",PBUFF(:,1),IS_GET_OK=is_get_ok)
   if( is_get_ok )then
@@ -504,6 +376,7 @@ END SUBROUTINE CMF_ICI_FORCING_GET
 !####################################################################
 SUBROUTINE CMF_ICI_OUTPUT
 ! Send output to ICI
+USE YOS_CMF_INPUT,      ONLY: LPTHOUT,      LGDWDLY,      LROSPLIT
 USE YOS_CMF_PROG,       ONLY: D2RIVSTO,     D2FLDSTO,     D2GDWSTO
 USE YOS_CMF_DIAG,       ONLY: D2RIVDPH,     D2FLDDPH,     D2FLDFRC,     D2FLDARE,     D2SFCELV,     D2STORGE, &
                             & D2OUTFLW_AVG, D2RIVOUT_AVG, D2FLDOUT_AVG, D2PTHOUT_AVG, D1PTHFLW_AVG, &
@@ -517,8 +390,6 @@ USE CMF_CALC_DIAG_MOD,  ONLY: CMF_DIAG_AVERAGE, CMF_DIAG_RESET
 USE ici_api,            ONLY: ici_put_data
 IMPLICIT NONE
 
-CALL ICI_RESTART_WRITE
-
 call CMF_DIAG_AVERAGE
 call ici_put_data("rivout", D2RIVOUT_AVG(:NSEQALL,1))
 call ici_put_data("rivsto", D2RIVSTO(:NSEQALL,1))
@@ -526,21 +397,27 @@ call ici_put_data("rivdph", D2RIVDPH(:NSEQALL,1))
 call ici_put_data("rivvel", D2RIVVEL_AVG(:NSEQALL,1))
 call ici_put_data("fldout", D2FLDOUT_AVG(:NSEQALL,1))
 call ici_put_data("fldsto", D2FLDSTO(:NSEQALL,1))
-call ici_put_data("flddph", D2FLDDPH(:nseqall,1))
-call ici_put_data("fldfrc", D2FLDFRC(:nseqall,1))
-call ici_put_data("fldare", D2FLDARE(:nseqall,1))
-call ici_put_data("sfcelv", D2SFCELV(:nseqall,1))
-call ici_put_data("outflw", D2OUTFLW_AVG(:nseqall,1))
-!call ici_put_data("gdwsto", D2GDWSTO(:NSEQALL,1))
+call ici_put_data("flddph", D2FLDDPH(:NSEQALL,1))
+call ici_put_data("fldfrc", D2FLDFRC(:NSEQALL,1))
+call ici_put_data("fldare", D2FLDARE(:NSEQALL,1))
+call ici_put_data("sfcelv", D2SFCELV(:NSEQALL,1))
+call ici_put_data("outflw", D2OUTFLW_AVG(:NSEQALL,1))
 call ici_put_data("storge", D2STORGE(:NSEQALL,1))
-call ici_put_data("pthout", D2PTHOUT_AVG(:NSEQALL,1))
-call ici_put_data("pthflw", D1PTHFLW_AVG(:NSEQALL,1))
-!call ici_put_data("gdwrtn", D2GDWRTN_AVG(:NSEQALL,1))
-!call ici_put_data("runoff", D2RUNOFF_AVG(:NSEQALL,1))
-!call ici_put_data("rofsub", D2ROFSUB_AVG(:NSEQALL,1))
+call ici_put_data("runoff", D2RUNOFF_AVG(:NSEQALL,1))
 call ici_put_data("maxflw", D2OUTFLW_MAX(:NSEQALL,1))
 call ici_put_data("maxsto", D2STORGE_MAX(:NSEQALL,1))
 call ici_put_data("maxdph", D2RIVDPH_MAX(:NSEQALL,1))
+IF (LPTHOUT) THEN
+  call ici_put_data("pthout", D2PTHOUT_AVG(:NSEQALL,1))
+  !call ici_put_data("pthflw", D1PTHFLW_AVG(:,:))
+ENDIF
+IF (LGDWDLY) THEN
+  call ici_put_data("gdwsto", D2GDWSTO(:NSEQALL,1))
+  call ici_put_data("gdwrtn", D2GDWRTN_AVG(:NSEQALL,1))
+ENDIF
+IF (LROSPLIT) THEN
+  call ici_put_data("rofsub", D2ROFSUB_AVG(:NSEQALL,1))
+ENDIF
 IF (LLAKEIN) THEN
   call CMF_LAKEIN_AVERAGE
   call ici_put_data("lkfrac" , D2LAKEFRC(:NSEQALL,1))
@@ -555,100 +432,6 @@ time_array(2) = JMM
 time_array(3) = JDD
 time_array(4) = JHOUR
 time_array(5) = JMIN
-
-CONTAINS
-!==========================================================
-!+ ICI_RESTART_WRITE
-!==========================================================
-SUBROUTINE ICI_RESTART_WRITE
-! Write restart file
-USE YOS_CMF_INPUT,      ONLY: TMPNAM, NX, NY, LPTHOUT, LGDWDLY, RMIS
-USE YOS_CMF_MAP,        ONLY: REGIONTHIS, NPTHOUT, NPTHLEV
-USE YOS_CMF_TIME,       ONLY: KSTEP,  NSTEPS, JYYYYMMDD, JHHMM, JDD, JHOUR, JMIN
-USE YOS_CMF_PROG,       ONLY: D2RIVSTO,     D2FLDSTO,     D2RIVOUT,     D2FLDOUT,     D2GDWSTO,     &
-                            & D2RIVOUT_PRE, D2FLDOUT_PRE, D2RIVDPH_PRE, D2FLDSTO_PRE, D1PTHFLW_PRE
-USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID, VEC2MAP
-IMPLICIT NONE
-!* local variable
-REAL(KIND=JPRM)            ::  R2TEMP(NX,NY), R2FINAL(NX,NY)
-REAL(KIND=JPRM)            ::  R1PTH(NPTHOUT,NPTHLEV)
-INTEGER(KIND=JPIM)         ::  ierr, IREC, IREST
-CHARACTER(LEN=256)         ::  CDATE,CFILE
-!================================================
-IREST=0
-
-IF ( ifrq_rst_ici>=0 .and. KSTEP==NSTEPS ) THEN    !! end of run
-  IREST = 1
-ENDIF
-
-IF ( ifrq_rst_ici>=1 .and. ifrq_rst_ici<=24 )THEN  !! at selected hour
-  IF ( MOD(JHOUR,ifrq_rst_ici)==0 .and. JMIN==0 )THEN
-    IREST = 1
-  ENDIF
-ENDIF
-
-IF ( ifrq_rst_ici==30 ) THEN
-  IF ( JDD==1 .and. JHOUR==0 .and. JMIN==0 ) THEN  !! at start of month
-    IREST = 1
-  ENDIF
-ENDIF
-
-IF ( IREST==1 ) THEN
-  WRITE(LOGNAM,*) ""
-  WRITE(LOGNAM,*) "!---------------------!"
-  WRITE(LOGNAM,*) 'CMF::ICI_RESTART_WRITE: write time: ' , JYYYYMMDD, JHHMM
-
-  WRITE(CDATE,'(I8.8,I2.2)') JYYYYMMDD,JHOUR
-  CFILE=TRIM(restart_outdir)//TRIM(restart_outpre)//TRIM(CDATE)//TRIM(restart_outsuf)
-  WRITE(LOGNAM,*) 'WRTE_REST_BIN: restart file:',CFILE
-
-  !*** write restart data (2D map)
-  IF ( REGIONTHIS == 1 ) THEN
-    TMPNAM=INQUIRE_FID()
-    OPEN(TMPNAM,FILE=CFILE,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NX*NY)
-  ENDIF
-  DO IREC = 1, 6
-   SELECT CASE(IREC)
-     CASE (1)
-       CALL VEC2MAP(D2RIVSTO,R2TEMP)
-     CASE (2)
-       CALL VEC2MAP(D2FLDSTO,R2TEMP)
-     CASE (3)
-       CALL VEC2MAP(D2RIVOUT_PRE,R2TEMP)
-     CASE (4)
-       CALL VEC2MAP(D2FLDOUT_PRE,R2TEMP)
-     CASE (5)
-       CALL VEC2MAP(D2RIVDPH_PRE,R2TEMP)
-     CASE (6)
-       CALL VEC2MAP(D2FLDSTO_PRE,R2TEMP)
-   END SELECT
-
-   R2FINAL(:,:) = RMIS
-   CALL MPI_Reduce(R2TEMP,R2FINAL,NX*NY,MPI_REAL4,MPI_MIN,0,comm,ierr)
-   IF ( REGIONTHIS == 1 ) WRITE(TMPNAM,REC=IREC) R2FINAL
-  ENDDO
-
-  IF ( LGDWDLY ) THEN
-    CALL VEC2MAP(D2GDWSTO,R2TEMP)
-    CALL MPI_Reduce(R2TEMP,R2FINAL,NX*NY,MPI_REAL4,MPI_MIN,0,comm,ierr)
-    IF ( REGIONTHIS == 1 ) WRITE(TMPNAM,REC=7) R2TEMP
-  ENDIF
-  IF ( REGIONTHIS == 1 ) CLOSE(TMPNAM)
-
-  !*** write restart data (1D bifucation chanenl)
-  IF( LPTHOUT )THEN
-    CFILE=TRIM(restart_outdir)//TRIM(restart_outpre)//TRIM(CDATE)//TRIM(restart_outsuf)//'.pth'
-    WRITE(LOGNAM,*) 'WRTE_REST: WRITE RESTART BIN:',CFILE
-
-    TMPNAM=INQUIRE_FID()
-    OPEN(TMPNAM,FILE=CFILE,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NPTHOUT*NPTHLEV)
-    R1PTH(:,:)=REAL(D1PTHFLW_PRE(:,:))
-    WRITE(TMPNAM,REC=1) R1PTH
-    CLOSE(TMPNAM)
-  ENDIF
-ENDIF
-
-END SUBROUTINE ICI_RESTART_WRITE
 
 END SUBROUTINE CMF_ICI_OUTPUT
 !####################################################################

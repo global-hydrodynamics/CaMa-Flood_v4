@@ -30,6 +30,7 @@ INTEGER(KIND=JPIM),ALLOCATABLE           ::  I2VECTOR(:,:)      !! VECTOR INDEX
 INTEGER(KIND=JPIM),ALLOCATABLE           ::  I2REGION(:,:)      !! REGION INDEX
 INTEGER(KIND=JPIM)                       ::  REGIONALL          !! REGION TOTAL
 INTEGER(KIND=JPIM)                       ::  REGIONTHIS         !! REGION THIS CPU
+INTEGER(KIND=JPIM)                       ::  MPI_COMM_CAMA      !! MPI COMMUNICATOR
 
 !================================================
 !*** lat, lon

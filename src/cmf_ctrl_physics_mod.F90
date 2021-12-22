@@ -44,6 +44,13 @@ REAL(KIND=JPRB)               ::  DT_DEF
 !================================================
 DT_DEF=DT
 
+!=== 0. calculate river and floodplain stage (for DT calc & )
+IF( LSTG_ES )THEN
+  CALL CMF_OPT_FLDSTG_ES  !! Alternative subroutine optimized for vector processor
+ELSE 
+  CALL CMF_CALC_FLDSTG     !! Default
+ENDIF
+
 NT=1
 IF( LADPSTP )THEN    ! adoptive time step
   CALL CALC_ADPSTP
