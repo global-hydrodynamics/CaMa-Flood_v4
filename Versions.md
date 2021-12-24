@@ -26,7 +26,11 @@ Latest GitHub branch (master)  is v4.03
 
 ## Update in v4.03 (2021.07.28)
 ### Importants changes for all users
-- bug fix on water storage budget 
+- bug fix on water storage budget (calc_stonxt)
 ### Changes related to some developpers 
-- Downstream dynamic sea level boundary scheme, bug fix & improvement
+- Downstream dynamic sea level boundary scheme, bug fix & improvement (etc/sealev_boundary)
 
+## Update in v4.04 (2021.12.24)
+### Changes related to some developpers 
+- MPI parallelization (etc/options_HPC)
+- Improve initialization efficiency
