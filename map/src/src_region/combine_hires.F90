@@ -561,7 +561,7 @@ print *, nlon, nlat
 ! ===============================================
       implicit none
 !
-      real            ::  lon, lat
+      real*8          ::  lon, lat
 
       character*1     ::  ew, sn
       character*2     ::  clat
