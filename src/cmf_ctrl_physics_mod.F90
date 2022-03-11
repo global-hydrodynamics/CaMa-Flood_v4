@@ -14,17 +14,16 @@ MODULE CMF_CTRL_PHYSICS_MOD
 !==========================================================
 CONTAINS 
 !####################################################################
-! -- CMF_ADVANCE_PHYSICS
-! --
+! -- CMF_PHYSICS_ADVANCE
+! -- CMF_PHYSICS_FLDSTG
 ! --
 !####################################################################
-SUBROUTINE CMF_ADVANCE_PHYSICS
+SUBROUTINE CMF_PHYSICS_ADVANCE
 USE PARKIND1,              ONLY: JPIM,   JPRB,    JPRM
 USE YOS_CMF_INPUT,         ONLY: LOGNAM, DT,      LADPSTP
-USE YOS_CMF_INPUT,         ONLY: LKINE,  LSLPMIX, LFLDOUT,   LPTHOUT,   LDAMOUT,   LSTG_ES
+USE YOS_CMF_INPUT,         ONLY: LKINE,  LSLPMIX, LFLDOUT,   LPTHOUT,   LDAMOUT, LLEVEE
 USE YOS_CMF_PROG,          ONLY: D2FLDOUT, D2FLDOUT_PRE
 !
-USE CMF_CALC_FLDSTG_MOD,   ONLY: CMF_CALC_FLDSTG, CMF_OPT_FLDSTG_ES
 USE CMF_CALC_OUTFLW_MOD,   ONLY: CMF_CALC_OUTFLW
 USE CMF_CALC_PTHOUT_MOD,   ONLY: CMF_CALC_PTHOUT
 USE CMF_CALC_STONXT_MOD,   ONLY: CMF_CALC_STONXT
@@ -32,6 +31,7 @@ USE CMF_CALC_DIAG_MOD,     ONLY: CMF_DIAG_AVEMAX
 ! optional
 USE CMF_OPT_OUTFLW_MOD,    ONLY: CMF_CALC_OUTFLW_KINEMIX, CMF_CALC_OUTFLW_KINE
 USE CMF_CTRL_DAMOUT_MOD,   ONLY: CMF_DAMOUT_CALC
+USE CMF_CTRL_LEVEE_MOD,    ONLY: CMF_LEVEE_OPT_PTHOUT
 #ifdef ILS
 USE YOS_CMF_ICI,           ONLY: LLAKEIN
 USE CMF_CALC_LAKEIN_MOD,   ONLY: CMF_CALC_LAKEIN, CMF_LAKEIN_AVE
@@ -45,11 +45,7 @@ REAL(KIND=JPRB)               ::  DT_DEF
 DT_DEF=DT
 
 !=== 0. calculate river and floodplain stage (for DT calc & )
-IF( LSTG_ES )THEN
-  CALL CMF_OPT_FLDSTG_ES  !! Alternative subroutine optimized for vector processor
-ELSE 
-  CALL CMF_CALC_FLDSTG     !! Default
-ENDIF
+CALL CMF_PHYSICS_FLDSTG
 
 NT=1
 IF( LADPSTP )THEN    ! adoptive time step
@@ -74,7 +70,11 @@ DO IT=1, NT
 
 ! ---
   IF( LPTHOUT )THEN
-    CALL CMF_CALC_PTHOUT            !! bifurcation channel flow
+    IF( LLEVEE )THEN
+      CALL CMF_LEVEE_OPT_PTHOUT            !! bifurcation channel flow
+    ELSE
+      CALL CMF_CALC_PTHOUT            !! bifurcation channel flow
+    ENDIF
   ENDIF
 ! ---
   IF ( LDAMOUT ) THEN
@@ -96,11 +96,7 @@ DO IT=1, NT
 
 
 !=== 3. calculate river and floodplain staging
-  IF( LSTG_ES )THEN
-    CALL CMF_OPT_FLDSTG_ES  !! Alternative subroutine optimized for vector processor
-  ELSE 
-    CALL CMF_CALC_FLDSTG     !! Default
-  ENDIF
+  CALL CMF_PHYSICS_FLDSTG
 
 !=== 4.  write water balance monitoring to IOFILE
   CALL CALC_WATBAL(IT)
@@ -179,12 +175,15 @@ END SUBROUTINE CALC_ADPSTP
 !==========================================================
 SUBROUTINE CALC_WATBAL(IT)
 USE YOS_CMF_TIME,            ONLY: KMIN
-USE YOS_CMF_DIAG,            ONLY: DGLBRIVSTO,DGLBFLDSTO,DGLBSTOPRE,DGLBSTONXT,DGLBSTONEW,DGLBRIVINF,DGLBRIVOUT,DGLBFLDARE
+USE YOS_CMF_DIAG,            ONLY: DGLBSTOPRE, DGLBSTONXT, DGLBSTONEW,DGLBRIVINF,DGLBRIVOUT !! dischrge calculation
+USE YOS_CMF_DIAG,            ONLY: DGLBSTOPRE2,DGLBSTONEW2,DGLBRIVSTO,DGLBFLDSTO,DGLBFLDARE
 USE CMF_UTILS_MOD,           ONLY: MIN2DATE,SPLITDATE,SPLITHOUR
 IMPLICIT NONE
 INTEGER(KIND=JPIM),INTENT(IN)   :: IT        !! step in adaptive time loop
 !*** LOCAL
-REAL(KIND=JPRB)                 :: DMISSING !! water ballance error [kg]
+REAL(KIND=JPRB)                 :: DERROR  !! water ballance error1 (discharge calculation)   [kg]
+REAL(KIND=JPRB)                 :: DERROR2 !! water ballance error2 (flood stage calculation) [kg]
+
 !*** local physics time
 INTEGER(KIND=JPIM)              :: PKMIN
 INTEGER(KIND=JPIM)              :: PYEAR, PMON, PDAY, PHOUR, PMIN
@@ -198,11 +197,13 @@ CALL MIN2DATE(PKMIN,PYYYYMMDD,PHHMM)
 CALL SPLITDATE(PYYYYMMDD,PYEAR,PMON,PDAY)
 CALL SPLITHOUR(PHHMM,PHOUR,PMIN)
 
-DMISSING   = DGLBSTOPRE - DGLBSTONXT + DGLBRIVINF - DGLBRIVOUT
-WRITE(LOGNAM,'(I4.4,4(A1,I2.2),I6,3F12.3,2x,2F12.3,2x,2F12.3,G12.3,F12.3)') &
-  PYEAR, '/', PMON, '/', PDAY, '_', PHOUR, ':', PMIN, IT,   &
-  DGLBSTOPRE*DORD, DGLBSTONXT*DORD, DGLBSTONEW*DORD ,DGLBRIVSTO*DORD, DGLBFLDSTO*DORD, &
-  DGLBRIVINF*DORD, DGLBRIVOUT*DORD, DMISSING*DORD,   DGLBFLDARE*DORD
+! poisitive error when water appears from somewhere, negative error when water is lost to somewhere
+DERROR   = - (DGLBSTOPRE  - DGLBSTONXT  + DGLBRIVINF - DGLBRIVOUT )  !! flux  calc budget error
+DERROR2  = - (DGLBSTOPRE2 - DGLBSTONEW2 )                            !! stage calc budget error
+WRITE(LOGNAM,'(I4.4,4(A1,I2.2),I6,a6,3F12.3,G12.3,2x,2F12.3,a6, 2F12.3,G12.3,3F12.3)') &
+  PYEAR, '/', PMON, '/', PDAY, '_', PHOUR, ':', PMIN, IT, ' flx: ', &
+  DGLBSTOPRE*DORD, DGLBSTONXT*DORD, DGLBSTONEW*DORD ,DERROR*DORD,    DGLBRIVINF*DORD, DGLBRIVOUT*DORD, ' stg: ', &
+  DGLBSTOPRE2*DORD,DGLBSTONEW2*DORD,DERROR2*DORD,    DGLBRIVSTO*DORD,DGLBFLDSTO*DORD, DGLBFLDARE*DORD
 
 END SUBROUTINE CALC_WATBAL
 !==========================================================
@@ -231,8 +232,32 @@ END DO
 END SUBROUTINE CALC_VARS_PRE
 !==========================================================
 
-END SUBROUTINE CMF_ADVANCE_PHYSICS
+END SUBROUTINE CMF_PHYSICS_ADVANCE
 !###############################################################
 
+
+
+
+
+!###############################################################
+SUBROUTINE CMF_PHYSICS_FLDSTG
+! flood stage scheme selecter
+USE YOS_CMF_INPUT,      ONLY: LLEVEE, LSTG_ES
+USE CMF_CALC_FLDSTG_MOD,ONLY: CMF_CALC_FLDSTG_DEF, CMF_OPT_FLDSTG_ES
+USE CMF_CTRL_LEVEE_MOD, ONLY: CMF_LEVEE_FLDSTG
+IMPLICIT NONE
+
+IF( LLEVEE )THEN
+  CALL CMF_LEVEE_FLDSTG  !! levee floodstage (Vector processor option not available)
+ELSE
+  IF( LSTG_ES )THEN
+    CALL CMF_OPT_FLDSTG_ES  !! Alternative subroutine optimized for vector processor
+  ELSE 
+    CALL CMF_CALC_FLDSTG_DEF     !! Default
+  ENDIF
+ENDIF
+
+END SUBROUTINE CMF_PHYSICS_FLDSTG
+!###############################################################
 
 END MODULE CMF_CTRL_PHYSICS_MOD

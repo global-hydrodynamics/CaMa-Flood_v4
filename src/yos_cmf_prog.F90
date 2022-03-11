@@ -53,5 +53,8 @@ REAL(KIND=JPRB),ALLOCATABLE     :: D1PTHFLW_PRE(:,:)     !! flood path outflow [
 REAL(KIND=JPRB),POINTER         :: D2DAMSTO(:,:)         !! reservoir storage [m3]
 REAL(KIND=JPRB),POINTER         :: D2DAMINF(:,:)         !! reservoir inflow [m3/s]; discharge before operatio
 
+!================================================
+!!!*** levee variables
+REAL(KIND=JPRB),POINTER         :: D2LEVSTO(:,:)         !! flood storage in protected side (D2FLDSTO for storage betwen river & levee)
 
 END MODULE YOS_CMF_PROG

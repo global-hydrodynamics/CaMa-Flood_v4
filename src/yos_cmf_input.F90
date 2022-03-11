@@ -36,6 +36,7 @@ LOGICAL                         :: LKINE                   !! true: use kinemati
 LOGICAL                         :: LFLDOUT                 !! true: floodplain flow (high-water channel flow) active
 LOGICAL                         :: LPTHOUT                 !! true: activate bifurcation scheme
 LOGICAL                         :: LDAMOUT                 !! true: activate dam operation (under development)
+LOGICAL                         :: LLEVEE                  !! true: activate levee scheme  (under development)
 
 LOGICAL                         :: LROSPLIT                !! true: input if surface (Qs) and sub-surface (Qsb) runoff
 LOGICAL                         :: LGDWDLY                 !! true: Activate ground water reservoir and delay

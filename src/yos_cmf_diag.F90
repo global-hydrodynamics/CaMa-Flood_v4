@@ -69,18 +69,29 @@ INTEGER(KIND=JPRB)              :: N2DIAG_MAX              !! Number of 2D diagn
 
 !================================================
 !*** Global total
-REAL(KIND=JPRB)                 :: DGLBRIVSTO              !! global river storage      [m3]
-REAL(KIND=JPRB)                 :: DGLBFLDSTO              !! global floodplain storage [m3]
+! discharge calculation budget
 REAL(KIND=JPRB)                 :: DGLBSTOPRE              !! global water storage      [m3] (befre flow calculation)
 REAL(KIND=JPRB)                 :: DGLBSTONXT              !! global water storage      [m3] (after flow calculation)
 REAL(KIND=JPRB)                 :: DGLBSTONEW              !! global water storage      [m3] (after runoff input)
 REAL(KIND=JPRB)                 :: DGLBRIVINF              !! global inflow             [m3] (rivinf + fldinf)
 REAL(KIND=JPRB)                 :: DGLBRIVOUT              !! global outflow            [m3] (rivout + fldout)
+
+! stage calculation budget
+REAL(KIND=JPRB)                 :: DGLBSTOPRE2             !! global water storage      [m3] (befre stage calculation)
+REAL(KIND=JPRB)                 :: DGLBSTONEW2             !! global water storage      [m3] (after stage calculation)
+REAL(KIND=JPRB)                 :: DGLBRIVSTO              !! global river storage      [m3]
+REAL(KIND=JPRB)                 :: DGLBFLDSTO              !! global floodplain storage [m3]
+REAL(KIND=JPRB)                 :: DGLBLEVSTO              !! global protected-side storage [m3] (levee scheme)
 REAL(KIND=JPRB)                 :: DGLBFLDARE              !! global flooded area       [m2]
 
 !================================================
 !*** dam variable
 REAL(KIND=JPRB),POINTER         :: d2daminf_avg(:,:)       !! average reservoir inflow [m3/s]  !!!added
+
+!================================================
+!!!*** levee variables
+REAL(KIND=JPRB),POINTER         :: D2LEVDPH(:,:)           !! flood depth in protected side (D2FLDDPH for water depth betwen river & levee)
+
 
 
 END MODULE YOS_CMF_DIAG

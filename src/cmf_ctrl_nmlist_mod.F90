@@ -35,7 +35,7 @@ USE YOS_CMF_INPUT,      ONLY: TMPNAM,   NSETFILE,   CSETFILE
 USE YOS_CMF_INPUT,      ONLY: LADPSTP,  LFPLAIN,  LKINE,    LFLDOUT,  LPTHOUT,  LDAMOUT,  &
                             & LROSPLIT, LGDWDLY,  LSLPMIX,  LMEANSL,  LSEALEV,  LOUTPUT,  &
                             & LRESTART, LSTOONLY, LGRIDMAP, LLEAPYR,  LMAPEND,  LBITSAFE, &
-                            & LSTG_ES
+                            & LSTG_ES,  LLEVEE
 ! dimention & time
 USE YOS_CMF_INPUT,      ONLY: CDIMINFO, DT,       NX,NY,    NLFP,     NXIN,NYIN,    INPN, &
                             & IFRQ_INP, DTIN,     WEST,EAST,NORTH,SOUTH
@@ -50,7 +50,7 @@ CHARACTER(LEN=8)              :: CREG                 !!
 NAMELIST/NRUNVER/  LADPSTP,  LFPLAIN,  LKINE,    LFLDOUT,  LPTHOUT,  LDAMOUT,  &
                    LROSPLIT, LGDWDLY,  LSLPMIX,  LMEANSL,  LSEALEV,  LOUTPUT,  &
                    LRESTART, LSTOONLY, LGRIDMAP, LLEAPYR,  LMAPEND,  LBITSAFE, &
-                   LSTG_ES
+                   LSTG_ES,  LLEVEE
 
 NAMELIST/NDIMTIME/ CDIMINFO, DT, IFRQ_INP
 
@@ -75,6 +75,7 @@ LKINE    = .FALSE.           !! true: use kinematic wave
 LFLDOUT  = .TRUE.            !! true: floodplain flow (high-water channel flow) active
 LPTHOUT  = .FALSE.           !! true: activate bifurcation scheme
 LDAMOUT  = .FALSE.           !! true: activate dam operation (under development)
+LLEVEE   = .FALSE.           !! true: activate levee scheme  (under development)
 
 LROSPLIT = .FALSE.           !! true: input if surface (Qs) and sub-surface (Qsb) runoff
 LGDWDLY  = .FALSE.           !! true: Activate ground water reservoir and delay
@@ -105,6 +106,7 @@ WRITE(LOGNAM,*) "LKINE   ",  LKINE
 WRITE(LOGNAM,*) "LFLDOUT ",  LFLDOUT
 WRITE(LOGNAM,*) "LPTHOUT ",  LPTHOUT
 WRITE(LOGNAM,*) "LDAMOUT ",  LDAMOUT
+WRITE(LOGNAM,*) "LLEVEE ",  LLEVEE
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "LROSPLIT ", LROSPLIT
 WRITE(LOGNAM,*) "LGDWDLY  ", LGDWDLY

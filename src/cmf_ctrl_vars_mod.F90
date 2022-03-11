@@ -17,7 +17,7 @@ MODULE CMF_CTRL_VARS_MOD
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
 USE PARKIND1,                ONLY: JPIM, JPRM, JPRB
-USE YOS_CMF_INPUT,           ONLY: LOGNAM, LDAMOUT
+USE YOS_CMF_INPUT,           ONLY: LOGNAM, LDAMOUT, LLEVEE
 IMPLICIT NONE
 CONTAINS 
 !####################################################################
@@ -32,7 +32,7 @@ USE YOS_CMF_PROG,            ONLY: ND2PROG,      D2PROG, &
                                  & D2RIVSTO,     D2FLDSTO,     D2RIVOUT,     D2FLDOUT, &
                                  & D2RIVOUT_PRE, D2FLDOUT_PRE, D2RIVDPH_PRE, D2FLDSTO_PRE, &
                                  & D1PTHFLW,     D1PTHFLW_PRE, &
-                                 & D2DAMSTO,     D2DAMINF      !!! added
+                                 & D2DAMSTO,     D2DAMINF,     D2LEVSTO      !! optional
 IMPLICIT NONE
 !*** LOCAL
 !$ SAVE
@@ -45,7 +45,8 @@ WRITE(LOGNAM,*) "CMF::PROG_INIT: prognostic variable initialization"
 
 !*** 1. ALLOCATE 
 ND2PROG=12                       !! # of standard prognostic variables 
-IF ( LDAMOUT ) ND2PROG=ND2PROG+2 !! dam variables are added (D2DAMSTO, D2DAMINF)
+IF ( LDAMOUT ) ND2PROG=ND2PROG+2 !! dam   variables are added (D2DAMSTO, D2DAMINF)
+IF ( LLEVEE  ) ND2PROG=ND2PROG+1 !! levee variables are added (D2LEVSTO)
 
 ALLOCATE( D2PROG(NSEQMAX,1,ND2PROG)     )
 ALLOCATE( D1PTHFLW(NPTHOUT,NPTHLEV)     )
@@ -71,6 +72,11 @@ IF( LDAMOUT ) THEN  !! additional prognostics for LDAMOUT
   IND=IND+1
   D2DAMINF     => D2PROG(:,:,IND)
 ENDIF
+IF( LLEVEE ) THEN  !! additional prognostics for LLEVEE
+  IND=IND+1
+  D2LEVSTO     => D2PROG(:,:,IND)
+ENDIF
+
 
 D2PROG(:,:,:) = 0._JPRB
 
@@ -93,6 +99,9 @@ D1PTHFLW_PRE(:,:) = 0._JPRB
 IF( LDAMOUT )THEN  !! Additional variable for LDAMOUT
   D2DAMSTO(:,:)     = 0._JPRB
   D2DAMINF(:,:)     = 0._JPRB
+ENDIF
+IF( LLEVEE )THEN  !! Additional variable for LDAMOUT
+  D2LEVSTO(:,:)     = 0._JPRB
 ENDIF
 
 !***  2b. set initial water surface elevation to sea surface level
@@ -174,10 +183,11 @@ END SUBROUTINE CMF_PROG_INIT
 
 !####################################################################
 SUBROUTINE CMF_DIAG_INIT
+
 USE YOS_CMF_MAP,        ONLY: NSEQMAX,NPTHOUT,NPTHLEV
 USE YOS_CMF_DIAG,       ONLY: N2DIAG, D2DIAG, &
                             &   D2RIVINF, D2RIVDPH, D2RIVVEL, D2FLDINF, D2FLDDPH, D2FLDFRC, D2FLDARE, &
-                            &   D2PTHOUT, D2PTHINF, D2SFCELV, D2OUTFLW, D2STORGE, D2OUTINS
+                            &   D2PTHOUT, D2PTHINF, D2SFCELV, D2OUTFLW, D2STORGE, D2OUTINS, D2LEVDPH
 USE YOS_CMF_DIAG,       ONLY: N2DIAG_AVG, D2DIAG_AVG, NADD, &
                             &   D2RIVOUT_AVG, D2FLDOUT_AVG, D2OUTFLW_AVG, D2RIVVEL_AVG, D2PTHOUT_AVG, &
                             &   D2GDWRTN_AVG, D2RUNOFF_AVG, D2ROFSUB_AVG, D1PTHFLW_AVG, &
@@ -196,6 +206,7 @@ WRITE(LOGNAM,*) "CMF::DIAG_INIT: initialize diagnostic variables"
 
 !*** 1. snapshot 2D diagnostics
 N2DIAG=13
+IF ( LLEVEE  ) N2DIAG=N2DIAG+1 !! levee variables are added (D2LEVSTO )
 
 ALLOCATE(D2DIAG(NSEQMAX,1,N2DIAG))
 D2DIAG(:,:,:) = 0._JPRB
@@ -212,6 +223,12 @@ D2SFCELV => D2DIAG(:,:,10)
 D2OUTFLW => D2DIAG(:,:,11)
 D2STORGE => D2DIAG(:,:,12)
 D2OUTINS => D2DIAG(:,:,13)
+
+IND=13
+IF ( LLEVEE  )THEN
+  IND=IND+1
+  D2LEVDPH => D2DIAG(:,:,IND)
+ENDIF
 
 !============================
 !*** 2a. time-average 2D diagnostics

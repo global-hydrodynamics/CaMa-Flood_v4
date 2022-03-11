@@ -19,7 +19,7 @@ MODULE CMF_CTRL_RESTART_MOD     !!!tentative version 7/21
 !==========================================================
 ! shared variables in module
 USE PARKIND1,                ONLY: JPIM, JPRB, JPRM
-USE YOS_CMF_INPUT,           ONLY: LOGNAM,  LSTOONLY, LDAMOUT, LPTHOUT, LGDWDLY
+USE YOS_CMF_INPUT,           ONLY: LOGNAM,  LSTOONLY, LDAMOUT, LLEVEE, LPTHOUT, LGDWDLY
 USE YOS_CMF_INPUT,           ONLY: CSUFBIN, CSUFPTH,  CSUFCDF
 IMPLICIT NONE
 !============================
@@ -93,7 +93,7 @@ SUBROUTINE CMF_RESTART_INIT
 USE YOS_CMF_PROG,   ONLY: D2RIVSTO,    D2FLDSTO,    D2RIVOUT,    D2FLDOUT,    D2GDWSTO, &
                         & D2RIVOUT_PRE,D2FLDOUT_PRE,D2RIVDPH_PRE,D2FLDSTO_PRE,&
                         & D1PTHFLW,    D1PTHFLW_PRE, &
-                        & D2DAMSTO      !!! added
+                        & D2DAMSTO,    D2LEVSTO      !!! added
 IMPLICIT NONE
 ! ===========
 D2RIVSTO(:,:)=0._JPRB
@@ -113,6 +113,9 @@ D1PTHFLW_PRE(:,:)=0._JPRB
 
 IF( LDAMOUT ) then
   D2DAMSTO(:,:)=0._JPRB   !!! added LDAMOUT
+ENDIF
+IF( LLEVEE ) then
+  D2LEVSTO(:,:)=0._JPRB   !!! added LLEVEE
 ENDIF
 
 IF ( LRESTCDF ) THEN
@@ -171,6 +174,9 @@ IF ( LGDWDLY ) THEN
 ENDIF
 IF ( LDAMOUT ) THEN      !!! added LDAMOUT
   CALL READ_BIN_MAP(D2DAMSTO,TMPNAM,RIREC)
+ENDIF
+IF ( LLEVEE ) THEN      !!! added LLEVEE
+  CALL READ_BIN_MAP(D2LEVSTO,TMPNAM,RIREC)
 ENDIF
 
 CLOSE(TMPNAM)
@@ -282,6 +288,12 @@ IF ( LDAMOUT ) THEN    !!! added
   CALL MAP2VECD(R2TEMP,D2DAMSTO)
 ENDIF
 
+IF ( LLEVEE ) THEN    !!! added
+  CALL NCERROR( NF90_INQ_VARID(NCID,'levsto',VARID))
+  CALL NCERROR( NF90_GET_VAR(NCID,VARID,R2TEMP,(/1,1,1/),(/NX,NY,1/) ) )
+  CALL MAP2VECD(R2TEMP,D2LEVSTO)
+ENDIF
+
 IF ( LPTHOUT .AND. .NOT. LSTOONLY ) THEN
   CALL NCERROR( NF90_INQ_VARID(NCID,'pthflw_pre',VARID))
   CALL NCERROR( NF90_GET_VAR(NCID,VARID,D1PTHFLW_PRE,(/1,1,1/),(/NPTHOUT,NPTHLEV,1/) ) )
@@ -309,7 +321,7 @@ USE YOS_CMF_TIME,       ONLY: KSTEP,  NSTEPS, JYYYYMMDD, JHHMM, JDD, JHOUR, JMIN
 USE YOS_CMF_MAP,        ONLY: NPTHOUT,     NPTHLEV
 USE YOS_CMF_PROG,       ONLY: D2RIVSTO,    D2FLDSTO,    D2RIVOUT_PRE,D2FLDOUT_PRE, &
                             & D1PTHFLW_PRE,D2RIVDPH_PRE,D2FLDSTO_PRE,D2GDWSTO, &
-                            & D2DAMSTO
+                            & D2DAMSTO,    D2LEVSTO
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
 IMPLICIT NONE
 !* local variable
@@ -397,6 +409,9 @@ RIREC=0
   ENDIF
   IF ( LDAMOUT ) THEN   !!! ADDED
     CALL WRTE_BIN_MAP(D2DAMSTO,TMPNAM,RIREC)
+  ENDIF
+  IF ( LLEVEE ) THEN   !!! ADDED
+    CALL WRTE_BIN_MAP(D2LEVSTO,TMPNAM,RIREC)
   ENDIF
 
 CLOSE(TMPNAM)
@@ -591,6 +606,14 @@ IF( REGIONTHIS==1 )THEN   !! write restart only on master node
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',DMIS) )
   ENDIF
   
+  IF ( LLEVEE ) THEN    !!! added
+    CALL NCERROR( NF90_DEF_VAR(NCID, 'levsto', NF90_DOUBLE, (/LONID,LATID,TIMEID/), &
+                             VARID,DEFLATE_LEVEL=6), 'Creating Variable levsto')  
+    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"storage exceeds levee protection" ) )
+    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m3") )
+    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',DMIS) )
+  ENDIF
+
   CALL NCERROR( NF90_ENDDEF(NCID) )
   !============================
   !*** 2. write data
@@ -608,7 +631,7 @@ IF( REGIONTHIS==1 )THEN   !! write restart only on master node
 ENDIF
 
 !! write restart variables
-DO JF=1,8
+DO JF=1,9
   IOUT=0
   SELECT CASE(JF)
     CASE (1)
@@ -643,6 +666,10 @@ DO JF=1,8
       CVAR='damsto'
       IF( LDAMOUT ) CALL VEC2MAPD(D2DAMSTO,D2TEMP)  !! D2DAMSTO only allocated for LDAMOUT
       IF( LDAMOUT ) IOUT=1
+    CASE (9)  !!! LLEVEE
+      CVAR='levsto'
+      IF( LLEVEE ) CALL VEC2MAPD(D2LEVSTO,D2TEMP)  !! D2DAMSTO only allocated for LDAMOUT
+      IF( LLEVEE ) IOUT=1
   END SELECT
 
 #ifdef UseMPI

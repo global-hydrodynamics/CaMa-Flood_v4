@@ -16,7 +16,6 @@ CONTAINS
 !####################################################################
 ! -- CMF_CALC_PTHOUT
 ! --
-! --
 !####################################################################
 SUBROUTINE CMF_CALC_PTHOUT
 USE PARKIND1,           ONLY: JPIM, JPRB
@@ -29,7 +28,7 @@ USE YOS_CMF_PROG,       ONLY: D1PTHFLW_PRE, D2RIVDPH_PRE
 USE YOS_CMF_DIAG,       ONLY: D2PTHOUT, D2PTHINF, D2RIVINF, D2FLDINF, D2SFCELV
 IMPLICIT NONE
 !*** Local
-      REAL(KIND=JPRB)    ::  D2SFCELV_PRE(NSEQMAX,1)                  !! water surface elev (t-1)[m] (for floodplain)
+      REAL(KIND=JPRB)    ::  D2SFCELV_PRE(NSEQMAX,1)                  !! water surface elev (t-1) [m] (for stable calculation)
       REAL(KIND=JPRB)    ::  D2RATE(NSEQMAX,1)                        !! outflow correction
 
 !$ SAVE
@@ -53,7 +52,7 @@ DO IPTH=1, NPTHOUT
   JSEQP=PTH_DOWN(IPTH)
   !! Avoid calculation outside of domain
   IF (ISEQP == 0 .OR. JSEQP== 0 ) CYCLE
-  IF (I2MASK(ISEQP,1) == 1 .OR. I2MASK(JSEQP,1) == 1 ) CYCLE
+  IF (I2MASK(ISEQP,1) == 1 .OR. I2MASK(JSEQP,1) == 1 ) CYCLE  !! I2MASK is for kinematic-inertial mixed flow scheme. Not mainly used.
   
   DSLOPE  = (D2SFCELV(ISEQP,1)-D2SFCELV(JSEQP,1)) * PTH_DST(IPTH)**(-1.D0)
   DSLOPE = max(-0.005D0,min(0.005D0,DSLOPE))                                    !! v390 stabilization
@@ -147,4 +146,8 @@ END DO
 END SUBROUTINE CMF_CALC_PTHOUT
 !####################################################################
 
+
+
+
+!####################################################################
 END MODULE CMF_CALC_PTHOUT_MOD
