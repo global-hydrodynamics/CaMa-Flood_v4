@@ -34,3 +34,8 @@ Latest GitHub branch (master)  is v4.03
 ### Changes related to some developpers 
 - MPI parallelization (etc/options_HPC)
 - Improve initialization efficiency
+
+## Update in v4.05 (2021.3.14)
+### Changes related to some developpers 
+- Levee scheme implemented (etc/levee_test)
+- Water balance log for flood stage calculation
