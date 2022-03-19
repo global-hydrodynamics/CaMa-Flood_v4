@@ -265,9 +265,6 @@ SUBROUTINE CMF_LEVEE_FLDSTG
 ! ================================================
 ! calculate river and floodplain staging considering levee
 ! ================================================
-USE YOS_CMF_TIME  ,ONLY: IYYYYMMDD
-
-
 USE YOS_CMF_INPUT  ,ONLY: NLFP
 USE YOS_CMF_MAP    ,ONLY: NSEQALL
 USE YOS_CMF_MAP    ,ONLY: D2GRAREA, D2RIVLEN, D2RIVWTH, D2RIVELV, D2RIVSTOMAX, D2FLDSTOMAX, D2FLDGRD, DFRCINC, D2FLDHGT
