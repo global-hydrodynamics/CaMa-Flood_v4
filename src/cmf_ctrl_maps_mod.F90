@@ -596,7 +596,7 @@ D2RIVMAN(:,:)  =0._JPRB
 D2MEANSL(:,:)  =0._JPRB
 D2DWNELV(:,:)  =0._JPRB
 D2GDWDLY(:,:)  =0._JPRB
-I2MASK(:,:)    =0._JPIM     !! mask for calculation (only for IFS slopemix)
+I2MASK(:,:)    =0._JPIM     !! mask for flow routine (1: kinematic, 2: dam operation)
 
 !============================
 ! *** 2. Read topo map

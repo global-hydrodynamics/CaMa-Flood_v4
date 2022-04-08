@@ -218,7 +218,7 @@ DO ISEQ=1, NSEQRIV                                                    !! for nor
       IF( D2FLDOUT(ISEQ,1)*D2RIVOUT(ISEQ,1)<0.D0 ) D2FLDOUT(ISEQ,1)=0.D0  !! stabilization
     ENDIF
 
-  ELSE
+  ELSE !! I2mask>0
     ! Kinematic wave, river flow
     DSLOPE = (D2ELEVTN(ISEQ,1)-D2ELEVTN(JSEQ,1)) * D2NXTDST(ISEQ,1)**(-1.)
     DSLOPE = max(DSLOPE,PMINSLP)
@@ -313,7 +313,7 @@ DO ISEQ=NSEQRIV+1, NSEQALL
       IF( D2FLDOUT(ISEQ,1)*D2RIVOUT(ISEQ,1)<0.D0 ) D2FLDOUT(ISEQ,1)=0.D0  !! stabilization
     ENDIF
 
-  ELSE
+  ELSE !! i2mask>0
     ! Kinematic approach, river channel flow
     DSLOPE = PMINSLP
     DVEL   = D2RIVMAN(ISEQ,1)**(-1.) * DSLOPE**0.5 * D2RIVDPH(ISEQ,1)**(2./3.)

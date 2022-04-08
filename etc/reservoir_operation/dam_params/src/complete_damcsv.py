@@ -120,7 +120,7 @@ print(damcsv2)
 
 # damcsv2 = damcsv2.sort_values('uparea_cama')
 
-damcsv2 = damcsv2.rename(columns={'damid': 'GRAND_ID', 'damname':'DamName', 'lon':'DamLon', 'lat':'DamLat', 'ix':'DamIX', 'iy':'DamIY', 'fldsto_mcm':'FldVol_mcm', 'consto_mcm':'ConVol_mcm', 'totalsto_mcm':'TotalVol_mcm'})
+damcsv2 = damcsv2.rename(columns={'damid': 'GRAND_ID', 'damname':'DamName', 'damlon':'DamLon', 'damlat':'DamLat', 'ix':'DamIX', 'iy':'DamIY', 'fldsto_mcm':'FldVol_mcm', 'consto_mcm':'ConVol_mcm', 'totalsto_mcm':'TotalVol_mcm'})
 
 damcsv2 = damcsv2[['GRAND_ID', 'DamName', 'DamLon', 'DamLat', 'upreal', 'DamIX', 'DamIY', 'FldVol_mcm', 'ConVol_mcm', 'TotalVol_mcm', 'fldsto/uparea', 'Qn', 'Qf']]
 

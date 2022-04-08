@@ -26,6 +26,7 @@ upareafile = str(mapdir)+'/uparea.bin'
 
 # minimum uparea error to allow
 minerror = 0.1
+
 #===============================================================
 
 ## get map nx, ny --------------------
@@ -57,14 +58,13 @@ dam_data_m['uparea_cama'] = 0.000000
 upcama_m = []
 x_m, y_m = [], []
 
-
-
 #----------------------------------------------------------
 
 for index, row in dam_data.iterrows():
     print('') 
     print('-------------------------------------------------')
     print(row)
+
     ix, iy = int(row['ix'])-1, int(row['iy'])-1
     iup_real = row['upreal']
     print(' ')
@@ -99,6 +99,11 @@ for index, row in dam_data.iterrows():
         for i in range(8):
             [ix_tmp, iy_tmp] = ix_list[i]
             print(ix_tmp, iy_tmp)
+            ix_tmp=max( [ix_tmp,0   ] )
+            ix_tmp=min( [ix_tmp,nx-1] )
+            iy_tmp=max( [iy_tmp,0   ] )
+            iy_tmp=min( [iy_tmp,ny-1] )
+
             error_tmp = abs(uparea_cama[iy_tmp,ix_tmp] - iup_real)
             if error_tmp >= error_m:    #if there is no better grid????
                 continue
@@ -118,6 +123,11 @@ for index, row in dam_data.iterrows():
                 for j_y in range(-2, 3, 1):
                     ix_tmp = ix + j_x
                     iy_tmp = iy + j_y
+                    ix_tmp=max( [ix_tmp,0   ] )
+                    ix_tmp=min( [ix_tmp,nx-1] )
+                    iy_tmp=max( [iy_tmp,0   ] )
+                    iy_tmp=min( [iy_tmp,ny-1] )
+
                     error_tmp = abs(uparea_cama[iy_tmp,ix_tmp] - iup_real)
                     if error_tmp >= error_m:    #if there is no better grid????
                         continue

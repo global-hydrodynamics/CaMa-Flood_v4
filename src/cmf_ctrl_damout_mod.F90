@@ -94,7 +94,7 @@ END SUBROUTINE CMF_DAMOUT_NMLIST
 SUBROUTINE CMF_DAMOUT_INIT
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
 USE YOS_CMF_INPUT,      ONLY: NX, NY, LRESTART, LPTHOUT
-USE YOS_CMF_MAP,        ONLY: I2VECTOR, I1NEXT, NSEQALL, NSEQMAX
+USE YOS_CMF_MAP,        ONLY: I2VECTOR, I1NEXT, NSEQALL, NSEQMAX, I2MASK
 USE YOS_CMF_PROG,       ONLY: D2DAMSTO, D2DAMINF
 USE YOS_CMF_MAP,        ONLY: NPTHOUT, NPTHLEV, PTH_UPST, PTH_DOWN, PTH_ELV !! bifurcation pass
 
@@ -154,6 +154,7 @@ DO IDAM = 1, NDAM
   ISEQ=I2VECTOR(IX,IY)
   DamSeq(IDAM)=ISEQ
   I1DAM(ISEQ)=1
+  I2MASK(ISEQ,1)=2  !! i2mask=2 : dam operation (exclude from bifurcation and adaptive time step)
 END DO
 CLOSE(NDAMFILE)
 !==========
@@ -164,6 +165,7 @@ DO ISEQ=1, NSEQALL
     JSEQ=I1NEXT(ISEQ)
     IF( I1DAM(JSEQ)==1 .or. I1DAM(JSEQ)==11 )THEN !! if downstream is dam
       I1DAM(ISEQ)=10            !! mark upstream of dam grid by "10"
+      I2MASK(ISEQ,1)=2          !! mask for kinematic wave (no bifurcation + no adaptive time step)
     ENDIF
   ENDIF
 

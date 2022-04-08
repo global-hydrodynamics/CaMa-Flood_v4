@@ -52,7 +52,7 @@ DO IPTH=1, NPTHOUT
   JSEQP=PTH_DOWN(IPTH)
   !! Avoid calculation outside of domain
   IF (ISEQP == 0 .OR. JSEQP== 0 ) CYCLE
-  IF (I2MASK(ISEQP,1) == 1 .OR. I2MASK(JSEQP,1) == 1 ) CYCLE  !! I2MASK is for kinematic-inertial mixed flow scheme. Not mainly used.
+  IF (I2MASK(ISEQP,1)>0 .OR. I2MASK(JSEQP,1)>0 ) CYCLE  !! I2MASK is for 1: kinemacit 2: dam  no bifurcation
   
   DSLOPE  = (D2SFCELV(ISEQP,1)-D2SFCELV(JSEQP,1)) * PTH_DST(IPTH)**(-1.D0)
   DSLOPE = max(-0.005D0,min(0.005D0,DSLOPE))                                    !! v390 stabilization
@@ -87,7 +87,7 @@ DO IPTH=1, NPTHOUT
   JSEQP=PTH_DOWN(IPTH)
   !! Avoid calculation outside of domain
   IF (ISEQP == 0 .OR. JSEQP== 0 ) CYCLE
-  IF (I2MASK(ISEQP,1) == 1 .OR. I2MASK(JSEQP,1) == 1 ) CYCLE
+  IF (I2MASK(ISEQP,1)>0 .OR. I2MASK(JSEQP,1)>0 ) CYCLE  !! I2MASK is for 1: kinemacit 2: dam  no bifurcation
 
   DO ILEV=1, NPTHLEV
     IF( D1PTHFLW(IPTH,ILEV) >= 0.D0 )THEN                                  !! total outflow from each grid
@@ -124,7 +124,7 @@ DO IPTH=1, NPTHOUT
   JSEQP=PTH_DOWN(IPTH)
   !! Avoid calculation outside of domain
   IF (ISEQP == 0 .OR. JSEQP== 0 ) CYCLE
-  IF (I2MASK(ISEQP,1) == 1 .OR. I2MASK(JSEQP,1) == 1 ) CYCLE
+  IF (I2MASK(ISEQP,1)>0 .OR. I2MASK(JSEQP,1)>0 ) CYCLE  !! I2MASK is for 1: kinemacit 2: dam  no bifurcation
   
   DO ILEV=1, NPTHLEV
     IF( D1PTHFLW(IPTH,ILEV) >= 0.D0 )THEN
