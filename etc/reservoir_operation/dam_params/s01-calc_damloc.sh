@@ -2,7 +2,7 @@
 
 #### initial setting ========================================
 ## project name
-TAG=sample_glb_15min
+TAG=glb_15min
 
 OUT_DAMPARAM="./${TAG}/damparam_${TAG}.csv"
 
@@ -31,41 +31,31 @@ echo "============================"
 echo ""
 echo "#####  Part 1: allocate GRanD on CaMa map"
 
-echo ""
-echo "@@@ src/get_rivinfo_glb "
-./src/get_rivinfo_glb
-mv ./damloc_tmp.txt ./$TAG/
+# ./t01-calc_damloc.sh   $TAG $MINUPAREA
 
-echo ""
-echo "@@@ ./src/modify_damloc.py "
-python ./src/modify_damloc.py $TAG $MINUPAREA
+# output dam allocation file : $TAG/damloc_modified.csv
 
 ##==========================
 echo ""
 echo "#####  Part 2: add dam paramerters"
-## calculate mean & 100yr flood discharge from naturalized simulations
-echo ""
-echo "@@@ ./src/get_annualmax_mean.py"
-python ./src/get_annualmax_mean.py $SYEAR $EYEAR $DT $TAG
 
-echo ""
-echo "@@@ ./src/get_100yrDischarge.py"
-python ./src/get_100yrDischarge.py $SYEAR $EYEAR $TAG
-
-## estimate dam storage parameter, using GRSAD and ReGeom data
-echo ""
-echo "@@@ ./src/est_fldsto_surfacearea.py"
-python ./src/est_fldsto_surfacearea.py $TAG
+# ./t02-calc_damparam.sh $TAG $MINUPAREA $SYEAR $EYEAR $DT
 
 ##==========================
 echo ""
 echo "#####  Part 3: merge dam location and parameter files"
-echo ""
+
 echo "@@@ ./src/complete_damcsv.py"
-python ./src/complete_damcsv.py $TAG $MINUPAREA
+#python ./src/complete_damcsv.py $TAG $MINUPAREA
+
+# output $TAG/dam_params_comp.csv 
+
+ND=`cat $TAG/dam_params_comp.csv | wc -l`
+NDAMS=$(( $ND - 1 ))
+echo "NDAMS allocated: $NDAMS"
 
 echo "@@@ create dam param: $OUT_DAMPARAM"
-sed -n 1p ./inp/damlist.csv     >  $OUT_DAMPARAM
+echo "${NDAMS},NDAMS"           >  $OUT_DAMPARAM
 cat ./$TAG/dam_params_comp.csv  >> $OUT_DAMPARAM
 
 exit 0
