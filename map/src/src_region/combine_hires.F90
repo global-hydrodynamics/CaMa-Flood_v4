@@ -34,18 +34,20 @@
       real                   ::  mwin
 
 ! regional hires map
-      integer*2,allocatable  ::  catmXX(:,:), catmYY(:,:)
+      integer*2,allocatable  ::  catmXX(:,:), catmYY(:,:), downx(:,:), downy(:,:)
       integer*1,allocatable  ::  catmZZ(:,:)
       real,allocatable       ::  flddif(:,:), grdare(:,:)
       real,allocatable       ::  elevtn(:,:), uparea(:,:), rivwth(:,:), hand(:,:) 
       integer*1,allocatable  ::  visual(:,:)
 
 ! input hires map
-      integer*2,allocatable  ::  catmXX0(:,:), catmYY0(:,:)
+      integer*2,allocatable  ::  catmXX0(:,:), catmYY0(:,:), downx0(:,:), downy0(:,:)
       integer*1,allocatable  ::  catmZZ0(:,:)
       real,allocatable       ::  flddif0(:,:), grdare0(:,:)
       real,allocatable       ::  elevtn0(:,:), uparea0(:,:), rivwth0(:,:), hand0(:,:)
       integer*1,allocatable  ::  visual0(:,:) 
+
+      integer                ::  isDownXY
 
       real,allocatable       ::  lon0(:), lat0(:)
 
@@ -124,7 +126,7 @@
         CCname=trim(tag)
 
         allocate(catmXX(nx,ny),catmYY(nx,ny),catmZZ(nx,ny),flddif(nx,ny),grdare(nx,ny))
-        allocate(hand(nx,ny),elevtn(nx,ny),uparea(nx,ny),rivwth(nx,ny),visual(nx,ny))
+        allocate(hand(nx,ny),elevtn(nx,ny),uparea(nx,ny),rivwth(nx,ny),visual(nx,ny),downx(nx,ny),downy(nx,ny))
 
         catmXX(:,:)=-9999
         catmYY(:,:)=-9999
@@ -136,6 +138,8 @@
         rivwth(:,:)=-9999
         uparea(:,:)=-9999
         visual(:,:)=-9
+        downx(:,:) =-9999
+        downy(:,:) =-9999
 
         list_loc=trim(hires)//'/location.txt'
         open(11,file=list_loc,form='formatted')
@@ -152,6 +156,7 @@
 
           allocate(catmXX0(nx0,ny0),catmYY0(nx0,ny0),catmZZ0(nx0,ny0),flddif0(nx0,ny0),grdare0(nx0,ny0))
           allocate(hand0(nx0,ny0),elevtn0(nx0,ny0),uparea0(nx0,ny0),rivwth0(nx0,ny0),visual0(nx0,ny0))
+          allocate(downx0(nx0,ny0),downy0(nx0,ny0))
           allocate(lon0(nx0),lat0(ny0))
 
           rfile1=trim(hires)//trim(area)//'.catmxy.bin'
@@ -165,6 +170,19 @@
             print *, '*******************'
             print *, 'no data: ', rfile1
             goto 1000
+          endif
+
+          isDownXY=0
+          rfile1=trim(hires)//trim(area)//'.downxy.bin'
+          print *, trim(rfile1)
+          open(21,file=rfile1,form='unformatted',access='direct',recl=2*nx0*ny0,status='old',iostat=ios)
+          if( ios==0 )then
+            isDownXY=1
+            read(21,rec=1) downx0
+            read(21,rec=2) downy0
+            close(21)
+          else
+            isDownXY=0
           endif
 
           rfile1=trim(hires)//trim(area)//'.catmzz.bin'
@@ -254,6 +272,11 @@
                   endif
                 endif
 
+                if( isDownXY==1 )then
+                  downx(ix,iy)=downx0(ix0,iy0)
+                  downy(ix,iy)=downy0(ix0,iy0)
+                endif
+
                 visual(ix,iy)=visual0(ix0,iy0)
                 flddif(ix,iy)=flddif0(ix0,iy0)
                 grdare(ix,iy)=grdare0(ix0,iy0)
@@ -265,7 +288,7 @@
             end do
           end do
  1000     continue
-          deallocate(catmXX0,catmYY0,catmZZ0,flddif0,grdare0)
+          deallocate(catmXX0,catmYY0,catmZZ0,flddif0,grdare0,downx0,downy0)
           deallocate(hand0,elevtn0,uparea0,rivwth0,visual0,lon0,lat0)
  2000     continue
         end do
@@ -317,6 +340,14 @@
         open(21,file=wfile1,form='unformatted',access='direct',recl=4*nx*ny)
         write(21,rec=1) visual
         close(21)
+
+        if( isDownXY==1 )then
+          wfile1=trim(out_hdir)//'/'//trim(CCname)//'.downxy.bin'
+          open(21,file=wfile1,form='unformatted',access='direct',recl=2*nx*ny)
+          write(21,rec=1) downx
+          write(21,rec=2) downy
+          close(21)
+        endif
 
         wfile1=trim(out_hdir)//'/location.txt'
 

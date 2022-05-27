@@ -79,7 +79,7 @@ Please use MPI related configulations for your server/system.
 
 
 
-## Victor-processor Optimization
+## Vector-processor Optimization
 
 The subroutine to calculate flood stage (CMF_CALC_FLDSTG in cmf_calc_fldstg_mod.F90 ) needs a special care when using in a vector-processor machine (such as Earth Simulator).
 

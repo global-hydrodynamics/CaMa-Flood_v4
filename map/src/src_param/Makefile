@@ -13,7 +13,8 @@ get_vecmap \
 get_upbasin \
 get_subbasin \
 set_bif_basin \
-set_mpi_region
+set_mpi_region \
+allocate_gauge
 
 all: $(TARGETS)
 
