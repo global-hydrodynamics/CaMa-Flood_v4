@@ -1,5 +1,5 @@
 #==========================================================
-# CaMa-Flood Mkinclude (for MaxOSX, gfortran)
+# CaMa-Flood Mkinclude (for MaxOSX, Intel fortran)
 #==========================================================
 RM = /bin/rm -f
 CP = /bin/cp
@@ -12,25 +12,30 @@ CP = /bin/cp
 #======================================
 
 #DMPI=-DUseMPI_CMF
-#DCDF=-DUseCDF_CMF
+DCDF=-DUseCDF_CMF
 #DATM=-DNoAtom
-CFLAGS=$(DMPI) $(DCDF) $(DATM) 
+DSINGLE=-DPARKIND1_SINGLE
+CFLAGS=$(DMPI) $(DCDF) $(DATM) $(DSINGLE)
 
 
 #======================================
-# gfortran Mac OSX 
+# Intel Fortran: Mac OSX 
 #======================================
 
-INC = -I/usr/local/include 
-LIB = -L/usr/local/lib
+## without netCDF
+#INC = -I/opt/intel/include -I/opt/local/include 
+#LIB = -L/opt/intel/lib -L/opt/intel/mkl/lib -L/opt/local/lib
+
+## with netCDF
+INC = -I/opt/intel/include -I/opt/local/include -I/opt/local/netcdf-fortran-4/include
+LIB = -L/opt/intel/lib -L/opt/intel/mkl/lib -L/opt/local/lib -L/opt/local/netcdf-fortran-4/lib -lnetcdff
 
 #==============================
 # FCMP: main program (src/), FC: pre/post process (map/ etc/)
-FCMP = gfortran -fopenmp
-#FCMP = mpif90 -fopenmp
-#FCMP = mpif90
-FC = gfortran
+FCMP = ifort -qopenmp
+FC = ifort
 
 LFLAGS =
-FFLAGS = -O3 -Wall -cpp -free -fimplicit-none 
+FFLAGS = -O3 -warn all -fpp -free -assume byterecl -heap-arrays -nogen-interface -lpthread -static-intel
+
 

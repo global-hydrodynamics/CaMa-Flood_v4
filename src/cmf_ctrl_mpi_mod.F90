@@ -1,6 +1,6 @@
 MODULE CMF_CTRL_MPI_MOD
-!! contains nothing is UseMPI is not defined
-#ifdef UseMPI
+!! contains nothing is UseMPI_CMF is not defined
+#ifdef UseMPI_CMF
 !==========================================================
 !* PURPOSE: modules related to MPI usage 
 !
@@ -20,16 +20,15 @@ MODULE CMF_CTRL_MPI_MOD
 !==========================================================
 !** shared variables in module
 USE MPI
-USE PARKIND1,                ONLY: JPIM, JPRB, JPRM
+USE PARKIND1,                ONLY: JPIM, JPRB, JPRM, JPRD
 USE YOS_CMF_INPUT,           ONLY: LOGNAM
 USE YOS_CMF_MAP,             ONLY: REGIONALL, REGIONTHIS, MPI_COMM_CAMA
 !$ USE OMP_LIB
 IMPLICIT NONE
 !** local variables
-SAVE
 !** MPI setting
-INTEGER(KIND=JPIM)              :: ierr, Nproc, Nid
-INTEGER(KIND=JPIM)              :: iOMP, nOMP
+INTEGER(KIND=JPIM),SAVE          :: ierr, Nproc, Nid
+INTEGER(KIND=JPIM),SAVE          :: iOMP, nOMP
 !==========================================================
 CONTAINS
 !####################################################################
@@ -160,12 +159,13 @@ IMPLICIT NONE
 !* input/output
 REAL(KIND=JPRB),INTENT(INOUT)   :: DT_MIN
 !* local variable
-REAL(KIND=JPRB)                 :: DT_LOC
+REAL(KIND=JPRD)                 :: DT_LOC, DT_OUT
 !================================================
 !*** MPI: use same DT in all node
 DT_LOC=DT_MIN
 
-CALL MPI_AllReduce(DT_LOC, DT_MIN, 1, MPI_DOUBLE_PRECISION, MPI_MIN, MPI_COMM_CAMA,ierr)
+CALL MPI_AllReduce(DT_LOC, DT_OUT, 1, MPI_DOUBLE_PRECISION, MPI_MIN, MPI_COMM_CAMA,ierr)
+DT_MIN=DT_OUT
 WRITE(LOGNAM,'(A,2F10.2)') "ADPSTP (MPI_AllReduce): DT_LOC->DTMIN", DT_LOC, DT_MIN
 
 END SUBROUTINE CMF_MPI_ADPSTP

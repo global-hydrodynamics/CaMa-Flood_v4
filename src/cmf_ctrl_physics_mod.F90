@@ -19,9 +19,9 @@ CONTAINS
 ! --
 !####################################################################
 SUBROUTINE CMF_PHYSICS_ADVANCE
-USE PARKIND1,              ONLY: JPIM,   JPRB,    JPRM
+USE PARKIND1,              ONLY: JPIM,   JPRB,    JPRD,      JPRM
 USE YOS_CMF_INPUT,         ONLY: LOGNAM, DT,      LADPSTP
-USE YOS_CMF_INPUT,         ONLY: LKINE,  LSLPMIX, LFLDOUT,   LPTHOUT,   LDAMOUT, LLEVEE
+USE YOS_CMF_INPUT,         ONLY: LKINE,  LSLPMIX, LFLDOUT,   LPTHOUT,   LDAMOUT, LLEVEE, LOUTINS
 USE YOS_CMF_PROG,          ONLY: D2FLDOUT, D2FLDOUT_PRE
 !
 USE CMF_CALC_OUTFLW_MOD,   ONLY: CMF_CALC_OUTFLW
@@ -29,7 +29,7 @@ USE CMF_CALC_PTHOUT_MOD,   ONLY: CMF_CALC_PTHOUT
 USE CMF_CALC_STONXT_MOD,   ONLY: CMF_CALC_STONXT
 USE CMF_CALC_DIAG_MOD,     ONLY: CMF_DIAG_AVEMAX
 ! optional
-USE CMF_OPT_OUTFLW_MOD,    ONLY: CMF_CALC_OUTFLW_KINEMIX, CMF_CALC_OUTFLW_KINE
+USE CMF_OPT_OUTFLW_MOD,    ONLY: CMF_CALC_OUTFLW_KINEMIX, CMF_CALC_OUTFLW_KINE,CMF_CALC_OUTINS
 USE CMF_CTRL_DAMOUT_MOD,   ONLY: CMF_DAMOUT_CALC
 USE CMF_CTRL_LEVEE_MOD,    ONLY: CMF_LEVEE_OPT_PTHOUT
 #ifdef ILS
@@ -64,8 +64,8 @@ DO IT=1, NT
   ENDIF
 
   IF( .not. LFLDOUT )THEN
-    D2FLDOUT(:,:)=0.D0    !! OPTION: no high-water channel flow
-    D2FLDOUT_PRE(:,:)=0.D0
+    D2FLDOUT(:,:)=0._JPRB    !! OPTION: no high-water channel flow
+    D2FLDOUT_PRE(:,:)=0._JPRB
   ENDIF
 
 ! ---
@@ -113,8 +113,15 @@ DO IT=1, NT
 #endif
 
 END DO
-
 DT=DT_DEF   !! reset DT
+
+! --- Optional: calculate instantaneous discharge (only at the end of outer time step)
+IF ( LOUTINS ) THEN
+  CALL CMF_CALC_OUTINS            !! reservoir operation
+ENDIF
+
+
+
 
 CONTAINS
 !==========================================================
@@ -124,26 +131,25 @@ CONTAINS
 !==========================================================
 SUBROUTINE CALC_ADPSTP
 USE YOS_CMF_INPUT,      ONLY: PGRV, PDSTMTH, PCADP
-USE YOS_CMF_MAP,        ONLY: D2NXTDST, I2MASK
+USE YOS_CMF_MAP,        ONLY: D2NXTDST
 USE YOS_CMF_MAP,        ONLY: NSEQALL,NSEQRIV
 USE YOS_CMF_DIAG,       ONLY: D2RIVDPH
-#ifdef UseMPI
+#ifdef UseMPI_CMF
 USE CMF_CTRL_MPI_MOD,   ONLY: CMF_MPI_ADPSTP
 #endif
 IMPLICIT NONE
 ! MPI setting
-!$ SAVE
-INTEGER(KIND=JPIM)              :: ISEQ
-REAL(KIND=JPRB)                 :: DT_MIN
-REAL(KIND=JPRB)                 :: DDPH, DDST
-!$OMP THREADPRIVATE(DDPH,DDST)
+! SAVE for OpenMP
+INTEGER(KIND=JPIM),SAVE         :: ISEQ
+REAL(KIND=JPRB),SAVE            :: DT_MIN
+REAL(KIND=JPRB),SAVE            :: DDPH, DDST
+!$OMP THREADPRIVATE               (DDPH,DDST)
 !================================================
 
 DT_MIN=DT_DEF
 !$OMP PARALLEL DO REDUCTION(MIN:DT_MIN)
 DO ISEQ=1, NSEQRIV
-  IF (I2MASK(ISEQ,1)>0 ) CYCLE  !! I2MASK is for 1: kinemacit 2: dam  no bifurcation
-  DDPH=MAX(D2RIVDPH(ISEQ,1),0.01D0 )
+  DDPH=MAX(D2RIVDPH(ISEQ,1),0.01_JPRB )
   DDST=D2NXTDST(ISEQ,1)
   DT_MIN=min( DT_MIN, PCADP*DDST * (PGRV*DDPH)**(-0.5) )
 END DO
@@ -151,15 +157,14 @@ END DO
 
 !$OMP PARALLEL DO REDUCTION(MIN:DT_MIN)
 DO ISEQ=NSEQRIV+1, NSEQALL
-  IF (I2MASK(ISEQ,1)>0 ) CYCLE  !! I2MASK is for 1: kinemacit 2: dam  no bifurcation
-  DDPH=MAX(D2RIVDPH(ISEQ,1),0.01D0 )
+  DDPH=MAX(D2RIVDPH(ISEQ,1),0.01_JPRB )
   DDST=PDSTMTH
   DT_MIN=min( DT_MIN, PCADP*DDST * (PGRV*DDPH)**(-0.5) )
 END DO
 !$OMP END PARALLEL DO
 
 !*** MPI: use same DT in all node
-#ifdef UseMPI
+#ifdef UseMPI_CMF
 CALL CMF_MPI_ADPSTP(DT_MIN)
 #endif
 !*********************************
@@ -183,15 +188,15 @@ USE CMF_UTILS_MOD,           ONLY: MIN2DATE,SPLITDATE,SPLITHOUR
 IMPLICIT NONE
 INTEGER(KIND=JPIM),INTENT(IN)   :: IT        !! step in adaptive time loop
 !*** LOCAL
-REAL(KIND=JPRB)                 :: DERROR  !! water ballance error1 (discharge calculation)   [kg]
-REAL(KIND=JPRB)                 :: DERROR2 !! water ballance error2 (flood stage calculation) [kg]
+REAL(KIND=JPRD)                 :: DERROR  !! water ballance error1 (discharge calculation)   [m3]
+REAL(KIND=JPRD)                 :: DERROR2 !! water ballance error2 (flood stage calculation) [m3]
 
 !*** local physics time
 INTEGER(KIND=JPIM)              :: PKMIN
 INTEGER(KIND=JPIM)              :: PYEAR, PMON, PDAY, PHOUR, PMIN
 INTEGER(KIND=JPIM)              :: PYYYYMMDD, PHHMM
 !*** PARAMETER
-REAL(KIND=JPRB)                 ::  DORD
+REAL(KIND=JPRD)                 ::  DORD
 PARAMETER                          (DORD=1.D-9)
 ! ================================================
 PKMIN=INT ( KMIN + IT*DT/60_JPRB )
@@ -219,8 +224,7 @@ USE YOS_CMF_PROG,            ONLY: D2RIVOUT,     D2FLDOUT,     D2FLDSTO
 USE YOS_CMF_PROG,            ONLY: D2RIVOUT_PRE, D2FLDOUT_PRE, D2FLDSTO_PRE, D2RIVDPH_PRE
 USE YOS_CMF_DIAG,            ONLY: D2RIVDPH
 IMPLICIT NONE
-!$ SAVE
-INTEGER(KIND=JPIM)              :: ISEQ
+INTEGER(KIND=JPIM),SAVE         :: ISEQ
 ! ================================================
 !$OMP PARALLEL DO
 DO ISEQ=1, NSEQALL ! for river mouth

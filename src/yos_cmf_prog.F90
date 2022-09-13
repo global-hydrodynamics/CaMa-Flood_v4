@@ -23,6 +23,7 @@ INTEGER(KIND=JPIM)              :: ND2PROG
 !*** input runoff (interporlated)
 REAL(KIND=JPRB),POINTER         :: D2RUNOFF(:,:)         !! input runoff             [m3/s]
 REAL(KIND=JPRB),POINTER         :: D2ROFSUB(:,:)         !! input sub-surface runoff [m3/s]
+REAL(KIND=JPRB),POINTER         :: D2WEVAP(:,:)          !! input Evaporation [m3/s]
 
 !================================================
 !*** river & floodpain
@@ -55,6 +56,6 @@ REAL(KIND=JPRB),POINTER         :: D2DAMINF(:,:)         !! reservoir inflow [m3
 
 !================================================
 !!!*** levee variables
-REAL(KIND=JPRB),POINTER         :: D2LEVSTO(:,:)         !! flood storage in protected side (D2FLDSTO for storage betwen river & levee)
+REAL(KIND=JPRB),POINTER         :: D2LEVSTO(:,:)         !! flood storage in protected side (storage betwen river & levee)
 
 END MODULE YOS_CMF_PROG

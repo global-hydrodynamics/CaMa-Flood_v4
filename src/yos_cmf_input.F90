@@ -38,16 +38,26 @@ LOGICAL                         :: LPTHOUT                 !! true: activate bif
 LOGICAL                         :: LDAMOUT                 !! true: activate dam operation (under development)
 LOGICAL                         :: LLEVEE                  !! true: activate levee scheme  (under development)
 
+!~~ used in ECMWF
 LOGICAL                         :: LROSPLIT                !! true: input if surface (Qs) and sub-surface (Qsb) runoff
+LOGICAL                         :: LWEVAP                  !! true: input water evaporation to extract from floodplain
+LOGICAL                         :: LWEVAPFIX               !! true: water balance closure extracting water from evap when available
+LOGICAL                         :: LWEXTRACTRIV            !! true: also extract water from rivers 
+LOGICAL                         :: LSLOPEMOUTH             !! true: prescribe water level slope == elevation slope on river month
 LOGICAL                         :: LGDWDLY                 !! true: Activate ground water reservoir and delay
 LOGICAL                         :: LSLPMIX                 !! true: activate mixed kinematic and local inertia based on slope
 
 LOGICAL                         :: LMEANSL                 !! true : boundary condition for mean sea level
 LOGICAL                         :: LSEALEV                 !! true : boundary condition for variable sea level
 
+LOGICAL                         :: LOUTINS                 !! true: diagnose instantaneous discharge 
+
+
 LOGICAL                         :: LRESTART                !! true: initial condition from restart file
 LOGICAL                         :: LSTOONLY                !! true: storage only restart (mainly for data assimilation)
+
 LOGICAL                         :: LOUTPUT                 !! true: use standard output (to file)
+LOGICAL                         :: LOUTINI                 !! true: output initial storage (netCDF only)
 
 LOGICAL                         :: LGRIDMAP                !! true: for standard XY gridded 2D map
 LOGICAL                         :: LLEAPYR                 !! true: neglect leap year (Feb29 skipped)
@@ -102,6 +112,16 @@ CHARACTER(LEN=256)              :: CSUFBIN            ! .bin suffix for binary (
 CHARACTER(LEN=256)              :: CSUFVEC            ! .vec suffix for binary (1D vector)
 CHARACTER(LEN=256)              :: CSUFPTH            ! .pth suffix for binary (1D bifurcation channel)
 CHARACTER(LEN=256)              :: CSUFCDF            ! .nc  suffix for netCDF
-
 !================================================
+#ifdef IFS
+! Fluxes buffers for IFS coupling
+REAL(KIND=JPRB), ALLOCATABLE :: ZBUFFO(:,:,:)
+REAL(KIND=JPRB), ALLOCATABLE :: ZBUFFI(:,:,:)
+REAL(KIND=JPRB), ALLOCATABLE :: ZACC0(:,:)
+REAL(KIND=JPRB), ALLOCATABLE :: ZACC1(:,:)
+!Time step to be advanced within DRV_ADVANCE used for IFS coupling
+INTEGER(KIND=JPIM)           :: ISTEPADV
+!===============================================
+#endif
+
 END MODULE YOS_CMF_INPUT

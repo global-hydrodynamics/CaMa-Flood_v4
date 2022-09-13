@@ -35,7 +35,8 @@ USE YOS_CMF_INPUT,      ONLY: TMPNAM,   NSETFILE,   CSETFILE
 USE YOS_CMF_INPUT,      ONLY: LADPSTP,  LFPLAIN,  LKINE,    LFLDOUT,  LPTHOUT,  LDAMOUT,  &
                             & LROSPLIT, LGDWDLY,  LSLPMIX,  LMEANSL,  LSEALEV,  LOUTPUT,  &
                             & LRESTART, LSTOONLY, LGRIDMAP, LLEAPYR,  LMAPEND,  LBITSAFE, &
-                            & LSTG_ES,  LLEVEE
+                            & LSTG_ES,  LLEVEE,   LOUTINS,  LOUTINI, &
+                            & LSLOPEMOUTH,LWEVAP, LWEVAPFIX,LWEXTRACTRIV
 ! dimention & time
 USE YOS_CMF_INPUT,      ONLY: CDIMINFO, DT,       NX,NY,    NLFP,     NXIN,NYIN,    INPN, &
                             & IFRQ_INP, DTIN,     WEST,EAST,NORTH,SOUTH
@@ -50,7 +51,7 @@ CHARACTER(LEN=8)              :: CREG                 !!
 NAMELIST/NRUNVER/  LADPSTP,  LFPLAIN,  LKINE,    LFLDOUT,  LPTHOUT,  LDAMOUT,  &
                    LROSPLIT, LGDWDLY,  LSLPMIX,  LMEANSL,  LSEALEV,  LOUTPUT,  &
                    LRESTART, LSTOONLY, LGRIDMAP, LLEAPYR,  LMAPEND,  LBITSAFE, &
-                   LSTG_ES,  LLEVEE
+                   LSTG_ES,  LLEVEE,   LSLOPEMOUTH,LWEVAP,LWEVAPFIX, LWEXTRACTRIV
 
 NAMELIST/NDIMTIME/ CDIMINFO, DT, IFRQ_INP
 
@@ -76,17 +77,26 @@ LFLDOUT  = .TRUE.            !! true: floodplain flow (high-water channel flow) 
 LPTHOUT  = .FALSE.           !! true: activate bifurcation scheme
 LDAMOUT  = .FALSE.           !! true: activate dam operation (under development)
 LLEVEE   = .FALSE.           !! true: activate levee scheme  (under development)
-
+LOUTINS  = .FALSE.           !! true: diagnose instantaneous discharge
+!!=== this part is used by ECMWF
 LROSPLIT = .FALSE.           !! true: input if surface (Qs) and sub-surface (Qsb) runoff
+LWEVAP   = .FALSE.           !! true: input evaporation to extract from river 
+LWEVAPFIX= .FALSE.           !! true: water balance closure extracting water from evap when available
 LGDWDLY  = .FALSE.           !! true: Activate ground water reservoir and delay
 LSLPMIX  = .FALSE.           !! true: activate mixed kinematic and local inertia based on slope
+LWEXTRACTRIV=.FALSE.         !! true: also extract water from rivers 
+LSLOPEMOUTH =.FALSE.         !! true: prescribe water level slope == elevation slope on river month
+!!===
 
+!! dinamic sea level
 LMEANSL  = .FALSE.           !! true : boundary condition for mean sea level
 LSEALEV  = .FALSE.           !! true : boundary condition for variable sea level
 
+!! restaer & output
 LRESTART = .FALSE.           !! true: initial condition from restart file
 LSTOONLY = .FALSE.           !! true: storage only restart (mainly for data assimilation)
 LOUTPUT  = .TRUE.            !! true: use standard output (to file)
+LOUTINI  = .FALSE.           !! true: output initial storage (netCDF only)
 
 LGRIDMAP = .TRUE.            !! true: for standard XY gridded 2D map
 LLEAPYR  = .TRUE.            !! true: neglect leap year (Feb29 skipped)
@@ -106,17 +116,24 @@ WRITE(LOGNAM,*) "LKINE   ",  LKINE
 WRITE(LOGNAM,*) "LFLDOUT ",  LFLDOUT
 WRITE(LOGNAM,*) "LPTHOUT ",  LPTHOUT
 WRITE(LOGNAM,*) "LDAMOUT ",  LDAMOUT
-WRITE(LOGNAM,*) "LLEVEE ",  LLEVEE
+WRITE(LOGNAM,*) "LLEVEE  ",  LLEVEE
+WRITE(LOGNAM,*) "LOUTINS ",  LOUTINS
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "LROSPLIT ", LROSPLIT
+WRITE(LOGNAM,*) "LWEVAP   ", LWEVAP
+WRITE(LOGNAM,*) "LWEVAPFIX", LWEVAPFIX
+WRITE(LOGNAM,*) "LWEXTRACTRIV", LWEXTRACTRIV
 WRITE(LOGNAM,*) "LGDWDLY  ", LGDWDLY
 WRITE(LOGNAM,*) "LSLPMIX  ", LSLPMIX
+WRITE(LOGNAM,*) "LSLOPEMOUTH ", LSLOPEMOUTH
+WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "LMEANSL: ", LSEALEV
 WRITE(LOGNAM,*) "LSEALEV: ", LSEALEV
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "LRESTART ", LRESTART
 WRITE(LOGNAM,*) "LSTOONLY ", LSTOONLY
 WRITE(LOGNAM,*) "LOUTPUT  ", LOUTPUT
+WRITE(LOGNAM,*) "LOUTINI  ", LOUTINI
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "LGRIDMAP ", LGRIDMAP
 WRITE(LOGNAM,*) "LLEAPYR  ", LLEAPYR
@@ -153,10 +170,10 @@ NLFP  = 10                   !! 10 floodplain layer
 NXIN  = 360                  !! 1 degree input
 NYIN  = 180
 INPN  = 1                    !! maximum number of input grids corresponding to one CaMa-Flood grid
-WEST  = -180.D0              !! west, east, north, south edges of the domain
-EAST  =  180.D0
-NORTH =  90.D0
-SOUTH = -90.D0
+WEST  = -180._JPRB              !! west, east, north, south edges of the domain
+EAST  =  180._JPRB
+NORTH =  90._JPRB
+SOUTH = -90._JPRB
 
 !* value from CDIMINFO
 IF( CDIMINFO/="NONE" )THEN
@@ -192,12 +209,12 @@ ENDIF
 !============================
 !*** 3. set PARAM: parameters
 ! * defaults
-PMANRIV=0.03D0                              !! manning coefficient river
-PMANFLD=0.10D0                              !! manning coefficient floodplain
-PGRV   =9.8D0                               !! gravity accerelation
-PDSTMTH=10000.D0                            !! downstream distance at river mouth [m]
-PCADP  =0.7D0                                !! CFL coefficient
-PMINSLP=1.D-5                               !! minimum slope (kinematic wave)
+PMANRIV=0.03_JPRB                              !! manning coefficient river
+PMANFLD=0.10_JPRB                              !! manning coefficient floodplain
+PGRV   =9.8_JPRB                               !! gravity accerelation
+PDSTMTH=10000._JPRB                            !! downstream distance at river mouth [m]
+PCADP  =0.7_JPRB                               !! CFL coefficient
+PMINSLP=1.E-5                                  !! minimum slope (kinematic wave)
 
 IMIS=-9999_JPIM
 RMIS=1.E20_JPRM
@@ -240,8 +257,8 @@ WRITE(LOGNAM,*) "--------------------!"
 WRITE(LOGNAM,*) ""
 
 IF (REGIONALL>=2 )then 
-  WRITE(CREG,'(I0)') REGIONTHIS                                   !! Regional Output for MPI run
-  CSUFVEC=TRIM(CSUFVEC)//'-'//TRIM(CREG)                          !! Change suffix of output file for each MPI node (only vector output)
+  WRITE(CREG,'(I0)') REGIONTHIS                !! Regional Output for MPI run
+  CSUFVEC=TRIM(CSUFVEC)//'-'//TRIM(CREG)       !! Change suffix of output file for each MPI node (only vector output)
 ENDIF
 
 
@@ -254,7 +271,8 @@ END SUBROUTINE CMF_CONFIG_NMLIST
 !####################################################################
 SUBROUTINE CMF_CONFIG_CHECK
 USE YOS_CMF_INPUT,      ONLY: LADPSTP,  LFPLAIN,  LKINE,    LPTHOUT,     &
-                            & LROSPLIT, LGDWDLY,  LSEALEV
+                            & LROSPLIT, LGDWDLY,  LSEALEV, &
+                            & LWEVAP,   LWEVAPFIX,LWEXTRACTRIV
 USE YOS_CMF_INPUT,      ONLY: DT, DTIN, DTSL
 IMPLICIT NONE
 !================================================
@@ -307,6 +325,16 @@ IF ( LGDWDLY .AND. .NOT. LROSPLIT ) THEN
   WRITE(LOGNAM,*) "LGDWDLY=true and LROSPLIT=false"
   WRITE(LOGNAM,*) "Ground water reservoir can only be active when runoff splitting is on"
 ENDIF
+
+IF ( LWEVAPFIX .AND. .NOT. LWEVAP ) THEN
+  WRITE(LOGNAM,*) "LWEVAPFIX=true and LWEVAP=false"
+  WRITE(LOGNAM,*) "LWEVAPFIX can only be active if LWEVAP is active"
+ENDIF 
+IF ( LWEXTRACTRIV .AND. .NOT. LWEVAP ) THEN
+  WRITE(LOGNAM,*) "LWEXTRACTRIV=true and LWEVAP=false"
+  WRITE(LOGNAM,*) "LWEXTRACTRIV can only be active if LWEVAP is active"
+ENDIF 
+
 
 WRITE(LOGNAM,*) "CMF::CONFIG_CHECK: end"
 

@@ -11,7 +11,7 @@ MODULE YOS_CMF_DIAG
 !  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
-USE PARKIND1, ONLY: JPIM, JPRB, JPRM
+USE PARKIND1, ONLY: JPIM, JPRB, JPRM, JPRD
 IMPLICIT NONE
 SAVE
 !================================================
@@ -35,6 +35,7 @@ REAL(KIND=JPRB),POINTER         :: D2OUTFLW(:,:)           !! total outflow     
 REAL(KIND=JPRB),POINTER         :: D2STORGE(:,:)           !! total storage       [m3]   (rivsto + fldsto)
 
 REAL(KIND=JPRB),POINTER         :: D2OUTINS(:,:)           !! instantaneous discharge [m3/s] (unrouted runoff)
+REAL(KIND=JPRB),POINTER         :: D2WEVAPEX(:,:)          !! Evaporation water extracted
 
 INTEGER(KIND=JPIM)              :: N2DIAG                  !! number of 2D diagnostics
 
@@ -51,6 +52,7 @@ REAL(KIND=JPRB),POINTER         :: D2PTHOUT_AVG(:,:)       !! flood pathway net 
 REAL(KIND=JPRB),POINTER         :: D2GDWRTN_AVG(:,:)       !! average ground water return flow
 REAL(KIND=JPRB),POINTER         :: D2RUNOFF_AVG(:,:)       !! average input runoff
 REAL(KIND=JPRB),POINTER         :: D2ROFSUB_AVG(:,:)       !! average input sub-surface runoff
+REAL(KIND=JPRB),POINTER         :: D2WEVAPEX_AVG(:,:)      !! average extracted water evaporation
 
 INTEGER(KIND=JPIM)              :: N2DIAG_AVG              !! Number of 2D diagnostics averages
 REAL(KIND=JPRB)                 :: NADD                    !! sum DT to calculate average
@@ -70,27 +72,27 @@ INTEGER(KIND=JPRB)              :: N2DIAG_MAX              !! Number of 2D diagn
 !================================================
 !*** Global total
 ! discharge calculation budget
-REAL(KIND=JPRB)                 :: DGLBSTOPRE              !! global water storage      [m3] (befre flow calculation)
-REAL(KIND=JPRB)                 :: DGLBSTONXT              !! global water storage      [m3] (after flow calculation)
-REAL(KIND=JPRB)                 :: DGLBSTONEW              !! global water storage      [m3] (after runoff input)
-REAL(KIND=JPRB)                 :: DGLBRIVINF              !! global inflow             [m3] (rivinf + fldinf)
-REAL(KIND=JPRB)                 :: DGLBRIVOUT              !! global outflow            [m3] (rivout + fldout)
+REAL(KIND=JPRD)                 :: DGLBSTOPRE              !! global water storage      [m3] (befre flow calculation)
+REAL(KIND=JPRD)                 :: DGLBSTONXT              !! global water storage      [m3] (after flow calculation)
+REAL(KIND=JPRD)                 :: DGLBSTONEW              !! global water storage      [m3] (after runoff input)
+REAL(KIND=JPRD)                 :: DGLBRIVINF              !! global inflow             [m3] (rivinf + fldinf)
+REAL(KIND=JPRD)                 :: DGLBRIVOUT              !! global outflow            [m3] (rivout + fldout)
 
 ! stage calculation budget
-REAL(KIND=JPRB)                 :: DGLBSTOPRE2             !! global water storage      [m3] (befre stage calculation)
-REAL(KIND=JPRB)                 :: DGLBSTONEW2             !! global water storage      [m3] (after stage calculation)
-REAL(KIND=JPRB)                 :: DGLBRIVSTO              !! global river storage      [m3]
-REAL(KIND=JPRB)                 :: DGLBFLDSTO              !! global floodplain storage [m3]
-REAL(KIND=JPRB)                 :: DGLBLEVSTO              !! global protected-side storage [m3] (levee scheme)
-REAL(KIND=JPRB)                 :: DGLBFLDARE              !! global flooded area       [m2]
+REAL(KIND=JPRD)                 :: DGLBSTOPRE2             !! global water storage      [m3] (befre stage calculation)
+REAL(KIND=JPRD)                 :: DGLBSTONEW2             !! global water storage      [m3] (after stage calculation)
+REAL(KIND=JPRD)                 :: DGLBRIVSTO              !! global river storage      [m3]
+REAL(KIND=JPRD)                 :: DGLBFLDSTO              !! global floodplain storage [m3]
+REAL(KIND=JPRD)                 :: DGLBLEVSTO              !! global protected-side storage [m3] (levee scheme)
+REAL(KIND=JPRD)                 :: DGLBFLDARE              !! global flooded area       [m2]
 
 !================================================
 !*** dam variable
-REAL(KIND=JPRB),POINTER         :: d2daminf_avg(:,:)       !! average reservoir inflow [m3/s]  !!!added
+REAL(KIND=JPRB),POINTER         :: D2DAMINF_AVG(:,:)       !! average reservoir inflow [m3/s]  !!!added
 
 !================================================
 !!!*** levee variables
-REAL(KIND=JPRB),POINTER         :: D2LEVDPH(:,:)           !! flood depth in protected side (D2FLDDPH for water depth betwen river & levee)
+REAL(KIND=JPRB),POINTER         :: D2LEVDPH(:,:)           !! flood depth in protected side (water depth betwen river & levee)
 
 
 

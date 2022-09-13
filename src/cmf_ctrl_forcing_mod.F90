@@ -55,21 +55,16 @@ NAMELIST/NFORCE/   LINTERP, LINPEND, LINPCDF, LITRPCDF, CINPMAT, DROFUNIT, &
                     CROFDIR,CROFPRE, CROFSUF, CSUBDIR,  CSUBPRE, CSUBSUF, &
                     CROFCDF,CVNROF,  CVNSUB,  SYEARIN,  SMONIN,SDAYIN,SHOURIN
 
-!* input file dimention (set by diminfo.txt)
-INTEGER(KIND=JPIM)              :: NXIN                    !! NUMBER OF GRIDS IN HORIZONTAL
-INTEGER(KIND=JPIM)              :: NYIN                    !! NUMBER OF GRIDS IN VERTICAL
-INTEGER(KIND=JPIM)              :: INPN                    !! MAX INPUT NUMBER
-
 !* local variable
 INTEGER(KIND=JPIM)              :: NCID        !! netCDF file     ID
 INTEGER(KIND=JPIM)              :: NVARID(2)   !! netCDF variable ID
 
-#ifdef UseCDF
+#ifdef UseCDF_CMF
 TYPE TYPEROF
 CHARACTER(LEN=256)              :: CNAME       !! netCDF file name
-CHARACTER(LEN=256)              :: CVAR(2)     !! netCDF variable name
+CHARACTER(LEN=256)              :: CVAR(3)     !! netCDF variable name
 INTEGER(KIND=JPIM)              :: NCID        !! netCDF file     ID
-INTEGER(KIND=JPIM)              :: NVARID(2)   !! netCDF variable ID
+INTEGER(KIND=JPIM)              :: NVARID(3)   !! netCDF variable ID
 INTEGER(KIND=JPIM)              :: NSTART      !! Start date of netNDF (in KMIN)
 END TYPE TYPEROF
 TYPE(TYPEROF)                   :: ROFCDF      !! Derived type for Runoff input 
@@ -79,6 +74,13 @@ TYPE(TYPEROF)                   :: ROFCDF      !! Derived type for Runoff input
 INTEGER(KIND=JPIM),ALLOCATABLE  :: INPX(:,:)        !! INPUT GRID XIN
 INTEGER(KIND=JPIM),ALLOCATABLE  :: INPY(:,:)        !! INPUT GRID YIN
 REAL(KIND=JPRB),ALLOCATABLE     :: INPA(:,:)        !! INPUT AREA
+
+! input matrix Inverse
+INTEGER(KIND=JPIM),ALLOCATABLE  :: INPXI(:,:,:)        !! OUTPUT GRID XOUT
+INTEGER(KIND=JPIM),ALLOCATABLE  :: INPYI(:,:,:)        !! OUTPUT GRID YOUT
+REAL(KIND=JPRB),ALLOCATABLE     :: INPAI(:,:,:)        !! OUTPUT AREA
+INTEGER(KIND=JPIM)              :: INPNI               !! MAX INPUT NUMBER for inverse interpolation
+
 
 CONTAINS
 !####################################################################
@@ -106,12 +108,12 @@ OPEN(NSETFILE,FILE=CSETFILE,STATUS="OLD")
 WRITE(LOGNAM,*) "CMF::FORCING_NMLIST: namelist OPEN in unit: ", TRIM(CSETFILE), NSETFILE 
 
 !*** 2. default value
-LINPCDF=.FALSE.
-LINPEND=.FALSE.
-LINTERP=.FALSE.
+LINPCDF =.FALSE.
+LINPEND =.FALSE.
+LINTERP =.FALSE.
 LITRPCDF=.FALSE.
-CINPMAT="NONE"
-DROFUNIT=86400*1.D3             !! defaults mm/day -> m3/m2/s
+CINPMAT ="NONE"
+DROFUNIT=86400*1000._JPRB             !! defaults mm/day -> m3/m2/s
 
 CROFDIR="./runoff/"
 CROFPRE="Roff____"           !! defaults runoff file name Roff____YYYYMMDD.one
@@ -122,16 +124,16 @@ CSUBPRE="Rsub____"           !! defaults runoff file name Rsub____YYYYMMDD.one
 CSUBSUF=".one"
 
 CROFCDF="NONE"
-CVNROF="runoff"
-CVNSUB="NONE"
+CVNROF ="runoff"
+CVNSUB ="NONE"
 IF( LROSPLIT )THEN
   CVNROF="Qs"
   CVNSUB="Qsb"
 ENDIF
 
 SYEARIN=0                       !! netCDF input file start date (set to 0 when not used)
-SMONIN=0
-SDAYIN=0
+SMONIN =0
+SDAYIN =0
 SHOURIN=0
 
 !*** 3. read namelist
@@ -192,13 +194,13 @@ WRITE(LOGNAM,*) "!---------------------!"
 
 WRITE(LOGNAM,*) "CMF::FORCING_INIT: Initialize runoff forcing file (only for netCDF)" 
 IF( LINPCDF ) THEN
-#ifdef UseCDF
+#ifdef UseCDF_CMF
   CALL CMF_FORCING_INIT_CDF
 #endif
 ENDIF
 IF( LINTERP ) THEN
   IF( LITRPCDF )THEN
-#ifdef UseCDF
+#ifdef UseCDF_CMF
     CALL CMF_INPMAT_INIT_CDF
 #endif
   ELSE
@@ -214,9 +216,9 @@ CONTAINS
 !+ CMF_INPMAT_INIT_CDF      :  open runoff interporlation matrix (inpmat)
 !+ CMF_INPMAT_INIT_BIN      :  open runoff interporlation matrix (inpmat)
 !==========================================================
-#ifdef UseCDF
+#ifdef UseCDF_CMF
 SUBROUTINE CMF_FORCING_INIT_CDF
-USE YOS_CMF_INPUT,           ONLY: LROSPLIT,  DTIN
+USE YOS_CMF_INPUT,           ONLY: LROSPLIT,  LWEVAP,    DTIN
 USE YOS_CMF_TIME,            ONLY: KMINSTAIN, KMINSTART, KMINEND
 USE CMF_UTILS_MOD,           ONLY: NCERROR,   DATE2MIN
 USE NETCDF
@@ -236,6 +238,11 @@ IF ( .not. LROSPLIT ) THEN
   ROFCDF%CVAR(2)="NONE"
   ROFCDF%NVARID(2)=-1
 ENDIF
+IF ( .NOT. LWEVAP ) THEN
+  ROFCDF%CVAR(3)="NONE"
+  ROFCDF%NVARID(3)=-1
+ENDIF 
+
 ROFCDF%NSTART=KMINSTAIN
 WRITE(LOGNAM,*) "CMF::FORCING_INIT_CDF:", TRIM(ROFCDF%CNAME), TRIM(ROFCDF%CVAR(1))
 
@@ -246,6 +253,9 @@ CALL NCERROR( NF90_INQ_VARID(ROFCDF%NCID,TRIM(ROFCDF%CVAR(1)),ROFCDF%NVARID(1)) 
 IF ( LROSPLIT ) THEN
   CALL NCERROR( NF90_INQ_VARID(ROFCDF%NCID,ROFCDF%CVAR(2),ROFCDF%NVARID(2)) )
 ENDIF 
+IF ( LWEVAP ) THEN
+  CALL NCERROR( NF90_INQ_VARID(ROFCDF%NCID,ROFCDF%CVAR(3),ROFCDF%NVARID(3)) )
+ENDIF
 CALL NCERROR( NF90_INQ_DIMID(ROFCDF%NCID,'time',NTIMEID),'GETTING TIME ID FORCING RUNOFF')
 CALL NCERROR( NF90_INQUIRE_DIMENSION(NCID=ROFCDF%NCID,DIMID=NTIMEID,LEN=NCDFSTP),'GETTING TIME LENGTH')
 
@@ -270,17 +280,24 @@ END SUBROUTINE CMF_FORCING_INIT_CDF
 !+
 !+
 !==========================================================
-#ifdef UseCDF
+#ifdef UseCDF_CMF
 SUBROUTINE CMF_INPMAT_INIT_CDF
-USE YOS_CMF_INPUT,           ONLY: NX, NY, INPN
+USE YOS_CMF_INPUT,           ONLY: NX, NY, INPN, LMAPEND, NXIN,NYIN
 USE YOS_CMF_MAP,             ONLY: NSEQMAX
 USE CMF_UTILS_MOD,           ONLY: INQUIRE_FID, NCERROR, MAP2VECD, MAP2VECI
 USE NETCDF
 IMPLICIT NONE
-INTEGER(KIND=JPIM)              :: INPI
-INTEGER(KIND=JPIM)              :: VARID
 INTEGER(KIND=JPIM),ALLOCATABLE  :: I2TMP(:,:,:)
 REAL(KIND=JPRB),ALLOCATABLE     :: D2TMP(:,:,:)
+
+INTEGER(KIND=JPIM)              :: INPI
+INTEGER(KIND=JPIM)              :: VARID
+INTEGER(KIND=JPIM)              :: ISTATUS,VDIMIDS(1)
+
+! SAVE for OpenMP
+INTEGER(KIND=JPIM),SAVE         :: IX,IY,ILEV
+REAL(KIND=JPRB),SAVE            :: ZTMP
+!$OMP THREADPRIVATE               (IY,ILEV,ZTMP)
 !================================================
 !*** 1. allocate input matrix variables
 WRITE(LOGNAM,*) 'NX, NY, INPN =', NX, NY, INPN
@@ -320,6 +337,51 @@ DO INPI=1, INPN
 END DO
 
 DEALLOCATE( I2TMP )
+
+!================================================
+!*** Check if inverse information is available  (only used in ECMWF/IFS v4.07)
+ISTATUS = NF90_INQ_VARID(NCID, 'levI', VARID)
+IF ( ISTATUS /= 0 ) THEN
+  WRITE(LOGNAM,*) "Could not find levI variable in inpmat.nc: inverse interpolation not available"
+  INPNI=-1  ! Not available 
+ELSE
+  !* Find levels dimension
+  CALL NCERROR( NF90_INQUIRE_VARIABLE(NCID,VARID,dimids=VDIMIDS),'getting levI dimensions ')
+  CALL NCERROR( NF90_INQUIRE_DIMENSION(NCID,VDIMIDS(1),len=INPNI),'getting time len ')
+  WRITE(LOGNAM,*) 'Alocating INP*I: NXIN, NYIN, INPNI =', NXIN, NYIN, INPNI
+  ALLOCATE( INPXI(NXIN,NYIN,INPNI),INPYI(NXIN,NYIN,INPNI),INPAI(NXIN,NYIN,INPNI) )
+  
+  WRITE(LOGNAM,*)'INIT_MAP: inpaI:',TRIM(CINPMAT)
+  CALL NCERROR ( NF90_INQ_VARID(NCID,'inpaI',VARID),'getting id' )
+  CALL NCERROR ( NF90_GET_VAR(NCID,VARID,INPAI,(/1,1,1/),(/NXIN,NYIN,INPNI/)),'reading data' ) 
+
+  WRITE(LOGNAM,*)'INIT_MAP: inpx:',TRIM(CINPMAT)
+  CALL NCERROR ( NF90_INQ_VARID(NCID,'inpxI',VARID),'getting id' )
+  CALL NCERROR ( NF90_GET_VAR(NCID,VARID,INPXI,(/1,1,1/),(/NXIN,NYIN,INPNI/)),'reading data' ) 
+
+  WRITE(LOGNAM,*)'INIT_MAP: inpy:',TRIM(CINPMAT)
+  CALL NCERROR ( NF90_INQ_VARID(NCID,'inpyI',VARID),'getting id' )
+  CALL NCERROR ( NF90_GET_VAR(NCID,VARID,INPYI,(/1,1,1/),(/NXIN,NYIN,INPNI/)),'reading data' )
+  
+  !! We normalize INPAI here as it is used to interpolate flood fraction (Input Area Inversed)
+  WRITE(LOGNAM,*) 'INPAI normalization'
+!$OMP PARALLEL DO
+  DO IX=1,NXIN
+    DO IY=1,NYIN
+      ZTMP=0._JPRB
+      DO ILEV=1,INPNI
+        ZTMP=ZTMP+INPAI(IX,IY,ILEV)
+      ENDDO
+      IF (ZTMP > 0._JPRB) THEN
+        DO ILEV=1,INPNI
+          INPAI(IX,IY,ILEV) = INPAI(IX,IY,ILEV) / ZTMP
+        ENDDO
+      ENDIF
+    ENDDO
+  ENDDO
+!$OMP END PARALLEL DO
+ENDIF 
+
 
 END SUBROUTINE CMF_INPMAT_INIT_CDF
 #endif
@@ -383,7 +445,7 @@ IMPLICIT NONE
 REAL(KIND=JPRB),INTENT(INOUT)   :: PBUFF(:,:,:)
 !================================================
 IF( LINPCDF ) THEN
-#ifdef UseCDF
+#ifdef UseCDF_CMF
   CALL CMF_FORCING_GET_CDF(PBUFF(:,:,:))
 #endif
 ELSE
@@ -429,7 +491,7 @@ IF( LINPEND ) CALL CONV_END(R2TMP,NXIN,NYIN)
 PBUFF(:,:,1)=R2TMP(:,:)
 
 !*** for sub-surface runoff withe LROSPLIT
-PBUFF(:,:,2)=0.D0  !! Plain Binary subsurface runoff to be added later
+PBUFF(:,:,2)=0._JPRB  !! Plain Binary subsurface runoff to be added later
 IF ( LROSPLIT ) THEN
   CIFNAME=TRIM(CSUBDIR)//'/'//TRIM(CSUBPRE)//TRIM(CDATE)//TRIM(CSUBSUF)
   WRITE(LOGNAM,*) "CMF::FORCING_GET_BIN: (sub-surface)",TRIM(CIFNAME)
@@ -450,7 +512,7 @@ END SUBROUTINE CMF_FORCING_GET_BIN
 !+
 !+
 ! ================================================
-#ifdef UseCDF
+#ifdef UseCDF_CMF
 SUBROUTINE CMF_FORCING_GET_CDF(PBUFF)
 ! Read forcing data from netcdf
 ! -- call from CMF_FORCING_GET
@@ -489,8 +551,8 @@ END SUBROUTINE CMF_FORCING_GET
 SUBROUTINE CMF_FORCING_PUT(PBUFF)
 ! interporlate with inpmat, then send runoff data to CaMa-Flood 
 ! -- called from "Main Program / Coupler" or CMF_DRV_ADVANCE
-USE YOS_CMF_INPUT,           ONLY: LROSPLIT
-USE YOS_CMF_PROG,            ONLY: D2RUNOFF,D2ROFSUB
+USE YOS_CMF_INPUT,           ONLY: LROSPLIT,LWEVAP
+USE YOS_CMF_PROG,            ONLY: D2RUNOFF,D2ROFSUB,D2WEVAP
 IMPLICIT NONE 
 ! Declaration of arguments 
 REAL(KIND=JPRB), INTENT(IN)     :: PBUFF(:,:,:)
@@ -512,6 +574,16 @@ ELSE !  nearest point
   ENDIF
 ENDIF 
 
+IF (LWEVAP) THEN
+  IF ( SIZE(PBUFF,3) == 3 ) THEN
+    CALL ROFF_INTERP(PBUFF(:,:,3),D2WEVAP)
+  ELSE
+    WRITE(LOGNAM,*)  "LWEVAP is true but evaporation not provide in input array for interpolation"
+    WRITE(LOGNAM,*)  "CMF_FORCING_PUT(PBUFF), PBUFF should have 3 fields for interpolation "
+    STOP 9
+  ENDIF
+ENDIF
+
 CONTAINS
 !==========================================================
 !+ ROFF_INTERP : runoff interpolation with mass conservation using "input matrix table (inpmat)"
@@ -524,14 +596,14 @@ USE YOS_CMF_INPUT,           ONLY: NXIN, NYIN, INPN, RMIS
 IMPLICIT NONE
 REAL(KIND=JPRB),INTENT(IN)      :: PBUFFIN(:,:)     !! default [mm/dt] 
 REAL(KIND=JPRB),INTENT(OUT)     :: PBUFFOUT(:,:)    !! m3/s
-!$ SAVE
-INTEGER(KIND=JPIM)  ::  ISEQ
-INTEGER(KIND=JPIM)  ::  IXIN, IYIN, INPI  !! FOR OUTPUT
+! SAVE for OMP
+INTEGER(KIND=JPIM),SAVE  ::  ISEQ
+INTEGER(KIND=JPIM),SAVE  ::  IXIN, IYIN, INPI  !! FOR OUTPUT
 !$OMP THREADPRIVATE    (IXIN, IYIN, INPI)
 !============================
 !$OMP PARALLEL DO
 DO ISEQ=1, NSEQALL
-  PBUFFOUT(ISEQ,1)=0.D0
+  PBUFFOUT(ISEQ,1)=0._JPRB
   DO INPI=1, INPN
     IXIN=INPX(ISEQ,INPI)
     IYIN=INPY(ISEQ,INPI)
@@ -546,7 +618,7 @@ DO ISEQ=1, NSEQALL
       ENDIF
     ENDIF
   END DO
-  PBUFFOUT(ISEQ,1)=MAX(PBUFFOUT(ISEQ,1), 0.D0)
+  PBUFFOUT(ISEQ,1)=MAX(PBUFFOUT(ISEQ,1), 0._JPRB)
 END DO
 !$OMP END PARALLEL DO
 END SUBROUTINE ROFF_INTERP
@@ -566,8 +638,7 @@ REAL(KIND=JPRB),INTENT(OUT)     :: PBUFFOUT(:,:)    !! m3/s
 
 REAL(KIND=JPRB),ALLOCATABLE     :: D2TEMP(:,:)
 
-!$ SAVE
-INTEGER(KIND=JPIM)  ::  ISEQ
+INTEGER(KIND=JPIM),SAVE         ::  ISEQ
 ! ================================================
 ALLOCATE(D2TEMP(NSEQMAX,1))
 CALL MAP2VECD(PBUFFIN,D2TEMP)
@@ -575,9 +646,9 @@ CALL MAP2VECD(PBUFFIN,D2TEMP)
 DO ISEQ=1, NSEQALL
   IF( D2TEMP(ISEQ,1).NE.RMIS )THEN
     PBUFFOUT(ISEQ,1) = D2TEMP(ISEQ,1) * D2GRAREA(ISEQ,1) / DROFUNIT
-    PBUFFOUT(ISEQ,1) = MAX(PBUFFOUT(ISEQ,1), 0.D0)
+    PBUFFOUT(ISEQ,1) = MAX(PBUFFOUT(ISEQ,1), 0._JPRB)
   ELSE
-    PBUFFOUT(ISEQ,1)=0.D0
+    PBUFFOUT(ISEQ,1)=0._JPRB
   ENDIF
 END DO
 !$OMP END PARALLEL DO
@@ -594,7 +665,7 @@ END SUBROUTINE CMF_FORCING_PUT
 
 !####################################################################
 SUBROUTINE CMF_FORCING_END
-#ifdef UseCDF
+#ifdef UseCDF_CMF
 USE CMF_UTILS_MOD,         ONLY: NCERROR
 USE NETCDF
 #endif
@@ -606,7 +677,7 @@ WRITE(LOGNAM,*) "CMF::FORCING_END: Finalize forcing module"
 
 !* Close Input netcdf 
 IF( LINPCDF ) THEN
-#ifdef UseCDF
+#ifdef UseCDF_CMF
   CALL NCERROR( NF90_CLOSE(ROFCDF%NCID))
   WRITE(LOGNAM,*) "input netCDF runoff closed:",ROFCDF%NCID
 #endif

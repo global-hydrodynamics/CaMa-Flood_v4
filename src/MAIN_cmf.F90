@@ -20,7 +20,7 @@ USE CMF_DRV_ADVANCE_MOD,     ONLY: CMF_DRV_ADVANCE
 USE CMF_CTRL_FORCING_MOD,    ONLY: CMF_FORCING_GET, CMF_FORCING_PUT
 !** parallelization options**
 !$ USE OMP_LIB
-#ifdef UseMPI
+#ifdef UseMPI_CMF
 USE CMF_CTRL_MPI_MOD,        ONLY: CMF_MPI_INIT, CMF_MPI_END
 #endif
 !****************************
@@ -33,7 +33,7 @@ REAL(KIND=JPRB),ALLOCATABLE     :: ZBUFF(:,:,:)       ! Buffer to store forcing 
 
 !================================================
 !*** 0. MPI Initialization
-#ifdef UseMPI
+#ifdef UseMPI_CMF
 CALL CMF_MPI_INIT
 #endif
 
@@ -69,7 +69,7 @@ DEALLOCATE(ZBUFF)
 CALL CMF_DRV_END
 
 !*** 3b. MPI specific finalization
-#ifdef UseMPI
+#ifdef UseMPI_CMF
 CALL CMF_MPI_END
 #endif
 

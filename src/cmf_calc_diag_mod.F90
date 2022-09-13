@@ -18,9 +18,8 @@ MODULE CMF_CALC_DIAG_MOD
 !  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
-USE PARKIND1,                ONLY: JPIM, JPRM, JPRB
-USE YOS_CMF_INPUT,           ONLY: LOGNAM
-IMPLICIT NONE
+USE PARKIND1,           ONLY: JPIM, JPRM, JPRB
+USE YOS_CMF_INPUT,      ONLY: LOGNAM
 CONTAINS 
 !####################################################################
 ! -- CMF_DIAG_AVE_MAX   : Add / Max of diagnostic variables at time step
@@ -29,19 +28,17 @@ CONTAINS
 !
 !####################################################################
 SUBROUTINE CMF_DIAG_AVEMAX
-USE YOS_CMF_INPUT,      ONLY: DT, LPTHOUT,  LDAMOUT
+USE YOS_CMF_INPUT,      ONLY: DT, LPTHOUT,  LDAMOUT,  LWEVAP
 USE YOS_CMF_MAP,        ONLY: NSEQALL,      NPTHOUT
-USE YOS_CMF_PROG,       ONLY: D2RIVOUT,     D2FLDOUT,     D1PTHFLW,     D2GDWRTN,     D2RUNOFF,     D2ROFSUB, &
-                            & D2DAMINF
-USE YOS_CMF_DIAG,       ONLY: D2OUTFLW,     D2RIVVEL,     D2PTHOUT,     D2PTHINF,     D2RIVDPH,     D2STORGE, &
-                            & D2DAMINF_AVG
-USE YOS_CMF_DIAG,       ONLY: D2RIVOUT_AVG, D2FLDOUT_AVG, D1PTHFLW_AVG, D2GDWRTN_AVG, D2RUNOFF_AVG, D2ROFSUB_AVG
-USE YOS_CMF_DIAG,       ONLY: D2OUTFLW_AVG, D2RIVVEL_AVG, D2PTHOUT_AVG
-USE YOS_CMF_DIAG,       ONLY: NADD
-USE YOS_CMF_DIAG,       ONLY: D2OUTFLW_MAX, D2RIVDPH_MAX, D2STORGE_MAX
+USE YOS_CMF_PROG,       ONLY: D2RIVOUT,     D2FLDOUT,     D1PTHFLW,     D2GDWRTN, &
+                            & D2RUNOFF,     D2ROFSUB,     D2DAMINF
+USE YOS_CMF_DIAG,       ONLY: D2OUTFLW,     D2RIVVEL,     D2PTHOUT,     D2PTHINF, &
+                            & D2RIVDPH,     D2STORGE,     D2WEVAPEX,    NADD, &
+                            & D2RIVOUT_AVG, D2FLDOUT_AVG, D1PTHFLW_AVG, D2GDWRTN_AVG, D2RUNOFF_AVG, D2ROFSUB_AVG, &
+                            & D2OUTFLW_AVG, D2RIVVEL_AVG, D2PTHOUT_AVG, D2DAMINF_AVG, D2WEVAPEX_AVG, &
+                            & D2OUTFLW_MAX, D2RIVDPH_MAX, D2STORGE_MAX
 IMPLICIT NONE
-INTEGER(KIND=JPIM)            ::  ISEQ, IPTH
-!$ SAVE                           ISEQ, IPTH
+INTEGER(KIND=JPIM),SAVE  ::  ISEQ, IPTH
 !====================
 NADD=NADD+DT
 !$OMP PARALLEL DO
@@ -60,6 +57,10 @@ DO ISEQ=1, NSEQALL
   D2OUTFLW_MAX(ISEQ,1)=max( D2OUTFLW_MAX(ISEQ,1), abs(D2OUTFLW(ISEQ,1)) )
   D2RIVDPH_MAX(ISEQ,1)=max( D2RIVDPH_MAX(ISEQ,1),     D2RIVDPH(ISEQ,1)  )
   D2STORGE_MAX(ISEQ,1)=max( D2STORGE_MAX(ISEQ,1),     D2STORGE(ISEQ,1)  )
+
+  IF( LWEVAP )THEN
+    D2WEVAPEX_AVG(ISEQ,1)= D2WEVAPEX_AVG(ISEQ,1) +D2WEVAPEX(ISEQ,1)*DT
+  ENDIF
 END DO
 !$OMP END PARALLEL DO
 
@@ -80,6 +81,7 @@ IF( LPTHOUT )THEN
   !$OMP END PARALLEL DO
 ENDIF
 
+
 END SUBROUTINE CMF_DIAG_AVEMAX
 !####################################################################
 
@@ -91,7 +93,6 @@ END SUBROUTINE CMF_DIAG_AVEMAX
 SUBROUTINE CMF_DIAG_AVERAGE
 USE YOS_CMF_TIME,       ONLY: JYYYYMMDD, JHHMM
 USE YOS_CMF_DIAG,       ONLY: D2DIAG_AVG, D1PTHFLW_AVG, NADD
-IMPLICIT NONE
 !================================================
 WRITE(LOGNAM,*) "CMF::DIAG_AVERAGE: time-average", NADD, JYYYYMMDD, JHHMM
 D2DIAG_AVG(:,:,:) = D2DIAG_AVG(:,:,:) /DBLE(NADD)
@@ -107,7 +108,6 @@ END SUBROUTINE CMF_DIAG_AVERAGE
 SUBROUTINE CMF_DIAG_RESET
 USE YOS_CMF_TIME,       ONLY: JYYYYMMDD, JHHMM
 USE YOS_CMF_DIAG,       ONLY: D2DIAG_AVG, D1PTHFLW_AVG, D2DIAG_MAX, NADD
-IMPLICIT NONE
 !================================================
 WRITE(LOGNAM,*) "CMF::DIAG_AVERAGE: reset", JYYYYMMDD, JHHMM
 NADD=0
