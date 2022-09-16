@@ -19,6 +19,8 @@ SAVE
 REAL(KIND=JPRB),ALLOCATABLE,TARGET :: D2PROG(:,:,:)      !! Array to store 2D variables 
 INTEGER(KIND=JPIM)              :: ND2PROG
 
+REAL(KIND=JPRB),ALLOCATABLE,TARGET :: D2DAMMY(:,:)       !! Dammy Array for unused variables 
+
 !================================================
 !*** input runoff (interporlated)
 REAL(KIND=JPRB),POINTER         :: D2RUNOFF(:,:)         !! input runoff             [m3/s]

@@ -79,7 +79,7 @@ DO IPTH=1, NPTHOUT
 END DO
 !$OMP END PARALLEL DO
 
-#ifndef NoAtom
+#ifndef NoAtom_CMF
 !$OMP PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
 #endif
 DO IPTH=1, NPTHOUT  
@@ -99,7 +99,7 @@ DO IPTH=1, NPTHOUT
     ENDIF
   END DO
 END DO
-#ifndef NoAtom
+#ifndef NoAtom_CMF
 !$OMP END PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
 #endif
 
@@ -116,7 +116,7 @@ DO ISEQ=1, NSEQALL
 END DO
 !$OMP END PARALLEL DO
 
-#ifndef NoAtom
+#ifndef NoAtom_CMF
 !$OMP PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
 #endif
 DO IPTH=1, NPTHOUT
@@ -139,7 +139,7 @@ DO IPTH=1, NPTHOUT
     D1PTHFLW_PRE(IPTH,ILEV)=D1PTHFLW(IPTH,ILEV)
   END DO
 END DO
-#ifndef NoAtom
+#ifndef NoAtom_CMF
 !$OMP END PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
 #endif
 

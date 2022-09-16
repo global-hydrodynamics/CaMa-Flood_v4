@@ -108,7 +108,7 @@ DO ISEQ=1, NSEQRIV                                                    !! for nor
 END DO
 !$OMP END PARALLEL DO
 
-#ifndef NoAtom
+#ifndef NoAtom_CMF
 !$OMP PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
 #endif
 DO ISEQ=1, NSEQRIV                                                    !! for normal cells
@@ -124,7 +124,7 @@ DO ISEQ=1, NSEQRIV                                                    !! for nor
 !$OMP ATOMIC
   D2STOOUT(JSEQ,1) = D2STOOUT(JSEQ,1) + DIDW 
 END DO
-#ifndef NoAtom
+#ifndef NoAtom_CMF
 !$OMP END PARALLEL DO
 #endif
 
@@ -199,7 +199,7 @@ DO ISEQ=1, NSEQALL
 END DO
 !$OMP END PARALLEL DO
 
-#ifndef NoAtom
+#ifndef NoAtom_CMF
 !$OMP PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
 #endif
 DO ISEQ=1, NSEQRIV ! for normal pixels
@@ -216,7 +216,7 @@ DO ISEQ=1, NSEQRIV ! for normal pixels
 !$OMP ATOMIC
   D2FLDINF(JSEQ,1) = D2FLDINF(JSEQ,1) + D2FLDOUT(ISEQ,1)
 END DO
-#ifndef NoAtom
+#ifndef NoAtom_CMF
 !$OMP END PARALLEL DO
 #endif
 

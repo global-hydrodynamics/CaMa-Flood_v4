@@ -113,7 +113,7 @@ CHARACTER(LEN=256)              :: CSUFVEC            ! .vec suffix for binary (
 CHARACTER(LEN=256)              :: CSUFPTH            ! .pth suffix for binary (1D bifurcation channel)
 CHARACTER(LEN=256)              :: CSUFCDF            ! .nc  suffix for netCDF
 !================================================
-#ifdef IFS
+#ifdef IFS_CMF
 ! Fluxes buffers for IFS coupling
 REAL(KIND=JPRB), ALLOCATABLE :: ZBUFFO(:,:,:)
 REAL(KIND=JPRB), ALLOCATABLE :: ZBUFFI(:,:,:)

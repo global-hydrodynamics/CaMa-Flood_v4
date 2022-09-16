@@ -20,6 +20,7 @@ MODULE CMF_CALC_DIAG_MOD
 !==========================================================
 USE PARKIND1,           ONLY: JPIM, JPRM, JPRB
 USE YOS_CMF_INPUT,      ONLY: LOGNAM
+IMPLICIT NONE
 CONTAINS 
 !####################################################################
 ! -- CMF_DIAG_AVE_MAX   : Add / Max of diagnostic variables at time step
@@ -93,6 +94,7 @@ END SUBROUTINE CMF_DIAG_AVEMAX
 SUBROUTINE CMF_DIAG_AVERAGE
 USE YOS_CMF_TIME,       ONLY: JYYYYMMDD, JHHMM
 USE YOS_CMF_DIAG,       ONLY: D2DIAG_AVG, D1PTHFLW_AVG, NADD
+IMPLICIT NONE
 !================================================
 WRITE(LOGNAM,*) "CMF::DIAG_AVERAGE: time-average", NADD, JYYYYMMDD, JHHMM
 D2DIAG_AVG(:,:,:) = D2DIAG_AVG(:,:,:) /DBLE(NADD)
@@ -108,6 +110,7 @@ END SUBROUTINE CMF_DIAG_AVERAGE
 SUBROUTINE CMF_DIAG_RESET
 USE YOS_CMF_TIME,       ONLY: JYYYYMMDD, JHHMM
 USE YOS_CMF_DIAG,       ONLY: D2DIAG_AVG, D1PTHFLW_AVG, D2DIAG_MAX, NADD
+IMPLICIT NONE
 !================================================
 WRITE(LOGNAM,*) "CMF::DIAG_AVERAGE: reset", JYYYYMMDD, JHHMM
 NADD=0

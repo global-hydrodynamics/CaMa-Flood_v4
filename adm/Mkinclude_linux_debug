@@ -13,7 +13,7 @@ CP = /bin/cp
 
 #DMPI=-DUseMPI_CMF
 DCDF=-DUseCDF_CMF
-#DATM=-DNoAtom
+#DATM=-DNoAtom_CMF
 CFLAGS=$(DMPI) $(DCDF) $(DATM) 
 
 #======================================

@@ -12,7 +12,7 @@ CP = /bin/cp
 DCDF=-DUseCDF_CMF
 DMPI=-DUseMPI_CMF
 DSINGLE=-DPARKIND1_SINGLE
-#DATM=-DNoAtom
+#DATM=-DNoAtom_CMF
 CFLAGS=$(DMPI) $(DCDF) $(DATM) $(DSINGLE)
 
 #======================================

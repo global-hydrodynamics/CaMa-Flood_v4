@@ -303,8 +303,8 @@ DO JF=1,NVARSOUT
 
     CASE DEFAULT
     WRITE(LOGNAM,*) trim(CVNAMES(JF)), ' Not defined in CMF_CREATE_OUTCDF_MOD'
-#ifdef IFS
-    ABORT
+#ifdef IFS_CMF
+    CALL ABORT
 #endif
     stop
   END SELECT
@@ -536,8 +536,8 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
 
       CASE DEFAULT
         WRITE(LOGNAM,*) VAROUT(JF)%CVNAME, ' Not defined in CMF_OUTPUT_MOD'
-#ifdef IFS
-        ABORT
+#ifdef IFS_CMF
+        CALL ABORT
 #endif
     END SELECT   !! variable name select
 

@@ -544,7 +544,58 @@ END SUBROUTINE CMF_FORCING_GET
 !####################################################################
 
 
+!####################################################################
+SUBROUTINE CMF_FORCING_COM(PBUFF)
+! interporlate with inpmatI, then send calling Model 
+! -- called from "Main Program / Coupler" or CMF_DRV_ADVANCE
+USE YOS_CMF_DIAG,            ONLY: D2FLDFRC
+IMPLICIT NONE 
+! Declaration of arguments 
+REAL(KIND=JPRB), INTENT(OUT)     :: PBUFF(:,:,:)
+!============================
+CALL INTERPI(D2FLDFRC,PBUFF(:,:,1))        !!  Inverse interpolation
 
+CONTAINS
+!==========================================================
+!+ INTERTI
+!==========================================================
+SUBROUTINE INTERPI(PBUFFIN,PBUFFOUT)
+! interporlate field using "input matrix inverse: from catchment to other grid"
+USE YOS_CMF_MAP,             ONLY: I2VECTOR,NSEQALL
+USE YOS_CMF_INPUT,           ONLY: NXIN, NYIN,  RMIS, NX,NY
+IMPLICIT NONE
+REAL(KIND=JPRB),INTENT(IN)      :: PBUFFIN(:,:)     !! input on catchment
+REAL(KIND=JPRB),INTENT(OUT)     :: PBUFFOUT(:,:)    !! output on target grid 
+
+INTEGER(KIND=JPIM)  :: IX,IY,INP,IXIN,IYIN,ISEQ
+
+IF ( INPNI == -1 ) THEN
+  WRITE(LOGNAM,*) "INPNI==-1, no inverse interpolation possible"
+  STOP 9
+ENDIF
+PBUFFOUT(:,:)=1._JPRB 
+
+DO IX=1,NXIN
+  DO IY=1,NYIN
+    PBUFFOUT(IX,IY)=0._JPRB
+    DO INP=1,INPNI
+      IXIN=INPXI(IX,IY,INP)
+      IYIN=INPYI(IX,IY,INP)
+      IF ( IXIN > 0 .AND. IYIN > 0 .AND. IXIN <= NX .AND. IYIN <= NY ) THEN
+        ISEQ =  I2VECTOR(IXIN,IYIN)
+        PBUFFOUT(IX,IY) = PBUFFOUT(IX,IY) + PBUFFIN(ISEQ,1) * INPAI(IX,IY,INP)
+      ENDIF
+    ENDDO
+  ENDDO
+ENDDO
+
+
+
+END SUBROUTINE INTERPI
+!==========================================================
+
+END SUBROUTINE CMF_FORCING_COM
+!####################################################################
 
 
 !####################################################################
