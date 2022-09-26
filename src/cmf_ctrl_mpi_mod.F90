@@ -127,6 +127,14 @@ REAL(KIND=JPRB)                 :: D2TMP(NX,NY)
 ! gather to master node
   D2TMP(:,:)=DMIS
   CALL MPI_Reduce(D2MAP,D2TMP,NX*NY,MPI_REAL8,MPI_MIN,0,MPI_COMM_CAMA,ierr)
+
+#ifdef ADDRESS64
+  CALL MPI_Reduce(D2MAP,D2TMP,NX*NY,MPI_REAL8,MPI_MIN,0,MPI_COMM_CAMA,ierr)
+#else
+  CALL MPI_Reduce(D2MAP,D2TMP,NX*NY,MPI_REAL4,MPI_MIN,0,MPI_COMM_CAMA,ierr)
+#endif
+
+
   D2MAP(:,:)=D2TMP(:,:)
 END SUBROUTINE CMF_MPI_REDUCE_D2MAP
 !####################################################################
@@ -144,7 +152,12 @@ REAL(KIND=JPRB)                 :: D1PTMP(NPTHOUT,NPTHLEV)
 !================================================
 ! gather to master node
   D1PTMP(:,:)=DMIS
+#ifdef ADDRESS64
   CALL MPI_Reduce(D1PTH,D1PTMP,NPTHOUT*NPTHLEV,MPI_REAL8,MPI_MIN,0,MPI_COMM_CAMA,ierr)
+#else
+  CALL MPI_Reduce(D1PTH,D1PTMP,NPTHOUT*NPTHLEV,MPI_REAL4,MPI_MIN,0,MPI_COMM_CAMA,ierr)
+#endif
+
   D1PTH(:,:)=D1PTMP(:,:)
 END SUBROUTINE CMF_MPI_REDUCE_D1PTH
 !####################################################################

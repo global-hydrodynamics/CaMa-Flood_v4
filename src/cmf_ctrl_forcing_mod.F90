@@ -546,14 +546,25 @@ END SUBROUTINE CMF_FORCING_GET
 
 !####################################################################
 SUBROUTINE CMF_FORCING_COM(PBUFF)
-! interporlate with inpmatI, then send calling Model 
+! interporlate with inpmatI (CaMa grid -> input runoff grid), then send calling Model 
 ! -- called from "Main Program / Coupler" or CMF_DRV_ADVANCE
+USE CMF_UTILS_MOD,           ONLY: VEC2MAPD
+#ifdef UseMPI_CMF
+USE CMF_CTRL_MPI_MOD,        ONLY: CMF_MPI_REDUCE_D2MAP
+#endif
 USE YOS_CMF_DIAG,            ONLY: D2FLDFRC
+USE YOS_CMF_INPUT,           ONLY: NX,NY
 IMPLICIT NONE 
 ! Declaration of arguments 
+REAL(KIND=JPRB)                  :: D2MAPTMP(NX,NY)
 REAL(KIND=JPRB), INTENT(OUT)     :: PBUFF(:,:,:)
 !============================
-CALL INTERPI(D2FLDFRC,PBUFF(:,:,1))        !!  Inverse interpolation
+CALL VEC2MAPD(D2FLDFRC,D2MAPTMP)             !! MPI node data is gathered by VEC2MAP
+#ifdef UseMPI_CMF
+  CALL CMF_MPI_REDUCE_D2MAP(D2MAPTMP)
+#endif
+
+CALL INTERPI(D2MAPTMP,PBUFF(:,:,1))        !!  Inverse interpolation (CaMa grid -> input runoff grid)
 
 CONTAINS
 !==========================================================
@@ -561,13 +572,12 @@ CONTAINS
 !==========================================================
 SUBROUTINE INTERPI(PBUFFIN,PBUFFOUT)
 ! interporlate field using "input matrix inverse: from catchment to other grid"
-USE YOS_CMF_MAP,             ONLY: I2VECTOR,NSEQALL
 USE YOS_CMF_INPUT,           ONLY: NXIN, NYIN,  RMIS, NX,NY
 IMPLICIT NONE
-REAL(KIND=JPRB),INTENT(IN)      :: PBUFFIN(:,:)     !! input on catchment
-REAL(KIND=JPRB),INTENT(OUT)     :: PBUFFOUT(:,:)    !! output on target grid 
+REAL(KIND=JPRB),INTENT(IN)      :: PBUFFIN(:,:)     !! CaMa-Flood variable on catchment (NX*NY)
+REAL(KIND=JPRB),INTENT(OUT)     :: PBUFFOUT(:,:)    !! output on target grid = input runoff grid (NXIN * NYIN)
 
-INTEGER(KIND=JPIM)  :: IX,IY,INP,IXIN,IYIN,ISEQ
+INTEGER(KIND=JPIM)  :: IX,IY,INP,IXIN,IYIN
 
 IF ( INPNI == -1 ) THEN
   WRITE(LOGNAM,*) "INPNI==-1, no inverse interpolation possible"
@@ -575,15 +585,14 @@ IF ( INPNI == -1 ) THEN
 ENDIF
 PBUFFOUT(:,:)=1._JPRB 
 
-DO IX=1,NXIN
-  DO IY=1,NYIN
-    PBUFFOUT(IX,IY)=0._JPRB
+DO IXIN=1,NXIN
+  DO IYIN=1,NYIN
+    PBUFFOUT(IXIN,IYIN)=0._JPRB
     DO INP=1,INPNI
-      IXIN=INPXI(IX,IY,INP)
-      IYIN=INPYI(IX,IY,INP)
-      IF ( IXIN > 0 .AND. IYIN > 0 .AND. IXIN <= NX .AND. IYIN <= NY ) THEN
-        ISEQ =  I2VECTOR(IXIN,IYIN)
-        PBUFFOUT(IX,IY) = PBUFFOUT(IX,IY) + PBUFFIN(ISEQ,1) * INPAI(IX,IY,INP)
+      IX=INPXI(IXIN,IYIN,INP)
+      IY=INPYI(IXIN,IYIN,INP)
+      IF ( IX > 0 .AND. IY > 0 .AND. IX <= NX .AND. IY <= NY ) THEN
+        PBUFFOUT(IXIN,IYIN) = PBUFFOUT(IXIN,IYIN) + PBUFFIN(IX,IY) * INPAI(IXIN,IYIN,INP)
       ENDIF
     ENDDO
   ENDDO
