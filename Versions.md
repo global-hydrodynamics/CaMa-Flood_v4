@@ -43,3 +43,13 @@ Latest GitHub branch (master)  is v4.05
 ## Update in v4.06 (2021.4.8)
 ### Changes related to some developpers 
 - Computationally efficient levee scheme
+
+## Update in v4.06 (2021.4.8)
+### Changes related to some developpers 
+- Computationally efficient levee scheme
+- This version for internal development, so not released.
+
+## Update in v4.07 (2021.10.20)
+### Changes related to some developpers 
+- Single precision mode activated. Many physics codes are modified for Single Precision mode efficiency.
+- (Some codes for EFMWF/IFS system was updated)
