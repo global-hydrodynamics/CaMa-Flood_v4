@@ -127,7 +127,7 @@ ELSE
   IF( LMEANSL )THEN
     WRITE(LOGNAM,*) "CMEANSL:   ", TRIM(CMEANSL)
   ENDIF
-#ifdef UseMPI
+#ifdef UseMPI_CMF
     WRITE(LOGNAM,*) "CMPIREG:   ", TRIM(CMPIREG)
 #endif
 ENDIF
@@ -169,7 +169,7 @@ ALLOCATE( D1LAT(NY) )
 !*** 2a. read river network map
 WRITE(LOGNAM,*) 'CMF::RIVMAP_INIT: read nextXY & set lat lon'
 IF( LMAPCDF )THEN
-#ifdef UseCDF
+#ifdef UseCDF_CMF
   CALL READ_MAP_CDF
 #endif
 ELSE
@@ -178,7 +178,6 @@ ENDIF
 
 !*** 2b. calculate river sequence & regions
 WRITE(LOGNAM,*) 'CMF::RIVMAP_INIT: calc region'
-!!CALL CALC_RIVSEQ  !! not used. deleted in v4.03
 CALL CALC_REGION
 
 !============================
@@ -227,7 +226,7 @@ USE YOS_CMF_INPUT,      ONLY: WEST,EAST,NORTH,SOUTH
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID, CONV_ENDI
 IMPLICIT NONE
 !* local variables
-INTEGER(KIND=JPIM)         :: IX,IY
+INTEGER(KIND=JPIM),SAVE    :: IX,IY
 !==========================================================
 !*** read river map
 WRITE(LOGNAM,*)'RIVMAP_INIT: nextxy binary: ',TRIM(CNEXTXY)
@@ -262,7 +261,7 @@ END SUBROUTINE READ_MAP_BIN
 !+
 !+
 !==========================================================
-#ifdef UseCDF
+#ifdef UseCDF_CMF
 SUBROUTINE READ_MAP_CDF
 USE CMF_UTILS_MOD  ,ONLY: NCERROR
 USE NETCDF
@@ -302,9 +301,9 @@ USE YOS_CMF_INPUT,           ONLY: IMIS
 IMPLICIT NONE
 !* local variables
 INTEGER(KIND=JPIM),ALLOCATABLE  :: REGIONGRID(:)
-!$ SAVE
-INTEGER(KIND=JPIM)              :: IX,IY
-INTEGER(KIND=JPIM)              :: IREGION
+!
+INTEGER(KIND=JPIM),SAVE              :: IX,IY
+INTEGER(KIND=JPIM),SAVE         :: IREGION
 !$OMP THREADPRIVATE               (IX)
 !================================================
 WRITE(LOGNAM,*) 'RIVMAP_INIT: region code'
@@ -323,7 +322,7 @@ END DO
 !$OMP END PARALLEL DO
 
 !! Use MPI: read MPI region map, allocate regions to MPI nodes
-#ifdef UseMPI
+#ifdef UseMPI_CMF
   WRITE(LOGNAM,*)'RIVMAP_INIT: read MPI region: ',TRIM(CNEXTXY)
   TMPNAM=INQUIRE_FID()
   OPEN(TMPNAM,FILE=CMPIREG,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NX*NY)
@@ -370,7 +369,7 @@ END SUBROUTINE CALC_REGION
 !+
 !==========================================================
 SUBROUTINE CALC_1D_SEQ
-! results of this subroutine highly depents on calculation order, so OMP is not used.
+! OpenMP is not used, because results of this subroutine highly depents on calculation order
 USE YOS_CMF_INPUT,           ONLY: IMIS
 IMPLICIT NONE
 !* local variables
@@ -518,14 +517,14 @@ DO IPTH=1, NPTHOUT
       IF( PWTH>0 )then
         PTH_ELV(IPTH,ILEV)=PELV - PDPH
       ELSE
-        PTH_ELV(IPTH,ILEV)=1.D20
+        PTH_ELV(IPTH,ILEV)=1.E20
       ENDIF
     ELSE
       PWTH=PTH_WTH(IPTH,ILEV)
       IF( PWTH>0 )then
         PTH_ELV(IPTH,ILEV)=PELV + ILEV - 2.0    !! ILEV=2: bank top level 
       ELSE
-        PTH_ELV(IPTH,ILEV)=1.D20
+        PTH_ELV(IPTH,ILEV)=1.E20
       ENDIF
     ENDIF
   END DO
@@ -559,7 +558,7 @@ SUBROUTINE CMF_TOPO_INIT
 ! read & set topography map 
 ! -- call from CMF_DRV_INIT
 USE YOS_CMF_INPUT,  ONLY: TMPNAM,   NX,NY,NLFP, LMAPEND,  &
-                        & LFPLAIN,  LMEANSL,  LGDWDLY,  LSLPMIX
+                        & LFPLAIN,  LMEANSL,  LGDWDLY,  LSLPMIX, LSLOPEMOUTH
 USE YOS_CMF_MAP,    ONLY: D2NXTDST, D2GRAREA, D2ELEVTN, D2RIVLEN, &
                         & D2RIVWTH, D2RIVHGT, D2FLDHGT, D2RIVELV, &
                         & D2FLDGRD, D2RIVMAN, D2RIVSTOMAX, D2FLDSTOMAX,  &
@@ -596,7 +595,7 @@ D2RIVMAN(:,:)  =0._JPRB
 D2MEANSL(:,:)  =0._JPRB
 D2DWNELV(:,:)  =0._JPRB
 D2GDWDLY(:,:)  =0._JPRB
-I2MASK(:,:)    =0._JPIM     !! mask for flow routine (1: kinematic, 2: dam operation)
+I2MASK(:,:)    =0._JPIM     !! mask for calculation (only for IFS slopemix)
 
 !============================
 ! *** 2. Read topo map
@@ -618,7 +617,7 @@ IF ( LFPLAIN ) THEN
   D2RIVSTOMAX(:,:) = D2RIVLEN(:,:) * D2RIVWTH(:,:) * D2RIVHGT(:,:)
 ELSE
   WRITE(LOGNAM,*) 'TOPO_INIT: no floodplain (rivstomax=1.D18)'
-  D2RIVSTOMAX(:,:) = 1.D18
+  D2RIVSTOMAX(:,:) = 1.E18
 ENDIF
 D2RIVELV(:,:) = D2ELEVTN(:,:) - D2RIVHGT(:,:)
 
@@ -729,6 +728,9 @@ ENDIF
 IF( LSLPMIX )THEN
   WRITE(LOGNAM,*)'TOPO_INIT: LSLPMIX only used in IFS, not availabke with binary map'
 ENDIF
+IF( LSLOPEMOUTH )THEN
+  WRITE(LOGNAM,*)'TOPO_INIT: LSLOPEMOUTH only used in IFS, not availabke with binary map'
+ENDIF
 
 ! ==========
 
@@ -751,9 +753,10 @@ END SUBROUTINE READ_TOPO_BIN
 !+
 !==========================================================
 SUBROUTINE READ_TOPO_CDF
-#ifdef UseCDF
+#ifdef UseCDF_CMF
 USE NETCDF 
 USE CMF_UTILS_MOD,            ONLY: NCERROR,MAP2VEC
+USE YOS_CMF_MAP,              ONLY: D2ELEVSLOPE     !! only used in ECMWF
 IMPLICIT NONE
 !* local variables
 INTEGER(KIND=JPIM)               :: NCID,VARID,STATUS
@@ -796,6 +799,19 @@ DO ILEV=1,NLFP
 ENDDO
 
 CALL NCERROR( NF90_CLOSE(NCID))
+
+IF ( LSLOPEMOUTH ) THEN
+  ALLOCATE( D2ELEVSLOPE(NSEQMAX,1) )
+  WRITE(LOGNAM,*)'TOPO_INIT: elevslope:',TRIM(CRIVPARNC)
+  STATUS = NF90_INQ_VARID(NCID,'elevslope',VARID)
+  IF (STATUS /= 0 ) THEN
+    WRITE(LOGNAM,*)'TOPO_INIT: elevslope: not present, aborting'
+    STOP 9 
+  ELSE
+    CALL NCERROR ( NF90_GET_VAR(NCID,VARID,R2TEMP),'reading data' ) 
+  ENDIF 
+  CALL MAP2VEC(R2TEMP,D2ELEVSLOPE)
+ENDIF
 
 !!========== 
 !! PAR FILE (river channel / groundwater parameters)
@@ -858,22 +874,21 @@ END SUBROUTINE READ_TOPO_CDF
 SUBROUTINE SET_FLDSTG
 IMPLICIT NONE
 !* local variables
-!$ SAVE
-INTEGER(KIND=JPIM)  ::  ISEQ, I
-REAL(KIND=JPRB)     ::  DSTONOW
-REAL(KIND=JPRB)     ::  DSTOPRE
-REAL(KIND=JPRB)     ::  DHGTPRE
-REAL(KIND=JPRB)     ::  DWTHINC
+INTEGER(KIND=JPIM),SAVE  ::  ISEQ, I
+REAL(KIND=JPRB),SAVE     ::  DSTONOW
+REAL(KIND=JPRB),SAVE     ::  DSTOPRE
+REAL(KIND=JPRB),SAVE     ::  DHGTPRE
+REAL(KIND=JPRB),SAVE     ::  DWTHINC
 !$OMP THREADPRIVATE               (I,DSTONOW,DSTOPRE,DHGTPRE,DWTHINC)
 !================================================
-D2FLDSTOMAX(:,:,:) = 0.D0
-D2FLDGRD(:,:,:)    = 0.D0
+D2FLDSTOMAX(:,:,:) = 0._JPRB
+D2FLDGRD(:,:,:)    = 0._JPRB
 DFRCINC=dble(NLFP)**(-1.)
 !
 !$OMP PARALLEL DO
 DO ISEQ=1, NSEQALL
   DSTOPRE = D2RIVSTOMAX(ISEQ,1)
-  DHGTPRE = 0.D0
+  DHGTPRE = 0._JPRB
   DWTHINC = D2GRAREA(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.) * DFRCINC
   DO I=1, NLFP
     DSTONOW = D2RIVLEN(ISEQ,1) * ( D2RIVWTH(ISEQ,1) + DWTHINC*(DBLE(I)-0.5) ) * (D2FLDHGT(ISEQ,1,I)-DHGTPRE)
@@ -893,7 +908,7 @@ END SUBROUTINE SET_FLDSTG
 !+
 !==========================================================
 SUBROUTINE SET_SLOPEMIX    !! only used in IFS0
-#ifdef UseCDF
+#ifdef UseCDF_CMF
 USE NETCDF 
 USE CMF_UTILS_MOD,           ONLY: NCERROR,MAP2VECI
 

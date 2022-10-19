@@ -52,6 +52,7 @@ INTEGER(KIND=JPIM)              :: BINID              ! output binary output fil
 INTEGER(KIND=JPIM)              :: NCID               ! output netCDF output file ID
 INTEGER(KIND=JPIM)              :: VARID              ! output netCDF output variable ID
 INTEGER(KIND=JPIM)              :: TIMID              ! output netCDF time   variable ID 
+INTEGER(KIND=JPIM)              :: IRECNC               ! Current time record for writting 
 END TYPE TVAROUT 
 TYPE(TVAROUT),ALLOCATABLE       :: VAROUT(:)          ! output variable TYPE set
 
@@ -126,9 +127,6 @@ USE YOS_CMF_INPUT,           ONLY: NX,NY
 USE YOS_CMF_TIME,            ONLY: ISYYYY, ISMM,   ISDD,   ISHOUR, ISMIN
 USE YOS_CMF_MAP,             ONLY: NSEQMAX,NPTHOUT,NPTHLEV,REGIONTHIS
 USE CMF_UTILS_MOD,           ONLY: INQUIRE_FID
-#ifdef IFS
-USE ABORT_SURF_MOD,          ONLY: ABORT_SURF
-#endif
 IMPLICIT NONE
 !* Local variables 
 CHARACTER(LEN=256)              :: CTIME, CTMP
@@ -262,6 +260,10 @@ DO JF=1,NVARSOUT
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='sub-surface runoff'
       VAROUT(JF)%CVUNITS='m3/s' 
+    CASE ('wevap')
+      VAROUT(JF)%CVNAME=CVNAMES(JF)
+      VAROUT(JF)%CVLNAME='water evaporation'
+      VAROUT(JF)%CVUNITS='m3/s'
 
     CASE ('maxsto')
       VAROUT(JF)%CVNAME=CVNAMES(JF)
@@ -275,7 +277,10 @@ DO JF=1,NVARSOUT
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='daily maximum river depth'
       VAROUT(JF)%CVUNITS='m' 
-
+    CASE ('outins')
+      VAROUT(JF)%CVNAME=CVNAMES(JF)
+      VAROUT(JF)%CVLNAME='instantaneous discharge'
+      VAROUT(JF)%CVUNITS='m3/s' 
 
     CASE ('damsto')   !!! added
       VAROUT(JF)%CVNAME=CVNAMES(JF)
@@ -290,7 +295,6 @@ DO JF=1,NVARSOUT
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='protected area storage'
       VAROUT(JF)%CVUNITS='m3' 
-
     CASE ('levdph')   !!! added
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='protected area depth'
@@ -299,8 +303,8 @@ DO JF=1,NVARSOUT
 
     CASE DEFAULT
     WRITE(LOGNAM,*) trim(CVNAMES(JF)), ' Not defined in CMF_CREATE_OUTCDF_MOD'
-#ifdef IFS
-    CALL ABORT_SURF('CMF_CREATE_OUTCDF_MOD')
+#ifdef IFS_CMF
+    CALL ABORT
 #endif
     stop
   END SELECT
@@ -352,13 +356,16 @@ END SUBROUTINE CREATE_OUTBIN
 !+
 !==========================================================
 SUBROUTINE CREATE_OUTCDF
-#ifdef UseCDF
+#ifdef UseCDF_CMF
 USE YOS_CMF_INPUT,           ONLY: RMIS
 USE YOS_CMF_MAP,             ONLY: D1LON, D1LAT
 USE CMF_UTILS_MOD,           ONLY: NCERROR
 USE NETCDF
 IMPLICIT NONE
 INTEGER(KIND=JPIM)  :: TIMEID,VARID,LATID,LONID
+!============
+VAROUT(JF)%IRECNC=1 ! initialize record current writting record to 1 
+
 !============
 VAROUT(JF)%CFILE=TRIM(COUTDIR)//'o_'//TRIM(VAROUT(JF)%CVNAME)//TRIM(COUTTAG)//TRIM(CSUFCDF)
 ! Create file 
@@ -417,24 +424,20 @@ END SUBROUTINE CMF_OUTPUT_INIT
 !####################################################################
 SUBROUTINE CMF_OUTPUT_WRITE
 !======
-#ifdef IFS
-USE ABORT_SURF_MOD,     ONLY: ABORT_SURF 
-#endif
-!======
 USE CMF_UTILS_MOD,           ONLY: VEC2MAP
 ! save results to output files
 ! -- Called either from "MAIN/Coupler" or CMF_DRV_ADVANCE
-USE YOS_CMF_INPUT,      ONLY: NX, NY
+USE YOS_CMF_INPUT,      ONLY: NX, NY, LOUTINI
 USE YOS_CMF_MAP,        ONLY: NSEQMAX, NPTHOUT, NPTHLEV, REGIONTHIS
-USE YOS_CMF_TIME,       ONLY: JYYYYMMDD, JHHMM, JHOUR, JMIN
+USE YOS_CMF_TIME,       ONLY: JYYYYMMDD, JHHMM, JHOUR, JMIN, KSTEP
 USE YOS_CMF_PROG,       ONLY: D2RIVSTO,     D2FLDSTO,     D2GDWSTO, &
                             & d2damsto,     D2LEVSTO  !!! added
 USE YOS_CMF_DIAG,       ONLY: D2RIVDPH,     D2FLDDPH,     D2FLDFRC,     D2FLDARE,     D2SFCELV,     D2STORGE, &
-                            & D2OUTFLW_AVG, D2RIVOUT_AVG, D2FLDOUT_AVG, D2PTHOUT_AVG, D1PTHFLW_AVG, &
-                            & D2RIVVEL_AVG, D2GDWRTN_AVG, D2RUNOFF_AVG, D2ROFSUB_AVG,               &
+                            & D2OUTFLW_AVG, D2RIVOUT_AVG, D2FLDOUT_AVG, D2PTHOUT_AVG, D1PTHFLW_AVG,  &
+                            & D2RIVVEL_AVG, D2GDWRTN_AVG, D2RUNOFF_AVG, D2ROFSUB_AVG, D2WEVAPEX_AVG, &
                             & D2OUTFLW_MAX, D2STORGE_MAX, D2RIVDPH_MAX, &
-                            & d2daminf_avg, D2LEVDPH   !!! added
-#ifdef UseMPI
+                            & D2DAMINF_AVG, D2OUTINS, D2LEVDPH   !!! added
+#ifdef UseMPI_CMF
 USE CMF_CTRL_MPI_MOD,   ONLY: CMF_MPI_REDUCE_R2MAP, CMF_MPI_REDUCE_R1PTH
 #endif
 IMPLICIT NONE
@@ -498,6 +501,9 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
       CASE ('maxsto')
         D2VEC =>  D2STORGE_MAX
 
+      CASE ('outins')
+        D2VEC =>  D2OUTINS
+
       CASE ('gwsto')
         D2VEC =>  D2GDWSTO
       CASE ('gdwsto')
@@ -515,6 +521,8 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
         D2VEC =>  D2RUNOFF_AVG
       CASE ('rofsub')
         D2VEC =>  D2ROFSUB_AVG
+      CASE ('wevap')
+        D2VEC => D2WEVAPEX_AVG
 
       CASE ('damsto')   !!! added
         D2VEC =>  d2damsto
@@ -528,20 +536,25 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
 
       CASE DEFAULT
         WRITE(LOGNAM,*) VAROUT(JF)%CVNAME, ' Not defined in CMF_OUTPUT_MOD'
-#ifdef IFS
-        CALL ABORT_SURF('Not defined in CMF_OUTPUT_MOD')
+#ifdef IFS_CMF
+        CALL ABORT
 #endif
     END SELECT   !! variable name select
+
+    IF( KSTEP==0 .and. LOUTINI )THEN  !! write storage only when LOUTINI specified
+      IF ( .not. LOUTCDF ) CYCLE
+      IF ( VAROUT(JF)%CVNAME/='rivsto' .and. VAROUT(JF)%CVNAME/='fldsto' .and. VAROUT(JF)%CVNAME/='gwsto' ) CYCLE
+    ENDIF
 
 !! convert 1Dvector to 2Dmap
     IF( VAROUT(JF)%CVNAME/='pthflw' ) THEN  !! usual 2D map variable
       CALL VEC2MAP(D2VEC,R2OUT)             !! MPI node data is gathered by VEC2MAP
-#ifdef UseMPI
+#ifdef UseMPI_CMF
       CALL CMF_MPI_REDUCE_R2MAP(R2OUT)
 #endif
     ELSE
       R1POUT(:,:)=REAL(D1PTHFLW_AVG(:,:))
-#ifdef UseMPI
+#ifdef UseMPI_CMF
       CALL CMF_MPI_REDUCE_R1PTH(R1POUT)
 #endif
     ENDIF
@@ -571,10 +584,10 @@ ENDIF
 
 !==========================================================
 CONTAINS
-!+ WRITE_OUTBIN
-!+ WRITE_OUTPTH
-!+ WRITE_OUTVEC
-!+ WRITE_OUTCFD
+!+ WRTE_OUTBIN
+!+ WRTE_OUTPTH
+!+ WRTE_OUTVEC
+!+ WRTE_OUTCDF
 !==========================================================
 SUBROUTINE WRTE_OUTBIN(IFN,IREC,R2OUTDAT)
 IMPLICIT NONE
@@ -625,7 +638,7 @@ END SUBROUTINE WRTE_OUTVEC
 !+
 !==========================================================
 SUBROUTINE WRTE_OUTCDF
-#ifdef UseCDF
+#ifdef UseCDF_CMF
 USE NETCDF 
 USE YOS_CMF_TIME,            ONLY: KMINSTART,KMINNEXT
 USE CMF_UTILS_MOD,           ONLY: NCERROR
@@ -634,9 +647,13 @@ REAL(KIND=JPRB)                 :: XTIME ! seconds since start of the run !
 
 !================================================
 XTIME=REAL( (KMINNEXT-KMINSTART),JPRB) *60._JPRB      !! for netCDF
-CALL NCERROR( NF90_PUT_VAR(VAROUT(JF)%NCID,VAROUT(JF)%TIMID,XTIME,(/IRECOUT/)) )
+CALL NCERROR( NF90_PUT_VAR(VAROUT(JF)%NCID,VAROUT(JF)%TIMID,XTIME,(/VAROUT(JF)%IRECNC/)) )
 
-CALL NCERROR( NF90_PUT_VAR(VAROUT(JF)%NCID,VAROUT(JF)%VARID,R2OUT(1:NX,1:NY),(/1,1,IRECOUT/),(/NX,NY,1/)) )
+CALL NCERROR( NF90_PUT_VAR(VAROUT(JF)%NCID,VAROUT(JF)%VARID,R2OUT(1:NX,1:NY),(/1,1,VAROUT(JF)%IRECNC/),(/NX,NY,1/)) )
+
+! update IREC
+VAROUT(JF)%IRECNC=VAROUT(JF)%IRECNC+1
+
 ! Comment out this as it slows down significantly the writting in the cray  
 !CALL NCERROR( NF90_SYNC(VAROUT(JF)%NCID) )  
 #endif
@@ -654,7 +671,7 @@ END SUBROUTINE CMF_OUTPUT_WRITE
 SUBROUTINE CMF_OUTPUT_END
 ! Finalize output module (close files)
 ! -- Called from CMF_DRV_END
-#ifdef UseCDF
+#ifdef UseCDF_CMF
 USE NETCDF
 USE CMF_UTILS_MOD,           ONLY: NCERROR
 #endif
@@ -669,7 +686,7 @@ WRITE(LOGNAM,*) "CMF::OUTPUT_END: finalize output module"
 
 IF( REGIONTHIS==1 )THEN
   IF (LOUTCDF) THEN
-#ifdef UseCDF
+#ifdef UseCDF_CMF
     DO JF=1,NVARSOUT
       CALL NCERROR( NF90_CLOSE(VAROUT(JF)%NCID))
       WRITE(LOGNAM,*) "Output netcdf output unit closed:",VAROUT(JF)%NCID

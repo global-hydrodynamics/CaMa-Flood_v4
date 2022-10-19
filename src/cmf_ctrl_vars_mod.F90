@@ -17,7 +17,7 @@ MODULE CMF_CTRL_VARS_MOD
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
 USE PARKIND1,                ONLY: JPIM, JPRM, JPRB
-USE YOS_CMF_INPUT,           ONLY: LOGNAM, LDAMOUT, LLEVEE
+USE YOS_CMF_INPUT,           ONLY: LOGNAM, LDAMOUT, LLEVEE, LWEVAP, LOUTINS
 IMPLICIT NONE
 CONTAINS 
 !####################################################################
@@ -27,16 +27,15 @@ CONTAINS
 !####################################################################
 SUBROUTINE CMF_PROG_INIT
 USE YOS_CMF_MAP,             ONLY: NSEQMAX, NPTHOUT, NPTHLEV
-USE YOS_CMF_PROG,            ONLY: ND2PROG,      D2PROG, &
+USE YOS_CMF_PROG,            ONLY: ND2PROG,      D2PROG,       D2DAMMY,  &
                                  & D2RUNOFF,     D2ROFSUB,     D2GDWSTO,     D2GDWRTN, &
                                  & D2RIVSTO,     D2FLDSTO,     D2RIVOUT,     D2FLDOUT, &
                                  & D2RIVOUT_PRE, D2FLDOUT_PRE, D2RIVDPH_PRE, D2FLDSTO_PRE, &
                                  & D1PTHFLW,     D1PTHFLW_PRE, &
-                                 & D2DAMSTO,     D2DAMINF,     D2LEVSTO      !! optional
+                                 & D2DAMSTO,     D2DAMINF,     D2LEVSTO ,    D2WEVAP     !! optional
 IMPLICIT NONE
 !*** LOCAL
-!$ SAVE
-INTEGER(KIND=JPIM)         :: IND
+INTEGER(KIND=JPIM),SAVE         :: IND
 !================================================
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "!---------------------!"
@@ -47,10 +46,16 @@ WRITE(LOGNAM,*) "CMF::PROG_INIT: prognostic variable initialization"
 ND2PROG=12                       !! # of standard prognostic variables 
 IF ( LDAMOUT ) ND2PROG=ND2PROG+2 !! dam   variables are added (D2DAMSTO, D2DAMINF)
 IF ( LLEVEE  ) ND2PROG=ND2PROG+1 !! levee variables are added (D2LEVSTO)
+IF ( LWEVAP  ) ND2PROG=ND2PROG+1 !! input evapolation (D2WEVAPs)
 
 ALLOCATE( D2PROG(NSEQMAX,1,ND2PROG)     )
+
 ALLOCATE( D1PTHFLW(NPTHOUT,NPTHLEV)     )
 ALLOCATE( D1PTHFLW_PRE(NPTHOUT,NPTHLEV) )
+
+ !! dammy variable for unused variable (depending on conffigulation)
+ALLOCATE( D2DAMMY(NSEQMAX,1) ) 
+D2DAMMY(:,:)=0._JPRB
 
 D2RUNOFF     => D2PROG(:,:,1)
 D2ROFSUB     => D2PROG(:,:,2)
@@ -71,38 +76,29 @@ IF( LDAMOUT ) THEN  !! additional prognostics for LDAMOUT
   D2DAMSTO     => D2PROG(:,:,IND)
   IND=IND+1
   D2DAMINF     => D2PROG(:,:,IND)
+ELSE
+  D2DAMSTO     => D2DAMMY(:,:)
+  D2DAMINF     => D2DAMMY(:,:)
 ENDIF
+
 IF( LLEVEE ) THEN  !! additional prognostics for LLEVEE
   IND=IND+1
   D2LEVSTO     => D2PROG(:,:,IND)
+ELSE
+  D2LEVSTO     => D2DAMMY(:,:)
 ENDIF
 
+IF( LWEVAP ) THEN  !! additional prognostics for LLEVEE
+  IND=IND+1
+  D2WEVAP      => D2PROG(:,:,IND)
+ELSE
+  D2WEVAP      => D2DAMMY(:,:)
+ENDIF
 
-D2PROG(:,:,:) = 0._JPRB
 
 !============================
 !*** 2a. set to zero 
-D2RUNOFF(:,:)     = 0._JPRB
-D2ROFSUB(:,:)     = 0._JPRB
-D2RIVSTO(:,:)     = 0._JPRB
-D2FLDSTO(:,:)     = 0._JPRB
-D2RIVOUT(:,:)     = 0._JPRB
-D2FLDOUT(:,:)     = 0._JPRB
-D2RIVOUT_PRE(:,:) = 0._JPRB
-D2FLDOUT_PRE(:,:) = 0._JPRB
-D2RIVDPH_PRE(:,:) = 0._JPRB
-D2FLDSTO_PRE(:,:) = 0._JPRB
-D2GDWRTN(:,:)     = 0._JPRB
-D2GDWSTO(:,:)     = 0._JPRB
-D1PTHFLW(:,:)     = 0._JPRB
-D1PTHFLW_PRE(:,:) = 0._JPRB
-IF( LDAMOUT )THEN  !! Additional variable for LDAMOUT
-  D2DAMSTO(:,:)     = 0._JPRB
-  D2DAMINF(:,:)     = 0._JPRB
-ENDIF
-IF( LLEVEE )THEN  !! Additional variable for LDAMOUT
-  D2LEVSTO(:,:)     = 0._JPRB
-ENDIF
+D2PROG(:,:,:) = 0._JPRB
 
 !***  2b. set initial water surface elevation to sea surface level
 WRITE(LOGNAM,*) 'PROG_INIT: fill channels below downstream boundary'
@@ -123,10 +119,10 @@ USE YOS_CMF_MAP,  ONLY: NSEQRIV,  NSEQALL,  I1NEXT
 USE YOS_CMF_MAP,  ONLY: D2DWNELV, D2RIVELV,D2RIVHGT,D2RIVWTH,D2RIVLEN
 IMPLICIT NONE
 ! local variables
-INTEGER(KIND=JPIM) ::  ISEQ, JSEQ
-!$ SAVE
-REAL(KIND=JPRB)    ::  DSEAELV, DDPH
-!$OMP THREADPRIVATE   (DSEAELV, DDPH)
+INTEGER(KIND=JPIM)   :: ISEQ, JSEQ
+!
+REAL(KIND=JPRB),SAVE :: DSEAELV, DDPH
+!$OMP THREADPRIVATE    (DSEAELV, DDPH)
 !!=================
 ! For River Mouth Grid
 !$OMP PARALLEL DO
@@ -185,19 +181,20 @@ END SUBROUTINE CMF_PROG_INIT
 SUBROUTINE CMF_DIAG_INIT
 
 USE YOS_CMF_MAP,        ONLY: NSEQMAX,NPTHOUT,NPTHLEV
+USE YOS_CMF_PROG,       ONLY: D2DAMMY
 USE YOS_CMF_DIAG,       ONLY: N2DIAG, D2DIAG, &
                             &   D2RIVINF, D2RIVDPH, D2RIVVEL, D2FLDINF, D2FLDDPH, D2FLDFRC, D2FLDARE, &
-                            &   D2PTHOUT, D2PTHINF, D2SFCELV, D2OUTFLW, D2STORGE, D2OUTINS, D2LEVDPH
+                            &   D2PTHOUT, D2PTHINF, D2SFCELV, D2OUTFLW, D2STORGE, D2OUTINS, D2LEVDPH, &
+                            &   D2WEVAPEX
 USE YOS_CMF_DIAG,       ONLY: N2DIAG_AVG, D2DIAG_AVG, NADD, &
                             &   D2RIVOUT_AVG, D2FLDOUT_AVG, D2OUTFLW_AVG, D2RIVVEL_AVG, D2PTHOUT_AVG, &
-                            &   D2GDWRTN_AVG, D2RUNOFF_AVG, D2ROFSUB_AVG, D1PTHFLW_AVG, &
+                            &   D2GDWRTN_AVG, D2RUNOFF_AVG, D2ROFSUB_AVG, D1PTHFLW_AVG, D2WEVAPEX_AVG,&
                             &   D2DAMINF_AVG
 USE YOS_CMF_DIAG,       ONLY: N2DIAG_MAX, D2DIAG_MAX, &
                             &   D2STORGE_MAX, D2OUTFLW_MAX, D2RIVDPH_MAX
 IMPLICIT NONE
 !*** LOCAL
-!$ SAVE
-INTEGER(KIND=JPIM)         :: IND
+INTEGER(KIND=JPIM),SAVE         :: IND
 !================================================
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "!---------------------!"
@@ -205,8 +202,10 @@ WRITE(LOGNAM,*) "!---------------------!"
 WRITE(LOGNAM,*) "CMF::DIAG_INIT: initialize diagnostic variables"
 
 !*** 1. snapshot 2D diagnostics
-N2DIAG=13
-IF ( LLEVEE  ) N2DIAG=N2DIAG+1 !! levee variables are added (D2LEVSTO )
+N2DIAG=12
+IF ( LLEVEE  ) N2DIAG=N2DIAG+1 !! levee variables are added     (D2LEVSTO )
+IF ( LWEVAP  ) N2DIAG=N2DIAG+1 !! evapolation added             (D2WEVAPEX) 
+IF ( LOUTINS ) N2DIAG=N2DIAG+1 !! instantaneous discharge added (D2OUTINS )
 
 ALLOCATE(D2DIAG(NSEQMAX,1,N2DIAG))
 D2DIAG(:,:,:) = 0._JPRB
@@ -222,12 +221,25 @@ D2PTHINF => D2DIAG(:,:,9)
 D2SFCELV => D2DIAG(:,:,10)
 D2OUTFLW => D2DIAG(:,:,11)
 D2STORGE => D2DIAG(:,:,12)
-D2OUTINS => D2DIAG(:,:,13)
 
-IND=13
+IND=12
 IF ( LLEVEE  )THEN
   IND=IND+1
   D2LEVDPH => D2DIAG(:,:,IND)
+ELSE
+  D2LEVDPH => D2DAMMY(:,:)
+ENDIF
+IF ( LWEVAP  )THEN
+  IND=IND+1
+  D2WEVAPEX => D2DIAG(:,:,IND)
+ELSE
+  D2WEVAPEX => D2DAMMY(:,:)
+ENDIF
+IF ( LOUTINS  )THEN
+  IND=IND+1
+  D2OUTINS => D2DIAG(:,:,IND)
+ELSE
+  D2OUTINS => D2DAMMY(:,:)
 ENDIF
 
 !============================
@@ -251,6 +263,14 @@ IND=8
 IF ( LDAMOUT ) THEN
   IND=IND+1
   D2DAMINF_AVG => D2DIAG_AVG(:,:,IND)
+ELSE
+  D2DAMINF_AVG => D2DAMMY(:,:)
+ENDIF
+IF ( LWEVAP ) THEN
+  IND=IND+1
+  D2WEVAPEX_AVG => D2DIAG_AVG(:,:,IND)
+ELSE
+  D2WEVAPEX_AVG => D2DAMMY(:,:)
 ENDIF
 
 NADD=0

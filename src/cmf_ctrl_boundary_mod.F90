@@ -47,7 +47,7 @@ NAMELIST/NBOUND/   LSEALEVCDF, CSEALEVDIR, CSEALEVPRE, CSEALEVSUF,&
                      CSLMAP, IFRQ_SL       
 
 !*** local variables
-#ifdef UseCDF
+#ifdef UseCDF_CMF
 TYPE TYPESL
 CHARACTER(LEN=256)              :: CNAME       !! Netcdf file name
 CHARACTER(LEN=256)              :: CVAR        !! Netcdf variable name 
@@ -98,11 +98,11 @@ CVNSEALEV="variable"
 CSLMAP="./sealev/"
 
 SYEARSL=0
-SMONSL=0 
-SDAYSL=0 
+SMONSL =0 
+SDAYSL =0 
 SHOURSL=0
 
-IFRQ_SL  = 9999              !! default: dynamic sea level not used
+IFRQ_SL= 9999              !! default: dynamic sea level not used
 
 !*** 3. read namelist
 REWIND(NSETFILE)
@@ -159,7 +159,7 @@ WRITE(LOGNAM,*) "CMF::BOUNDARY_INIT: initialize boundary"
 ALLOCATE( D2SEALEV(NSEQMAX,1) )
 
 IF( LSEALEVCDF )THEN
-#ifdef UseCDF
+#ifdef UseCDF_CMF
   CALL CMF_BOUNDARY_INIT_CDF    !! initialize sea level boundary (netCDF only)
 #endif
 ENDIF
@@ -168,7 +168,7 @@ WRITE(LOGNAM,*) "CMF::BOUNDARY_INIT: end"
 
 
 
-#ifdef UseCDF
+#ifdef UseCDF_CMF
 CONTAINS
 !==========================================================
 !+ CMF_BOUNDARY_INIT_CDF
@@ -284,7 +284,7 @@ IF( LSEALEV .and. IUPDATE==1 ) THEN
 
 
   IF( LSEALEVCDF )THEN
-#ifdef UseCDF
+#ifdef UseCDF_CMF
     CALL CMF_BOUNDARY_GET_CDF
 #endif
   ELSE
@@ -335,7 +335,7 @@ END SUBROUTINE CMF_BOUNDARY_GET_BIN
 !+
 !+
 !==========================================================
-#ifdef UseCDF
+#ifdef UseCDF_CMF
 SUBROUTINE CMF_BOUNDARY_GET_CDF
 USE YOS_CMF_INPUT,           ONLY: DTSL, NX, NY
 USE YOS_CMF_TIME,            ONLY: KMIN
@@ -377,7 +377,7 @@ END SUBROUTINE CMF_BOUNDARY_UPDATE
 
 !####################################################################
 SUBROUTINE CMF_BOUNDARY_END
-#ifdef UseCDF
+#ifdef UseCDF_CMF
 USE CMF_UTILS_MOD,         ONLY: NCERROR
 USE NETCDF
 #endif
@@ -386,7 +386,7 @@ IMPLICIT NONE
 WRITE(LOGNAM,*) "CMF::BOUNDARY_END: Finalize boundary module"
 
 IF( LSEALEVCDF )THEN
-#ifdef UseCDF
+#ifdef UseCDF_CMF
   CALL NCERROR( NF90_CLOSE(SLCDF%NCID))
   WRITE(LOGNAM,*) "Input netcdf sealev closed:",SLCDF%NCID
 #endif

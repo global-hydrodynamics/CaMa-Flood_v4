@@ -59,8 +59,7 @@ IMPLICIT NONE
 REAL(KIND=JPRB),INTENT(IN)      :: D2VEC(NSEQMAX,1)
 REAL(KIND=JPRM),INTENT(OUT)     :: R2MAP(NX,NY)
 !* local variable
-!$ SAVE
-INTEGER(KIND=JPIM)              ::  IX,IY,ISEQ
+INTEGER(KIND=JPIM),SAVE         ::  IX,IY,ISEQ
 !$OMP THREADPRIVATE                (IX,IY)
 !================================================
 R2MAP(:,:) = RMIS
@@ -85,8 +84,7 @@ IMPLICIT NONE
 REAL(KIND=JPRB),INTENT(IN)      :: D2VEC(NSEQMAX,1)
 REAL(KIND=JPRB),INTENT(OUT)     :: D2MAP(NX,NY)
 !* local variable
-!$ SAVE
-INTEGER(KIND=JPIM)              ::  IX,IY,ISEQ
+INTEGER(KIND=JPIM),SAVE         ::  IX,IY,ISEQ
 !$OMP THREADPRIVATE                (IX,IY)
 !================================================
 D2MAP(:,:) = DMIS
@@ -110,8 +108,7 @@ IMPLICIT NONE
 REAL(KIND=JPRM),INTENT(IN)      :: R2TEMP(NX,NY)
 REAL(KIND=JPRB),INTENT(OUT)     :: D2VAR(NSEQMAX,1)
 !* local variable
-!$ SAVE
-INTEGER(KIND=JPIM)              :: IX,IY, ISEQ
+INTEGER(KIND=JPIM),SAVE         :: IX,IY, ISEQ
 !$OMP THREADPRIVATE               (IX,IY)
 !================================================
 !$OMP PARALLEL DO
@@ -134,8 +131,7 @@ IMPLICIT NONE
 REAL(KIND=JPRB),INTENT(IN)      :: D2TEMP(NX,NY)
 REAL(KIND=JPRB),INTENT(OUT)     :: D2VAR(NSEQMAX,1)
 !* local variable
-!$ SAVE
-INTEGER(KIND=JPIM)              :: IX,IY, ISEQ
+INTEGER(KIND=JPIM),SAVE         :: IX,IY, ISEQ
 !$OMP THREADPRIVATE               (IX,IY)
 !================================================
 !$OMP PARALLEL DO
@@ -158,8 +154,7 @@ IMPLICIT NONE
 INTEGER(KIND=JPIM),INTENT(IN)   :: I2TEMP(NX,NY)
 INTEGER(KIND=JPIM),INTENT(OUT)  :: I2VAR(NSEQMAX,1)
 !* local variable
-!$ SAVE
-INTEGER(KIND=JPIM)              :: IX,IY,ISEQ
+INTEGER(KIND=JPIM),SAVE         :: IX,IY,ISEQ
 !$OMP THREADPRIVATE               (IX,IY)
 !================================================
 !$OMP PARALLEL DO
@@ -467,7 +462,7 @@ END FUNCTION INQUIRE_FID
 !+
 !+
 !==========================================================
-#ifdef UseCDF
+#ifdef UseCDF_CMF
 SUBROUTINE NCERROR(STATUS,STRING)
 !! NETCDF error handling 
 USE NETCDF

@@ -49,7 +49,8 @@ REAL(KIND=JPRB),ALLOCATABLE              ::  D2RIVHGT(:,:)      !! RIVER HEIGHT 
 REAL(KIND=JPRB),ALLOCATABLE              ::  D2FLDHGT(:,:,:)    !! FLOODPLAIN HEIGHT [M]
 
 REAL(KIND=JPRB),ALLOCATABLE              ::  D2GDWDLY(:,:)      !! Ground water delay
-INTEGER(KIND=JPIM),ALLOCATABLE           ::  I2MASK(:,:)        !! Mask for mixed flow routine (1: kinematic, 2: dam operation)
+REAL(KIND=JPRB),ALLOCATABLE              ::  D2ELEVSLOPE(:,:)   !! River bed slope
+INTEGER(KIND=JPIM),ALLOCATABLE           ::  I2MASK(:,:)        !! Mask 
 
 !================================================
 !*** Floodplain Topography (diagnosed)

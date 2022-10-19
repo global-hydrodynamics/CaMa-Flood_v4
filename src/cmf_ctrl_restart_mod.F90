@@ -18,7 +18,7 @@ MODULE CMF_CTRL_RESTART_MOD     !!!tentative version 7/21
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
 ! shared variables in module
-USE PARKIND1,                ONLY: JPIM, JPRB, JPRM
+USE PARKIND1,                ONLY: JPIM, JPRB, JPRM, JPRD
 USE YOS_CMF_INPUT,           ONLY: LOGNAM,  LSTOONLY, LDAMOUT, LLEVEE, LPTHOUT, LGDWDLY
 USE YOS_CMF_INPUT,           ONLY: CSUFBIN, CSUFPTH,  CSUFCDF
 IMPLICIT NONE
@@ -143,7 +143,6 @@ IMPLICIT NONE
 INTEGER(KIND=JPIM)              :: RIREC
 REAL(KIND=JPRM)                 :: R1PTH(NPTHOUT,NPTHLEV)
 CHARACTER(LEN=256)              :: CFILE
-!$ SAVE
 !================================================
 CFILE=TRIM(CRESTSTO)
 WRITE(LOGNAM,*)'READ_REST: read restart binary: ', TRIM(CFILE)
@@ -231,7 +230,7 @@ END SUBROUTINE READ_BIN_MAP
 !+
 !==========================================================
 SUBROUTINE READ_REST_CDF
-#ifdef UseCDF
+#ifdef UseCDF_CMF
 USE NETCDF
 USE YOS_CMF_INPUT,    ONLY: NX, NY
 USE YOS_CMF_MAP,      ONLY: NPTHOUT, NPTHLEV
@@ -367,7 +366,7 @@ CONTAINS
 SUBROUTINE WRTE_REST_BIN
 USE YOS_CMF_TIME,       ONLY: JYYYYMMDD, JHOUR
 USE YOS_CMF_MAP,        ONLY: REGIONTHIS
-#ifdef UseMPI
+#ifdef UseMPI_CMF
 USE CMF_CTRL_MPI_MOD,   ONLY: CMF_MPI_REDUCE_R1PTH, CMF_MPI_REDUCE_D1PTH
 #endif
 IMPLICIT NONE
@@ -425,7 +424,7 @@ IF( LPTHOUT )THEN
   !! Double Precision Restart
   IF( LRESTDBL )THEN
     D1PTH(:,:)=D1PTHFLW_PRE(:,:)
-#ifdef UseMPI
+#ifdef UseMPI_CMF
     CALL CMF_MPI_REDUCE_D1PTH(D1PTH)
 #endif
     IF ( REGIONTHIS==1 )THEN
@@ -436,7 +435,7 @@ IF( LPTHOUT )THEN
   !! Single Precision Restart
   ELSE
     R1PTH(:,:)=REAL(D1PTHFLW_PRE(:,:))
-#ifdef UseMPI
+#ifdef UseMPI_CMF
     CALL CMF_MPI_REDUCE_R1PTH(R1PTH)
 #endif
     IF ( REGIONTHIS==1 )THEN
@@ -452,7 +451,7 @@ END SUBROUTINE WRTE_REST_BIN
 SUBROUTINE WRTE_BIN_MAP(D2VAR,TNAM,IREC)
 USE CMF_UTILS_MOD,      ONLY: VEC2MAP,    VEC2MAPD
 USE YOS_CMF_MAP,        ONLY: REGIONTHIS, NSEQMAX
-#ifdef UseMPI
+#ifdef UseMPI_CMF
 USE CMF_CTRL_MPI_MOD,   ONLY: CMF_MPI_REDUCE_R2MAP, CMF_MPI_REDUCE_D2MAP
 #endif
 IMPLICIT NONE
@@ -467,14 +466,14 @@ IREC=IREC+1
 !! Double Precision Restart
 IF( LRESTDBL )THEN
   CALL VEC2MAPD(D2VAR,D2TEMP)  
-#ifdef UseMPI
+#ifdef UseMPI_CMF
     CALL CMF_MPI_REDUCE_D2MAP(D2TEMP)
 #endif
   IF ( REGIONTHIS==1 ) WRITE(TNAM,REC=IREC) D2TEMP
 !! Single Precision Restart
 ELSE
   CALL VEC2MAP(D2VAR,R2TEMP)  
-#ifdef UseMPI
+#ifdef UseMPI_CMF
     CALL CMF_MPI_REDUCE_R2MAP(R2TEMP)
 #endif
   IF ( REGIONTHIS==1 ) WRITE(TNAM,REC=IREC) R2TEMP
@@ -487,14 +486,14 @@ END SUBROUTINE WRTE_BIN_MAP
 !+
 !==========================================================
 SUBROUTINE WRTE_REST_CDF
-#ifdef UseCDF
+#ifdef UseCDF_CMF
 USE NETCDF
 USE YOS_CMF_INPUT,      ONLY: DMIS
 USE YOS_CMF_TIME,       ONLY: KMINNEXT, KMINSTART, ISYYYY,ISMM,ISDD, ISHOUR, ISMIN
 USE YOS_CMF_TIME,       ONLY: JYYYYMMDD,JHOUR
 USE YOS_CMF_MAP,        ONLY: D1LON,    D1LAT,     REGIONTHIS
 USE CMF_UTILS_MOD,      ONLY: NCERROR,  VEC2MAPD
-#ifdef UseMPI
+#ifdef UseMPI_CMF
 USE CMF_CTRL_MPI_MOD,   ONLY: CMF_MPI_REDUCE_D2MAP, CMF_MPI_REDUCE_D1PTH
 #endif
 IMPLICIT NONE
@@ -547,39 +546,39 @@ IF( REGIONTHIS==1 )THEN   !! write restart only on master node
                              VARID,DEFLATE_LEVEL=6), 'Creating Variable')
   CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"river storage" ) )
   CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m3") )
-  CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',DMIS),'in here?' )
+  CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',REAL(DMIS,KIND=JPRD)),'in here?' )
   
    
   CALL NCERROR( NF90_DEF_VAR(NCID, 'fldsto', NF90_DOUBLE, (/LONID,LATID,TIMEID/), &
                              VARID,DEFLATE_LEVEL=6), 'Creating Variable')  
   CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"flood plain storage" ) )
   CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m3") )
-  CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',DMIS) )
+  CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',REAL(DMIS,KIND=JPRD)) )
   
   IF ( .not. LSTOONLY )THEN           !! default restart with previous t-step outflw
     CALL NCERROR( NF90_DEF_VAR(NCID, 'rivout_pre', NF90_DOUBLE, (/LONID,LATID,TIMEID/),&
                                VARID,DEFLATE_LEVEL=6), 'Creating Variable')  
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"river outflow prev" ) )
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m3/s") )
-    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',DMIS) )
+    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',REAL(DMIS,KIND=JPRD)) )
     
     CALL NCERROR( NF90_DEF_VAR(NCID, 'fldout_pre', NF90_DOUBLE, (/LONID,LATID,TIMEID/), &
                                VARID,DEFLATE_LEVEL=6), 'Creating Variable')  
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"floodplain outflow prev" ) )
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m3/s") )
-    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',DMIS) )
+    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',REAL(DMIS,KIND=JPRD)) )
     
     CALL NCERROR( NF90_DEF_VAR(NCID, 'rivdph_pre', NF90_DOUBLE, (/LONID,LATID,TIMEID/), &
                                VARID,DEFLATE_LEVEL=6), 'Creating Variable')  
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"river depth prev" ) )
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m") )
-    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',DMIS) )
+    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',REAL(DMIS,KIND=JPRD)) )
     
     CALL NCERROR( NF90_DEF_VAR(NCID, 'fldsto_pre', NF90_DOUBLE, (/LONID,LATID,TIMEID/), &
                                VARID,DEFLATE_LEVEL=6), 'Creating Variable')  
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"floodplain storage prev" ) )
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m3") )
-    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',DMIS) )
+    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',REAL(DMIS,KIND=JPRD)) )
   
     !! optional variables
     IF ( LPTHOUT ) THEN
@@ -595,7 +594,7 @@ IF( REGIONTHIS==1 )THEN   !! write restart only on master node
                              VARID,DEFLATE_LEVEL=6), 'Creating Variable gdwsto')  
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"ground water storage" ) )
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m3") )
-    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',DMIS) )
+    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',REAL(DMIS,KIND=JPRD)) )
   ENDIF
   
   IF ( LDAMOUT ) THEN    !!! added
@@ -603,7 +602,7 @@ IF( REGIONTHIS==1 )THEN   !! write restart only on master node
                              VARID,DEFLATE_LEVEL=6), 'Creating Variable dasmto')  
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"dam reservoir storage" ) )
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m3") )
-    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',DMIS) )
+    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',REAL(DMIS,KIND=JPRD)) )
   ENDIF
   
   IF ( LLEVEE ) THEN    !!! added
@@ -611,7 +610,7 @@ IF( REGIONTHIS==1 )THEN   !! write restart only on master node
                              VARID,DEFLATE_LEVEL=6), 'Creating Variable levsto')  
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"storage exceeds levee protection" ) )
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m3") )
-    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',DMIS) )
+    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',REAL(DMIS,KIND=JPRD)) )
   ENDIF
 
   CALL NCERROR( NF90_ENDDEF(NCID) )
@@ -672,7 +671,7 @@ DO JF=1,9
       IF( LLEVEE ) IOUT=1
   END SELECT
 
-#ifdef UseMPI
+#ifdef UseMPI_CMF
   CALL CMF_MPI_REDUCE_D2MAP(D2TEMP)
 #endif
 
@@ -688,7 +687,7 @@ ENDDO
 
 IF ( LPTHOUT ) THEN
   IF ( .not. LSTOONLY )THEN
-#ifdef UseMPI
+#ifdef UseMPI_CMF
     CALL CMF_MPI_REDUCE_D1PTH(D1PTHFLW_PRE)
 #endif
     IF( REGIONTHIS==1 )THEN
