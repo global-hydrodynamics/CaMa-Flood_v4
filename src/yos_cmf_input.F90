@@ -37,6 +37,7 @@ LOGICAL                         :: LFLDOUT                 !! true: floodplain f
 LOGICAL                         :: LPTHOUT                 !! true: activate bifurcation scheme
 LOGICAL                         :: LDAMOUT                 !! true: activate dam operation (under development)
 LOGICAL                         :: LLEVEE                  !! true: activate levee scheme  (under development)
+LOGICAL                         :: LSEDOUT                 !! true: activate sediment transport (under development)
 
 !~~ used in ECMWF
 LOGICAL                         :: LROSPLIT                !! true: input if surface (Qs) and sub-surface (Qsb) runoff

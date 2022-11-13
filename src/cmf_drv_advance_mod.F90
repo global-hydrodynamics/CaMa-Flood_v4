@@ -37,6 +37,10 @@ USE CMF_CTRL_RESTART_MOD,    ONLY: CMF_RESTART_WRITE
 USE CMF_CTRL_OUTPUT_MOD,     ONLY: CMF_OUTPUT_WRITE
 USE CMF_CALC_DIAG_MOD,       ONLY: CMF_DIAG_AVERAGE, CMF_DIAG_RESET
 USE CMF_CTRL_BOUNDARY_MOD,   ONLY: CMF_BOUNDARY_UPDATE
+#ifdef sediment
+USE YOS_CMF_INPUT,           ONLY: LSEDOUT
+USE cmf_ctrl_sedout_mod,     ONLY: cmf_sed_output
+#endif
 !$ USE OMP_LIB
 IMPLICIT NONE 
 SAVE
@@ -85,6 +89,12 @@ DO ISTEP=1,KSTEPS
 
     !*** write output data
     CALL CMF_OUTPUT_WRITE
+
+#ifdef sediment
+    IF ( LSEDOUT ) THEN
+      CALL cmf_sed_output
+    ENDIF
+#endif
 
     !*** reset variable
     CALL CMF_DIAG_RESET
