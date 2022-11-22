@@ -38,6 +38,7 @@ cmf_calc_lakein_mod.o   \
 \
 cmf_ctrl_mpi_mod.o      \
 cmf_ctrl_damout_mod.o   \
+cmf_ctrl_levee_mod.o  \
 cmf_ctrl_forcing_mod.o  \
 cmf_ctrl_boundary_mod.o \
 cmf_ctrl_output_mod.o   \
@@ -69,7 +70,7 @@ LIBNAME = src.a
 
 all: $(LIBNAME) $(TARGET)
 
-$(TARGET): $(TARGET).o $(LIBNAME) ${ICILIB} ${CMMNLIB} ${JCUPLIB}
+$(TARGET): $(TARGET).o $(LIBNAME) ${CPLLIB} ${CMMNLIB}
 	$(LD) $(LDFLAGS) -o $@ $^
 	@echo "Complete making cama"
 	$(INSTALL) $@ $(BINDIR)/$(BINNAME)
