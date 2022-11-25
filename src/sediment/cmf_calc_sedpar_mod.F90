@@ -61,7 +61,7 @@ function calc_shearVelocity(rivvel,rivdph) result(sVel)
   real(kind=JPRB), intent(in)     ::  rivvel, rivdph 
   !========
 
-  sVel = sqrt ( PGRV * PMANRIV**2.d0 * rivvel**2.d0 / rivdph )
+  sVel = sqrt ( PGRV * PMANRIV**2.d0 * rivvel**2.d0 * rivdph**(-1.d0/3.d0) )  !bug fix 2022/11/22
   return
 end function calc_shearVelocity
 !=====================================================
