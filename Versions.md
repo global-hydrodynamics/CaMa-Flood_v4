@@ -37,12 +37,7 @@ Latest GitHub branch (master)  is v4.05
 
 ## Update in v4.05 (2021.3.14)
 ### Changes related to some developpers 
-- Levee scheme implemented (etc/levee_test)
 - Water balance log for flood stage calculation
-
-## Update in v4.06 (2021.4.8)
-### Changes related to some developpers 
-- Computationally efficient levee scheme
 
 ## Update in v4.06 (2021.4.8)
 ### Changes related to some developpers 
