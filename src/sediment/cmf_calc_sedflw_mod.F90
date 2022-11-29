@@ -165,7 +165,7 @@ contains
           plusVel = shearVel(iseq) + critShearVel(iseq,ised)
           minusVel = shearVel(iseq) - critShearVel(iseq,ised)
           d2bedout(iseq,ised) = 17.d0 * D2RIVWTH(iseq,1) * plusVel * minusVel * minusVel & 
-           & * (psedD-pwatD) / pwatD / PGRV * d2layer(iseq,ised) / sum(d2layer(iseq,:)) 
+           & / ((psedD-pwatD)/pwatD) / PGRV * d2layer(iseq,ised) / sum(d2layer(iseq,:)) 
           bOut(iseq0,ised) = bOut(iseq0,ised) + d2bedout(iseq,ised)*sedDT
         enddo
       endif
