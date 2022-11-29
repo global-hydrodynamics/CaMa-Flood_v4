@@ -209,7 +209,7 @@ subroutine cmf_sed_output
   use YOS_CMF_MAP,             only: NSEQMAX
   use YOS_CMF_TIME,            only: JHOUR, JMIN
   use yos_cmf_sed,             only: d2layer, d2sedcon, d2seddep, d2bedout_avg, d2netflw_avg, &
-                                     d2sedout_avg, d2sedinp_avg, d2sedv_avg
+                                     d2sedout_avg, d2sedinp_avg, d2sedv_avg, sadd_out
   use cmf_ctrl_sedrest_mod,    only: sediment_restart_write
 #ifdef UseMPI_CMF
   use CMF_CTRL_MPI_MOD,        only: CMF_MPI_REDUCE_R2MAP
@@ -225,7 +225,8 @@ subroutine cmf_sed_output
   !================================================
   call sediment_restart_write
 
-  d2sedv_avg(:,:,:) = d2sedv_avg(:,:,:) / dble(NADD)
+  d2sedv_avg(:,:,:) = d2sedv_avg(:,:,:) / dble(sadd_out)
+  write(LOGNAM,*) 'cmf_sed_output: average ',sadd_out,' seconds'
 
   !*** 0. check date:hour with output frequency
   if ( mod(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) then             ! JHOUR: end of time step , nfpph: output frequency (hour)
@@ -284,6 +285,7 @@ subroutine cmf_sed_output
   endif
 
   d2sedv_avg(:,:,:) = 0._JPRB
+  sadd_out = 0._JPRB
 
 contains
   subroutine wrte_outcdf

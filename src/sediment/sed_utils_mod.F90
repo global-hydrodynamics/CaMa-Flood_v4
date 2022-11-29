@@ -35,4 +35,28 @@ subroutine splitchar(allvars,vnames)
   endif
 end subroutine splitchar
 
+subroutine sed_diag_average
+  use yos_cmf_sed,             only: d2rivout_sed, d2rivvel_sed, sadd_riv, sadd_out
+  implicit none
+
+  d2rivout_sed(:) = d2rivout_sed(:) /dble(sadd_riv)
+  d2rivvel_sed(:) = d2rivvel_sed(:) /dble(sadd_riv)
+end subroutine sed_diag_average
+
+subroutine sed_diag_reset
+  use PARKIND1,                only: JPRB
+  use YOS_CMF_PROG,            only: D2RIVSTO
+  use yos_cmf_sed,             only: d2rivsto_pre, d2rivout_sed, d2rivvel_sed, &
+                                     sadd_riv, sadd_out, sedDT
+  implicit none
+
+  sadd_riv = 0
+  d2rivout_sed(:) = 0._JPRB
+  d2rivvel_sed(:) = 0._JPRB
+  d2rivsto_pre(:) = D2RIVSTO(:,1)
+
+  sadd_out = sadd_out + sedDT
+end subroutine sed_diag_reset
+
+
 end module sed_utils_mod
