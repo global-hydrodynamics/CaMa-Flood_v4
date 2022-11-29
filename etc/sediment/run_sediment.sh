@@ -57,7 +57,7 @@ LOGOUT="./log_CaMa.txt"                     # standard log output
 
 #============================
 #*** 1b. Model physics option
-DT=86400                                    # base DT (modified in physics loop by LADPSTP)
+DT=3600                                    # base DT (modified in physics loop by LADPSTP)
 LADPSTP=".TRUE."                            # .TRUE. for adaptive time step
 
 LFPLAIN=".TRUE."                            # .TRUE. to activate floodplain storage
@@ -209,7 +209,7 @@ lambda="0.4d0"                              # bed porosity
 lyrdph="0.00005d0"                          # bed layer depth
 nsed=3                                      # number of grain sizes 
 #nsed=1
-psedDT=1                                    # if more than 1 timestep per water flow's time step is necessary
+sedDT="3600.d0"                             # timestep for sediment [s]
 psedD="2.65d0"                              # sediment grain density
 revEgia=".true."                            # .true. if using revised egiazoroff
 #totlyrnum=5                                 # number of vertical bed layers
@@ -491,7 +491,7 @@ cat >> input_sed.nam << EOF
 lambda = ${lambda}
 lyrdph = ${lyrdph}
 nsed = ${nsed}
-psedDT = ${psedDT}
+sedDT = ${sedDT}
 psedD = ${psedD}
 pset = 1.D0
 pwatD = 1.D0
