@@ -31,9 +31,10 @@ contains
 subroutine sediment_restart_init
   use YOS_CMF_MAP,             only: D2RIVLEN, D2RIVWTH
   use YOS_CMF_PROG,            only: D2RIVSTO
-  use yos_cmf_sed,             only: d2sedfrc, lyrdph, rivsto_pre
+  use yos_cmf_sed,             only: d2sedfrc, lyrdph, d2rivsto_pre, &
+                                     d2rivout_sed, d2rivvel_sed, sadd_riv, sadd_out
   use CMF_UTILS_MOD,           only: MAP2VEC, inquire_fid
-  
+
   implicit none
   save
 #ifdef UseMPI_CMF
@@ -92,8 +93,12 @@ subroutine sediment_restart_init
     write(LOGNAM,*) 'read restart sediment',maxval(d2seddep(:,totlyrnum,:))
   endif
 
-  allocate(rivsto_pre(NSEQALL))
-  rivsto_pre(:) = D2RIVSTO(:NSEQALL,1)
+  allocate(d2rivsto_pre(NSEQMAX), d2rivout_sed(NSEQMAX), d2rivvel_sed(NSEQMAX))
+  sadd_riv = 0.d0
+  sadd_out = 0.d0
+  d2rivsto_pre(:) = D2RIVSTO(:,1)
+  d2rivout_sed(:) = 0.d0
+  d2rivvel_sed(:) = 0.d0
 end subroutine sediment_restart_init
 
 subroutine sediment_restart_write

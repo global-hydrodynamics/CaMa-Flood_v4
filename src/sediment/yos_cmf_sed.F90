@@ -43,7 +43,13 @@ module yos_cmf_sed
   real(kind=JPRB),allocatable     :: sDiam(:)          ! sediment diameter
   real(kind=JPRB),allocatable     :: setVel(:)         ! setting velocity (m/s)
   
-  real(kind=JPRB),allocatable     :: rivsto_pre(:)     ! save river storage from previous timestep
+  integer(kind=JPIM)              :: STEP_SED          ! number of river timesteps within sediment timestep (sedDT/DT)
+  real(kind=JPRB)                 :: sadd_riv          ! sum DT to calculate river variable average for sediment
+  real(kind=JPRB)                 :: sadd_out          ! sum sedDT to calculate output average
+  real(kind=JPRB)                 :: sedDT             ! sediment timestep (s)
+  real(kind=JPRB),allocatable     :: d2rivout_sed(:)   ! accumulate rivout at DT to average into sedDT
+  real(kind=JPRB),allocatable     :: d2rivvel_sed(:)   ! accumulate rivvel at DT to average into sedDT
+  real(kind=JPRB),allocatable     :: d2rivsto_pre(:)   ! save river storage from previous timestep
 
 !================================================
 end module yos_cmf_sed

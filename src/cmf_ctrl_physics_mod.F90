@@ -36,10 +36,6 @@ USE CMF_CTRL_LEVEE_MOD,    ONLY: CMF_LEVEE_OPT_PTHOUT
 USE YOS_CMF_ICI,           ONLY: LLAKEIN
 USE CMF_CALC_LAKEIN_MOD,   ONLY: CMF_CALC_LAKEIN, CMF_LAKEIN_AVE
 #endif
-#ifdef sediment
-USE YOS_CMF_INPUT,         ONLY: LSEDOUT
-USE cmf_calc_sedflw_mod,   ONLY: cmf_calc_sedflw
-#endif
 
 IMPLICIT NONE
 !! LOCAL
@@ -84,12 +80,6 @@ DO IT=1, NT
   IF ( LDAMOUT ) THEN
     CALL CMF_DAMOUT_CALC            !! reservoir operation
   ENDIF
-
-#ifdef sediment
-  IF ( LSEDOUT ) THEN
-    CALL cmf_calc_sedflw            !! sediment dynamics
-  ENDIF
-#endif
 
 ! --- save value for next tstet
   CALL CALC_VARS_PRE

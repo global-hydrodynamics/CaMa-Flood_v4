@@ -30,13 +30,13 @@ contains
 !####################################################################
 
 subroutine cmf_sed_nmlist
-  use yos_cmf_sed,             only: lambda, psedDT, psedD, pset, pwatD, &
+  use yos_cmf_sed,             only: lambda, psedD, pset, pwatD, sedDT, &
                                      revEgia, visKin, vonKar
 
   implicit none
   integer(kind=JPIM)              :: nsetfile
 
-  namelist/sediment_param/  lambda, lyrdph, nsed, psedDT, psedD, &
+  namelist/sediment_param/  lambda, lyrdph, nsed, sedDT, psedD, &
                             pset, pwatD, revEgia, totlyrnum, &
                             visKin, vonKar
 
@@ -46,7 +46,7 @@ subroutine cmf_sed_nmlist
   lambda = 0.4d0
   lyrdph = 0.00005d0
   nsed = 3
-  psedDT = 1 
+  sedDT = 3600
   psedD = 2.65d0
   pset = 1.d0
   pwatD = 1.d0
@@ -61,7 +61,7 @@ subroutine cmf_sed_nmlist
   write(LOGNAM,*) 'nml sediment_param'
   write(LOGNAM,*) 'lambda    :', lambda
   write(LOGNAM,*) 'lyrdph    :', lyrdph
-  write(LOGNAM,*) 'psedDT    :', psedDT
+  write(LOGNAM,*) 'sedDT     :', sedDT
   write(LOGNAM,*) 'psedD     :', psedD
   write(LOGNAM,*) 'pset      :', pset
   write(LOGNAM,*) 'pwatD     :', pwatD
@@ -178,8 +178,16 @@ contains
                                        d2bedout_avg, d2netflw_avg,   &
                                        d2sedout, d2sedcon, d2sedinp, &
                                        d2sedout_avg, d2sedinp_avg, d2layer, &
-                                       d2sedv, d2sedv_avg, d2depv
+                                       d2sedv, d2sedv_avg, d2depv,   &
+                                       sedDT, step_sed
+    use YOS_CMF_INPUT,           only: DT
     implicit none
+
+    if ( mod(sedDT,DT) /= 0 ) then
+      write(lognam,*) 'sedDT ',sedDT,'is not a multiple of DT',DT
+      stop
+    endif
+    step_sed = int(sedDT/DT)
 
     allocate(d2sedv(NSEQMAX,nsed,6))
     d2sedv(:,:,:) = 0._JPRB

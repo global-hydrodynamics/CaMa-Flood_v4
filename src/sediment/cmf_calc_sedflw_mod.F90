@@ -14,44 +14,42 @@ subroutine cmf_calc_sedflw
   use PARKIND1,                only: JPIM, JPRB
   use YOS_CMF_INPUT,           only: DT, PGRV
   use YOS_CMF_MAP,             only: D2RIVLEN, D2RIVWTH, NSEQALL
-  use YOS_CMF_PROG,            only: D2RIVOUT, D2RIVSTO
-  use YOS_CMF_DIAG,            only: D2RIVDPH, D2RIVVEL
-  use yos_cmf_sed,             only: lambda, nsed, revEgia, psedD, psedDT, pwatD, sDiam
-  use yos_cmf_sed,             only: d2layer, d2sedcon, rivsto_pre, setVel
-  
+  use YOS_CMF_PROG,            only: D2RIVSTO
+  use YOS_CMF_DIAG,            only: D2RIVDPH
+  use yos_cmf_sed,             only: lambda, nsed, sedDT, setVel, &
+                                     d2layer, d2sedcon, d2rivsto_pre
+  use sed_utils_mod,           only: sed_diag_average, sed_diag_reset
+
   implicit none
   !$ SAVE
   save
-  integer(kind=JPIM)              :: ISEQ, sDT
+  integer(kind=JPIM)              :: ISEQ
   real(kind=JPRB)                 :: sedsto(NSEQALL,nsed)
   real(kind=JPRB)                 :: shearVel(NSEQALL)
-  real(kind=JPRB)                 :: critShearVel(NSEQALL,nsed), dMean(NSEQALL), sedDT, susVel(NSEQALL,nsed)
+  real(kind=JPRB)                 :: critShearVel(NSEQALL,nsed), dMean(NSEQALL), susVel(NSEQALL,nsed)
   real(kind=JPRB), parameter      :: IGNORE_DPH = 0.05d0
   !================================================
 
-  sedDT = DT / dble(psedDT)
-  
-  do sDT = 1, psedDT
-    !$omp parallel do
-    do iseq = 1, NSEQALL
-      sedsto(iseq,:) = d2sedcon(iseq,:) * max(rivsto_pre(iseq), 0.d0)
-    enddo
-    !$omp end parallel do
-
-    call calc_params
-    call calc_advection
-    call calc_entrainment
-    call calc_exchange
-
-    !$omp parallel do
-    do iseq = 1, NSEQALL
-      if ( D2RIVSTO(iseq,1) < D2RIVWTH(iseq,1)*D2RIVLEN(iseq,1)*IGNORE_DPH ) cycle
-      d2sedcon(iseq,:) = sedsto(iseq,:) / D2RIVSTO(iseq,1)
-    enddo
-    !$omp end parallel do
+  call sed_diag_average 
+  !$omp parallel do
+  do iseq = 1, NSEQALL
+    sedsto(iseq,:) = d2sedcon(iseq,:) * max(d2rivsto_pre(iseq), 0.d0)
   enddo
+  !$omp end parallel do
 
-  rivsto_pre(:NSEQALL) = D2RIVSTO(:NSEQALL,1)
+  call calc_params
+  call calc_advection
+  call calc_entrainment
+  call calc_exchange
+
+  !$omp parallel do
+  do iseq = 1, NSEQALL
+    if ( D2RIVSTO(iseq,1) < D2RIVWTH(iseq,1)*D2RIVLEN(iseq,1)*IGNORE_DPH ) cycle
+    d2sedcon(iseq,:) = sedsto(iseq,:) / D2RIVSTO(iseq,1)
+  enddo
+  !$omp end parallel do
+
+  call sed_diag_reset
 
 contains
 !==========================================================
@@ -61,7 +59,7 @@ contains
 !+ calc_exchange
 !==========================================================
   subroutine calc_params
-    use yos_cmf_sed,           only: pset, visKin
+    use yos_cmf_sed,           only: pset, revEgia, sDiam, visKin, d2rivvel_sed
     use cmf_calc_sedpar_mod,   only: calc_criticalShearVelocity, calc_shearVelocity, calc_suspendVelocity
     implicit none
     save
@@ -99,11 +97,11 @@ contains
       !------------------------------------------------------!
       ! shear velocity, suspend velocity, Karman coefficient !
       !------------------------------------------------------!
-      if ( D2RIVVEL(iseq,1) == 0.d0 .or. D2RIVDPH(iseq,1) < IGNORE_DPH ) then
+      if ( d2rivvel_sed(iseq) == 0.d0 .or. D2RIVDPH(iseq,1) < IGNORE_DPH ) then
         shearVel(iseq) = 0.d0
         susVel(iseq,:) = 0.d0
       else
-        shearVel(iseq) = calc_shearVelocity(D2RIVVEL(iseq,1), D2RIVDPH(iseq,1))
+        shearVel(iseq) = calc_shearVelocity(d2rivvel_sed(iseq), D2RIVDPH(iseq,1))
         susVel(iseq,:) = calc_suspendVelocity(critShearVel(iseq,:), shearVel(iseq), setVel(:))
       endif
     enddo
@@ -112,8 +110,8 @@ contains
 
   subroutine calc_advection
     use YOS_CMF_MAP,           only:  I1NEXT
-    use yos_cmf_sed,           only:  d2bedout, d2sedout, &
-                                      d2bedout_avg, d2sedout_avg
+    use yos_cmf_sed,           only:  d2rivout_sed, d2bedout, d2sedout, &
+                                      d2bedout_avg, d2sedout_avg, psedD, pwatD
     implicit none
     real(kind=JPRB)               ::  bOut(NSEQALL,nsed), brate(NSEQALL,nsed)
     real(kind=JPRB)               ::  sOut(NSEQALL,nsed), srate(NSEQALL,nsed)
@@ -129,7 +127,7 @@ contains
     !$omp parallel do
     do iseq = 1, NSEQALL
       
-      if ( D2RIVOUT(iseq,1) >= 0.d0 ) then
+      if ( d2rivout_sed(iseq) >= 0.d0 ) then
         iseq0 = iseq
         iseq1 = I1NEXT(iseq)
       else
@@ -137,7 +135,7 @@ contains
         iseq1 = iseq
       endif
 
-      if ( D2RIVOUT(iseq,1) == 0.d0 ) then
+      if ( d2rivout_sed(iseq) == 0.d0 ) then
         d2sedout(iseq,:) = 0.d0
         d2bedout(iseq,:) = 0.d0
         cycle
@@ -147,9 +145,9 @@ contains
       ! calc suspend flow !
       !-------------------!
       if ( iseq0 < 0 ) then
-        d2sedout(iseq,:) = d2sedcon(iseq1,:) * D2RIVOUT(iseq,1)
+        d2sedout(iseq,:) = d2sedcon(iseq1,:) * d2rivout_sed(iseq)
       else
-        d2sedout(iseq,:) = d2sedcon(iseq0,:) * D2RIVOUT(iseq,1)
+        d2sedout(iseq,:) = d2sedcon(iseq0,:) * d2rivout_sed(iseq)
         sOut(iseq0,:) = sOut(iseq0,:) + abs(d2sedout(iseq,:))*sedDT
       endif
 
@@ -180,7 +178,7 @@ contains
     brate(:,:) = 1.d0
     srate(:,:) = 1.d0
     !$omp parallel do
-    do iseq = 1, nseqall
+    do iseq = 1, NSEQALL
       if ( minval(sOut(iseq,:)) <= 1e-8 ) then
         do ised = 1, nsed
           if ( sOut(iseq,ised) > 1e-8 ) then
@@ -202,8 +200,8 @@ contains
     enddo
     !$omp end parallel do
     
-    do iseq = 1, nseqall
-      if ( D2RIVOUT(iseq,1) >= 0.d0 ) then
+    do iseq = 1, NSEQALL
+      if ( d2rivout_sed(iseq) >= 0.d0 ) then
         iseq0 = iseq
         iseq1 = I1NEXT(iseq)
       else
