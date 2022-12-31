@@ -20,7 +20,7 @@ MODULE CMF_CTRL_ICI_MOD
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
 ! shared variables in module
-USE MPI
+USE mpi
 USE PARKIND1,                ONLY: JPIM, JPRB
 USE YOS_CMF_INPUT,           ONLY: LOGNAM
 USE YOS_CMF_ICI,             ONLY: LLAKEIN
@@ -71,8 +71,7 @@ SUBROUTINE CMF_ICI_INPUT
 USE YOS_CMF_INPUT,           ONLY: NSETFILE, CLOGOUT
 USE YOS_CMF_MAP,             ONLY: REGIONALL,REGIONTHIS, MPI_COMM_CAMA
 USE CMF_UTILS_MOD,           ONLY: INQUIRE_FID
-USE ici_api,                 ONLY: ici_split_world, ici_set_my_world, &
-                                &  ici_init, ici_get_numpe_local, ici_get_irank_local, ici_get_comm_local
+USE ici_api,                 ONLY: ici_init, ici_get_numpe_local, ici_get_irank_local, ici_get_comm_local
 IMPLICIT NONE
 !* local variables
 !================================================
@@ -89,9 +88,6 @@ CLOSE(NSETFILE)
 
 !*** Initialize MPI
 CALL MPI_Init(ierr)
-CALL ici_split_world(0, my_comm) ! A-O communicator
-CALL ici_split_world(1, my_comm) ! ILS communicator
-CALL ici_set_my_world(my_comm)
 CALL ici_init(my_comp, namelist_ici_file)
 CALL palm_TimeInit("CAMA",comm=ici_get_comm_local())
 
@@ -147,7 +143,7 @@ SUBROUTINE ICI_MAPTABLE_INIT
 USE YOS_CMF_INPUT,           ONLY: NSETFILE,NX
 USE YOS_CMF_MAP,             ONLY: I1SEQX, I1SEQY, NSEQALL
 USE CMF_UTILS_MOD,           ONLY: INQUIRE_FID
-USE ici_api,                 ONLY: ici_def_grid, ici_end_grid_def, ici_set_interpolation_table
+USE ici_api,                 ONLY: ici_def_grid, ici_end_grid_def
 IMPLICIT NONE
 !* local variables
 INTEGER(KIND=JPIM)              :: ix,iy,iseq,i
@@ -161,26 +157,6 @@ ENDDO
 
 CALL ici_def_grid(my_grid,NSEQALL,1,1,cama_grid)
 CALL ici_end_grid_def()
-
-NSETFILE=INQUIRE_FID()
-OPEN(NSETFILE,FILE='input_cmf.nam',STATUS="OLD")
-REWIND(NSETFILE)
-DO i=1,intpl_num
-  send_comp  = ""
-  send_grid  = ""
-  recv_comp  = ""
-  recv_grid  = ""
-  map_file   = ""
-  intpl_map  = 1
-  intpl_file = ""
-  READ(NSETFILE,NML=cama_ici_intpl)
-  IF (map_file=="") THEN
-    CALL ici_set_interpolation_table(send_comp,send_grid,recv_comp,recv_grid)
-  ELSE
-    CALL ici_set_interpolation_table(send_comp,send_grid,recv_comp,recv_grid,trim(map_file),trim(intpl_file), intpl_map)
-  ENDIF
-ENDDO
-CLOSE(NSETFILE)
 
 END SUBROUTINE ICI_MAPTABLE_INIT
 !==========================================================
@@ -250,7 +226,7 @@ call ici_put_data("fldare", D2FLDARE(:NSEQALL,1))
 call ici_put_data("sfcelv", D2SFCELV(:NSEQALL,1))
 call ici_put_data("outflw", D2OUTFLW_AVG(:NSEQALL,1))
 call ici_put_data("storge", D2STORGE(:NSEQALL,1))
-call ici_put_data("runoff", D2RUNOFF_AVG(:NSEQALL,1))
+call ici_put_data("runoff_o", D2RUNOFF_AVG(:NSEQALL,1))
 call ici_put_data("maxflw", D2OUTFLW_MAX(:NSEQALL,1))
 call ici_put_data("maxsto", D2STORGE_MAX(:NSEQALL,1))
 call ici_put_data("maxdph", D2RIVDPH_MAX(:NSEQALL,1))
@@ -403,7 +379,7 @@ call ici_put_data("fldare", D2FLDARE(:NSEQALL,1))
 call ici_put_data("sfcelv", D2SFCELV(:NSEQALL,1))
 call ici_put_data("outflw", D2OUTFLW_AVG(:NSEQALL,1))
 call ici_put_data("storge", D2STORGE(:NSEQALL,1))
-call ici_put_data("runoff", D2RUNOFF_AVG(:NSEQALL,1))
+call ici_put_data("runoff_o", D2RUNOFF_AVG(:NSEQALL,1))
 call ici_put_data("maxflw", D2OUTFLW_MAX(:NSEQALL,1))
 call ici_put_data("maxsto", D2STORGE_MAX(:NSEQALL,1))
 call ici_put_data("maxdph", D2RIVDPH_MAX(:NSEQALL,1))
