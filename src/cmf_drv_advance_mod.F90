@@ -43,6 +43,7 @@ USE yos_cmf_sed,             ONLY: step_sed
 USE cmf_ctrl_sedout_mod,     ONLY: cmf_sed_output
 USE cmf_calc_sedflw_mod,     ONLY: cmf_calc_sedflw
 #endif
+
 !$ USE OMP_LIB
 IMPLICIT NONE 
 SAVE
@@ -77,7 +78,7 @@ DO ISTEP=1,KSTEPS
   ENDIF
 
   !============================
-  !*** 2a. Advance model integration
+  !*** 2a. Advance model integration 
   CALL CMF_PHYSICS_ADVANCE
 
 #ifdef sediment

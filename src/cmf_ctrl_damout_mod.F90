@@ -17,7 +17,7 @@ MODULE CMF_CTRL_DAMOUT_MOD
 !  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
-USE PARKIND1,                ONLY: JPIM, JPRB, JPRM
+USE PARKIND1,                ONLY: JPIM, JPRB, JPRM, JPRD
 USE YOS_CMF_INPUT,           ONLY: LOGNAM, IMIS
 !============================
 IMPLICIT NONE
@@ -95,7 +95,7 @@ SUBROUTINE CMF_DAMOUT_INIT
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
 USE YOS_CMF_INPUT,      ONLY: NX, NY, LRESTART, LPTHOUT
 USE YOS_CMF_MAP,        ONLY: I2VECTOR, I1NEXT, NSEQALL, NSEQMAX
-USE YOS_CMF_PROG,       ONLY: D2DAMSTO, D2DAMINF
+USE YOS_CMF_PROG,       ONLY: D2DAMSTO, B2DAMINF
 USE YOS_CMF_MAP,        ONLY: NPTHOUT, NPTHLEV, PTH_UPST, PTH_DOWN, PTH_ELV !! bifurcation pass
 
 ! reed setting from CDAMFILE
@@ -188,7 +188,7 @@ ENDIF
 
 !! Initialize dam inflow
 DO ISEQ=1, NSEQALL
-  D2DAMINF(ISEQ,1)=0._JPRB
+  B2DAMINF(ISEQ,1)=0._JPRB
 END DO
 
 !! Stop bifurcation at dam & dam-upstream grids
@@ -215,9 +215,9 @@ END SUBROUTINE CMF_DAMOUT_INIT
 SUBROUTINE CMF_DAMOUT_CALC
 USE YOS_CMF_INPUT,      ONLY: DT
 USE YOS_CMF_MAP,        ONLY: I1NEXT,   NSEQALL,  NSEQRIV
-USE YOS_CMF_PROG,       ONLY: D2RIVOUT, D2FLDOUT, D2RIVSTO, D2FLDSTO
-USE YOS_CMF_PROG,       ONLY: D2DAMSTO, D2DAMINF, D2RUNOFF    !! 
-USE YOS_CMF_DIAG,       ONLY: D2RIVINF, D2FLDINF
+USE YOS_CMF_PROG,       ONLY: B2RIVOUT, B2FLBOUT, D2RIVSTO, D2FLDSTO
+USE YOS_CMF_PROG,       ONLY: D2DAMSTO, B2DAMINF, B2RUNOFF    !! 
+USE YOS_CMF_DIAG,       ONLY: B2RIVINF, B2FLDINF
 ! local
 IMPLICIT NONE
 ! SAVE for OMP
@@ -227,7 +227,7 @@ REAL(KIND=JPRB),SAVE       :: DamVol
 REAL(KIND=JPRB),SAVE       :: DamInflow
 REAL(KIND=JPRB),SAVE       :: DamOutflw           !! Total outflw 
 !*** water balance
-REAL(KIND=JPRB),SAVE       :: GlbDAMSTO, GlbDAMSTONXT, GlbDAMINF, GlbDAMOUT, DamMiss
+REAL(KIND=JPRD),SAVE       :: GlbDAMSTO, GlbDAMSTONXT, GlbDAMINF, GlbDAMOUT, DamMiss
 
 !$OMP THREADPRIVATE    (ISEQD,DamVol,DamInflow,DamOutflw)
 !====================
@@ -252,7 +252,7 @@ DO IDAM=1, NDAM
 
   !! *** 2a update dam volume and inflow -----------------------------------
   DamVol    = D2DAMSTO(ISEQD,1)    
-  DamInflow = D2DAMINF(ISEQD,1)
+  DamInflow = B2DAMINF(ISEQD,1)
 
   !! *** 2b Reservoir Operation          ------------------------------
   !! case1: impoundment
@@ -280,16 +280,16 @@ DO IDAM=1, NDAM
   ENDIF
 
   !! *** 2c flow limitter
-  DamOutflw = min( DamOutflw, DamVol/DT, ( D2RIVSTO(ISEQD,1)+D2FLDSTO(ISEQD,1) )/DT )
+  DamOutflw = min( DamOutflw, DamVol/DT, real(D2RIVSTO(ISEQD,1)+D2FLDSTO(ISEQD,1),JPRB)/DT )
   DamOutflw = max( DamOutflw, 0._JPRB )
 
   !! update CaMa variables  (treat all outflow as RIVOUT in dam grid, no fldout)
-  D2RIVOUT(ISEQD,1) = DamOutflw
-  D2FLDOUT(ISEQD,1) = 0._JPRB
+  B2RIVOUT(ISEQD,1) = DamOutflw
+  B2FLBOUT(ISEQD,1) = 0._JPRB
 END DO
 !$OMP END PARALLEL DO
 
-!* 3) modify outflow to suppless negative discharge, update RIVOUT,FLDOUT,RIVINF,FLDINF
+!* 3) modify outflow to suppless negative discharge, update RIVOUT,FLBOUT,RIVINF,FLDINF
 CALL MODIFY_OUTFLW
 
 
@@ -304,9 +304,9 @@ DO IDAM=1, NDAM
   IF( DamSeq(IDAM)<=0 ) CYCLE
   ISEQD = DamSeq(IDAM)
 
-  DamInflow = D2RIVINF(ISEQD,1) + D2FLDINF(ISEQD,1) + D2RUNOFF(ISEQD,1)
-  DamOutflw = D2RIVOUT(ISEQD,1) + D2FLDOUT(ISEQD,1)
-!!D2DAMINF(ISEQD,1)=DamInflow   !! if water balance needs to be checked in the output file, D2DAMINF should be updated.
+  DamInflow = B2RIVINF(ISEQD,1) + B2FLDINF(ISEQD,1) + B2RUNOFF(ISEQD,1)
+  DamOutflw = B2RIVOUT(ISEQD,1) + B2FLBOUT(ISEQD,1)
+!!B2DAMINF(ISEQD,1)=DamInflow   !! if water balance needs to be checked in the output file, B2DAMINF should be updated.
 
   GlbDAMSTO = GlbDAMSTO + D2DAMSTO(ISEQD,1)
   GlbDAMINF = GlbDAMINF + DamInflow*DT
@@ -330,23 +330,23 @@ CONTAINS
 !==========================================================
 SUBROUTINE UPDATE_INFLOW
 USE YOS_CMF_INPUT,      ONLY: PMINSLP, PMANFLD
-USE YOS_CMF_MAP,        ONLY: D2RIVLEN, D2RIVMAN, D2ELEVTN, D2NXTDST, D2RIVWTH
-USE YOS_CMF_PROG,       ONLY: D2RIVOUT_PRE, D2FLDOUT_PRE
-USE YOS_CMF_DIAG,       ONLY: D2RIVDPH, D2RIVVEL, D2FLDDPH
+USE YOS_CMF_MAP,        ONLY: B2RIVLEN, B2RIVMAN, B2ELEVTN, B2NXTDST, B2RIVWTH
+USE YOS_CMF_PROG,       ONLY: B2RIVOUT_PRE, B2FLBOUT_PRE
+USE YOS_CMF_DIAG,       ONLY: B2RIVDPH, B2RIVVEL, B2FLDDPH
 IMPLICIT NONE
 ! SAVE for OpenMP
 INTEGER(KIND=JPIM),SAVE    :: ISEQ, JSEQ
-REAL(KIND=JPRB),SAVE       :: DSLOPE,DAREA,DVEL,DSLOPE_F,DARE_F,DVEL_F
-!$OMP THREADPRIVATE     (JSEQ,DSLOPE,DAREA,DVEL,DSLOPE_F,DARE_F,DVEL_F)
+REAL(KIND=JPRB),SAVE       :: BSLOPE,BAREA,BVEL,BSLOPE_F,BARE_F,BVEL_F
+!$OMP THREADPRIVATE     (JSEQ,BSLOPE,BAREA,BVEL,BSLOPE_F,BARE_F,BVEL_F)
 !============================
 
 !*** 1a. reset outflw & dam inflow
 !$OMP PARALLEL DO
 DO ISEQ=1, NSEQALL
   IF( I1DAM(ISEQ)>0 )THEN  !! if dam grid or upstream of dam, reset variables
-    D2RIVOUT(ISEQ,1) = 0._JPRB
-    D2FLDOUT(ISEQ,1) = 0._JPRB
-    D2DAMINF(ISEQ,1) = 0._JPRB
+    B2RIVOUT(ISEQ,1) = 0._JPRB
+    B2FLBOUT(ISEQ,1) = 0._JPRB
+    B2DAMINF(ISEQ,1) = 0._JPRB
   ENDIF
 END DO
 !$OMP END PARALLEL DO
@@ -359,7 +359,7 @@ DO ISEQ=1, NSEQALL
   IF( I1DAM(ISEQ)==10 .or. I1DAM(ISEQ)==11 )THEN  !! if dam grid or upstream of dam
     JSEQ=I1NEXT(ISEQ)
 !$OMP ATOMIC
-    D2DAMINF(JSEQ,1) = D2DAMINF(JSEQ,1) + D2RIVOUT_PRE(ISEQ,1) + D2FLDOUT_PRE(ISEQ,1) 
+    B2DAMINF(JSEQ,1) = B2DAMINF(JSEQ,1) + B2RIVOUT_PRE(ISEQ,1) + B2FLBOUT_PRE(ISEQ,1) 
   ENDIF
 END DO
 #ifndef NoAtom_CMF
@@ -372,23 +372,23 @@ DO ISEQ=1, NSEQRIV
   IF( I1DAM(ISEQ)==10 )THEN  !! if downstream is DAM
     JSEQ   = I1NEXT(ISEQ)
     ! === river flow
-    DSLOPE = (D2ELEVTN(ISEQ,1)-D2ELEVTN(JSEQ,1)) * D2NXTDST(ISEQ,1)**(-1.)
-    DSLOPE = max(DSLOPE,PMINSLP)
+    BSLOPE = (B2ELEVTN(ISEQ,1)-B2ELEVTN(JSEQ,1)) * B2NXTDST(ISEQ,1)**(-1.)
+    BSLOPE = max(BSLOPE,PMINSLP)
 
-    DVEL   = D2RIVMAN(ISEQ,1)**(-1.) * DSLOPE**0.5 * D2RIVDPH(ISEQ,1)**(2./3.)
-    DAREA  = D2RIVWTH(ISEQ,1) * D2RIVDPH(ISEQ,1)
+    BVEL   = B2RIVMAN(ISEQ,1)**(-1.) * BSLOPE**0.5 * B2RIVDPH(ISEQ,1)**(2./3.)
+    BAREA  = B2RIVWTH(ISEQ,1) * B2RIVDPH(ISEQ,1)
 
-    D2RIVVEL(ISEQ,1) = DVEL
-    D2RIVOUT(ISEQ,1) = DAREA * DVEL
-    D2RIVOUT(ISEQ,1) = MIN(  D2RIVOUT(ISEQ,1), D2RIVSTO(ISEQ,1)/DT )
+    B2RIVVEL(ISEQ,1) = BVEL
+    B2RIVOUT(ISEQ,1) = BAREA * BVEL
+    B2RIVOUT(ISEQ,1) = MIN( B2RIVOUT(ISEQ,1), real(D2RIVSTO(ISEQ,1),JPRB)/DT )
     !=== floodplain flow
-    DSLOPE_F = min( 0.005_JPRB,DSLOPE )    !! set min [instead of using weirequation for efficiency]
-    DVEL_F   = PMANFLD**(-1.) * DSLOPE_F**0.5 * D2FLDDPH(ISEQ,1)**(2./3.)
-    DARE_F   = D2FLDSTO(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
-    DARE_F   = MAX( DARE_F - D2FLDDPH(ISEQ,1)*D2RIVWTH(ISEQ,1), 0._JPRB )   !!remove above river channel     area
+    BSLOPE_F = min( 0.005_JPRB,BSLOPE )    !! set min [instead of using weirequation for efficiency]
+    BVEL_F   = PMANFLD**(-1.) * BSLOPE_F**0.5 * B2FLDDPH(ISEQ,1)**(2./3.)
+    BARE_F   = D2FLDSTO(ISEQ,1) * B2RIVLEN(ISEQ,1)**(-1.)
+    BARE_F   = MAX( BARE_F - B2FLDDPH(ISEQ,1)*B2RIVWTH(ISEQ,1), 0._JPRB )   !!remove above river channel     area
 
-    D2FLDOUT(ISEQ,1) = DARE_F * DVEL_F
-    D2FLDOUT(ISEQ,1) = MIN(  D2FLDOUT(ISEQ,1), D2FLDSTO(ISEQ,1)/DT )
+    B2FLBOUT(ISEQ,1) = BARE_F * BVEL_F
+    B2FLBOUT(ISEQ,1) = MIN(  B2FLBOUT(ISEQ,1)*1._JPRD, D2FLDSTO(ISEQ,1)/DT )
   ENDIF
 END DO
 !$OMP END PARALLEL DO
@@ -404,22 +404,22 @@ SUBROUTINE MODIFY_OUTFLW
 USE YOS_CMF_MAP,        ONLY: NSEQMAX
 IMPLICIT NONE
 
-REAL(KIND=JPRB)            :: D2STOOUT(NSEQMAX,1)                      !! total outflow from a grid     [m3]
-REAL(KIND=JPRB)            :: D2RATE(NSEQMAX,1)                        !! outflow correction
+REAL(KIND=JPRB)            :: B2STOOUT(NSEQMAX,1)                      !! total outflow from a grid     [m3]
+REAL(KIND=JPRB)            :: B2RATE(NSEQMAX,1)                        !! outflow correction
 ! SAVE for OpenMP
 INTEGER(KIND=JPIM),SAVE    :: ISEQ, JSEQ
-REAL(KIND=JPRB),SAVE       :: OUT_R1, OUT_R2, OUT_F1, OUT_F2, DIUP, DIDW
-!$OMP THREADPRIVATE     (JSEQ,OUT_R1, OUT_R2, OUT_F1, OUT_F2, DIUP, DIDW)
+REAL(KIND=JPRB),SAVE       :: OUT_R1, OUT_R2, OUT_F1, OUT_F2, BIUP, BIDW
+!$OMP THREADPRIVATE     (JSEQ,OUT_R1, OUT_R2, OUT_F1, OUT_F2, BIUP, BIDW)
 !================================================
   
-!*** 1. initialize & calculate D2STOOUT for normal cells
+!*** 1. initialize & calculate B2STOOUT for normal cells
 
 !$OMP PARALLEL DO
 DO ISEQ=1, NSEQALL
-  D2RIVINF(ISEQ,1) = 0._JPRB
-  D2FLDINF(ISEQ,1) = 0._JPRB
-  D2STOOUT(ISEQ,1) = 0._JPRB
-  D2RATE(ISEQ,1) = 1._JPRB
+  B2RIVINF(ISEQ,1) = 0._JPRB
+  B2FLDINF(ISEQ,1) = 0._JPRB
+  B2STOOUT(ISEQ,1) = 0._JPRB
+  B2RATE(ISEQ,1) = 1._JPRB
 END DO
 !$OMP END PARALLEL DO
 
@@ -429,16 +429,16 @@ END DO
 #endif
 DO ISEQ=1, NSEQRIV                                                    !! for normalcells
   JSEQ=I1NEXT(ISEQ) ! next cell's pixel
-  OUT_R1 = max(  D2RIVOUT(ISEQ,1),0._JPRB )
-  OUT_R2 = max( -D2RIVOUT(ISEQ,1),0._JPRB )
-  OUT_F1 = max(  D2FLDOUT(ISEQ,1),0._JPRB )
-  OUT_F2 = max( -D2FLDOUT(ISEQ,1),0._JPRB )
-  DIUP=(OUT_R1+OUT_F1)*DT
-  DIDW=(OUT_R2+OUT_F2)*DT
+  OUT_R1 = max(  B2RIVOUT(ISEQ,1),0._JPRB )
+  OUT_R2 = max( -B2RIVOUT(ISEQ,1),0._JPRB )
+  OUT_F1 = max(  B2FLBOUT(ISEQ,1),0._JPRB )
+  OUT_F2 = max( -B2FLBOUT(ISEQ,1),0._JPRB )
+  BIUP=(OUT_R1+OUT_F1)*DT
+  BIDW=(OUT_R2+OUT_F2)*DT
 !$OMP ATOMIC
-  D2STOOUT(ISEQ,1) = D2STOOUT(ISEQ,1) + DIUP 
+  B2STOOUT(ISEQ,1) = B2STOOUT(ISEQ,1) + BIUP 
 !$OMP ATOMIC
-  D2STOOUT(JSEQ,1) = D2STOOUT(JSEQ,1) + DIDW 
+  B2STOOUT(JSEQ,1) = B2STOOUT(JSEQ,1) + BIDW 
 END DO
 #ifndef NoAtom_CMF
 !$OMP END PARALLEL DO
@@ -447,9 +447,9 @@ END DO
 !! for river mouth grids ------------
 !$OMP PARALLEL DO
 DO ISEQ=NSEQRIV+1, NSEQALL
-  OUT_R1 = max( D2RIVOUT(ISEQ,1), 0._JPRB )
-  OUT_F1 = max( D2FLDOUT(ISEQ,1), 0._JPRB )
-  D2STOOUT(ISEQ,1) = D2STOOUT(ISEQ,1) + OUT_R1*DT + OUT_F1*DT
+  OUT_R1 = max( B2RIVOUT(ISEQ,1), 0._JPRB )
+  OUT_F1 = max( B2FLBOUT(ISEQ,1), 0._JPRB )
+  B2STOOUT(ISEQ,1) = B2STOOUT(ISEQ,1) + OUT_R1*DT + OUT_F1*DT
 END DO
 !$OMP END PARALLEL DO
 
@@ -458,8 +458,8 @@ END DO
 
 !$OMP PARALLEL DO
 DO ISEQ=1, NSEQALL
-  IF ( D2STOOUT(ISEQ,1) > 1.E-8 ) THEN
-    D2RATE(ISEQ,1) = min( (D2RIVSTO(ISEQ,1)+D2FLDSTO(ISEQ,1)) * D2STOOUT(ISEQ,1)**(-1.), 1._JPRB )
+  IF ( B2STOOUT(ISEQ,1) > 1.E-8 ) THEN
+    B2RATE(ISEQ,1) = min( (D2RIVSTO(ISEQ,1)+D2FLDSTO(ISEQ,1)) * B2STOOUT(ISEQ,1)**(-1.), 1._JPRD )
   ENDIF
 END DO
 !$OMP END PARALLEL DO
@@ -470,17 +470,17 @@ END DO
 #endif
 DO ISEQ=1, NSEQRIV ! for normal pixels
   JSEQ=I1NEXT(ISEQ)
-  IF( D2RIVOUT(ISEQ,1) >= 0._JPRB )THEN
-    D2RIVOUT(ISEQ,1) = D2RIVOUT(ISEQ,1)*D2RATE(ISEQ,1)
-    D2FLDOUT(ISEQ,1) = D2FLDOUT(ISEQ,1)*D2RATE(ISEQ,1)
+  IF( B2RIVOUT(ISEQ,1) >= 0._JPRB )THEN
+    B2RIVOUT(ISEQ,1) = B2RIVOUT(ISEQ,1)*B2RATE(ISEQ,1)
+    B2FLBOUT(ISEQ,1) = B2FLBOUT(ISEQ,1)*B2RATE(ISEQ,1)
   ELSE
-    D2RIVOUT(ISEQ,1) = D2RIVOUT(ISEQ,1)*D2RATE(JSEQ,1)
-    D2FLDOUT(ISEQ,1) = D2FLDOUT(ISEQ,1)*D2RATE(JSEQ,1)
+    B2RIVOUT(ISEQ,1) = B2RIVOUT(ISEQ,1)*B2RATE(JSEQ,1)
+    B2FLBOUT(ISEQ,1) = B2FLBOUT(ISEQ,1)*B2RATE(JSEQ,1)
   ENDIF
 !$OMP ATOMIC
-  D2RIVINF(JSEQ,1) = D2RIVINF(JSEQ,1) + D2RIVOUT(ISEQ,1)             !! total inflow to a grid (from upstream)
+  B2RIVINF(JSEQ,1) = B2RIVINF(JSEQ,1) + B2RIVOUT(ISEQ,1)             !! total inflow to a grid (from upstream)
 !$OMP ATOMIC
-  D2FLDINF(JSEQ,1) = D2FLDINF(JSEQ,1) + D2FLDOUT(ISEQ,1)
+  B2FLDINF(JSEQ,1) = B2FLDINF(JSEQ,1) + B2FLBOUT(ISEQ,1)
 END DO
 #ifndef NoAtom_CMF
 !$OMP END PARALLEL DO
@@ -489,8 +489,8 @@ END DO
 !! river mouth-----------------
 !$OMP PARALLEL DO
 DO ISEQ=NSEQRIV+1, NSEQALL
-  D2RIVOUT(ISEQ,1) = D2RIVOUT(ISEQ,1)*D2RATE(ISEQ,1)
-  D2FLDOUT(ISEQ,1) = D2FLDOUT(ISEQ,1)*D2RATE(ISEQ,1)
+  B2RIVOUT(ISEQ,1) = B2RIVOUT(ISEQ,1)*B2RATE(ISEQ,1)
+  B2FLBOUT(ISEQ,1) = B2FLBOUT(ISEQ,1)*B2RATE(ISEQ,1)
 END DO
 !$OMP END PARALLEL DO
 

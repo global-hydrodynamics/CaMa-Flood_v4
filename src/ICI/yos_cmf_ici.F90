@@ -16,9 +16,9 @@ IMPLICIT NONE
 SAVE
 !================================================
 LOGICAL                     :: LLAKEIN
-REAL(KIND=JPRB),ALLOCATABLE :: D2LAKEFRC(:,:)
-REAL(KIND=JPRB),ALLOCATABLE :: D2RUNIN(:,:)
-REAL(KIND=JPRB),ALLOCATABLE :: D2RUNIN_AVG(:,:)
+REAL(KIND=JPRB),ALLOCATABLE :: B2LAKEFRC(:,:)
+REAL(KIND=JPRB),ALLOCATABLE :: B2RUNIN(:,:)
+REAL(KIND=JPRB),ALLOCATABLE :: B2RUNIN_AVG(:,:)
 
 !================================================
 END MODULE YOS_CMF_ICI
