@@ -47,6 +47,10 @@ USE CMF_CTRL_LEVEE_MOD,      ONLY: CMF_LEVEE_NMLIST
 USE CMF_CTRL_OUTPUT_MOD,     ONLY: CMF_OUTPUT_NMLIST
 USE CMF_CTRL_MAPS_MOD,       ONLY: CMF_MAPS_NMLIST
 USE CMF_UTILS_MOD,           ONLY: INQUIRE_FID
+#ifdef sediment
+USE YOS_CMF_INPUT,           ONLY: LSEDOUT
+USE cmf_ctrl_sed_mod,        ONLY: cmf_sed_nmlist
+#endif
 IMPLICIT NONE
 !* local
 CHARACTER(LEN=8)              :: CREG                 !! 
@@ -106,6 +110,12 @@ IF( LOUTPUT )THEN
   CALL CMF_OUTPUT_NMLIST
 ENDIF
 
+#ifdef sediment
+IF( LSEDOUT )THEN
+  CALL cmf_sed_nmlist
+ENDIF
+#endif
+
 WRITE(LOGNAM,*) "CMF::DRV_INPUT: end reading namelist"
 
 !*** 3. check configulation conflicts
@@ -137,6 +147,10 @@ USE CMF_CTRL_OUTPUT_MOD,     ONLY: CMF_OUTPUT_INIT,  CMF_OUTPUT_WRITE
 USE CMF_CTRL_RESTART_MOD,    ONLY: CMF_RESTART_INIT
 USE CMF_CTRL_DAMOUT_MOD,     ONLY: CMF_DAMOUT_INIT
 USE CMF_CTRL_LEVEE_MOD,      ONLY: CMF_LEVEE_INIT
+#ifdef sediment
+USE YOS_CMF_INPUT,           ONLY: LSEDOUT
+USE cmf_ctrl_sed_mod,        ONLY: cmf_sed_init
+#endif
 ! import
 USE CMF_CTRL_PHYSICS_MOD,    ONLY: CMF_PHYSICS_FLDSTG
 USE CMF_OPT_OUTFLW_MOD,      ONLY: CMF_CALC_OUTPRE
@@ -209,6 +223,13 @@ IF( LDAMOUT )THEN
   CALL CMF_DAMOUT_INIT
 ENDIF
 
+#ifdef sediment
+!*** 4e. Optional sediment initialization
+IF( LSEDOUT )THEN
+  CALL cmf_sed_init
+ENDIF
+#endif
+
 !================================================
 WRITE(LOGNAM,*) "CMF::DRV_INIT: (5) set flood stage at initial condition"
 
@@ -250,6 +271,10 @@ USE YOS_CMF_INPUT,           ONLY: LOUTPUT, LSEALEV
 USE CMF_CTRL_OUTPUT_MOD,     ONLY: CMF_OUTPUT_END
 USE CMF_CTRL_FORCING_MOD,    ONLY: CMF_FORCING_END
 USE CMF_CTRL_BOUNDARY_MOD,   ONLY: CMF_BOUNDARY_END
+#ifdef sediment
+USE YOS_CMF_INPUT,           ONLY: LSEDOUT
+USE cmf_ctrl_sedout_mod,     ONLY: sediment_output_end
+#endif
 !$ USE OMP_LIB    
 IMPLICIT NONE 
 !==========================================================
@@ -259,6 +284,9 @@ WRITE(LOGNAM,*) "CMF::DRV_END: finalize forcing & output modules"
 CALL CMF_FORCING_END
 IF( LOUTPUT )THEN
   CALL CMF_OUTPUT_END
+#ifdef sediment
+  IF( LSEDOUT ) call sediment_output_end
+#endif
 ENDIF
 IF( LSEALEV ) THEN
   CALL CMF_BOUNDARY_END

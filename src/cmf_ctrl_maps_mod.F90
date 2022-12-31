@@ -391,6 +391,7 @@ I1SEQY(:)=0
 I1NEXT(:)=0
 I2VECTOR(:,:)=0
 
+write(lognam,*) 'one',REGIONTHIS
 ! count number of upstream 
 NUPST(:,:)=0
 UPNOW(:,:)=0
