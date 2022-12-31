@@ -34,37 +34,37 @@ INTEGER(KIND=JPIM)                       ::  MPI_COMM_CAMA      !! MPI COMMUNICA
 
 !================================================
 !*** lat, lon
-REAL(KIND=JPRB),ALLOCATABLE              ::  D1LON(:)           !! longitude [degree_east]
-REAL(KIND=JPRB),ALLOCATABLE              ::  D1LAT(:)           !! latitude  [degree_north]
+REAL(KIND=JPRB),ALLOCATABLE              ::  B1LON(:)           !! longitude [degree_east]
+REAL(KIND=JPRB),ALLOCATABLE              ::  B1LAT(:)           !! latitude  [degree_north]
 
 !================================================
 !*** River + Floodplain topography (map)
-REAL(KIND=JPRB),ALLOCATABLE              ::  D2GRAREA(:,:)      !! GRID AREA [M2]
-REAL(KIND=JPRB),ALLOCATABLE              ::  D2ELEVTN(:,:)      !! ELEVATION [M]
-REAL(KIND=JPRB),ALLOCATABLE              ::  D2NXTDST(:,:)      !! DISTANCE TO THE NEXT GRID [M]
-REAL(KIND=JPRB),ALLOCATABLE              ::  D2RIVLEN(:,:)      !! RIVER LENGTH [M]
-REAL(KIND=JPRB),ALLOCATABLE              ::  D2RIVWTH(:,:)      !! RIVER WIDTH [M]
-REAL(KIND=JPRB),ALLOCATABLE              ::  D2RIVMAN(:,:)      !! RIVER MANNING COEFFICIENT
-REAL(KIND=JPRB),ALLOCATABLE              ::  D2RIVHGT(:,:)      !! RIVER HEIGHT [M]
-REAL(KIND=JPRB),ALLOCATABLE              ::  D2FLDHGT(:,:,:)    !! FLOODPLAIN HEIGHT [M]
+REAL(KIND=JPRB),ALLOCATABLE              ::  B2GRAREA(:,:)      !! GRID AREA [M2]
+REAL(KIND=JPRB),ALLOCATABLE              ::  B2ELEVTN(:,:)      !! ELEVATION [M]
+REAL(KIND=JPRB),ALLOCATABLE              ::  B2NXTDST(:,:)      !! DISTANCE TO THE NEXT GRID [M]
+REAL(KIND=JPRB),ALLOCATABLE              ::  B2RIVLEN(:,:)      !! RIVER LENGTH [M]
+REAL(KIND=JPRB),ALLOCATABLE              ::  B2RIVWTH(:,:)      !! RIVER WIDTH [M]
+REAL(KIND=JPRB),ALLOCATABLE              ::  B2RIVMAN(:,:)      !! RIVER MANNING COEFFICIENT
+REAL(KIND=JPRB),ALLOCATABLE              ::  B2RIVHGT(:,:)      !! RIVER HEIGHT [M]
+REAL(KIND=JPRB),ALLOCATABLE              ::  B2FLDHGT(:,:,:)    !! FLOODPLAIN HEIGHT [M]
 
-REAL(KIND=JPRB),ALLOCATABLE              ::  D2GDWDLY(:,:)      !! Ground water delay
-REAL(KIND=JPRB),ALLOCATABLE              ::  D2ELEVSLOPE(:,:)   !! River bed slope
+REAL(KIND=JPRB),ALLOCATABLE              ::  B2GDWDLY(:,:)      !! Ground water delay
+REAL(KIND=JPRB),ALLOCATABLE              ::  B2ELEVSLOPE(:,:)   !! River bed slope
 INTEGER(KIND=JPIM),ALLOCATABLE           ::  I2MASK(:,:)        !! Mask 
 
 !================================================
 !*** Floodplain Topography (diagnosed)
-REAL(KIND=JPRB),ALLOCATABLE              ::  D2RIVSTOMAX(:,:)   !! maximum river storage [m3]
-REAL(KIND=JPRB),ALLOCATABLE              ::  D2RIVELV(:,:)      !! elevation of river bed [m3]
-REAL(KIND=JPRB),ALLOCATABLE              ::  D2FLDSTOMAX(:,:,:) !! MAXIMUM FLOODPLAIN STORAGE [M3]
-REAL(KIND=JPRB),ALLOCATABLE              ::  D2FLDGRD(:,:,:)    !! FLOODPLAIN GRADIENT
-REAL(KIND=JPRB)                          ::  DFRCINC            !! FLOODPLAIN FRACTION INCREMENT [-] (1/NLFP)
+REAL(KIND=JPRB),ALLOCATABLE              ::  B2RIVSTOMAX(:,:)   !! maximum river storage [m3]
+REAL(KIND=JPRB),ALLOCATABLE              ::  B2RIVELV(:,:)      !! elevation of river bed [m3]
+REAL(KIND=JPRB),ALLOCATABLE              ::  B2FLDSTOMAX(:,:,:) !! MAXIMUM FLOODPLAIN STORAGE [M3]
+REAL(KIND=JPRB),ALLOCATABLE              ::  B2FLDGRD(:,:,:)    !! FLOODPLAIN GRADIENT
+REAL(KIND=JPRB)                          ::  BFRCINC            !! FLOODPLAIN FRACTION INCREMENT [-] (1/NLFP)
 
 !================================================
 !*** Downstream boundary
-REAL(KIND=JPRB),ALLOCATABLE              ::  D2MEANSL(:,:)      !! MEAN SEA LEVEL [M]
-REAL(KIND=JPRB),ALLOCATABLE              ::  D2SEALEV(:,:)        !! sea level variation [m]
-REAL(KIND=JPRB),ALLOCATABLE              ::  D2DWNELV(:,:)        !! downstream boundary elevation [m]
+REAL(KIND=JPRB),ALLOCATABLE              ::  B2MEANSL(:,:)      !! MEAN SEA LEVEL [M]
+REAL(KIND=JPRB),ALLOCATABLE              ::  B2SEALEV(:,:)        !! sea level variation [m]
+REAL(KIND=JPRB),ALLOCATABLE              ::  B2DWNELV(:,:)        !! downstream boundary elevation [m]
 
 !================================================
 !*** bifurcation channel

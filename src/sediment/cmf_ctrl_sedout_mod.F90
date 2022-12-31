@@ -1,5 +1,5 @@
 module cmf_ctrl_sedout_mod
-
+!======================================================
   use PARKIND1,                only: JPIM, JPRB, JPRM
   use YOS_CMF_INPUT,           only: LOGNAM, NX, NY
   use YOS_CMF_MAP,             only: REGIONTHIS
@@ -15,9 +15,12 @@ module cmf_ctrl_sedout_mod
   !*** namelist/sediment_output
   character(len=256)         :: csedsout
   namelist/sediment_output/ csedsout
-
-
 contains
+!==================================
+! -- sediment_output_init
+! -- cmf_sed_output
+! -- sediment_output_end
+!==================================
 subroutine sediment_output_init
   use CMF_CTRL_OUTPUT_MOD,     only: COUTTAG
   use CMF_UTILS_MOD,           only: INQUIRE_FID
@@ -110,12 +113,12 @@ subroutine sediment_output_init
   enddo
 
 contains
-
+!==============
   subroutine create_outcdf
 #ifdef UseCDF_CMF
     use YOS_CMF_INPUT,           only: RMIS, CSUFCDF
     use YOS_CMF_TIME,            only: ISYYYY, ISMM,   ISDD,   ISHOUR, ISMIN
-    use YOS_CMF_MAP,             only: D1LON, D1LAT
+    use YOS_CMF_MAP,             only: B1LON, B1LAT
     use CMF_UTILS_MOD,           only: NCERROR
     use CMF_CTRL_OUTPUT_MOD,     only: NDLEVEL
     use yos_cmf_sed,             only: sDiam
@@ -171,17 +174,17 @@ contains
     call NCERROR( nf90_put_var(varout(jf)%ncid,varid,sDiam))
 
     call NCERROR ( nf90_inq_varid(varout(jf)%ncid,'lon',varid),'getting id' )
-    call NCERROR( nf90_put_var(varout(jf)%ncid,varid,D1LON))
+    call NCERROR( nf90_put_var(varout(jf)%ncid,varid,B1LON))
     
     call NCERROR ( nf90_inq_varid(varout(jf)%ncid,'lat',varid),'getting id' )
-    call NCERROR( nf90_put_var(varout(jf)%ncid,varid,D1LAT))
+    call NCERROR( nf90_put_var(varout(jf)%ncid,varid,B1LAT))
     
     write(LOGNAM,*) 'cfile: ',trim(varout(jf)%cfile),' cvar:',trim(varout(jf)%cvname),&
                     ' clname: ',trim(varout(jf)%cvlname),' cunits: ',trim(varout(jf)%cvunits)
     write(LOGNAM,*) 'open in unit: ',varout(jf)%ncid
 #endif
   end subroutine create_outcdf
-
+!==============
   subroutine create_outbin
     use YOS_CMF_INPUT,           only: CSUFBIN, CSUFVEC
     use YOS_CMF_MAP,             only: NSEQMAX, REGIONALL
@@ -201,15 +204,16 @@ contains
   end subroutine create_outbin
 
 end subroutine sediment_output_init
-
+!==================================
+!
+!==================================
 subroutine cmf_sed_output
-  use YOS_CMF_DIAG,            only: NADD
-  use CMF_UTILS_MOD,           only: VEC2MAP
+  use CMF_UTILS_MOD,           only: VECB2MAPR
   use YOS_CMF_INPUT,           only: IFRQ_OUT, RMIS
   use YOS_CMF_MAP,             only: NSEQMAX
   use YOS_CMF_TIME,            only: JHOUR, JMIN
-  use yos_cmf_sed,             only: d2layer, d2sedcon, d2seddep, d2bedout_avg, d2netflw_avg, &
-                                     d2sedout_avg, d2sedinp_avg, d2sedv_avg, sadd_out
+  use yos_cmf_sed,             only: b2layer, b2sedcon, b2seddep, b2bedout_avg, b2netflw_avg, &
+                                     b2sedout_avg, b2sedinp_avg, b2sedv_avg, sadd_out
   use cmf_ctrl_sedrest_mod,    only: sediment_restart_write
 #ifdef UseMPI_CMF
   use CMF_CTRL_MPI_MOD,        only: CMF_MPI_REDUCE_R2MAP
@@ -219,13 +223,13 @@ subroutine cmf_sed_output
   save
   integer(kind=JPIM)              :: ilyr, ised
   integer(kind=JPIM)              :: jf
-  real(kind=JPRB),pointer         :: d2vec(:,:) ! point data location to output
+  real(kind=JPRB),pointer         :: b2vec(:,:) ! point data location to output
   !*** local
   real(kind=JPRM)                 :: r3out(NX,NY,nsed)
   !================================================
   call sediment_restart_write
 
-  d2sedv_avg(:,:,:) = d2sedv_avg(:,:,:) / dble(sadd_out)
+  b2sedv_avg(:,:,:) = b2sedv_avg(:,:,:) / real(sadd_out,kind=JPRB)
   write(LOGNAM,*) 'cmf_sed_output: average ',sadd_out,' seconds'
 
   !*** 0. check date:hour with output frequency
@@ -238,21 +242,21 @@ subroutine cmf_sed_output
     do jf=1,nvarsout
       select case (varout(jf)%cvname)
         case ('sedout')
-          d2vec => d2sedout_avg
+          b2vec => b2sedout_avg
         case ('sedcon')
-          d2vec => d2sedcon
+          b2vec => b2sedcon
         case ('sedinp')
-          d2vec => d2sedinp_avg
+          b2vec => b2sedinp_avg
         case ('bedout')
-          d2vec => d2bedout_avg
+          b2vec => b2bedout_avg
         case ('netflw')
-          d2vec => d2netflw_avg
+          b2vec => b2netflw_avg
         case ('layer')
-          d2vec => d2layer
+          b2vec => b2layer
         case default
           if ( varout(jf)%cvname(:6) == 'deplyr' ) then
             read(varout(jf)%cvname(7:8),*) ilyr
-            d2vec => d2seddep(:,ilyr,:)
+            b2vec => b2seddep(:,ilyr,:)
           else
             write(LOGNAM,*) varout(jf)%cvname, ' not defined in cmf_output_mod'
           endif
@@ -263,7 +267,7 @@ subroutine cmf_sed_output
       
       if ( .not. LOUTVEC ) then
         do ised = 1, nsed
-          call vec2map(d2vec(:,ised),r3out(:,:,ised))             !! mpi node data is gathered by vec2map
+          call VECB2MAPR(b2vec(:,ised),r3out(:,:,ised))             !! mpi node data is gathered by vec2map
 #ifdef UseMPI_CMF
           call cmf_mpi_reduce_r2map(r3out(:,:,ised))
 #endif
@@ -277,14 +281,14 @@ subroutine cmf_sed_output
           endif
         endif
       else 
-        call wrte_outvec(varout(jf)%binid,IRECOUT,d2vec)
+        call wrte_outvec(varout(jf)%binid,IRECOUT,b2vec)
       endif
     end do
 
     write(LOGNAM,*) 'cmf::sediment_output_write: end'
   endif
 
-  d2sedv_avg(:,:,:) = 0._JPRB
+  b2sedv_avg(:,:,:) = 0._JPRB
   sadd_out = 0._JPRB
 
 contains
@@ -336,7 +340,9 @@ contains
   end subroutine wrte_outvec
   !==========================================================
 end subroutine cmf_sed_output
-
+!==================================
+!
+!==================================
 subroutine sediment_output_end
 #ifdef UseCDF_CMF
   use NETCDF

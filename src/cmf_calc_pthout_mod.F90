@@ -19,33 +19,33 @@ CONTAINS
 !####################################################################
 SUBROUTINE CMF_CALC_PTHOUT
 USE PARKIND1,           ONLY: JPIM, JPRB
-USE YOS_CMF_INPUT,      ONLY: DT, PGRV, DMIS
+USE YOS_CMF_INPUT,      ONLY: DT, PGRV, BMIS
 USE YOS_CMF_MAP,        ONLY: NSEQALL, NSEQMAX, NPTHOUT, NPTHLEV, PTH_UPST, PTH_DOWN, PTH_DST, &
                             & PTH_ELV, PTH_WTH, PTH_MAN, I2MASK
-USE YOS_CMF_MAP,        ONLY: D2RIVELV
-USE YOS_CMF_PROG,       ONLY: D2RIVSTO, D2FLDSTO, D1PTHFLW, D2RIVOUT, D2FLDOUT
-USE YOS_CMF_PROG,       ONLY: D1PTHFLW_PRE, D2RIVDPH_PRE
-USE YOS_CMF_DIAG,       ONLY: D2PTHOUT, D2PTHINF, D2RIVINF, D2FLDINF, D2SFCELV
+USE YOS_CMF_MAP,        ONLY: B2RIVELV
+USE YOS_CMF_PROG,       ONLY: D2RIVSTO, D2FLDSTO, B1PTHFLW, B2RIVOUT, B2FLBOUT
+USE YOS_CMF_PROG,       ONLY: B1PTHFLW_PRE, B2RIVDPH_PRE
+USE YOS_CMF_DIAG,       ONLY: B2PTHOUT, B2PTHINF, B2RIVINF, B2FLDINF, B2SFCELV
 IMPLICIT NONE
 !*** Local
-REAL(KIND=JPRB)         ::  D2SFCELV_PRE(NSEQMAX,1)                  !! water surface elev (t-1) [m] (for stable calculation)
-REAL(KIND=JPRB)         ::  D2RATE(NSEQMAX,1)                        !! outflow correction
+REAL(KIND=JPRB)         ::  B2SFCELV_PRE(NSEQMAX,1)                  !! water surface elev (t-1) [m] (for stable calculation)
+REAL(KIND=JPRB)         ::  B2RATE(NSEQMAX,1)                        !! outflow correction
 
 ! Save for OpenMP
 INTEGER(KIND=JPIM),SAVE ::  IPTH, ILEV, ISEQ, ISEQP, JSEQP
-REAL(KIND=JPRB),SAVE    ::  DSLOPE, DFLW, DOUT_PRE, DFLW_PRE, DFLW_IMP, DSTO_TMP
-!$OMP THREADPRIVATE        (DSLOPE, DFLW, DOUT_PRE, DFLW_PRE, DFLW_IMP, DSTO_TMP, ILEV, ISEQP, JSEQP)
+REAL(KIND=JPRB),SAVE    ::  BSLOPE, BFLW, BOUT_PRE, BFLW_PRE, BFLW_IMP, BSTO_TMP
+!$OMP THREADPRIVATE        (BSLOPE, BFLW, BOUT_PRE, BFLW_PRE, BFLW_IMP, BSTO_TMP, ILEV, ISEQP, JSEQP)
 !================================================
 !$OMP PARALLEL DO
 DO ISEQ=1, NSEQALL
-  D2SFCELV_PRE(ISEQ,1) = D2RIVELV(ISEQ,1)+D2RIVDPH_PRE(ISEQ,1)
-  D2PTHOUT(ISEQ,1) = 0._JPRB
-  D2PTHINF(ISEQ,1) = 0._JPRB
-  D2RATE(ISEQ,1)   =-999._JPRB
+  B2SFCELV_PRE(ISEQ,1) = B2RIVELV(ISEQ,1)+B2RIVDPH_PRE(ISEQ,1)
+  B2PTHOUT(ISEQ,1) = 0._JPRB
+  B2PTHINF(ISEQ,1) = 0._JPRB
+  B2RATE(ISEQ,1)   =-999._JPRB
 END DO
 !$OMP END PARALLEL DO
 
-D1PTHFLW(:,:) = DMIS
+B1PTHFLW(:,:) = BMIS
 !$OMP PARALLEL DO
 DO IPTH=1, NPTHOUT  
   ISEQP=PTH_UPST(IPTH)
@@ -54,26 +54,26 @@ DO IPTH=1, NPTHOUT
   IF (ISEQP == 0 .OR. JSEQP== 0 ) CYCLE
   IF (I2MASK(ISEQP,1)>0 .OR. I2MASK(JSEQP,1)>0 ) CYCLE  !! I2MASK is for 1: kinemacit 2: dam  no bifurcation
   
-  DSLOPE  = (D2SFCELV(ISEQP,1)-D2SFCELV(JSEQP,1)) * PTH_DST(IPTH)**(-1.)
-  DSLOPE = max(-0.005_JPRB,min(0.005_JPRB,DSLOPE))                                    !! v390 stabilization
+  BSLOPE  = (B2SFCELV(ISEQP,1)-B2SFCELV(JSEQP,1)) * PTH_DST(IPTH)**(-1.)
+  BSLOPE = max(-0.005_JPRB,min(0.005_JPRB,BSLOPE))                                    !! v390 stabilization
 
   DO ILEV=1, NPTHLEV
 
-    DFLW = MAX(D2SFCELV(ISEQP,1),D2SFCELV(JSEQP,1)) - PTH_ELV(IPTH,ILEV) 
-    DFLW = MAX(DFLW,0._JPRB)
+    BFLW = MAX(B2SFCELV(ISEQP,1),B2SFCELV(JSEQP,1)) - PTH_ELV(IPTH,ILEV) 
+    BFLW = MAX(BFLW,0._JPRB)
 
-    DFLW_PRE = MAX(D2SFCELV_PRE(ISEQP,1),D2SFCELV_PRE(JSEQP,1)) - PTH_ELV(IPTH,ILEV)
-    DFLW_PRE = MAX(DFLW_PRE,0._JPRB)
+    BFLW_PRE = MAX(B2SFCELV_PRE(ISEQP,1),B2SFCELV_PRE(JSEQP,1)) - PTH_ELV(IPTH,ILEV)
+    BFLW_PRE = MAX(BFLW_PRE,0._JPRB)
 
-    DFLW_IMP = (DFLW*DFLW_PRE)**0.5                                       !! semi implicit flow depth
-    IF( DFLW_IMP<=0._JPRB ) DFLW_IMP=DFLW
+    BFLW_IMP = (BFLW*BFLW_PRE)**0.5                                       !! semi implicit flow depth
+    IF( BFLW_IMP<=0._JPRB ) BFLW_IMP=BFLW
 
-    IF( DFLW_IMP>1.E-5 )THEN                         !! local inertial equation, see [Bates et al., 2010, J.Hydrol.]
-      DOUT_PRE = D1PTHFLW_PRE(IPTH,ILEV) * PTH_WTH(IPTH,ILEV)**(-1.)                         !! outflow (t-1) [m2/s] (unit width)
-      D1PTHFLW(IPTH,ILEV) = PTH_WTH(IPTH,ILEV) * ( DOUT_PRE + PGRV*DT*DFLW_IMP*DSLOPE ) &
-                         * ( 1. + PGRV*DT*PTH_MAN(ILEV)**2. * abs(DOUT_PRE)*DFLW_IMP**(-7./3.) )**(-1.)
+    IF( BFLW_IMP>1.E-5 )THEN                         !! local inertial equation, see [Bates et al., 2010, J.Hydrol.]
+      BOUT_PRE = B1PTHFLW_PRE(IPTH,ILEV) * PTH_WTH(IPTH,ILEV)**(-1.)                         !! outflow (t-1) [m2/s] (unit width)
+      B1PTHFLW(IPTH,ILEV) = PTH_WTH(IPTH,ILEV) * ( BOUT_PRE + PGRV*DT*BFLW_IMP*BSLOPE ) &
+                         * ( 1. + PGRV*DT*PTH_MAN(ILEV)**2. * abs(BOUT_PRE)*BFLW_IMP**(-7./3.) )**(-1.)
     ELSE
-      D1PTHFLW(IPTH,ILEV) = 0._JPRB
+      B1PTHFLW(IPTH,ILEV) = 0._JPRB
     ENDIF
   END DO
 END DO
@@ -90,12 +90,12 @@ DO IPTH=1, NPTHOUT
   IF (I2MASK(ISEQP,1)>0 .OR. I2MASK(JSEQP,1)>0 ) CYCLE  !! I2MASK is for 1: kinemacit 2: dam  no bifurcation
 
   DO ILEV=1, NPTHLEV
-    IF( D1PTHFLW(IPTH,ILEV) >= 0._JPRB )THEN                                  !! total outflow from each grid
+    IF( B1PTHFLW(IPTH,ILEV) >= 0._JPRB )THEN                                  !! total outflow from each grid
 !$OMP ATOMIC
-      D2PTHOUT(ISEQP,1) = D2PTHOUT(ISEQP,1) + D1PTHFLW(IPTH,ILEV)
+      B2PTHOUT(ISEQP,1) = B2PTHOUT(ISEQP,1) + B1PTHFLW(IPTH,ILEV)
     ELSE
 !$OMP ATOMIC
-      D2PTHOUT(JSEQP,1) = D2PTHOUT(JSEQP,1) - D1PTHFLW(IPTH,ILEV)
+      B2PTHOUT(JSEQP,1) = B2PTHOUT(JSEQP,1) - B1PTHFLW(IPTH,ILEV)
     ENDIF
   END DO
 END DO
@@ -105,14 +105,14 @@ END DO
 
 !$OMP PARALLEL DO                                              !! calculate total outflow from a grid
 DO ISEQ=1, NSEQALL
-  IF( D2PTHOUT(ISEQ,1) > 1.E-10 )THEN
-    DSTO_TMP = ( D2RIVSTO(ISEQ,1)+D2FLDSTO(ISEQ,1) ) &
-                  - D2RIVOUT(ISEQ,1)*DT + D2RIVINF(ISEQ,1)*DT - D2FLDOUT(ISEQ,1)*DT + D2FLDINF(ISEQ,1)*DT
-    D2RATE(ISEQ,1) = MIN( DSTO_TMP * (D2PTHOUT(ISEQ,1)*DT)**(-1.), 1._JPRB )
+  IF( B2PTHOUT(ISEQ,1) > 1.E-10 )THEN
+    BSTO_TMP = ( D2RIVSTO(ISEQ,1)+D2FLDSTO(ISEQ,1) ) &
+                  - B2RIVOUT(ISEQ,1)*DT + B2RIVINF(ISEQ,1)*DT - B2FLBOUT(ISEQ,1)*DT + B2FLDINF(ISEQ,1)*DT
+    B2RATE(ISEQ,1) = MIN( BSTO_TMP * (B2PTHOUT(ISEQ,1)*DT)**(-1.), 1._JPRB )
   ELSE
-    D2RATE(ISEQ,1) = 1._JPRB
+    B2RATE(ISEQ,1) = 1._JPRB
   ENDIF
-  D2PTHOUT(ISEQ,1) = D2PTHOUT(ISEQ,1) * D2RATE(ISEQ,1)
+  B2PTHOUT(ISEQ,1) = B2PTHOUT(ISEQ,1) * B2RATE(ISEQ,1)
 END DO
 !$OMP END PARALLEL DO
 
@@ -127,16 +127,16 @@ DO IPTH=1, NPTHOUT
   IF (I2MASK(ISEQP,1)>0 .OR. I2MASK(JSEQP,1)>0 ) CYCLE  !! I2MASK is for 1: kinemacit 2: dam  no bifurcation
   
   DO ILEV=1, NPTHLEV
-    IF( D1PTHFLW(IPTH,ILEV) >= 0._JPRB )THEN
-      D1PTHFLW(IPTH,ILEV) = D1PTHFLW(IPTH,ILEV)*D2RATE(ISEQP,1)
+    IF( B1PTHFLW(IPTH,ILEV) >= 0._JPRB )THEN
+      B1PTHFLW(IPTH,ILEV) = B1PTHFLW(IPTH,ILEV)*B2RATE(ISEQP,1)
 !$OMP ATOMIC
-      D2PTHINF(JSEQP,1) = D2PTHINF(JSEQP,1) + D1PTHFLW(IPTH,ILEV)             !! total inflow [m3/s] (from upstream)
+      B2PTHINF(JSEQP,1) = B2PTHINF(JSEQP,1) + B1PTHFLW(IPTH,ILEV)             !! total inflow [m3/s] (from upstream)
     ELSE
-      D1PTHFLW(IPTH,ILEV) = D1PTHFLW(IPTH,ILEV)*D2RATE(JSEQP,1)
+      B1PTHFLW(IPTH,ILEV) = B1PTHFLW(IPTH,ILEV)*B2RATE(JSEQP,1)
 !$OMP ATOMIC
-      D2PTHINF(ISEQP,1) = D2PTHINF(ISEQP,1) - D1PTHFLW(IPTH,ILEV)             !! total inflow [m3/s] (from upstream)
+      B2PTHINF(ISEQP,1) = B2PTHINF(ISEQP,1) - B1PTHFLW(IPTH,ILEV)             !! total inflow [m3/s] (from upstream)
     ENDIF
-    D1PTHFLW_PRE(IPTH,ILEV)=D1PTHFLW(IPTH,ILEV)
+    B1PTHFLW_PRE(IPTH,ILEV)=B1PTHFLW(IPTH,ILEV)
   END DO
 END DO
 #ifndef NoAtom_CMF

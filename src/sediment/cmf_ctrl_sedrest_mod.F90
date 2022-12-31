@@ -11,7 +11,7 @@ module cmf_ctrl_sedrest_mod
   use YOS_CMF_INPUT,           only: LOGNAM, NX, NY
   use YOS_CMF_MAP,             only: MPI_COMM_CAMA, NSEQALL, NSEQMAX, REGIONTHIS
   use CMF_UTILS_MOD,           only: INQUIRE_FID
-  use yos_cmf_sed,             only: nsed, totlyrnum, d2layer, d2sedcon, d2seddep
+  use yos_cmf_sed,             only: nsed, totlyrnum, b2layer, b2sedcon, b2seddep
 
   implicit none
   save
@@ -27,13 +27,12 @@ contains
 ! --
 ! --
 !####################################################################
-
 subroutine sediment_restart_init
-  use YOS_CMF_MAP,             only: D2RIVLEN, D2RIVWTH
+  use YOS_CMF_MAP,             only: B2RIVLEN, B2RIVWTH
   use YOS_CMF_PROG,            only: D2RIVSTO
-  use yos_cmf_sed,             only: d2sedfrc, lyrdph, d2rivsto_pre, &
-                                     d2rivout_sed, d2rivvel_sed, sadd_riv, sadd_out
-  use CMF_UTILS_MOD,           only: MAP2VEC, inquire_fid
+  use yos_cmf_sed,             only: b2sedfrc, lyrdph, b2rivsto_pre, &
+                                     b2rivout_sed, b2rivvel_sed, sadd_riv, sadd_out
+  use CMF_UTILS_MOD,           only: MAPR2VECB, inquire_fid
 
   implicit none
   save
@@ -52,11 +51,11 @@ subroutine sediment_restart_init
   if ( sedrest_infile == "" ) then  ! set layer/bedload if no restart file
     !$omp parallel do
     do iseq = 1, NSEQALL
-      d2layer(iseq,:) = lyrdph * D2RIVWTH(iseq,1) * D2RIVLEN(iseq,1) * d2sedfrc(iseq,:)
+      b2layer(iseq,:) = lyrdph * B2RIVWTH(iseq,1) * B2RIVLEN(iseq,1) * b2sedfrc(iseq,:)
       do ilyr = 1, totlyrnum-1
-        d2seddep(iseq,ilyr,:) = d2layer(iseq,:)
+        b2seddep(iseq,ilyr,:) = b2layer(iseq,:)
       enddo
-      d2seddep(iseq,totlyrnum,:) = ( max(10.d0-lyrdph*totlyrnum,0.d0) ) * D2RIVWTH(iseq,1) * D2RIVLEN(iseq,1) * d2sedfrc(iseq,:)
+      b2seddep(iseq,totlyrnum,:) = ( max(10.d0-lyrdph*totlyrnum,0.d0) ) * B2RIVWTH(iseq,1) * B2RIVLEN(iseq,1) * b2sedfrc(iseq,:)
     enddo
     !$omp end parallel do
 
@@ -73,9 +72,9 @@ subroutine sediment_restart_init
 #endif
         select case(irec)
           case (1)
-            call MAP2VEC(r2temp,d2layer(:,ised))
+            call MAPR2VECB(r2temp,b2layer(:,ised))
           case (2)
-            call MAP2VEC(r2temp,d2sedcon(:,ised))
+            call MAPR2VECB(r2temp,b2sedcon(:,ised))
         end select
       enddo
     enddo
@@ -86,26 +85,28 @@ subroutine sediment_restart_init
 #ifdef UseMPI_CMF
         call MPI_Bcast(r2temp(1,1),NX*NY,mpi_real4,0,MPI_COMM_CAMA,ierr)
 #endif
-        call MAP2VEC(r2temp,d2seddep(:,irec,ised))
+        call MAPR2VECB(r2temp,b2seddep(:,irec,ised))
       enddo
     enddo
     if ( REGIONTHIS == 1 ) close(tmpnam)
-    write(LOGNAM,*) 'read restart sediment',maxval(d2seddep(:,totlyrnum,:))
+    write(LOGNAM,*) 'read restart sediment',maxval(b2seddep(:,totlyrnum,:))
   endif
 
-  allocate(d2rivsto_pre(NSEQMAX), d2rivout_sed(NSEQMAX), d2rivvel_sed(NSEQMAX))
+  allocate(b2rivsto_pre(NSEQMAX), b2rivout_sed(NSEQMAX), b2rivvel_sed(NSEQMAX))
   sadd_riv = 0.d0
   sadd_out = 0.d0
-  d2rivsto_pre(:) = D2RIVSTO(:,1)
-  d2rivout_sed(:) = 0.d0
-  d2rivvel_sed(:) = 0.d0
+  b2rivsto_pre(:) = D2RIVSTO(:,1)
+  b2rivout_sed(:) = 0.d0
+  b2rivvel_sed(:) = 0.d0
 end subroutine sediment_restart_init
-
+!==================================
+!
+!==================================
 subroutine sediment_restart_write
   use YOS_CMF_TIME,            only: KSTEP, NSTEPS, JDD, JHHMM, JHOUR, JMIN, JYYYYMMDD
   use YOS_CMF_INPUT,           only: CSUFBIN, RMIS
   use CMF_CTRL_RESTART_MOD,    only: CRESTDIR
-  use CMF_UTILS_MOD,           only: VEC2MAP
+  use CMF_UTILS_MOD,           only: VECB2MAPR
 #ifdef UseMPI_CMF
   use CMF_CTRL_MPI_MOD,        only: CMF_MPI_REDUCE_R2MAP
 #endif
@@ -153,9 +154,9 @@ subroutine sediment_restart_write
      do ised = 1, nsed
        select case(irec)
          case (1)
-           call VEC2MAP(d2layer(:,ised),r2temp)
+           call VECB2MAPR(b2layer(:,ised),r2temp)
          case (2)
-           call VEC2MAP(d2sedcon(:,ised),r2temp)
+           call VECB2MAPR(b2sedcon(:,ised),r2temp)
        end select
 #ifdef UseMPI_CMF
        call CMF_MPI_REDUCE_R2MAP(r2temp)
@@ -168,7 +169,7 @@ subroutine sediment_restart_write
     do irec = 1, totlyrnum
       r3final(:,:,:) = RMIS
       do ised = 1, nsed
-        call VEC2MAP(d2seddep(:,irec,ised),r2temp)
+        call VECB2MAPR(b2seddep(:,irec,ised),r2temp)
 #ifdef UseMPI_CMF
         call CMF_MPI_REDUCE_R2MAP(r2temp)
 #endif
