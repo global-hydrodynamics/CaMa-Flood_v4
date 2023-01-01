@@ -41,13 +41,13 @@ REAL(KIND=JPRD),ALLOCATABLE,TARGET     :: D2RIVSTO(:,:)         !! river      st
 REAL(KIND=JPRD),ALLOCATABLE,TARGET     :: D2FLDSTO(:,:)         !! floodplain storage [m3]
 
 REAL(KIND=JPRB),ALLOCATABLE,TARGET     :: B2RIVOUT(:,:)         !! river      outflow [m3/s]
-REAL(KIND=JPRB),ALLOCATABLE,TARGET     :: B2FLBOUT(:,:)         !! floodplain outflow [m3/s]
+REAL(KIND=JPRB),ALLOCATABLE,TARGET     :: B2FLDOUT(:,:)         !! floodplain outflow [m3/s]
 
 !================================================
 !*** for implicit schemes of the local inertial equation
 REAL(KIND=JPRB),ALLOCATABLE,TARGET     :: B2RIVOUT_PRE(:,:)     !! river      outflow [m3/s] (prev t-step)
 REAL(KIND=JPRB),ALLOCATABLE,TARGET     :: B2RIVDPH_PRE(:,:)     !! river      depth   [m]    (prev t-step)
-REAL(KIND=JPRB),ALLOCATABLE,TARGET     :: B2FLBOUT_PRE(:,:)     !! floodplain outflow [m3/s] (prev t-step)
+REAL(KIND=JPRB),ALLOCATABLE,TARGET     :: B2FLDOUT_PRE(:,:)     !! floodplain outflow [m3/s] (prev t-step)
 REAL(KIND=JPRB),ALLOCATABLE,TARGET     :: B2FLDSTO_PRE(:,:)     !! floodplain storage [m3]   (prev t-step)
 
 !================================================

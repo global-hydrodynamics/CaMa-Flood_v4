@@ -12,7 +12,7 @@ MODULE CMF_UTILS_MOD
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
 USE PARKIND1,                ONLY: JPIM,   JPRB, JPRM, JPRD
-USE YOS_CMF_INPUT,           ONLY: LOGNAM, BMIS, RMIS, NX,NY
+USE YOS_CMF_INPUT,           ONLY: LOGNAM, DMIS, RMIS, NX,NY
 USE YOS_CMF_MAP,             ONLY: NSEQMAX, NSEQALL
 IMPLICIT NONE
 CONTAINS
@@ -88,7 +88,7 @@ REAL(KIND=JPRB),INTENT(OUT)     :: B2MAP(NX,NY)
 INTEGER(KIND=JPIM),SAVE         ::  IX,IY,ISEQ
 !$OMP THREADPRIVATE                (IX,IY)
 !================================================
-B2MAP(:,:) = BMIS
+B2MAP(:,:) = DMIS
 !$OMP PARALLEL DO
 DO ISEQ=1,NSEQALL
   IX=I1SEQX(ISEQ)
@@ -112,7 +112,7 @@ REAL(KIND=JPRD),INTENT(OUT)     :: D2MAP(NX,NY)
 INTEGER(KIND=JPIM),SAVE         ::  IX,IY,ISEQ
 !$OMP THREADPRIVATE                (IX,IY)
 !================================================
-D2MAP(:,:) = BMIS
+D2MAP(:,:) = DMIS
 !$OMP PARALLEL DO
 DO ISEQ=1,NSEQALL
   IX=I1SEQX(ISEQ)
