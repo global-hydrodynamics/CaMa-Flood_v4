@@ -32,7 +32,7 @@ CONTAINS
 SUBROUTINE CMF_CONFIG_NMLIST
 USE YOS_CMF_INPUT,      ONLY: TMPNAM,   NSETFILE,   CSETFILE
 ! run version
-USE YOS_CMF_INPUT,      ONLY: LADPSTP,  LFPLAIN,  LKINE,    LFLBOUT,  LPTHOUT,  LDAMOUT,  &
+USE YOS_CMF_INPUT,      ONLY: LADPSTP,  LFPLAIN,  LKINE,    LFLDOUT,  LPTHOUT,  LDAMOUT,  &
                             & LROSPLIT, LGDWDLY,  LSLPMIX,  LMEANSL,  LSEALEV,  LOUTPUT,  &
                             & LRESTART, LSTOONLY, LGRIDMAP, LLEAPYR,  LMAPEND,  LBITSAFE, &
                             & LSTG_ES,  LLEVEE,   LOUTINS,  LOUTINI,  LSEDOUT, &
@@ -42,22 +42,22 @@ USE YOS_CMF_INPUT,      ONLY: CDIMINFO, DT,       NX,NY,    NLFP,     NXIN,NYIN,
                             & IFRQ_INP, DTIN,     WEST,EAST,NORTH,SOUTH
 ! parameters
 USE YOS_CMF_INPUT,      ONLY: PMANRIV,  PMANFLD,  PDSTMTH,  PMINSLP,  PGRV, PCADP, &
-                            & IMIS,RMIS,BMIS,     CSUFBIN,  CSUFVEC,  CSUFPTH,  CSUFCDF
+                            & IMIS, RMIS, DMIS,   CSUFBIN,  CSUFVEC,  CSUFPTH,  CSUFCDF
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
 IMPLICIT NONE
 !* local
 CHARACTER(LEN=8)              :: CREG                 !! 
 !
-NAMELIST/NRUNVER/  LADPSTP,  LFPLAIN,  LKINE,    LFLBOUT,  LPTHOUT,  LDAMOUT,  &
+NAMELIST/NRUNVER/  LADPSTP,  LFPLAIN,  LKINE,    LFLDOUT,  LPTHOUT,  LDAMOUT,  &
                    LROSPLIT, LGDWDLY,  LSLPMIX,  LMEANSL,  LSEALEV,  LOUTPUT,  &
                    LRESTART, LSTOONLY, LGRIDMAP, LLEAPYR,  LMAPEND,  LBITSAFE, &
                    LSTG_ES,  LLEVEE,   LSEDOUT,  LSLOPEMOUTH, &
-                   LOUTINI,  LWEVAP,   LWEVAPFIX,LWEXTRACTRIV 
+                   LOUTINI,  LWEVAP,   LWEVAPFIX,LWEXTRACTRIV
 
 NAMELIST/NDIMTIME/ CDIMINFO, DT, IFRQ_INP
 
 NAMELIST/NPARAM/   PMANRIV, PMANFLD, PGRV,    PDSTMTH, PCADP,   PMINSLP, &
-                   IMIS, RMIS, BMIS, CSUFBIN, CSUFVEC, CSUFPTH, CSUFCDF
+                   IMIS, RMIS, DMIS, CSUFBIN, CSUFVEC, CSUFPTH, CSUFCDF
 !================================================
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "!--------------------"
@@ -74,7 +74,7 @@ WRITE(LOGNAM,*) "CMF::CONFIG_NMLIST: namelist opened: ", TRIM(CSETFILE), NSETFIL
 LADPSTP  = .TRUE.            !! true: use adaptive time step
 LFPLAIN  = .TRUE.            !! true: consider floodplain (false: only river channel)
 LKINE    = .FALSE.           !! true: use kinematic wave
-LFLBOUT  = .TRUE.            !! true: floodplain flow (high-water channel flow) active
+LFLDOUT  = .TRUE.            !! true: floodplain flow (high-water channel flow) active
 LPTHOUT  = .FALSE.           !! true: activate bifurcation scheme
 LDAMOUT  = .FALSE.           !! true: activate dam operation (under development)
 LLEVEE   = .FALSE.           !! true: activate levee scheme  (under development)
@@ -115,7 +115,7 @@ WRITE(LOGNAM,*) "=== NAMELIST, NRUNVER ==="
 WRITE(LOGNAM,*) "LADPSTP ",  LADPSTP
 WRITE(LOGNAM,*) "LFPLAIN ",  LFPLAIN
 WRITE(LOGNAM,*) "LKINE   ",  LKINE
-WRITE(LOGNAM,*) "LFLBOUT ",  LFLBOUT
+WRITE(LOGNAM,*) "LFLDOUT ",  LFLDOUT
 WRITE(LOGNAM,*) "LPTHOUT ",  LPTHOUT
 WRITE(LOGNAM,*) "LDAMOUT ",  LDAMOUT
 WRITE(LOGNAM,*) "LLEVEE  ",  LLEVEE
@@ -221,7 +221,7 @@ PMINSLP=1.E-5                                  !! minimum slope (kinematic wave)
 
 IMIS=-9999_JPIM
 RMIS=1.E20_JPRM
-BMIS=RMIS            !! default: same for RMIS/BMIS to ensure consistency 
+DMIS=1.E20_JPRB
 
 CSUFBIN='.bin'
 CSUFVEC='.vec'
@@ -231,10 +231,6 @@ CSUFCDF='.nc'
 ! * change
 REWIND(NSETFILE)
 READ(NSETFILE,NML=NPARAM)
-
-#ifdef PARKIND1_SINGLE
-  BMIS=RMIS
-#endif
 
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "=== NAMELIST, NPARAM ==="
@@ -247,7 +243,7 @@ WRITE(LOGNAM,*) "PMINSLP  ", PMINSLP
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "IMIS     ", IMIS
 WRITE(LOGNAM,*) "RMIS     ", RMIS
-WRITE(LOGNAM,*) "BMIS     ", BMIS
+WRITE(LOGNAM,*) "DMIS     ", DMIS
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "CSUFBIN  ", TRIM(CSUFBIN)
 WRITE(LOGNAM,*) "CSUFVEC  ", TRIM(CSUFVEC)
