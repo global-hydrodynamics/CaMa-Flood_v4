@@ -446,8 +446,8 @@ USE YOS_CMF_MAP,        ONLY: NSEQMAX, NPTHOUT, NPTHLEV, REGIONTHIS
 USE YOS_CMF_TIME,       ONLY: JYYYYMMDD, JHHMM, JHOUR, JMIN, KSTEP
 USE YOS_CMF_PROG,       ONLY: D2RIVSTO,     D2FLDSTO,     B2GDWSTO, &
                             & D2DAMSTO,     D2LEVSTO,     B2JPRB  !!! added
-USE YOS_CMF_DIAG,       ONLY: B2RIVDPH,     B2FLDDPH,     B2FLDFRC,     B2FLDARE,     B2SFCELV,     B2STORGE, &
-                            & B2OUTFLW_AVG, B2RIVOUT_AVG, B2FLDOUT_AVG, B2PTHOUT_AVG, B1PTHFLW_AVG,  &
+USE YOS_CMF_DIAG,       ONLY: B2RIVDPH,     B2FLDDPH,     B2FLDFRC,     B2FLBARE,     B2SFCELV,     B2STORGE, &
+                            & B2OUTFLW_AVG, B2RIVOUT_AVG, B2FLBOUT_AVG, B2PTHOUT_AVG, B1PTHFLW_AVG,  &
                             & B2RIVVEL_AVG, B2GDWRTN_AVG, B2RUNOFF_AVG, B2ROFSUB_AVG, B2WEVAPEX_AVG, &
                             & B2OUTFLW_MAX, B2STORGE_MAX, B2RIVDPH_MAX, &
                             & B2DAMINF_AVG, B2OUTINS, B2LEVDPH   !!! added
@@ -488,14 +488,14 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
       CASE ('rivvel')
         B2VEC => B2RIVVEL_AVG
       CASE ('fldout')
-        B2VEC => B2FLDOUT_AVG
+        B2VEC => B2FLBOUT_AVG
 
       CASE ('flddph')
         B2VEC => B2FLDDPH
       CASE ('fldfrc')
         B2VEC => B2FLDFRC
       CASE ('fldare')
-        B2VEC => B2FLDARE
+        B2VEC => B2FLBARE
       CASE ('sfcelv')
         B2VEC => B2SFCELV
 
