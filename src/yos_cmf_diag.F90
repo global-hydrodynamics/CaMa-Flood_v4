@@ -25,7 +25,7 @@ REAL(KIND=JPRB),POINTER         :: B2RIVVEL(:,:)           !! flow velocity     
 REAL(KIND=JPRB),POINTER         :: B2FLDINF(:,:)           !! floodplain inflow   [m3/s]
 REAL(KIND=JPRB),POINTER         :: B2FLDDPH(:,:)           !! floodplain depth    [m]
 REAL(KIND=JPRB),POINTER         :: B2FLDFRC(:,:)           !! flooded    fractipn [m2/m2]
-REAL(KIND=JPRB),POINTER         :: B2FLDARE(:,:)           !! flooded    area     [m2]
+REAL(KIND=JPRB),POINTER         :: B2FLBARE(:,:)           !! flooded    area     [m2]
 
 REAL(KIND=JPRB),POINTER         :: B2PTHOUT(:,:)           !! flood path outflow   [m3/s]
 REAL(KIND=JPRB),POINTER         :: B2PTHINF(:,:)           !! flood path inflow   [m3/s]
@@ -45,7 +45,7 @@ REAL(KIND=JPRB),ALLOCATABLE,TARGET :: B2DIAG_AVG(:,:,:)    !! Storage array for 
 
 REAL(KIND=JPRB),POINTER         :: B2RIVOUT_AVG(:,:)       !! average river       discharge
 REAL(KIND=JPRB),POINTER         :: B2OUTFLW_AVG(:,:)       !! average total outflow       [m3/s] (rivout + fldout)  !! bugfix v362
-REAL(KIND=JPRB),POINTER         :: B2FLDOUT_AVG(:,:)       !! average floodplain  discharge
+REAL(KIND=JPRB),POINTER         :: B2FLBOUT_AVG(:,:)       !! average floodplain  discharge
 REAL(KIND=JPRB),POINTER         :: B2RIVVEL_AVG(:,:)       !! average flow velocity
 REAL(KIND=JPRB),POINTER         :: B2PTHOUT_AVG(:,:)       !! flood pathway net outflow (2D)
 
@@ -84,7 +84,7 @@ REAL(KIND=JPRD)                 :: DGLBSTONEW2             !! global water stora
 REAL(KIND=JPRD)                 :: DGLBRIVSTO              !! global river storage      [m3]
 REAL(KIND=JPRD)                 :: DGLBFLDSTO              !! global floodplain storage [m3]
 REAL(KIND=JPRD)                 :: DGLBLEVSTO              !! global protected-side storage [m3] (levee scheme)
-REAL(KIND=JPRD)                 :: DGLBFLDARE              !! global flooded area       [m2]
+REAL(KIND=JPRD)                 :: DGLBFLBARE              !! global flooded area       [m2]
 
 !================================================
 !*** dam variable
