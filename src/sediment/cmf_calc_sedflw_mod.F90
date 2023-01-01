@@ -12,12 +12,12 @@ contains
 !####################################################################
 subroutine cmf_calc_sedflw
   use PARKIND1,                only: JPIM, JPRB
-  use YOS_CMF_INPUT,           only: PGRV
-  use YOS_CMF_MAP,             only: B2RIVLEN, B2RIVWTH, NSEQALL
+  use YOS_CMF_INPUT,           only: DT, PGRV
+  use YOS_CMF_MAP,             only: D2RIVLEN, D2RIVWTH, NSEQALL
   use YOS_CMF_PROG,            only: D2RIVSTO
-  use YOS_CMF_DIAG,            only: B2RIVDPH
+  use YOS_CMF_DIAG,            only: D2RIVDPH
   use yos_cmf_sed,             only: lambda, nsed, sedDT, setVel, &
-                                     b2layer, b2sedcon, b2rivsto_pre
+                                     d2layer, d2sedcon, d2rivsto_pre
   use sed_utils_mod,           only: sed_diag_average, sed_diag_reset
 
   implicit none
@@ -27,13 +27,13 @@ subroutine cmf_calc_sedflw
   real(kind=JPRB)                 :: sedsto(NSEQALL,nsed)
   real(kind=JPRB)                 :: shearVel(NSEQALL)
   real(kind=JPRB)                 :: critShearVel(NSEQALL,nsed), dMean(NSEQALL), susVel(NSEQALL,nsed)
-  real(kind=JPRB), parameter      :: IGNORE_DPH = 0.05_JPRB
+  real(kind=JPRB), parameter      :: IGNORE_DPH = 0.05d0
   !================================================
 
   call sed_diag_average 
   !$omp parallel do
   do iseq = 1, NSEQALL
-    sedsto(iseq,:) = b2sedcon(iseq,:) * max(b2rivsto_pre(iseq), 0._JPRB)
+    sedsto(iseq,:) = d2sedcon(iseq,:) * max(d2rivsto_pre(iseq), 0.d0)
   enddo
   !$omp end parallel do
 
@@ -44,8 +44,8 @@ subroutine cmf_calc_sedflw
 
   !$omp parallel do
   do iseq = 1, NSEQALL
-    if ( D2RIVSTO(iseq,1) < B2RIVWTH(iseq,1)*B2RIVLEN(iseq,1)*IGNORE_DPH ) cycle
-    b2sedcon(iseq,:) = sedsto(iseq,:) / D2RIVSTO(iseq,1)
+    if ( D2RIVSTO(iseq,1) < D2RIVWTH(iseq,1)*D2RIVLEN(iseq,1)*IGNORE_DPH ) cycle
+    d2sedcon(iseq,:) = sedsto(iseq,:) / D2RIVSTO(iseq,1)
   enddo
   !$omp end parallel do
 
@@ -59,7 +59,7 @@ contains
 !+ calc_exchange
 !==========================================================
   subroutine calc_params
-    use yos_cmf_sed,           only: pset, revEgia, sDiam, visKin, B2RIVvel_sed
+    use yos_cmf_sed,           only: pset, revEgia, sDiam, visKin, d2rivvel_sed
     use cmf_calc_sedpar_mod,   only: calc_criticalShearVelocity, calc_shearVelocity, calc_suspendVelocity
     implicit none
     save
@@ -72,36 +72,36 @@ contains
       ! critical shear velocity !
       !-------------------------!
       
-      if ( sum(b2layer(iseq,:)) <= 0._JPRB ) then
-        critShearVel(iseq,:) = 1E20
+      if ( sum(d2layer(iseq,:)) <= 0.d0 ) then
+        critShearVel(iseq,:) = 1e20
       else if ( revEgia ) then
-        dMean(iseq) = 0._JPRB
+        dMean(iseq) = 0.d0
         do ised = 1, nsed
-          dMean(iseq) = dMean(iseq) + sDiam(ised)*b2layer(iseq,ised)/sum(b2layer(iseq,:))
+          dMean(iseq) = dMean(iseq) + sDiam(ised)*d2layer(iseq,ised)/sum(d2layer(iseq,:))
         enddo
         csVel0 = calc_criticalShearVelocity(dMean(iseq))
         do ised = 1, nsed
-          if ( sDiam(ised) / dMean(iseq) >= 0.4_JPRB ) then
+          if ( sDiam(ised) / dMean(iseq) >= 0.4d0 ) then
             critShearVel(iseq,ised) = sqrt( csVel0*sDiam(ised)/dMean(iseq) ) * &
-              & ( log10(19._JPRB)/log10(19._JPRB*sDiam(ised)/dMean(iseq)) ) * 0.01_JPRB
+              & ( log10(19.d0)/log10(19.d0*sDiam(ised)/dMean(iseq)) ) * 0.01d0
           else
-            critShearVel(iseq,ised) = sqrt( 0.85*csVel0 ) * 0.01_JPRB
+            critShearVel(iseq,ised) = sqrt( 0.85*csVel0 ) * 0.01d0
           endif
         enddo      
       else
         do ised = 1, nsed
-          critShearVel(iseq,ised) = sqrt( calc_criticalShearVelocity(sDiam(ised)) ) * 0.01_JPRB
+          critShearVel(iseq,ised) = sqrt( calc_criticalShearVelocity(sDiam(ised)) ) * 0.01d0
         enddo
       endif
     
       !------------------------------------------------------!
       ! shear velocity, suspend velocity, Karman coefficient !
       !------------------------------------------------------!
-      if ( B2RIVvel_sed(iseq) == 0._JPRB .or. B2RIVDPH(iseq,1) < IGNORE_DPH ) then
-        shearVel(iseq) = 0._JPRB
-        susVel(iseq,:) = 0._JPRB
+      if ( d2rivvel_sed(iseq) == 0.d0 .or. D2RIVDPH(iseq,1) < IGNORE_DPH ) then
+        shearVel(iseq) = 0.d0
+        susVel(iseq,:) = 0.d0
       else
-        shearVel(iseq) = calc_shearVelocity(B2RIVvel_sed(iseq), B2RIVDPH(iseq,1))
+        shearVel(iseq) = calc_shearVelocity(d2rivvel_sed(iseq), D2RIVDPH(iseq,1))
         susVel(iseq,:) = calc_suspendVelocity(critShearVel(iseq,:), shearVel(iseq), setVel(:))
       endif
     enddo
@@ -110,8 +110,8 @@ contains
 
   subroutine calc_advection
     use YOS_CMF_MAP,           only:  I1NEXT
-    use yos_cmf_sed,           only:  b2rivout_sed, b2bedout, b2sedout, &
-                                      b2bedout_avg, b2sedout_avg, psedD, pwatD
+    use yos_cmf_sed,           only:  d2rivout_sed, d2bedout, d2sedout, &
+                                      d2bedout_avg, d2sedout_avg, psedD, pwatD
     implicit none
     real(kind=JPRB)               ::  bOut(NSEQALL,nsed), brate(NSEQALL,nsed)
     real(kind=JPRB)               ::  sOut(NSEQALL,nsed), srate(NSEQALL,nsed)
@@ -122,12 +122,12 @@ contains
     !$omp threadprivate ( plusVel, minusVel, iseq0, iseq1 )
     !========
 
-    bOut(:,:) = 0._JPRB
-    sOut(:,:) = 0._JPRB
+    bOut(:,:) = 0.d0
+    sOut(:,:) = 0.d0
     !$omp parallel do
     do iseq = 1, NSEQALL
       
-      if ( b2rivout_sed(iseq) >= 0._JPRB ) then
+      if ( d2rivout_sed(iseq) >= 0.d0 ) then
         iseq0 = iseq
         iseq1 = I1NEXT(iseq)
       else
@@ -135,9 +135,9 @@ contains
         iseq1 = iseq
       endif
 
-      if ( b2rivout_sed(iseq) == 0._JPRB ) then
-        b2sedout(iseq,:) = 0._JPRB
-        b2bedout(iseq,:) = 0._JPRB
+      if ( d2rivout_sed(iseq) == 0.d0 ) then
+        d2sedout(iseq,:) = 0.d0
+        d2bedout(iseq,:) = 0.d0
         cycle
       endif
 
@@ -145,28 +145,28 @@ contains
       ! calc suspend flow !
       !-------------------!
       if ( iseq0 < 0 ) then
-        b2sedout(iseq,:) = b2sedcon(iseq1,:) * b2rivout_sed(iseq)
+        d2sedout(iseq,:) = d2sedcon(iseq1,:) * d2rivout_sed(iseq)
       else
-        b2sedout(iseq,:) = b2sedcon(iseq0,:) * b2rivout_sed(iseq)
-        sOut(iseq0,:) = sOut(iseq0,:) + abs(b2sedout(iseq,:))*sedDT
+        d2sedout(iseq,:) = d2sedcon(iseq0,:) * d2rivout_sed(iseq)
+        sOut(iseq0,:) = sOut(iseq0,:) + abs(d2sedout(iseq,:))*sedDT
       endif
 
       !--------------!
       ! calc bedflow !
       !--------------!
-      if ( minval(critShearVel(iseq,:)) >= shearVel(iseq) .or. sum(b2layer(iseq,:)) == 0._JPRB .or. iseq0 < 0  ) then
-        b2bedout(iseq,:) = 0._JPRB
+      if ( minval(critShearVel(iseq,:)) >= shearVel(iseq) .or. sum(d2layer(iseq,:)) == 0.d0 .or. iseq0 < 0  ) then
+        d2bedout(iseq,:) = 0.d0
       else 
         do ised = 1, nsed
-          if ( critShearVel(iseq,ised) >= shearVel(iseq) .or. b2layer(iseq,ised) == 0._JPRB ) then
-            b2bedout(iseq,ised) = 0._JPRB
+          if ( critShearVel(iseq,ised) >= shearVel(iseq) .or. d2layer(iseq,ised) == 0.d0 ) then
+            d2bedout(iseq,ised) = 0.d0
             cycle
           endif
           plusVel = shearVel(iseq) + critShearVel(iseq,ised)
           minusVel = shearVel(iseq) - critShearVel(iseq,ised)
-          b2bedout(iseq,ised) = 17._JPRB * B2RIVWTH(iseq,1) * plusVel * minusVel * minusVel & 
-           & / ((psedD-pwatD)/pwatD) / PGRV * b2layer(iseq,ised) / sum(b2layer(iseq,:)) 
-          bOut(iseq0,ised) = bOut(iseq0,ised) + b2bedout(iseq,ised)*sedDT
+          d2bedout(iseq,ised) = 17.d0 * D2RIVWTH(iseq,1) * plusVel * minusVel * minusVel & 
+           & / ((psedD-pwatD)/pwatD) / PGRV * d2layer(iseq,ised) / sum(d2layer(iseq,:)) 
+          bOut(iseq0,ised) = bOut(iseq0,ised) + d2bedout(iseq,ised)*sedDT
         enddo
       endif
     enddo
@@ -175,33 +175,33 @@ contains
     !--------------------------------------------!
     ! adjust outflow if larget than sedsto/layer !
     !--------------------------------------------!
-    brate(:,:) = 1._JPRB
-    srate(:,:) = 1._JPRB
+    brate(:,:) = 1.d0
+    srate(:,:) = 1.d0
     !$omp parallel do
     do iseq = 1, NSEQALL
       if ( minval(sOut(iseq,:)) <= 1e-8 ) then
         do ised = 1, nsed
           if ( sOut(iseq,ised) > 1e-8 ) then
-            srate(iseq,ised) = min ( sedsto(iseq,ised) / sOut(iseq,ised), 1._JPRB )
+            srate(iseq,ised) = min ( sedsto(iseq,ised) / sOut(iseq,ised), 1.d0 )
           endif
         enddo
       else
-        srate(iseq,:) = min ( sedsto(iseq,:) / sOut(iseq,:), 1._JPRB )
+        srate(iseq,:) = min ( sedsto(iseq,:) / sOut(iseq,:), 1.d0 )
       endif
       if ( minval(bOut(iseq,:)) <= 1e-8 ) then
         do ised = 1, nsed
           if ( bOut(iseq,ised) > 1e-8 ) then
-            brate(iseq,ised) = min( b2layer(iseq,ised) / bOut(iseq,ised), 1._JPRB )
+            brate(iseq,ised) = min( d2layer(iseq,ised) / bOut(iseq,ised), 1.d0 )
           endif
         enddo
       else
-        brate(iseq,:) = min( b2layer(iseq,:) / bOut(iseq,:), 1._JPRB )
+        brate(iseq,:) = min( d2layer(iseq,:) / bOut(iseq,:), 1.d0 )
       endif
     enddo
     !$omp end parallel do
     
     do iseq = 1, NSEQALL
-      if ( b2rivout_sed(iseq) >= 0._JPRB ) then
+      if ( d2rivout_sed(iseq) >= 0.d0 ) then
         iseq0 = iseq
         iseq1 = I1NEXT(iseq)
       else
@@ -210,25 +210,25 @@ contains
       endif
 
       if ( iseq0 > 0 ) then
-        b2sedout(iseq,:) = b2sedout(iseq,:) * srate(iseq0,:)
-        sedsto(iseq0,:) = max( sedsto(iseq0,:)-abs(b2sedout(iseq,:))*sedDT, 0._JPRB )
-        b2bedout(iseq,:) = b2bedout(iseq,:) * brate(iseq0,:)
-        b2layer(iseq0,:) = max( b2layer(iseq0,:)-abs(b2bedout(iseq,:))*sedDT, 0._JPRB )
+        d2sedout(iseq,:) = d2sedout(iseq,:) * srate(iseq0,:)
+        sedsto(iseq0,:) = max( sedsto(iseq0,:)-abs(d2sedout(iseq,:))*sedDT, 0.d0 )
+        d2bedout(iseq,:) = d2bedout(iseq,:) * brate(iseq0,:)
+        d2layer(iseq0,:) = max( d2layer(iseq0,:)-abs(d2bedout(iseq,:))*sedDT, 0.d0 )
       endif
       if ( iseq1 > 0 ) then
-        sedsto(iseq1,:) = max( sedsto(iseq1,:)+abs(b2sedout(iseq,:))*sedDT, 0._JPRB )
-        b2layer(iseq1,:) = max( b2layer(iseq1,:)+abs(b2bedout(iseq,:))*sedDT, 0._JPRB ) 
+        sedsto(iseq1,:) = max( sedsto(iseq1,:)+abs(d2sedout(iseq,:))*sedDT, 0.d0 )
+        d2layer(iseq1,:) = max( d2layer(iseq1,:)+abs(d2bedout(iseq,:))*sedDT, 0.d0 ) 
       endif
 
-      b2bedout_avg(iseq,:) = b2bedout_avg(iseq,:) + b2bedout(iseq,:)*sedDT
-      b2sedout_avg(iseq,:) = b2sedout_avg(iseq,:) + b2sedout(iseq,:)*sedDT
+      d2bedout_avg(iseq,:) = d2bedout_avg(iseq,:) + d2bedout(iseq,:)*sedDT
+      d2sedout_avg(iseq,:) = d2sedout_avg(iseq,:) + d2sedout(iseq,:)*sedDT
     enddo
 
   end subroutine calc_advection
   !=====================================================
 
   subroutine calc_entrainment
-    use yos_cmf_sed,           only:  vonKar, b2netflw, b2netflw_avg, b2sedinp, b2seddep, totlyrnum
+    use yos_cmf_sed,           only:  vonKar, d2netflw, d2netflw_avg, d2sedinp, d2seddep, totlyrnum
     
     implicit none
     real(kind=JPRB)               ::  dTmp(NSEQALL,nsed), D(NSEQALL,nsed), Es(NSEQALL,nsed), Zd(NSEQALL,nsed)
@@ -239,69 +239,69 @@ contains
 
     !$omp parallel do
     do iseq = 1, NSEQALL
-      if ( B2RIVDPH(iseq,1) < IGNORE_DPH ) then
-        b2netflw(iseq,:) = 0._JPRB
+      if ( D2RIVDPH(iseq,1) < IGNORE_DPH ) then
+        d2netflw(iseq,:) = 0.d0
         cycle
       endif
 
       !----------------------!
       ! calculate suspension !
       !----------------------!
-      if ( sum(b2layer(iseq,:)) == 0._JPRB .or. all(susVel(iseq,:)==0._JPRB) ) then
-        Es(iseq,:) = 0._JPRB
+      if ( sum(d2layer(iseq,:)) == 0.d0 .or. all(susVel(iseq,:)==0.d0) ) then
+        Es(iseq,:) = 0.d0
       else
-        Es(iseq,:) = susVel(iseq,:) * (1._JPRB-lambda) * B2RIVWTH(iseq,1) * B2RIVLEN(iseq,1) * b2layer(iseq,:) / sum(b2layer(iseq,:))
-        Es(iseq,:) = max( Es(iseq,:), 0._JPRB )
+        Es(iseq,:) = susVel(iseq,:) * (1.d0-lambda) * D2RIVWTH(iseq,1) * D2RIVLEN(iseq,1) * d2layer(iseq,:) / sum(d2layer(iseq,:))
+        Es(iseq,:) = max( Es(iseq,:), 0.d0 )
       endif
 
       !----------------------!
       ! calculate deposition !
       !----------------------!
-      if ( shearVel(iseq) == 0._JPRB .or. all(setVel(:)==0._JPRB) ) then
-        D(iseq,:) = 0._JPRB
+      if ( shearVel(iseq) == 0.d0 .or. all(setVel(:)==0.d0) ) then
+        D(iseq,:) = 0.d0
       else
-        Zd(iseq,:) = 6._JPRB * setVel(:) / vonKar / shearVel(iseq)
-        D(iseq,:) = setVel(:) * B2RIVWTH(iseq,1) * B2RIVLEN(iseq,1) * b2sedcon(iseq,:) * Zd(iseq,:) / (1._JPRB-exp(-Zd(iseq,:))) 
-        D(iseq,:) = max( D(iseq,:), 0._JPRB )
+        Zd(iseq,:) = 6.d0 * setVel(:) / vonKar / shearVel(iseq)
+        D(iseq,:) = setVel(:) * D2RIVWTH(iseq,1) * D2RIVLEN(iseq,1) * d2sedcon(iseq,:) * Zd(iseq,:) / (1.d0-exp(-Zd(iseq,:))) 
+        D(iseq,:) = max( D(iseq,:), 0.d0 )
       endif
-      b2netflw(iseq,:) = Es(iseq,:) - D(iseq,:)
+      d2netflw(iseq,:) = Es(iseq,:) - D(iseq,:)
    
       !-------------------------------------------!
       ! if >0, suspension ; if <0, deposition     !
       ! adjust netflw if larger than sedsto/layer !
       !-------------------------------------------!
       do ised = 1, nsed
-        if ( b2netflw(iseq,ised) == 0._JPRB ) then
+        if ( d2netflw(iseq,ised) == 0.d0 ) then
           cycle
-        else if ( b2netflw(iseq,ised) > 0._JPRB ) then
-          dTmp1 = b2netflw(iseq,ised)*sedDT/(1._JPRB-lambda)
-          if ( dTmp1 < b2layer(iseq,ised) ) then
-            b2layer(iseq,ised) = b2layer(iseq,ised) - dTmp1
+        else if ( d2netflw(iseq,ised) > 0.d0 ) then
+          dTmp1 = d2netflw(iseq,ised)*sedDT/(1.d0-lambda)
+          if ( dTmp1 < d2layer(iseq,ised) ) then
+            d2layer(iseq,ised) = d2layer(iseq,ised) - dTmp1
           else
-            b2netflw(iseq,ised) = b2layer(iseq,ised) * (1._JPRB-lambda) / sedDT
-            b2layer(iseq,ised) = 0._JPRB
+            d2netflw(iseq,ised) = d2layer(iseq,ised) * (1.d0-lambda) / sedDT
+            d2layer(iseq,ised) = 0.d0
           endif
-          sedsto(iseq,ised) = sedsto(iseq,ised) + b2netflw(iseq,ised) * sedDT
+          sedsto(iseq,ised) = sedsto(iseq,ised) + d2netflw(iseq,ised) * sedDT
         else
-          if ( abs(b2netflw(iseq,ised))*sedDT < sedsto(iseq,ised) ) then
-            sedsto(iseq,ised) = max (sedsto(iseq,ised) - abs(b2netflw(iseq,ised))*sedDT, 0._JPRB )
+          if ( abs(d2netflw(iseq,ised))*sedDT < sedsto(iseq,ised) ) then
+            sedsto(iseq,ised) = max (sedsto(iseq,ised) - abs(d2netflw(iseq,ised))*sedDT, 0.d0 )
           else
-            b2netflw(iseq,ised) = - sedsto(iseq,ised) / sedDT
-            sedsto(iseq,ised) = 0._JPRB
+            d2netflw(iseq,ised) = - sedsto(iseq,ised) / sedDT
+            sedsto(iseq,ised) = 0.d0
           endif
-          b2layer(iseq,ised) = b2layer(iseq,ised) + abs(b2netflw(iseq,ised))*sedDT/(1._JPRB-lambda)
+          d2layer(iseq,ised) = d2layer(iseq,ised) + abs(d2netflw(iseq,ised))*sedDT/(1.d0-lambda)
         endif
       enddo
 
-      sedsto(iseq,:) = sedsto(iseq,:) + b2sedinp(iseq,:)*sedDT    
-      if ( sum(sedsto(iseq,:)) > D2RIVSTO(iseq,1) * 0.01_JPRB ) then
-        dTmp(iseq,:) = ( sum(sedsto(iseq,:)) - D2RIVSTO(iseq,1)*0.01_JPRB ) * sedsto(iseq,:)/sum(sedsto(iseq,:))
-        b2netflw(iseq,:) = b2netflw(iseq,:) - dTmp(iseq,:)/sedDT
+      sedsto(iseq,:) = sedsto(iseq,:) + d2sedinp(iseq,:)*sedDT    
+      if ( sum(sedsto(iseq,:)) > D2RIVSTO(iseq,1) * 0.01d0 ) then
+        dTmp(iseq,:) = ( sum(sedsto(iseq,:)) - D2RIVSTO(iseq,1)*0.01d0 ) * sedsto(iseq,:)/sum(sedsto(iseq,:))
+        d2netflw(iseq,:) = d2netflw(iseq,:) - dTmp(iseq,:)/sedDT
         sedsto(iseq,:) = sedsto(iseq,:) - dTmp(iseq,:)
-        b2layer(iseq,:) = b2layer(iseq,:) + dTmp(iseq,:)/(1._JPRB-lambda)
+        d2layer(iseq,:) = d2layer(iseq,:) + dTmp(iseq,:)/(1.d0-lambda)
       endif
         
-      b2netflw_avg(iseq,:) = b2netflw_avg(iseq,:) + b2netflw(iseq,:)*sedDT
+      d2netflw_avg(iseq,:) = d2netflw_avg(iseq,:) + d2netflw(iseq,:)*sedDT
     enddo
     !$omp end parallel do
   end subroutine calc_entrainment
@@ -309,84 +309,84 @@ contains
 
   subroutine calc_exchange
     ! redistribute into vertical bed layers
-    use yos_cmf_sed,           only:  b2seddep, lyrdph, totlyrnum
+    use yos_cmf_sed,           only:  d2seddep, lyrdph, totlyrnum
     
     implicit none
     integer(kind=JPIM)            ::  ilyr, ised, iseq, jlyr, slyr
     real(kind=JPRB)               ::  diff, lyrvol, layerP(nsed), seddepP(totlyrnum+1,nsed), tmp(nsed)
 
     do iseq = 1, NSEQALL
-      lyrvol = lyrdph * B2RIVWTH(iseq,1) * B2RIVLEN(iseq,1)
+      lyrvol = lyrdph * D2RIVWTH(iseq,1) * D2RIVLEN(iseq,1)
 
-      if ( minval(b2layer(iseq,:)) < 0._JPRB ) b2layer(iseq,:) = max( b2layer(iseq,:), 0._JPRB )
-      if ( minval(b2seddep(iseq,:,:)) < 0._JPRB ) b2seddep(iseq,:,:) = max( b2seddep(iseq,:,:), 0._JPRB )
+      if ( minval(d2layer(iseq,:)) < 0.d0 ) d2layer(iseq,:) = max( d2layer(iseq,:), 0.d0 )
+      if ( minval(d2seddep(iseq,:,:)) < 0.d0 ) d2seddep(iseq,:,:) = max( d2seddep(iseq,:,:), 0.d0 )
 
       !---------------------------------------!
       ! if bed storage less than layer volume !
       !---------------------------------------!
-      if ( sum(b2layer(iseq,:)) + sum(b2seddep(iseq,:,:)) <= lyrvol ) then
-        b2layer(iseq,:) = b2layer(iseq,:) + sum(b2seddep(iseq,:,:),dim=1)
-        b2seddep(iseq,:,:) = 0._JPRB
+      if ( sum(d2layer(iseq,:)) + sum(d2seddep(iseq,:,:)) <= lyrvol ) then
+        d2layer(iseq,:) = d2layer(iseq,:) + sum(d2seddep(iseq,:,:),dim=1)
+        d2seddep(iseq,:,:) = 0.d0
         cycle
       endif
 
       !------------------------------------!
       ! distribute into top exchange layer !
       !------------------------------------!
-      layerP(:) = b2layer(iseq,:)
+      layerP(:) = d2layer(iseq,:)
       if ( sum(layerP(:)) >= lyrvol ) then
-        b2layer(iseq,:) = layerP(:) * min( lyrvol/sum(layerP(:)), 1._JPRB )
-        layerP(:) = max( layerP(:) - b2layer(iseq,:), 0._JPRB )
+        d2layer(iseq,:) = layerP(:) * min( lyrvol/sum(layerP(:)), 1.d0 )
+        layerP(:) = max( layerP(:) - d2layer(iseq,:), 0.d0 )
         slyr = 0
-      else if ( sum(b2seddep(iseq,:,:)) > 0._JPRB ) then
-        layerP(:) = 0._JPRB
+      else if ( sum(d2seddep(iseq,:,:)) > 0.d0 ) then
+        layerP(:) = 0.d0
         do ilyr = 1, totlyrnum
-          diff = lyrvol - sum(b2layer(iseq,:))
-          if ( diff <= 0._JPRB ) exit
-          if ( sum(b2seddep(iseq,ilyr,:)) <= diff ) then
-            b2layer(iseq,:) = b2layer(iseq,:) + b2seddep(iseq,ilyr,:)
-            b2seddep(iseq,ilyr,:) = 0._JPRB
+          diff = lyrvol - sum(d2layer(iseq,:))
+          if ( diff <= 0.d0 ) exit
+          if ( sum(d2seddep(iseq,ilyr,:)) <= diff ) then
+            d2layer(iseq,:) = d2layer(iseq,:) + d2seddep(iseq,ilyr,:)
+            d2seddep(iseq,ilyr,:) = 0.d0
             slyr = ilyr + 1
           else
-            tmp(:) = diff * b2seddep(iseq,ilyr,:) / sum(b2seddep(iseq,ilyr,:))
-            b2layer(iseq,:) = b2layer(iseq,:) + tmp(:)
-            b2seddep(iseq,ilyr,:) = max( b2seddep(iseq,ilyr,:) - tmp(:), 0._JPRB )
+            tmp(:) = diff * d2seddep(iseq,ilyr,:) / sum(d2seddep(iseq,ilyr,:))
+            d2layer(iseq,:) = d2layer(iseq,:) + tmp(:)
+            d2seddep(iseq,ilyr,:) = max( d2seddep(iseq,ilyr,:) - tmp(:), 0.d0 )
             slyr = ilyr
             exit
           endif
         enddo
       else
-        b2seddep(iseq,:,:) = 0._JPRB
+        d2seddep(iseq,:,:) = 0.d0
         cycle
       endif
-      if ( sum(b2seddep(iseq,:,:)) == 0._JPRB ) cycle
+      if ( sum(d2seddep(iseq,:,:)) == 0.d0 ) cycle
 
       !-----------------------------------!
       ! distribute remaining bedload into !
       ! vertical deposition layers        !
       !-----------------------------------!
       seddepP(1,:) = layerP(:)
-      seddepP(2:,:) = b2seddep(iseq,:,:)
-      b2seddep(iseq,:,:) = 0._JPRB
+      seddepP(2:,:) = d2seddep(iseq,:,:)
+      d2seddep(iseq,:,:) = 0.d0
       do ilyr = 1, totlyrnum - 1
-        if ( sum(b2seddep(iseq,ilyr,:)) == lyrvol ) cycle
+        if ( sum(d2seddep(iseq,ilyr,:)) == lyrvol ) cycle
         do jlyr = slyr+1, totlyrnum + 1
-          diff = lyrvol - sum(b2seddep(iseq,ilyr,:))
-          if ( diff <= 0._JPRB ) exit
+          diff = lyrvol - sum(d2seddep(iseq,ilyr,:))
+          if ( diff <= 0.d0 ) exit
           if ( sum(seddepP(jlyr,:)) <= diff ) then
-            b2seddep(iseq,ilyr,:) = b2seddep(iseq,ilyr,:) + seddepP(jlyr,:)
-            seddepP(jlyr,:) = 0._JPRB
+            d2seddep(iseq,ilyr,:) = d2seddep(iseq,ilyr,:) + seddepP(jlyr,:)
+            seddepP(jlyr,:) = 0.d0
           else
             tmp(:) = diff * seddepP(jlyr,:) / sum(seddepP(jlyr,:))
-            b2seddep(iseq,ilyr,:) = b2seddep(iseq,ilyr,:) + tmp(:)
-            seddepP(jlyr,:) = max(seddepP(jlyr,:) - tmp(:), 0._JPRB)
+            d2seddep(iseq,ilyr,:) = d2seddep(iseq,ilyr,:) + tmp(:)
+            seddepP(jlyr,:) = max(seddepP(jlyr,:) - tmp(:), 0.d0)
             exit
           endif
         enddo
       enddo
       
-      if ( sum(seddepP) > 0._JPRB ) then
-        b2seddep(iseq,totlyrnum,:) = sum(seddepP, dim=1)
+      if ( sum(seddepP) > 0.d0 ) then
+        d2seddep(iseq,totlyrnum,:) = sum(seddepP, dim=1)
       endif
     enddo
 

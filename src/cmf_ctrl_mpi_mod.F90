@@ -88,7 +88,7 @@ REAL(KIND=JPRM)                 :: R2TMP(NX,NY)
 !================================================
 ! gather to master node
   R2TMP(:,:)=RMIS
-  CALL MPI_AllReduce(R2MAP,R2TMP,NX*NY,MPI_REAL4,MPI_MIN,MPI_COMM_CAMA,ierr)
+  CALL MPI_Reduce(R2MAP,R2TMP,NX*NY,MPI_REAL4,MPI_MIN,0,MPI_COMM_CAMA,ierr)
   R2MAP(:,:)=R2TMP(:,:)
 END SUBROUTINE CMF_MPI_REDUCE_R2MAP
 !####################################################################
@@ -108,71 +108,33 @@ REAL(KIND=JPRM)                 :: R1PTMP(NPTHOUT,NPTHLEV)
 !================================================
 ! gather to master node
   R1PTMP(:,:)=RMIS
-  CALL MPI_AllReduce(R1PTH,R1PTMP,NPTHOUT*NPTHLEV,MPI_REAL4,MPI_MIN,MPI_COMM_CAMA,ierr)
+  CALL MPI_Reduce(R1PTH,R1PTMP,NPTHOUT*NPTHLEV,MPI_REAL4,MPI_MIN,0,MPI_COMM_CAMA,ierr)
   R1PTH(:,:)=R1PTMP(:,:)
 END SUBROUTINE CMF_MPI_REDUCE_R1PTH
 !####################################################################
 
 
 !####################################################################
-SUBROUTINE CMF_MPI_REDUCE_B2MAP(B2MAP)
-! only used in netCDF restart file. (cannot be compiled due to a bug in MacOS mpif90)
-USE YOS_CMF_INPUT,           ONLY: BMIS, NX,NY
-IMPLICIT NONE
-!* input/output
-REAL(KIND=JPRB),INTENT(INOUT)   :: B2MAP(NX,NY)
-!* local variable
-REAL(KIND=JPRB)                 :: B2TMP(NX,NY)
-!================================================
-! gather to master node
-  B2TMP(:,:)=BMIS
-#ifdef PARKIND1_SINGLE
-  CALL MPI_AllReduce(B2MAP,B2TMP,NX*NY,MPI_REAL4,MPI_MIN,MPI_COMM_CAMA,ierr)
-#else
-  CALL MPI_AllReduce(B2MAP,B2TMP,NX*NY,MPI_REAL8,MPI_MIN,MPI_COMM_CAMA,ierr)
-#endif
-  B2MAP(:,:)=B2TMP(:,:)
-END SUBROUTINE CMF_MPI_REDUCE_B2MAP
-!####################################################################
-
-
-!####################################################################
-SUBROUTINE CMF_MPI_REDUCE_B1PTH(B1PTH)
-USE YOS_CMF_INPUT,           ONLY: BMIS
-USE YOS_CMF_MAP,             ONLY: NPTHOUT, NPTHLEV
-IMPLICIT NONE
-!* input/output
-REAL(KIND=JPRB),INTENT(INOUT)   :: B1PTH(NPTHOUT,NPTHLEV)
-!* local variable
-REAL(KIND=JPRB)                 :: D1PTMP(NPTHOUT,NPTHLEV)
-!================================================
-! gather to master node
-  D1PTMP(:,:)=BMIS
-#ifdef PARKIND1_SINGLE
-!!  CALL MPI_Reduce(B1PTH,D1PTMP,NPTHOUT*NPTHLEV,MPI_REAL4,MPI_MIN,0,MPI_COMM_CAMA,ierr)
-  CALL MPI_AllReduce(B1PTH,D1PTMP,NPTHOUT*NPTHLEV,MPI_REAL4,MPI_MIN,MPI_COMM_CAMA,ierr)
-#else
-  CALL MPI_AllReduce(B1PTH,D1PTMP,NPTHOUT*NPTHLEV,MPI_REAL8,MPI_MIN,MPI_COMM_CAMA,ierr)
-#endif
-  B1PTH(:,:)=D1PTMP(:,:)
-END SUBROUTINE CMF_MPI_REDUCE_B1PTH
-!####################################################################
-
-
-
-!####################################################################
 SUBROUTINE CMF_MPI_REDUCE_D2MAP(D2MAP)
 ! only used in netCDF restart file. (cannot be compiled due to a bug in MacOS mpif90)
-USE YOS_CMF_INPUT,           ONLY: BMIS, NX,NY
+USE YOS_CMF_INPUT,           ONLY: DMIS, NX,NY
 IMPLICIT NONE
 !* input/output
-REAL(KIND=JPRD),INTENT(INOUT)   :: D2MAP(NX,NY)
+REAL(KIND=JPRB),INTENT(INOUT)   :: D2MAP(NX,NY)
 !* local variable
-REAL(KIND=JPRD)                 :: D2TMP(NX,NY)
+REAL(KIND=JPRB)                 :: D2TMP(NX,NY)
 !================================================
 ! gather to master node
-  D2TMP(:,:)=BMIS
-  CALL MPI_AllReduce(D2MAP,D2TMP,NX*NY,MPI_REAL8,MPI_MIN,MPI_COMM_CAMA,ierr)
+  D2TMP(:,:)=DMIS
+  CALL MPI_Reduce(D2MAP,D2TMP,NX*NY,MPI_REAL8,MPI_MIN,0,MPI_COMM_CAMA,ierr)
+
+#ifdef ADDRESS64
+  CALL MPI_Reduce(D2MAP,D2TMP,NX*NY,MPI_REAL8,MPI_MIN,0,MPI_COMM_CAMA,ierr)
+#else
+  CALL MPI_Reduce(D2MAP,D2TMP,NX*NY,MPI_REAL4,MPI_MIN,0,MPI_COMM_CAMA,ierr)
+#endif
+
+
   D2MAP(:,:)=D2TMP(:,:)
 END SUBROUTINE CMF_MPI_REDUCE_D2MAP
 !####################################################################
@@ -180,20 +142,26 @@ END SUBROUTINE CMF_MPI_REDUCE_D2MAP
 
 !####################################################################
 SUBROUTINE CMF_MPI_REDUCE_D1PTH(D1PTH)
-USE YOS_CMF_INPUT,           ONLY: BMIS
+USE YOS_CMF_INPUT,           ONLY: DMIS
 USE YOS_CMF_MAP,             ONLY: NPTHOUT, NPTHLEV
 IMPLICIT NONE
 !* input/output
-REAL(KIND=JPRD),INTENT(INOUT)   :: D1PTH(NPTHOUT,NPTHLEV)
+REAL(KIND=JPRB),INTENT(INOUT)   :: D1PTH(NPTHOUT,NPTHLEV)
 !* local variable
-REAL(KIND=JPRD)                 :: D1PTMP(NPTHOUT,NPTHLEV)
+REAL(KIND=JPRB)                 :: D1PTMP(NPTHOUT,NPTHLEV)
 !================================================
 ! gather to master node
-  D1PTMP(:,:)=BMIS
-  CALL MPI_AllReduce(D1PTH,D1PTMP,NPTHOUT*NPTHLEV,MPI_REAL8,MPI_MIN,MPI_COMM_CAMA,ierr)
+  D1PTMP(:,:)=DMIS
+#ifdef ADDRESS64
+  CALL MPI_Reduce(D1PTH,D1PTMP,NPTHOUT*NPTHLEV,MPI_REAL8,MPI_MIN,0,MPI_COMM_CAMA,ierr)
+#else
+  CALL MPI_Reduce(D1PTH,D1PTMP,NPTHOUT*NPTHLEV,MPI_REAL4,MPI_MIN,0,MPI_COMM_CAMA,ierr)
+#endif
+
   D1PTH(:,:)=D1PTMP(:,:)
 END SUBROUTINE CMF_MPI_REDUCE_D1PTH
 !####################################################################
+
 
 
 

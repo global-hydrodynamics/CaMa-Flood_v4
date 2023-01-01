@@ -33,7 +33,7 @@ LOGICAL                         :: LADPSTP                 !! true: use adaptive
 
 LOGICAL                         :: LFPLAIN                 !! true: consider floodplain (false: only river channel)
 LOGICAL                         :: LKINE                   !! true: use kinematic wave
-LOGICAL                         :: LFLBOUT                 !! true: floodplain flow (high-water channel flow) active
+LOGICAL                         :: LFLDOUT                 !! true: floodplain flow (high-water channel flow) active
 LOGICAL                         :: LPTHOUT                 !! true: activate bifurcation scheme
 LOGICAL                         :: LDAMOUT                 !! true: activate dam operation (under development)
 LOGICAL                         :: LLEVEE                  !! true: activate levee scheme  (under development)
@@ -107,7 +107,7 @@ REAL(KIND=JPRB)                 :: PMINSLP              !! minimum topographic s
 !* missing values
 INTEGER(KIND=JPIM)              :: IMIS                !! integer undefined
 REAL(KIND=JPRM)                 :: RMIS                !! real    undefined
-REAL(KIND=JPRB)                 :: BMIS                !! double  undefined
+REAL(KIND=JPRB)                 :: DMIS                !! double  undefined
 !* file suffix
 CHARACTER(LEN=256)              :: CSUFBIN            ! .bin suffix for binary (2D map)
 CHARACTER(LEN=256)              :: CSUFVEC            ! .vec suffix for binary (1D vector)
@@ -116,12 +116,12 @@ CHARACTER(LEN=256)              :: CSUFCDF            ! .nc  suffix for netCDF
 !================================================
 #ifdef IFS_CMF
 ! Fluxes buffers for IFS coupling
-REAL(KIND=JPRB), ALLOCATABLE    :: ZBUFFO(:,:,:)
-REAL(KIND=JPRB), ALLOCATABLE    :: ZBUFFI(:,:,:)
-REAL(KIND=JPRB), ALLOCATABLE    :: ZACC0(:,:)
-REAL(KIND=JPRB), ALLOCATABLE    :: ZACC1(:,:)
+REAL(KIND=JPRB), ALLOCATABLE :: ZBUFFO(:,:,:)
+REAL(KIND=JPRB), ALLOCATABLE :: ZBUFFI(:,:,:)
+REAL(KIND=JPRB), ALLOCATABLE :: ZACC0(:,:)
+REAL(KIND=JPRB), ALLOCATABLE :: ZACC1(:,:)
 !Time step to be advanced within DRV_ADVANCE used for IFS coupling
-INTEGER(KIND=JPIM)              :: ISTEPADV
+INTEGER(KIND=JPIM)           :: ISTEPADV
 !===============================================
 #endif
 

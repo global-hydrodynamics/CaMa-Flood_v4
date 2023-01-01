@@ -105,8 +105,8 @@ contains
 
   subroutine sediment_map_init
     use YOS_CMF_INPUT,           only: NLFP, PGRV
-    use CMF_UTILS_MOD,           only: MAPR2VECB
-    use yos_cmf_sed,             only: b2sedfrc, psedD, pset, pwatD, setVel, visKin
+    use CMF_UTILS_MOD,           only: MAP2VEC
+    use yos_cmf_sed,             only: d2sedfrc, psedD, pset, pwatD, setVel, visKin
     use cmf_calc_sedpar_mod,     only: calc_settingVelocity
     use sed_utils_mod,           only: splitchar
 
@@ -143,7 +143,7 @@ contains
     !-----------------------------!
     ! read sediment fraction file !
     !-----------------------------!
-    allocate(b2sedfrc(NSEQMAX,nsed))
+    allocate(d2sedfrc(NSEQMAX,nsed))
     if ( REGIONTHIS == 1 ) then
       tmpnam = INQUIRE_FID()
       open(tmpnam,file=csedfrc,form='unformatted',access='direct',recl=4*NX*NY)
@@ -153,20 +153,20 @@ contains
 #ifdef UseMPI_CMF
       call MPI_Bcast(r2temp(1,1),NX*NY,mpi_real4,0,MPI_COMM_CAMA,ierr)
 #endif
-      call MAPR2VECB(r2temp,b2sedfrc(:,ised))
+      call MAP2VEC(r2temp,d2sedfrc(:,ised))
     enddo
     if ( REGIONTHIS == 1 ) close(tmpnam)
    
     ! adjust if any fractions are negative or if sum is not equal to 1
     if ( nsed == 1 ) then
-      b2sedfrc(:,:) = 1.d0
+      d2sedfrc(:,:) = 1.d0
     else
       !$omp parallel do
       do iseq = 1, NSEQALL
-        if ( minval(b2sedfrc(iseq,:)) < 0.d0 .or. sum(b2sedfrc(iseq,:)) == 0.d0 ) then
-          b2sedfrc(iseq,:) = 1.d0 / dble(nsed)
-        else if ( sum(b2sedfrc(iseq,:)) /= 1.d0 ) then
-          b2sedfrc(iseq,:) = b2sedfrc(iseq,:) / sum(b2sedfrc(iseq,:))
+        if ( minval(d2sedfrc(iseq,:)) < 0.d0 .or. sum(d2sedfrc(iseq,:)) == 0.d0 ) then
+          d2sedfrc(iseq,:) = 1.d0 / dble(nsed)
+        else if ( sum(d2sedfrc(iseq,:)) /= 1.d0 ) then
+          d2sedfrc(iseq,:) = d2sedfrc(iseq,:) / sum(d2sedfrc(iseq,:))
         endif
       enddo
       !$omp end parallel do
@@ -174,11 +174,11 @@ contains
   end subroutine sediment_map_init
 
   subroutine sediment_vars_init
-    use yos_cmf_sed,             only: b2bedout, b2netflw, b2seddep, &
-                                       b2bedout_avg, b2netflw_avg,   &
-                                       b2sedout, b2sedcon, b2sedinp, &
-                                       b2sedout_avg, b2sedinp_avg, b2layer, &
-                                       b2sedv, b2sedv_avg, b2depv,   &
+    use yos_cmf_sed,             only: d2bedout, d2netflw, d2seddep, &
+                                       d2bedout_avg, d2netflw_avg,   &
+                                       d2sedout, d2sedcon, d2sedinp, &
+                                       d2sedout_avg, d2sedinp_avg, d2layer, &
+                                       d2sedv, d2sedv_avg, d2depv,   &
                                        sedDT, step_sed
     use YOS_CMF_INPUT,           only: DT
     implicit none
@@ -189,25 +189,25 @@ contains
     endif
     step_sed = int(sedDT/DT)
 
-    allocate(b2sedv(NSEQMAX,nsed,6))
-    b2sedv(:,:,:) = 0._JPRB
-    b2sedout => b2sedv(:,:,1)
-    b2sedcon => b2sedv(:,:,2)
-    b2sedinp => b2sedv(:,:,3)
-    b2bedout => b2sedv(:,:,4)
-    b2netflw => b2sedv(:,:,5)
-    b2layer => b2sedv(:,:,6)
+    allocate(d2sedv(NSEQMAX,nsed,6))
+    d2sedv(:,:,:) = 0._JPRB
+    d2sedout => d2sedv(:,:,1)
+    d2sedcon => d2sedv(:,:,2)
+    d2sedinp => d2sedv(:,:,3)
+    d2bedout => d2sedv(:,:,4)
+    d2netflw => d2sedv(:,:,5)
+    d2layer => d2sedv(:,:,6)
 
-    allocate(b2depv(NSEQMAX,totlyrnum,nsed))
-    b2depv(:,:,:) = 0._JPRB
-    b2seddep => b2depv
+    allocate(d2depv(NSEQMAX,totlyrnum,nsed))
+    d2depv(:,:,:) = 0._JPRB
+    d2seddep => d2depv
 
-    allocate(b2sedv_avg(NSEQMAX,nsed,4))
-    b2sedv_avg(:,:,:) = 0._JPRB
-    b2sedout_avg => b2sedv_avg(:,:,1)
-    b2sedinp_avg => b2sedv_avg(:,:,2)
-    b2bedout_avg => b2sedv_avg(:,:,3)
-    b2netflw_avg => b2sedv_avg(:,:,4)
+    allocate(d2sedv_avg(NSEQMAX,nsed,4))
+    d2sedv_avg(:,:,:) = 0._JPRB
+    d2sedout_avg => d2sedv_avg(:,:,1)
+    d2sedinp_avg => d2sedv_avg(:,:,2)
+    d2bedout_avg => d2sedv_avg(:,:,3)
+    d2netflw_avg => d2sedv_avg(:,:,4)
   end subroutine sediment_vars_init
 
 
