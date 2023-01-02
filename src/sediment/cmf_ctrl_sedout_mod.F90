@@ -1,5 +1,16 @@
 module cmf_ctrl_sedout_mod
-
+!==========================================================
+!* PURPOSE: Output module for CaMa-Flood sediment scheme
+! (C) M. Hatono (Hiroshima Univ)  Jan 2023
+!
+! Licensed under the Apache License, Version 2.0 (the "License");
+!   You may not use this file except in compliance with the License.
+!   You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-2.0
+!
+! Unless required by applicable law or agreed to in writing, software distributed under the License is 
+!  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+! See the License for the specific language governing permissions and limitations under the License.
+!==========================================================
   use PARKIND1,                only: JPIM, JPRB, JPRM
   use YOS_CMF_INPUT,           only: LOGNAM, NX, NY
   use YOS_CMF_MAP,             only: REGIONTHIS
@@ -16,8 +27,12 @@ module cmf_ctrl_sedout_mod
   character(len=256)         :: csedsout
   namelist/sediment_output/ csedsout
 
-
 contains
+!####################################################################
+!-- sediment_output_init
+!-- cmf_sed_output
+!-- sediment_output_end
+!####################################################################
 subroutine sediment_output_init
   use CMF_CTRL_OUTPUT_MOD,     only: COUTTAG
   use CMF_UTILS_MOD,           only: INQUIRE_FID
@@ -201,10 +216,11 @@ contains
   end subroutine create_outbin
 
 end subroutine sediment_output_init
-
+!==========================================================
+!+
+!==========================================================
 subroutine cmf_sed_output
-  use YOS_CMF_DIAG,            only: NADD
-  use CMF_UTILS_MOD,           only: VEC2MAP
+  use CMF_UTILS_MOD,           only: vecD2mapR
   use YOS_CMF_INPUT,           only: IFRQ_OUT, RMIS
   use YOS_CMF_MAP,             only: NSEQMAX
   use YOS_CMF_TIME,            only: JHOUR, JMIN
@@ -212,7 +228,7 @@ subroutine cmf_sed_output
                                      d2sedout_avg, d2sedinp_avg, d2sedv_avg, sadd_out
   use cmf_ctrl_sedrest_mod,    only: sediment_restart_write
 #ifdef UseMPI_CMF
-  use CMF_CTRL_MPI_MOD,        only: CMF_MPI_REDUCE_R2MAP
+  use CMF_CTRL_MPI_MOD,        only: CMF_MPI_AllReduce_R2MAP
 #endif
   
   implicit none
@@ -263,9 +279,9 @@ subroutine cmf_sed_output
       
       if ( .not. LOUTVEC ) then
         do ised = 1, nsed
-          call vec2map(d2vec(:,ised),r3out(:,:,ised))             !! mpi node data is gathered by vec2map
+          call vecD2mapR(d2vec(:,ised),r3out(:,:,ised))             !! mpi node data is gathered by vec2map
 #ifdef UseMPI_CMF
-          call cmf_mpi_reduce_r2map(r3out(:,:,ised))
+          call CMF_MPI_AllReduce_R2MAP(r3out(:,:,ised))
 #endif
         enddo
         
@@ -336,7 +352,9 @@ contains
   end subroutine wrte_outvec
   !==========================================================
 end subroutine cmf_sed_output
-
+!==========================================================
+!+
+!==========================================================
 subroutine sediment_output_end
 #ifdef UseCDF_CMF
   use NETCDF

@@ -204,7 +204,7 @@ END SUBROUTINE ICI_LAKE_INIT
 SUBROUTINE ICI_OUTPUT_INIT
 ! Create first data output
 USE YOS_CMF_INPUT,      ONLY: LOUTPUT,      IFRQ_OUT,     LPTHOUT,      LGDWDLY,      LROSPLIT
-USE YOS_CMF_PROG,       ONLY: D2RIVSTO,     D2FLDSTO,     D2GDWSTO
+USE YOS_CMF_PROG,       ONLY: P2RIVSTO,     P2FLDSTO,     P2GDWSTO
 USE YOS_CMF_DIAG,       ONLY: D2RIVDPH,     D2FLDDPH,     D2FLDFRC,     D2FLDARE,     D2SFCELV,     D2STORGE, &
                             & D2OUTFLW_AVG, D2RIVOUT_AVG, D2FLDOUT_AVG, D2PTHOUT_AVG, D1PTHFLW_AVG, &
                             & D2RIVVEL_AVG, D2GDWRTN_AVG, D2RUNOFF_AVG, D2ROFSUB_AVG,               &
@@ -215,11 +215,11 @@ USE ici_api,            ONLY: ici_put_data
 IMPLICIT NONE
 !================================================
 call ici_put_data("rivout", D2RIVOUT_AVG(:NSEQALL,1))
-call ici_put_data("rivsto", D2RIVSTO(:NSEQALL,1))
+call ici_put_data("rivsto", P2RIVSTO(:NSEQALL,1))
 call ici_put_data("rivdph", D2RIVDPH(:NSEQALL,1))
 call ici_put_data("rivvel", D2RIVVEL_AVG(:NSEQALL,1))
 call ici_put_data("fldout", D2FLDOUT_AVG(:NSEQALL,1))
-call ici_put_data("fldsto", D2FLDSTO(:NSEQALL,1))
+call ici_put_data("fldsto", P2FLDSTO(:NSEQALL,1))
 call ici_put_data("flddph", D2FLDDPH(:NSEQALL,1))
 call ici_put_data("fldfrc", D2FLDFRC(:NSEQALL,1))
 call ici_put_data("fldare", D2FLDARE(:NSEQALL,1))
@@ -235,7 +235,7 @@ IF (LPTHOUT) THEN
   !call ici_put_data("pthflw", D1PTHFLW_AVG(:,:))
 ENDIF
 IF (LGDWDLY) THEN
-  call ici_put_data("gdwsto", D2GDWSTO(:NSEQALL,1))
+  call ici_put_data("gdwsto", P2GDWSTO(:NSEQALL,1))
   call ici_put_data("gdwrtn", D2GDWRTN_AVG(:NSEQALL,1))
 ENDIF
 IF (LROSPLIT) THEN
@@ -353,7 +353,7 @@ END SUBROUTINE CMF_ICI_FORCING_GET
 SUBROUTINE CMF_ICI_OUTPUT
 ! Send output to ICI
 USE YOS_CMF_INPUT,      ONLY: LPTHOUT,      LGDWDLY,      LROSPLIT
-USE YOS_CMF_PROG,       ONLY: D2RIVSTO,     D2FLDSTO,     D2GDWSTO
+USE YOS_CMF_PROG,       ONLY: P2RIVSTO,     P2FLDSTO,     P2GDWSTO
 USE YOS_CMF_DIAG,       ONLY: D2RIVDPH,     D2FLDDPH,     D2FLDFRC,     D2FLDARE,     D2SFCELV,     D2STORGE, &
                             & D2OUTFLW_AVG, D2RIVOUT_AVG, D2FLDOUT_AVG, D2PTHOUT_AVG, D1PTHFLW_AVG, &
                             & D2RIVVEL_AVG, D2GDWRTN_AVG, D2RUNOFF_AVG, D2ROFSUB_AVG,               &
@@ -368,11 +368,11 @@ IMPLICIT NONE
 
 call CMF_DIAG_AVERAGE
 call ici_put_data("rivout", D2RIVOUT_AVG(:NSEQALL,1))
-call ici_put_data("rivsto", D2RIVSTO(:NSEQALL,1))
+call ici_put_data("rivsto", P2RIVSTO(:NSEQALL,1))
 call ici_put_data("rivdph", D2RIVDPH(:NSEQALL,1))
 call ici_put_data("rivvel", D2RIVVEL_AVG(:NSEQALL,1))
 call ici_put_data("fldout", D2FLDOUT_AVG(:NSEQALL,1))
-call ici_put_data("fldsto", D2FLDSTO(:NSEQALL,1))
+call ici_put_data("fldsto", P2FLDSTO(:NSEQALL,1))
 call ici_put_data("flddph", D2FLDDPH(:NSEQALL,1))
 call ici_put_data("fldfrc", D2FLDFRC(:NSEQALL,1))
 call ici_put_data("fldare", D2FLDARE(:NSEQALL,1))
@@ -388,7 +388,7 @@ IF (LPTHOUT) THEN
   !call ici_put_data("pthflw", D1PTHFLW_AVG(:,:))
 ENDIF
 IF (LGDWDLY) THEN
-  call ici_put_data("gdwsto", D2GDWSTO(:NSEQALL,1))
+  call ici_put_data("gdwsto", P2GDWSTO(:NSEQALL,1))
   call ici_put_data("gdwrtn", D2GDWRTN_AVG(:NSEQALL,1))
 ENDIF
 IF (LROSPLIT) THEN
