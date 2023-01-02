@@ -1,6 +1,6 @@
 #!/bin/sh
 #==========================================================
-# CaMa-Flood sample go script (1) global 15min simulation
+# CaMa-Flood sample go script (0) example of MPI simulation
 # -- Multi 1-year simulations (2000 spinup -> 2000 -> 2001)
 # -- Daily runoff forcing (plain binary) at 1deg resolution
 #
@@ -16,8 +16,8 @@
 #==========================================================
 
 #*** PBS setting when needed
-#PBS -q E20
-#PBS -l select=1:ncpus=20:mem=10gb
+#PBS -q F40
+#PBS -l select=1:ncpus=40:mpiprocs=8:mem=10gb
 #PBS -j oe
 #PBS -m ea
 #PBS -V
@@ -37,7 +37,7 @@ export HDF5LIB="/opt/local/hdf5-1.10.5/lib"
 export DYLD_LIBRARY_PATH="${HDF5LIB}:${IFORTLIB}:${DYLD_LIBRARY_PATH}"
 
 #*** 0c. OpenMP thread number
-export OMP_NUM_THREADS=16                    # OpenMP cpu num
+export OMP_NUM_THREADS=2                    # OpenMP cpu num
 
 #================================================
 # (1) Experiment setting
@@ -45,13 +45,13 @@ export OMP_NUM_THREADS=16                    # OpenMP cpu num
 
 #============================
 #*** 1a. Experiment directory setting
-EXP="test1-glb_15min"                       # experiment name (output directory name)
+EXP="mpi8omp2"                       # experiment name (output directory name)
 RDIR=${BASE}/out/${EXP}                     # directory to run CaMa-Flood
 EXE="MAIN_cmf"                              # Execute file name
 PROG=${BASE}/src/${EXE}                     # location of Fortran main program
 NMLIST="./input_cmf.nam"                    # standard namelist
 LOGOUT="./log_CaMa.txt"                     # standard log output
-
+MPINP=8                                     # MPI process number
 
 #============================
 #*** 1b. Model physics option
@@ -59,7 +59,6 @@ DT=86400                                    # base DT (modified in physics loop 
 LADPSTP=".TRUE."                            # .TRUE. for adaptive time step
 LPTHOUT=".TRUE."                            # .TRUE. to activate bifurcation flow, mainly for delta simulation
 LDAMOUT=".FALSE."                           # .TRUE. to activate reservoir operation (under development)
-
 
 #============================
 #*** 1c. simulation time
@@ -89,18 +88,18 @@ DROFUNIT="86400000"   # [mm/day->m/s]       # runoff unit conversion
 #----- for plain binary runoff forcing
 LINPCDF=".FALSE."                           # true for netCDF runoff
 LINTERP=".TRUE."                            # .TRUE. to interporlate with input matrix
+LINTERPCDF=".FALSE."                        # .TRUE. to use netCDF input matrix
 CROFDIR="${BASE}/inp/test_1deg/runoff/"     # runoff directory
 CROFPRE="Roff____"                          # runoff prefix/suffix  
 CROFSUF=".one"                              #   $(CROFPRE)YYYYMMDD$(CROFSUF)
-
-#----- for netCDF runoff forcing ###
-# Example available in test2 script
 
 #============================
 #*** 1f. river map & topography
 FMAP="${BASE}/map/glb_15min"                # map directory
 CDIMINFO="${FMAP}/diminfo_test-1deg.txt"    # dimention information file
 CINPMAT=${FMAP}/inpmat_test-1deg.bin        # runoff input matrix for interporlation
+#CDIMINFO="${FMAP}/diminfo_test-15min_nc.txt" # dimention information file
+#CINPMAT=${FMAP}/inpmat_test-15min_nc.bin     # runoff input matrix for interporlation
 
 #----- for plain binary map input
 #** basic topography
@@ -111,6 +110,7 @@ CELEVTN="${FMAP}/elevtn.bin"                # channel top elevation [m]
 CNXTDST="${FMAP}/nxtdst.bin"                # downstream distance   [m]
 CRIVLEN="${FMAP}/rivlen.bin"                # channel length        [m]
 CFLDHGT="${FMAP}/fldhgt.bin"                # floodplain elevation profile (height above 'elevtn') [m]
+CMPIREG="${FMAP}/mpireg-${MPINP}.bin"       # mpi region map
 
 #** channel parameter
 ###CRIVWTH=${FMAP}/rivwth.bin"              # channel width [m] (empirical power-low)
@@ -123,6 +123,7 @@ CPTHOUT="${FMAP}/bifprm.txt"                #   bifurcation channel list
 
 #============================
 #*** 1h. Output Settings 
+LOUTPUT=".TRUE."                            # .TRUE. to use CaMa-Flood standard output
 IFRQ_OUT=24                                 # output frequency: [1,2,3,...,24] hour
 
 LOUTCDF=".FALSE."                           # .TRUE. netCDF output, .FALSE. plain binary output
@@ -158,8 +159,6 @@ if [ ${SPINUP} -eq 0 ]; then
 else
   NSP=0  # restart, no spinup
 fi
-
-
 
 #================================================
 # (3) For each simulation year, modify setting
@@ -211,7 +210,6 @@ cat >> ${NMLIST} << EOF
 &NRUNVER
 LADPSTP  = ${LADPSTP}                  ! true: use adaptive time step
 LPTHOUT  = ${LPTHOUT}                  ! true: activate bifurcation scheme
-LDAMOUT  = ${LDAMOUT}                  ! true: activate dam operation (under development)
 LRESTART = ${LRESTART}                 ! true: initial condition from restart file
 /
 &NDIMTIME
@@ -255,6 +253,7 @@ CRIVWTH    = "${CRIVWTH}"              ! channel width
 CRIVHGT    = "${CRIVHGT}"              ! channel depth
 CRIVMAN    = "${CRIVMAN}"              ! river manning coefficient
 CPTHOUT    = "${CPTHOUT}"              ! bifurcation channel table
+CMPIREG    = "${CMPIREG}"              ! MPI region map
 /
 EOF
 
@@ -270,6 +269,7 @@ IFRQ_RST = ${IFRQ_RST}                 ! restart write frequency (1-24: hour, 0:
 EOF
 
 #*** 4. forcing
+if [ ${LINPCDF} = ".FALSE." ]; then
 cat >> ${NMLIST} << EOF
 &NFORCE
 LINPCDF  = ${LINPCDF}                  ! true for netCDF runoff
@@ -282,13 +282,30 @@ CROFSUF  = "${CROFSUF}"                ! runoff             input suffix
 /
 EOF
 
+elif [ ${LINPCDF} = ".TRUE." ]; then
+cat >> ${NMLIST} << EOF
+&NFORCE
+LINPCDF  = ${LINPCDF}                  ! true for netCDF runoff
+LINTERP  = ${LINTERP}                  ! true for runoff interpolation using input matrix
+CINPMAT  = "${CINPMAT}"                ! input matrix file name
+DROFUNIT = ${DROFUNIT}                 ! runoff unit conversion
+CROFCDF  = "${CROFCDF}"                ! * netCDF input runoff file name
+CVNROF   = "${CVNROF}"                 ! * netCDF input runoff variable name
+SYEARIN  = ${SYEARIN}                  ! * netCDF input start year
+SMONIN   = ${SMONIN}                   ! * netCDF input start year
+SDAYIN   = ${SDAYIN}                   ! * netCDF input start year
+SHOURIN  = ${SHOURIN}                  ! * netCDF input start year
+/
+EOF
+
+fi # (if LINPCDF)
+
 #*** 5. outputs
 cat >> ${NMLIST} << EOF
 &NOUTPUT
 COUTDIR  = "${COUTDIR}"                ! OUTPUT DIRECTORY
 CVARSOUT = "${CVARSOUT}"               ! Comma-separated list of output variables to save 
 COUTTAG  = "${COUTTAG}"                ! Output Tag Name for each experiment
-LOUTVEC  = .FALSE                      ! TRUE FOR VECTORIAL OUTPUT, FALSE FOR NX,NY OUTPUT
 LOUTCDF  = ${LOUTCDF}                  ! * true for netcdf outptu false for binary
 NDLEVEL  = 0                           ! * NETCDF DEFLATION LEVEL 
 IFRQ_OUT = ${IFRQ_OUT}                 ! output data write frequency (hour)
@@ -299,7 +316,11 @@ EOF
 # (5) Execute main program
 
 echo "start: ${SYEAR}" `date`  >> log.txt
-time ./${EXE}                  >> log.txt 
+
+#time ./${EXE}                  >> log.txt 
+time mpirun -np $MPINP ${EXE}  >> log.txt
+#time mpiexec_mpt omplace ./${EXE} >> log.txt 
+
 echo "end:   ${SYEAR}" `date`  >> log.txt
 
 mv ${LOGOUT} log_CaMa-${CYR}.txt
@@ -335,12 +356,16 @@ then
     mv -f ./*${CYR}.pth                              ${CYR}-sp${ISP}  2> /dev/null
     mv -f ./o_*${CYR}.nc                             ${CYR}-sp${ISP}  2> /dev/null
     mv -f ./*${CYR}.log                              ${CYR}-sp${ISP}  2> /dev/null
-    mv -f ./log_CaMa-${CYR}.txt                      ${CYR}-sp${ISP}  2> /dev/null
+    mv -f ./${LOGOUT}*                               ${CYR}-sp${ISP}  2> /dev/null
+    mv -f ./${NMLIST}                                ${CYR}-sp${ISP}  2> /dev/null
 
     ISP=`expr ${ISP} + 1`
   else
     ISP=0
     IYR=`expr ${IYR} + 1`
+    mkdir -p log_${CYR}
+    mv -f ./${LOGOUT}*                               log_${CYR}       2> /dev/null
+    mv -f ./${NMLIST}                                log_${CYR}       2> /dev/null
   fi
 else
   IYR=`expr ${IYR} + 1`
