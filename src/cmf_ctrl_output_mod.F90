@@ -22,6 +22,7 @@ MODULE CMF_CTRL_OUTPUT_MOD
 USE PARKIND1,                ONLY: JPIM, JPRB, JPRM
 USE YOS_CMF_INPUT,           ONLY: LOGNAM,  IFRQ_OUT
 USE YOS_CMF_INPUT,           ONLY: CSUFBIN, CSUFVEC, CSUFPTH, CSUFCDF
+USE YOS_CMF_INPUT,           ONLY: LPTHOUT, LDAMOUT, LLEVEE,  LWEVAP, LGDWDLY, LOUTINS
 IMPLICIT NONE
 !============================
 SAVE
@@ -105,7 +106,7 @@ if( LOUTVEC )THEN
   WRITE(LOGNAM,*) "LOUTVEC:  ", LOUTVEC
 ENDIF
 
-WRITE(LOGNAM,*) "IFRQ_OUT  ", IFRQ_OUT
+WRITE(LOGNAM,*)   "IFRQ_OUT  ", IFRQ_OUT
 
 
 CLOSE(NSETFILE)
@@ -232,37 +233,14 @@ DO JF=1,NVARSOUT
       VAROUT(JF)%CVUNITS='m3'
 
     CASE ('pthflw')
+      IF( .not. LPTHOUT ) CYCLE
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='bifurcation channel discharge'
       VAROUT(JF)%CVUNITS='m3/s'
     CASE ('pthout')
+      IF( .not. LPTHOUT ) CYCLE
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='net bifurcation discharge'
-      VAROUT(JF)%CVUNITS='m3/s'
-
-    CASE ('gdwsto')
-      VAROUT(JF)%CVNAME=CVNAMES(JF)
-      VAROUT(JF)%CVLNAME='ground water storage'
-      VAROUT(JF)%CVUNITS='m3'
-    CASE ('gwsto')
-      VAROUT(JF)%CVNAME=CVNAMES(JF)
-      VAROUT(JF)%CVLNAME='ground water storage'
-      VAROUT(JF)%CVUNITS='m3'
-    CASE ('gwout')
-      VAROUT(JF)%CVNAME=CVNAMES(JF)
-      VAROUT(JF)%CVLNAME='ground water discharge'
-      VAROUT(JF)%CVUNITS='m3/s'  
-    CASE ('runoff')
-      VAROUT(JF)%CVNAME=CVNAMES(JF)
-      VAROUT(JF)%CVLNAME='Surface runoff'
-      VAROUT(JF)%CVUNITS='m3/s' 
-    CASE ('runoffsub')
-      VAROUT(JF)%CVNAME=CVNAMES(JF)
-      VAROUT(JF)%CVLNAME='sub-surface runoff'
-      VAROUT(JF)%CVUNITS='m3/s' 
-    CASE ('wevap')
-      VAROUT(JF)%CVNAME=CVNAMES(JF)
-      VAROUT(JF)%CVLNAME='water evaporation'
       VAROUT(JF)%CVUNITS='m3/s'
 
     CASE ('maxsto')
@@ -277,29 +255,65 @@ DO JF=1,NVARSOUT
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='daily maximum river depth'
       VAROUT(JF)%CVUNITS='m' 
-    CASE ('outins')
+
+    CASE ('runoff')
       VAROUT(JF)%CVNAME=CVNAMES(JF)
-      VAROUT(JF)%CVLNAME='instantaneous discharge'
+      VAROUT(JF)%CVLNAME='Surface runoff'
+      VAROUT(JF)%CVUNITS='m3/s' 
+    CASE ('runoffsub')
+      VAROUT(JF)%CVNAME=CVNAMES(JF)
+      VAROUT(JF)%CVLNAME='sub-surface runoff'
       VAROUT(JF)%CVUNITS='m3/s' 
 
     CASE ('damsto')   !!! added
+      IF( .not. LDAMOUT ) CYCLE
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='reservoir storage'
       VAROUT(JF)%CVUNITS='m3' 
     CASE ('daminf')   !!! added
+      IF( .not. LDAMOUT ) CYCLE
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='reservoir inflow'
       VAROUT(JF)%CVUNITS='m3/s' 
 
     CASE ('levsto')   !!! added
+      IF( .not. LLEVEE ) CYCLE
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='protected area storage'
       VAROUT(JF)%CVUNITS='m3' 
     CASE ('levdph')   !!! added
+      IF( .not. LLEVEE ) CYCLE
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='protected area depth'
       VAROUT(JF)%CVUNITS='m' 
 
+    CASE ('gdwsto')
+      IF( .not. LGDWDLY ) CYCLE
+      VAROUT(JF)%CVNAME=CVNAMES(JF)
+      VAROUT(JF)%CVLNAME='ground water storage'
+      VAROUT(JF)%CVUNITS='m3'
+    CASE ('gwsto')
+      IF( .not. LGDWDLY ) CYCLE
+      VAROUT(JF)%CVNAME=CVNAMES(JF)
+      VAROUT(JF)%CVLNAME='ground water storage'
+      VAROUT(JF)%CVUNITS='m3'
+    CASE ('gwout')
+      IF( .not. LGDWDLY ) CYCLE
+      VAROUT(JF)%CVNAME=CVNAMES(JF)
+      VAROUT(JF)%CVLNAME='ground water discharge'
+      VAROUT(JF)%CVUNITS='m3/s'  
+
+    CASE ('wevap')
+      IF( .not. LWEVAP ) CYCLE
+      VAROUT(JF)%CVNAME=CVNAMES(JF)
+      VAROUT(JF)%CVLNAME='water evaporation'
+      VAROUT(JF)%CVUNITS='m3/s'
+
+    CASE ('outins')
+      IF( .not. LOUTINS ) CYCLE
+      VAROUT(JF)%CVNAME=CVNAMES(JF)
+      VAROUT(JF)%CVLNAME='instantaneous discharge'
+      VAROUT(JF)%CVUNITS='m3/s' 
 
     CASE DEFAULT
     WRITE(LOGNAM,*) trim(CVNAMES(JF)), ' Not defined in CMF_CREATE_OUTCDF_MOD'
@@ -424,21 +438,21 @@ END SUBROUTINE CMF_OUTPUT_INIT
 !####################################################################
 SUBROUTINE CMF_OUTPUT_WRITE
 !======
-USE CMF_UTILS_MOD,           ONLY: VEC2MAP
+USE CMF_UTILS_MOD,           ONLY: vecD2mapR
 ! save results to output files
 ! -- Called either from "MAIN/Coupler" or CMF_DRV_ADVANCE
 USE YOS_CMF_INPUT,      ONLY: NX, NY, LOUTINI
 USE YOS_CMF_MAP,        ONLY: NSEQMAX, NPTHOUT, NPTHLEV, REGIONTHIS
 USE YOS_CMF_TIME,       ONLY: JYYYYMMDD, JHHMM, JHOUR, JMIN, KSTEP
-USE YOS_CMF_PROG,       ONLY: D2RIVSTO,     D2FLDSTO,     D2GDWSTO, &
-                            & d2damsto,     D2LEVSTO  !!! added
+USE YOS_CMF_PROG,       ONLY: P2RIVSTO,     P2FLDSTO,     P2GDWSTO, &
+                            & P2DAMSTO,     P2LEVSTO,     D2COPY       !!! added
 USE YOS_CMF_DIAG,       ONLY: D2RIVDPH,     D2FLDDPH,     D2FLDFRC,     D2FLDARE,     D2SFCELV,     D2STORGE, &
                             & D2OUTFLW_AVG, D2RIVOUT_AVG, D2FLDOUT_AVG, D2PTHOUT_AVG, D1PTHFLW_AVG,  &
                             & D2RIVVEL_AVG, D2GDWRTN_AVG, D2RUNOFF_AVG, D2ROFSUB_AVG, D2WEVAPEX_AVG, &
                             & D2OUTFLW_MAX, D2STORGE_MAX, D2RIVDPH_MAX, &
                             & D2DAMINF_AVG, D2OUTINS, D2LEVDPH   !!! added
 #ifdef UseMPI_CMF
-USE CMF_CTRL_MPI_MOD,   ONLY: CMF_MPI_REDUCE_R2MAP, CMF_MPI_REDUCE_R1PTH
+USE CMF_CTRL_MPI_MOD,   ONLY: CMF_MPI_AllReduce_R2MAP, CMF_MPI_AllReduce_R1PTH
 #endif
 IMPLICIT NONE
 INTEGER(KIND=JPIM)          :: JF
@@ -460,27 +474,31 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
   !*** 2. check variable name & allocate data to pointer DVEC
   DO JF=1,NVARSOUT
     SELECT CASE (VAROUT(JF)%CVNAME)
+      CASE ('rivsto')
+        D2COPY=P2RIVSTO  !! convert Double to Single precision when using SinglePrecisionMode 
+        D2VEC => D2COPY  !!   (Storage variables are kept as Float64 in SinglePrecisionMode)
+      CASE ('fldsto')
+        D2COPY=P2FLDSTO
+        D2VEC => D2COPY
+
       CASE ('rivout')
         D2VEC => D2RIVOUT_AVG
-      CASE ('rivsto')
-        D2VEC => D2RIVSTO
       CASE ('rivdph')
         D2VEC => D2RIVDPH
       CASE ('rivvel')
         D2VEC => D2RIVVEL_AVG
       CASE ('fldout')
         D2VEC => D2FLDOUT_AVG
-      CASE ('fldsto')
-        D2VEC => D2FLDSTO
+
       CASE ('flddph')
         D2VEC => D2FLDDPH
       CASE ('fldfrc')
         D2VEC => D2FLDFRC
       CASE ('fldare')
         D2VEC => D2FLDARE
-
       CASE ('sfcelv')
         D2VEC => D2SFCELV
+
       CASE ('totout')
         D2VEC => D2OUTFLW_AVG
       CASE ('outflw')            !!  compatibility for previous file name
@@ -491,9 +509,12 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
         D2VEC => D2STORGE
 
       CASE ('pthout')
+        IF( .not. LPTHOUT ) CYCLE
         D2VEC => D2PTHOUT_AVG
       CASE ('pthflw')
+        IF( .not. LPTHOUT ) CYCLE
         WRITE(LOGNAM,*) ''       !! 1d bifurcation channel (do not use D2VEC)
+
       CASE ('maxflw')
         D2VEC =>  D2OUTFLW_MAX
       CASE ('maxdph')
@@ -505,12 +526,18 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
         D2VEC =>  D2OUTINS
 
       CASE ('gwsto')
-        D2VEC =>  D2GDWSTO
+        IF( .not. LGDWDLY ) CYCLE
+        D2COPY=P2GDWSTO
+        D2VEC =>  D2COPY
       CASE ('gdwsto')
-        D2VEC =>  D2GDWSTO
+        IF( .not. LGDWDLY ) CYCLE
+        D2COPY=P2GDWSTO
+        D2VEC =>  D2COPY
       CASE ('gwout')
+        IF( .not. LGDWDLY ) CYCLE
         D2VEC =>  D2GDWRTN_AVG
       CASE ('gdwrtn')
+        IF( .not. LGDWDLY ) CYCLE
         D2VEC =>  D2GDWRTN_AVG
 
       CASE ('runoff')             !!  compatibility for previous file name
@@ -522,16 +549,23 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
       CASE ('rofsub')
         D2VEC =>  D2ROFSUB_AVG
       CASE ('wevap')
+        IF( .not. LWEVAP ) CYCLE
         D2VEC => D2WEVAPEX_AVG
 
       CASE ('damsto')   !!! added
-        D2VEC =>  d2damsto
+        IF( .not. LDAMOUT ) CYCLE
+        D2COPY=P2DAMSTO
+        D2VEC => D2COPY
       CASE ('daminf')   !!! added
+        IF( .not. LDAMOUT ) CYCLE
         D2VEC =>  d2daminf_avg
 
       CASE ('levsto')   !!! added
-        D2VEC =>  D2LEVSTO
+        IF( .not. LLEVEE ) CYCLE
+        D2COPY=P2LEVSTO
+        D2VEC => D2COPY
       CASE ('levdph')   !!! added
+        IF( .not. LLEVEE ) CYCLE
         D2VEC =>  D2LEVDPH
 
       CASE DEFAULT
@@ -548,14 +582,15 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
 
 !! convert 1Dvector to 2Dmap
     IF( VAROUT(JF)%CVNAME/='pthflw' ) THEN  !! usual 2D map variable
-      CALL VEC2MAP(D2VEC,R2OUT)             !! MPI node data is gathered by VEC2MAP
+      IF( .not. LPTHOUT ) CYCLE
+      CALL vecD2mapR(D2VEC,R2OUT)             !! MPI node data is gathered by vecP2mapR
 #ifdef UseMPI_CMF
-      CALL CMF_MPI_REDUCE_R2MAP(R2OUT)
+      CALL CMF_MPI_AllReduce_R2MAP(R2OUT)
 #endif
     ELSE
       R1POUT(:,:)=REAL(D1PTHFLW_AVG(:,:))
 #ifdef UseMPI_CMF
-      CALL CMF_MPI_REDUCE_R1PTH(R1POUT)
+      CALL CMF_MPI_AllReduce_R1PTH(R1POUT)
 #endif
     ENDIF
 
@@ -698,7 +733,7 @@ IF( REGIONTHIS==1 )THEN
       WRITE(LOGNAM,*) "Output binary output unit closed:",VAROUT(JF)%BINID
     ENDDO
     IF( LOUTVEC )THEN
-      CALL WRTE_MAP2VEC  !! write map-vector conversion file
+      CALL WRTE_mapR2vecD  !! write map-vector conversion file
     ENDIF
   ENDIF
 ENDIF
@@ -708,11 +743,11 @@ WRITE(LOGNAM,*) "CMF::OUTPUT_END: end"
 
 CONTAINS
 !==========================================================
-!+ WRTE_MAP2VEC
+!+ WRTE_mapR2vecD
 !+
 !+
 !==========================================================
-SUBROUTINE WRTE_MAP2VEC       !! 1D sequence vector informtion required to convert MPI distributed vector output to 2D map
+SUBROUTINE WRTE_mapR2vecD       !! 1D sequence vector informtion required to convert MPI distributed vector output to 2D map
 USE YOS_CMF_INPUT,      ONLY: TMPNAM
 USE YOS_CMF_MAP,        ONLY: I1SEQX, I1SEQY, NSEQMAX
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
@@ -723,7 +758,7 @@ CHARACTER(LEN=256)         :: CFILE1
 IF( LOUTVEC )THEN
   CFILE1='./ind_xy'//TRIM(CSUFVEC)
 
-  WRITE(LOGNAM,*) "LOUTVEC: write map2vec conversion table", TRIM(CFILE1)
+  WRITE(LOGNAM,*) "LOUTVEC: write mapR2vecD conversion table", TRIM(CFILE1)
 
   TMPNAM=INQUIRE_FID()
   OPEN(TMPNAM,FILE=CFILE1,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NSEQMAX)
@@ -732,7 +767,7 @@ IF( LOUTVEC )THEN
   CLOSE(TMPNAM)
 ENDIF
 
-END SUBROUTINE WRTE_MAP2VEC
+END SUBROUTINE WRTE_mapR2vecD
 !================================================
 
 

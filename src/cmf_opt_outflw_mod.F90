@@ -26,12 +26,12 @@ CONTAINS
 !####################################################################
 SUBROUTINE CMF_CALC_OUTFLW_KINE
 ! Calculate discharge, mix kinematic & local inertial, depending on slope
-USE PARKIND1,           ONLY: JPIM, JPRB
+USE PARKIND1,           ONLY: JPIM, JPRB, JPRD
 USE YOS_CMF_INPUT,      ONLY: DT,       PMANFLD,  PMINSLP,  LFLDOUT, LSLOPEMOUTH
 USE YOS_CMF_MAP,        ONLY: I1NEXT,   NSEQALL,  NSEQRIV
 USE YOS_CMF_MAP,        ONLY: D2RIVELV, D2ELEVTN, D2NXTDST, D2RIVWTH
 USE YOS_CMF_MAP,        ONLY: D2RIVLEN, D2RIVMAN, D2ELEVSLOPE
-USE YOS_CMF_PROG,       ONLY: D2RIVSTO, D2RIVOUT, D2FLDSTO, D2FLDOUT
+USE YOS_CMF_PROG,       ONLY: P2RIVSTO, D2RIVOUT, P2FLDSTO, D2FLDOUT
 USE YOS_CMF_DIAG,       ONLY: D2RIVDPH, D2RIVVEL, D2RIVINF, D2FLDDPH, D2FLDINF, D2SFCELV
 IMPLICIT NONE
 INTEGER(KIND=JPIM),SAVE   ::  ISEQ, JSEQ
@@ -63,16 +63,16 @@ DO ISEQ=1, NSEQRIV
 
   D2RIVVEL(ISEQ,1) = DVEL
   D2RIVOUT(ISEQ,1) = DAREA * DVEL
-  D2RIVOUT(ISEQ,1) = MIN(  D2RIVOUT(ISEQ,1), D2RIVSTO(ISEQ,1)/DT )
+  D2RIVOUT(ISEQ,1) = MIN(  D2RIVOUT(ISEQ,1)*1._JPRD, P2RIVSTO(ISEQ,1)/DT )
 !=== floodplain flow
   IF( LFLDOUT )THEN
     DSLOPE_F = min( 0.005_JPRB,DSLOPE )    !! set min [instead of using weir equation for efficiency]
     DVEL_F   = PMANFLD**(-1.) * DSLOPE_F**0.5 * D2FLDDPH(ISEQ,1)**(2./3.)
-    DARE_F   = D2FLDSTO(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
+    DARE_F   = P2FLDSTO(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
     DARE_F   = MAX( DARE_F - D2FLDDPH(ISEQ,1)*D2RIVWTH(ISEQ,1), 0._JPRB )   !! remove above river channel area
 
     D2FLDOUT(ISEQ,1) = DARE_F * DVEL_F
-    D2FLDOUT(ISEQ,1) = MIN(  D2FLDOUT(ISEQ,1), D2FLDSTO(ISEQ,1)/DT )
+    D2FLDOUT(ISEQ,1) = MIN(  D2FLDOUT(ISEQ,1)*1._JPRD, P2FLDSTO(ISEQ,1)/DT )
   ENDIF
 END DO
 !$OMP END PARALLEL DO
@@ -107,17 +107,17 @@ DO ISEQ=NSEQRIV+1, NSEQALL
 
   D2RIVVEL(ISEQ,1) = DVEL
   D2RIVOUT(ISEQ,1) = DAREA * DVEL
-  D2RIVOUT(ISEQ,1) = MIN(  D2RIVOUT(ISEQ,1), D2RIVSTO(ISEQ,1)/DT )
+  D2RIVOUT(ISEQ,1) = MIN(  D2RIVOUT(ISEQ,1)*1._JPRD, P2RIVSTO(ISEQ,1)/DT )
 
 !=== kinematic, floodplain mouth flow
   IF( LFLDOUT )THEN
     DSLOPE_F = min( 0.005_JPRB,DSLOPE )    !! set min [instead of using weir equation for efficiency]
     DVEL_F  = PMANFLD**(-1.) * DSLOPE_F**0.5 * D2FLDDPH(ISEQ,1)**(2./3.)
-    DARE_F   = D2FLDSTO(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
+    DARE_F   = P2FLDSTO(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
     DARE_F   = MAX( DARE_F - D2FLDDPH(ISEQ,1)*D2RIVWTH(ISEQ,1), 0._JPRB )   !! remove above river channel area
 
     D2FLDOUT(ISEQ,1) = DARE_F * DVEL_F
-    D2FLDOUT(ISEQ,1) = MIN(  D2FLDOUT(ISEQ,1), D2FLDSTO(ISEQ,1)/DT )
+    D2FLDOUT(ISEQ,1) = MIN(  D2FLDOUT(ISEQ,1)*1._JPRD, P2FLDSTO(ISEQ,1)/DT )
   ENDIF
 END DO
 !$OMP END PARALLEL DO
@@ -132,14 +132,14 @@ END SUBROUTINE CMF_CALC_OUTFLW_KINE
 !####################################################################
 SUBROUTINE CMF_CALC_OUTFLW_KINEMIX
 ! Calculate discharge, mix kinematic & local inertial, depending on slope
-USE PARKIND1,           ONLY: JPIM, JPRB
+USE PARKIND1,           ONLY: JPIM, JPRB, JPRD
 USE YOS_CMF_INPUT,      ONLY: DT,       LFLDOUT
 USE YOS_CMF_INPUT,      ONLY: PDSTMTH,  PMANFLD,  PGRV , PMINSLP
 USE YOS_CMF_MAP,        ONLY: I1NEXT,   NSEQALL,  NSEQRIV,  NSEQMAX
 USE YOS_CMF_MAP,        ONLY: D2RIVELV, D2ELEVTN, D2NXTDST, D2RIVWTH, D2RIVHGT
 USE YOS_CMF_MAP,        ONLY: D2RIVLEN, D2RIVMAN, I2MASK, D2DWNELV
-USE YOS_CMF_PROG,       ONLY: D2RIVSTO, D2RIVOUT, D2FLDSTO, D2FLDOUT
-USE YOS_CMF_PROG,       ONLY: D2RIVOUT_PRE, D2RIVDPH_PRE, D2FLDOUT_PRE, D2FLDSTO_PRE
+USE YOS_CMF_PROG,       ONLY: P2RIVSTO, D2RIVOUT, P2FLDSTO, D2FLDOUT
+USE YOS_CMF_PROG,       ONLY: D2RIVOUT_PRE, D2RIVDPH_PRE, D2FLDOUT_PRE, P2FLDSTO_PRE
 USE YOS_CMF_DIAG,       ONLY: D2RIVDPH, D2RIVVEL, D2RIVINF, D2FLDDPH, D2FLDINF, D2SFCELV
 IMPLICIT NONE
 !*** Local
@@ -201,13 +201,13 @@ DO ISEQ=1, NSEQRIV                                                    !! for nor
   !=== Floodplain Flow ===
     IF( LFLDOUT )THEN
       DFLW_F   = MAX( DSFCMAX-D2ELEVTN(ISEQ,1), 0._JPRB )
-      DARE_F   = D2FLDSTO(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
+      DARE_F   = P2FLDSTO(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
       DARE_F   = MAX( DARE_F - D2FLDDPH(ISEQ,1)*D2RIVWTH(ISEQ,1), 0._JPRB )   !! remove above river channel area
   
       DFLW_PRE_F = DSFCMAX_PRE - D2ELEVTN(ISEQ,1)
       DFLW_IMP_F = MAX( (MAX(DFLW_F*DFLW_PRE_F,0._JPRB))**0.5, 1.E-6_JPRB )
   
-      DARE_PRE_F = D2FLDSTO_PRE(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
+      DARE_PRE_F = P2FLDSTO_PRE(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
       DARE_PRE_F = MAX( DARE_PRE_F - D2FLDDPH_PRE(ISEQ,1)*D2RIVWTH(ISEQ,1), 1.E-6_JPRB )   !! remove above river channel area
       DARE_IMP_F = max( (DARE_F*DARE_PRE_F)**0.5, 1.E-6_JPRB )
   
@@ -231,16 +231,16 @@ DO ISEQ=1, NSEQRIV                                                    !! for nor
 
     D2RIVVEL(ISEQ,1) = DVEL
     D2RIVOUT(ISEQ,1) = DAREA * DVEL
-    D2RIVOUT(ISEQ,1) = MIN(  D2RIVOUT(ISEQ,1), D2RIVSTO(ISEQ,1)/DT )
+    D2RIVOUT(ISEQ,1) = MIN(  D2RIVOUT(ISEQ,1)*1._JPRD, P2RIVSTO(ISEQ,1)/DT )
     !! kinematic wave, floodplain flow
     IF( LFLDOUT )THEN
       DSLOPE_F = min( 0.005_JPRB,DSLOPE )    !! set max&min [instead of using weir equation for efficiency]
       DVEL_F  = PMANFLD**(-1.) * DSLOPE_F**0.5 * D2FLDDPH(ISEQ,1)**(2./3.)
-      DARE_F   = D2FLDSTO(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.D0)
+      DARE_F   = P2FLDSTO(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.D0)
       DARE_F   = MAX( DARE_F - D2FLDDPH(ISEQ,1)*D2RIVWTH(ISEQ,1), 0._JPRB )   !! remove above river channel area
     
       D2FLDOUT(ISEQ,1) = DARE_F * DVEL_F
-      D2FLDOUT(ISEQ,1) = MIN(  D2FLDOUT(ISEQ,1), D2FLDSTO(ISEQ,1)/DT )
+      D2FLDOUT(ISEQ,1) = MIN(  D2FLDOUT(ISEQ,1)*1._JPRD, P2FLDSTO(ISEQ,1)/DT )
     ENDIF
   ENDIF 
     
@@ -296,13 +296,13 @@ DO ISEQ=NSEQRIV+1, NSEQALL
     IF( LFLDOUT )THEN
       DFLW_F   = D2SFCELV(ISEQ,1)-D2ELEVTN(ISEQ,1)
 
-      DARE_F   = D2FLDSTO(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
+      DARE_F   = P2FLDSTO(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
       DARE_F   = MAX( DARE_F - D2FLDDPH(ISEQ,1)*D2RIVWTH(ISEQ,1), 0._JPRB )   !! remove above river channel area
 
       DFLW_PRE_F = D2SFCELV_PRE(ISEQ,1)-D2ELEVTN(ISEQ,1)
       DFLW_IMP_F = MAX( (MAX(DFLW_F*DFLW_PRE_F,0._JPRB))**0.5, 1.E-6_JPRB )
 
-      DARE_PRE_F = D2FLDSTO_PRE(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
+      DARE_PRE_F = P2FLDSTO_PRE(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
       DARE_PRE_F = MAX( DARE_PRE_F - D2FLDDPH_PRE(ISEQ,1)*D2RIVWTH(ISEQ,1), 1.E-6_JPRB )   !! remove above river channel area
       DARE_IMP_F = max( (DARE_F*DARE_PRE_F)**0.5, 1.E-6_JPRB )
 
@@ -325,17 +325,17 @@ DO ISEQ=NSEQRIV+1, NSEQALL
 
     D2RIVVEL(ISEQ,1) = DVEL
     D2RIVOUT(ISEQ,1) = DAREA * DVEL
-    D2RIVOUT(ISEQ,1) = MIN(  D2RIVOUT(ISEQ,1), D2RIVSTO(ISEQ,1)/DT )
+    D2RIVOUT(ISEQ,1) = MIN(  D2RIVOUT(ISEQ,1)*1._JPRD, P2RIVSTO(ISEQ,1)/DT )
 
     !! kinematic wave, floodplain flow
     IF( LFLDOUT )THEN
       DSLOPE_F = min( 0.005_JPRB,DSLOPE )    !! set max&min [instead of using weir equation for efficiency]
       DVEL_F  = PMANFLD**(-1.) * DSLOPE_F**0.5 * D2FLDDPH(ISEQ,1)**(2./3.)
-      DARE_F   = D2FLDSTO(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
+      DARE_F   = P2FLDSTO(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
       DARE_F   = MAX( DARE_F - D2FLDDPH(ISEQ,1)*D2RIVWTH(ISEQ,1), 0._JPRB )   !! remove above river channel area
     
       D2FLDOUT(ISEQ,1) = DARE_F * DVEL_F
-      D2FLDOUT(ISEQ,1) = MIN(  D2FLDOUT(ISEQ,1), D2FLDSTO(ISEQ,1)/DT )
+      D2FLDOUT(ISEQ,1) = MIN(  D2FLDOUT(ISEQ,1)*1._JPRD, P2FLDSTO(ISEQ,1)/DT )
     ENDIF
   ENDIF 
  
@@ -352,7 +352,7 @@ END DO
 !$OMP PARALLEL DO                                                     !! outflow correcttion if total outflow > storage
 DO ISEQ=1, NSEQALL
   IF ( D2STOOUT(ISEQ,1) > 1.E-8 .AND. I2MASK(ISEQ,1) == 0 ) THEN
-    D2RATE(ISEQ,1)   = min( (D2RIVSTO(ISEQ,1)+D2FLDSTO(ISEQ,1)) * D2STOOUT(ISEQ,1)**(-1.), 1._JPRB )
+    D2RATE(ISEQ,1)   = min( (P2RIVSTO(ISEQ,1)+P2FLDSTO(ISEQ,1)) * D2STOOUT(ISEQ,1)**(-1.), 1._JPRD )
   ENDIF
 END DO
 !$OMP END PARALLEL DO
@@ -402,7 +402,7 @@ USE YOS_CMF_MAP,     ONLY: I1NEXT,   NSEQALL,  NSEQRIV,  NPTHOUT
 USE YOS_CMF_MAP,     ONLY: D2RIVELV, D2ELEVTN, D2NXTDST, D2RIVWTH, D2RIVLEN, D2RIVMAN, D2DWNELV
 USE YOS_CMF_MAP,     ONLY: NPTHOUT,  NPTHLEV, PTH_UPST, PTH_DOWN, PTH_DST, PTH_ELV, PTH_WTH, PTH_MAN
 USE YOS_CMF_PROG,    ONLY: D2RIVOUT_PRE, D2FLDOUT_PRE, D1PTHFLW_PRE ,D2RIVDPH_PRE         !! output
-USE YOS_CMF_PROG,    ONLY: D2FLDSTO                                                       !! input
+USE YOS_CMF_PROG,    ONLY: P2FLDSTO                                                       !! input
 USE YOS_CMF_DIAG,    ONLY: D2RIVDPH, D2SFCELV, D2FLDDPH                                   !! input
 IMPLICIT NONE
 INTEGER(KIND=JPIM),SAVE :: ISEQ, JSEQ, IPTH, ILEV, ISEQP, JSEQP
@@ -438,7 +438,7 @@ DO ISEQ=1, NSEQRIV                                                    !! for nor
 
 !=== Floodplain Flow ===
   DFLW_F   = MAX( DSFCMAX-D2ELEVTN(ISEQ,1), 0._JPRB )
-  DARE_F   = D2FLDSTO(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
+  DARE_F   = P2FLDSTO(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
   DARE_F   = MAX( DARE_F - D2FLDDPH(ISEQ,1)*D2RIVWTH(ISEQ,1), 0._JPRB )   !! remove above river channel area
 
   IF( DARE_F>1.E-5 )THEN 
@@ -467,7 +467,7 @@ DO ISEQ=NSEQRIV+1, NSEQALL
   ENDIF
 !=== floodplain mouth flow ===
   DFLW_F   = D2SFCELV(ISEQ,1)-D2ELEVTN(ISEQ,1)
-  DARE_F   = D2FLDSTO(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
+  DARE_F   = P2FLDSTO(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
   DARE_F   = MAX( DARE_F - D2FLDDPH(ISEQ,1)*D2RIVWTH(ISEQ,1), 0._JPRB )   !! remove above river channel area
   IF( DARE_F>1.E-5 )THEN
     D2FLDOUT_PRE(ISEQ,1) = DARE_F * ( PMANFLD**(-1.) * DFLW_F**(2./3.) * abs(DSLOPE_F)**(0.5) )

@@ -17,7 +17,7 @@ MODULE CMF_CTRL_DAMOUT_MOD
 !  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
-USE PARKIND1,                ONLY: JPIM, JPRB, JPRM
+USE PARKIND1,                ONLY: JPIM, JPRB, JPRM, JPRD
 USE YOS_CMF_INPUT,           ONLY: LOGNAM, IMIS
 !============================
 IMPLICIT NONE
@@ -95,7 +95,7 @@ SUBROUTINE CMF_DAMOUT_INIT
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
 USE YOS_CMF_INPUT,      ONLY: NX, NY, LRESTART, LPTHOUT
 USE YOS_CMF_MAP,        ONLY: I2VECTOR, I1NEXT, NSEQALL, NSEQMAX
-USE YOS_CMF_PROG,       ONLY: D2DAMSTO, D2DAMINF
+USE YOS_CMF_PROG,       ONLY: P2DAMSTO, D2DAMINF
 USE YOS_CMF_MAP,        ONLY: NPTHOUT, NPTHLEV, PTH_UPST, PTH_DOWN, PTH_ELV !! bifurcation pass
 
 ! reed setting from CDAMFILE
@@ -177,11 +177,11 @@ END DO
 
 !! Initialize dam storage
 IF( .not. LRESTART )THEN
-  D2DAMSTO(:,1)=0._JPRB
+  P2DAMSTO(:,1)=0._JPRB
   DO IDAM=1, NDAM
     IF( DamSeq(IDAM)>0 )THEN
       ISEQ=DamSeq(IDAM)
-      D2DAMSTO(ISEQ,1)=NorVol(IDAM)  !! set initial storage to Normal Storage Volume
+      P2DAMSTO(ISEQ,1)=NorVol(IDAM)  !! set initial storage to Normal Storage Volume
     ENDIF
   END DO
 ENDIF
@@ -215,8 +215,8 @@ END SUBROUTINE CMF_DAMOUT_INIT
 SUBROUTINE CMF_DAMOUT_CALC
 USE YOS_CMF_INPUT,      ONLY: DT
 USE YOS_CMF_MAP,        ONLY: I1NEXT,   NSEQALL,  NSEQRIV
-USE YOS_CMF_PROG,       ONLY: D2RIVOUT, D2FLDOUT, D2RIVSTO, D2FLDSTO
-USE YOS_CMF_PROG,       ONLY: D2DAMSTO, D2DAMINF, D2RUNOFF    !! 
+USE YOS_CMF_PROG,       ONLY: D2RIVOUT, D2FLDOUT, P2RIVSTO, P2FLDSTO
+USE YOS_CMF_PROG,       ONLY: P2DAMSTO, D2DAMINF, D2RUNOFF    !! 
 USE YOS_CMF_DIAG,       ONLY: D2RIVINF, D2FLDINF
 ! local
 IMPLICIT NONE
@@ -227,7 +227,7 @@ REAL(KIND=JPRB),SAVE       :: DamVol
 REAL(KIND=JPRB),SAVE       :: DamInflow
 REAL(KIND=JPRB),SAVE       :: DamOutflw           !! Total outflw 
 !*** water balance
-REAL(KIND=JPRB),SAVE       :: GlbDAMSTO, GlbDAMSTONXT, GlbDAMINF, GlbDAMOUT, DamMiss
+REAL(KIND=JPRD),SAVE       :: GlbDAMSTO, GlbDAMSTONXT, GlbDAMINF, GlbDAMOUT, DamMiss
 
 !$OMP THREADPRIVATE    (ISEQD,DamVol,DamInflow,DamOutflw)
 !====================
@@ -251,7 +251,7 @@ DO IDAM=1, NDAM
   ISEQD=DamSeq(IDAM)
 
   !! *** 2a update dam volume and inflow -----------------------------------
-  DamVol    = D2DAMSTO(ISEQD,1)    
+  DamVol    = P2DAMSTO(ISEQD,1)    
   DamInflow = D2DAMINF(ISEQD,1)
 
   !! *** 2b Reservoir Operation          ------------------------------
@@ -280,7 +280,7 @@ DO IDAM=1, NDAM
   ENDIF
 
   !! *** 2c flow limitter
-  DamOutflw = min( DamOutflw, DamVol/DT, ( D2RIVSTO(ISEQD,1)+D2FLDSTO(ISEQD,1) )/DT )
+  DamOutflw = min( DamOutflw, DamVol/DT, real(P2RIVSTO(ISEQD,1)+P2FLDSTO(ISEQD,1),JPRB)/DT )
   DamOutflw = max( DamOutflw, 0._JPRB )
 
   !! update CaMa variables  (treat all outflow as RIVOUT in dam grid, no fldout)
@@ -308,13 +308,13 @@ DO IDAM=1, NDAM
   DamOutflw = D2RIVOUT(ISEQD,1) + D2FLDOUT(ISEQD,1)
 !!D2DAMINF(ISEQD,1)=DamInflow   !! if water balance needs to be checked in the output file, D2DAMINF should be updated.
 
-  GlbDAMSTO = GlbDAMSTO + D2DAMSTO(ISEQD,1)
+  GlbDAMSTO = GlbDAMSTO + P2DAMSTO(ISEQD,1)
   GlbDAMINF = GlbDAMINF + DamInflow*DT
   GlbDAMOUT = GlbDAMOUT + DamOutflw*DT
 
-  D2DAMSTO(ISEQD,1) = D2DAMSTO(ISEQD,1) + DamInflow * DT - DamOutflw * DT
+  P2DAMSTO(ISEQD,1) = P2DAMSTO(ISEQD,1) + DamInflow * DT - DamOutflw * DT
 
-  GlbDAMSTONXT = GlbDAMSTONXT + D2DAMSTO(ISEQD,1)
+  GlbDAMSTONXT = GlbDAMSTONXT + P2DAMSTO(ISEQD,1)
 END DO
 !$OMP END PARALLEL DO
 
@@ -380,15 +380,15 @@ DO ISEQ=1, NSEQRIV
 
     D2RIVVEL(ISEQ,1) = DVEL
     D2RIVOUT(ISEQ,1) = DAREA * DVEL
-    D2RIVOUT(ISEQ,1) = MIN(  D2RIVOUT(ISEQ,1), D2RIVSTO(ISEQ,1)/DT )
+    D2RIVOUT(ISEQ,1) = MIN( D2RIVOUT(ISEQ,1), real(P2RIVSTO(ISEQ,1),JPRB)/DT )
     !=== floodplain flow
     DSLOPE_F = min( 0.005_JPRB,DSLOPE )    !! set min [instead of using weirequation for efficiency]
     DVEL_F   = PMANFLD**(-1.) * DSLOPE_F**0.5 * D2FLDDPH(ISEQ,1)**(2./3.)
-    DARE_F   = D2FLDSTO(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
+    DARE_F   = P2FLDSTO(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
     DARE_F   = MAX( DARE_F - D2FLDDPH(ISEQ,1)*D2RIVWTH(ISEQ,1), 0._JPRB )   !!remove above river channel     area
 
     D2FLDOUT(ISEQ,1) = DARE_F * DVEL_F
-    D2FLDOUT(ISEQ,1) = MIN(  D2FLDOUT(ISEQ,1), D2FLDSTO(ISEQ,1)/DT )
+    D2FLDOUT(ISEQ,1) = MIN(  D2FLDOUT(ISEQ,1)*1._JPRD, P2FLDSTO(ISEQ,1)/DT )
   ENDIF
 END DO
 !$OMP END PARALLEL DO
@@ -459,7 +459,7 @@ END DO
 !$OMP PARALLEL DO
 DO ISEQ=1, NSEQALL
   IF ( D2STOOUT(ISEQ,1) > 1.E-8 ) THEN
-    D2RATE(ISEQ,1) = min( (D2RIVSTO(ISEQ,1)+D2FLDSTO(ISEQ,1)) * D2STOOUT(ISEQ,1)**(-1.), 1._JPRB )
+    D2RATE(ISEQ,1) = min( (P2RIVSTO(ISEQ,1)+P2FLDSTO(ISEQ,1)) * D2STOOUT(ISEQ,1)**(-1.), 1._JPRD )
   ENDIF
 END DO
 !$OMP END PARALLEL DO

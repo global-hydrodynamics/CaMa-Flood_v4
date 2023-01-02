@@ -54,6 +54,7 @@ ENDIF
 
 !! ==========
 DO IT=1, NT
+
 !=== 1. Calculate river discharge 
   IF ( LKINE ) THEN
     CALL CMF_CALC_OUTFLW_KINE       !!  OPTION: kinematic
@@ -93,7 +94,6 @@ DO IT=1, NT
     CALL CMF_CALC_LAKEIN            !! calculate lake inflow for river-lake coupling
   ENDIF
 #endif
-
 
 !=== 3. calculate river and floodplain staging
   CALL CMF_PHYSICS_FLDSTG
@@ -182,8 +182,8 @@ END SUBROUTINE CALC_ADPSTP
 !==========================================================
 SUBROUTINE CALC_WATBAL(IT)
 USE YOS_CMF_TIME,            ONLY: KMIN
-USE YOS_CMF_DIAG,            ONLY: DGLBSTOPRE, DGLBSTONXT, DGLBSTONEW,DGLBRIVINF,DGLBRIVOUT !! dischrge calculation
-USE YOS_CMF_DIAG,            ONLY: DGLBSTOPRE2,DGLBSTONEW2,DGLBRIVSTO,DGLBFLDSTO,DGLBFLDARE
+USE YOS_CMF_DIAG,            ONLY: P0GLBSTOPRE, P0GLBSTONXT, P0GLBSTONEW,P0GLBRIVINF,P0GLBRIVOUT !! dischrge calculation
+USE YOS_CMF_DIAG,            ONLY: P0GLBSTOPRE2,P0GLBSTONEW2,P0GLBRIVSTO,P0GLBFLDSTO,P0GLBFLDARE
 USE CMF_UTILS_MOD,           ONLY: MIN2DATE,SPLITDATE,SPLITHOUR
 IMPLICIT NONE
 INTEGER(KIND=JPIM),INTENT(IN)   :: IT        !! step in adaptive time loop
@@ -205,12 +205,12 @@ CALL SPLITDATE(PYYYYMMDD,PYEAR,PMON,PDAY)
 CALL SPLITHOUR(PHHMM,PHOUR,PMIN)
 
 ! poisitive error when water appears from somewhere, negative error when water is lost to somewhere
-DERROR   = - (DGLBSTOPRE  - DGLBSTONXT  + DGLBRIVINF - DGLBRIVOUT )  !! flux  calc budget error
-DERROR2  = - (DGLBSTOPRE2 - DGLBSTONEW2 )                            !! stage calc budget error
+DERROR   = - (P0GLBSTOPRE  - P0GLBSTONXT  + P0GLBRIVINF - P0GLBRIVOUT )  !! flux  calc budget error
+DERROR2  = - (P0GLBSTOPRE2 - P0GLBSTONEW2 )                            !! stage calc budget error
 WRITE(LOGNAM,'(I4.4,4(A1,I2.2),I6,a6,3F12.3,G12.3,2x,2F12.3,a6, 2F12.3,G12.3,3F12.3)') &
   PYEAR, '/', PMON, '/', PDAY, '_', PHOUR, ':', PMIN, IT, ' flx: ', &
-  DGLBSTOPRE*DORD, DGLBSTONXT*DORD, DGLBSTONEW*DORD ,DERROR*DORD,    DGLBRIVINF*DORD, DGLBRIVOUT*DORD, ' stg: ', &
-  DGLBSTOPRE2*DORD,DGLBSTONEW2*DORD,DERROR2*DORD,    DGLBRIVSTO*DORD,DGLBFLDSTO*DORD, DGLBFLDARE*DORD
+  P0GLBSTOPRE*DORD, P0GLBSTONXT*DORD, P0GLBSTONEW*DORD ,DERROR*DORD,    P0GLBRIVINF*DORD, P0GLBRIVOUT*DORD, ' stg: ', &
+  P0GLBSTOPRE2*DORD,P0GLBSTONEW2*DORD,DERROR2*DORD,    P0GLBRIVSTO*DORD,P0GLBFLDSTO*DORD, P0GLBFLDARE*DORD
 
 END SUBROUTINE CALC_WATBAL
 !==========================================================
@@ -220,8 +220,8 @@ END SUBROUTINE CALC_WATBAL
 !==========================================================
 SUBROUTINE CALC_VARS_PRE
 USE YOS_CMF_MAP,             ONLY: NSEQALL
-USE YOS_CMF_PROG,            ONLY: D2RIVOUT,     D2FLDOUT,     D2FLDSTO
-USE YOS_CMF_PROG,            ONLY: D2RIVOUT_PRE, D2FLDOUT_PRE, D2FLDSTO_PRE, D2RIVDPH_PRE
+USE YOS_CMF_PROG,            ONLY: D2RIVOUT,     D2FLDOUT,     P2FLDSTO
+USE YOS_CMF_PROG,            ONLY: D2RIVOUT_PRE, D2FLDOUT_PRE, P2FLDSTO_PRE, D2RIVDPH_PRE
 USE YOS_CMF_DIAG,            ONLY: D2RIVDPH
 IMPLICIT NONE
 INTEGER(KIND=JPIM),SAVE         :: ISEQ
@@ -231,7 +231,7 @@ DO ISEQ=1, NSEQALL ! for river mouth
   D2RIVOUT_PRE(ISEQ,1)=D2RIVOUT(ISEQ,1)                              !! save outflow (t)
   D2RIVDPH_PRE(ISEQ,1)=D2RIVDPH(ISEQ,1)                              !! save depth   (t)
   D2FLDOUT_PRE(ISEQ,1)=D2FLDOUT(ISEQ,1)                              !! save outflow (t)
-  D2FLDSTO_PRE(ISEQ,1)=D2FLDSTO(ISEQ,1)
+  P2FLDSTO_PRE(ISEQ,1)=P2FLDSTO(ISEQ,1)
 END DO
 !$OMP END PARALLEL DO
 
