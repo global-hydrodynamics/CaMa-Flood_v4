@@ -72,19 +72,19 @@ INTEGER(KIND=JPRB)              :: N2DIAG_MAX              !! Number of 2D diagn
 !================================================
 !*** Global total
 ! discharge calculation budget
-REAL(KIND=JPRD)                 :: DGLBSTOPRE              !! global water storage      [m3] (befre flow calculation)
-REAL(KIND=JPRD)                 :: DGLBSTONXT              !! global water storage      [m3] (after flow calculation)
-REAL(KIND=JPRD)                 :: DGLBSTONEW              !! global water storage      [m3] (after runoff input)
-REAL(KIND=JPRD)                 :: DGLBRIVINF              !! global inflow             [m3] (rivinf + fldinf)
-REAL(KIND=JPRD)                 :: DGLBRIVOUT              !! global outflow            [m3] (rivout + fldout)
+REAL(KIND=JPRD)                 :: P0GLBSTOPRE              !! global water storage      [m3] (befre flow calculation)
+REAL(KIND=JPRD)                 :: P0GLBSTONXT              !! global water storage      [m3] (after flow calculation)
+REAL(KIND=JPRD)                 :: P0GLBSTONEW              !! global water storage      [m3] (after runoff input)
+REAL(KIND=JPRD)                 :: P0GLBRIVINF              !! global inflow             [m3] (rivinf + fldinf)
+REAL(KIND=JPRD)                 :: P0GLBRIVOUT              !! global outflow            [m3] (rivout + fldout)
 
 ! stage calculation budget
-REAL(KIND=JPRD)                 :: DGLBSTOPRE2             !! global water storage      [m3] (befre stage calculation)
-REAL(KIND=JPRD)                 :: DGLBSTONEW2             !! global water storage      [m3] (after stage calculation)
-REAL(KIND=JPRD)                 :: DGLBRIVSTO              !! global river storage      [m3]
-REAL(KIND=JPRD)                 :: DGLBFLDSTO              !! global floodplain storage [m3]
-REAL(KIND=JPRD)                 :: DGLBLEVSTO              !! global protected-side storage [m3] (levee scheme)
-REAL(KIND=JPRD)                 :: DGLBFLDARE              !! global flooded area       [m2]
+REAL(KIND=JPRD)                 :: P0GLBSTOPRE2             !! global water storage      [m3] (befre stage calculation)
+REAL(KIND=JPRD)                 :: P0GLBSTONEW2             !! global water storage      [m3] (after stage calculation)
+REAL(KIND=JPRD)                 :: P0GLBRIVSTO              !! global river storage      [m3]
+REAL(KIND=JPRD)                 :: P0GLBFLDSTO              !! global floodplain storage [m3]
+REAL(KIND=JPRD)                 :: P0GLBLEVSTO              !! global protected-side storage [m3] (levee scheme)
+REAL(KIND=JPRD)                 :: P0GLBFLDARE              !! global flooded area       [m2]
 
 !================================================
 !*** dam variable

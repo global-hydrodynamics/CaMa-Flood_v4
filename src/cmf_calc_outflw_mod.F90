@@ -19,13 +19,13 @@ CONTAINS
 ! --
 !####################################################################
 SUBROUTINE CMF_CALC_OUTFLW
-USE PARKIND1,           ONLY: JPIM, JPRB
+USE PARKIND1,           ONLY: JPIM, JPRB, JPRD
 USE YOS_CMF_INPUT,      ONLY: DT,       PDSTMTH,  PMANFLD,  PGRV,     LFLDOUT, LSLOPEMOUTH
 USE YOS_CMF_MAP,        ONLY: I1NEXT,   NSEQALL,  NSEQRIV,  NSEQMAX
 USE YOS_CMF_MAP,        ONLY: D2RIVELV, D2ELEVTN, D2NXTDST, D2RIVWTH, D2RIVHGT
 USE YOS_CMF_MAP,        ONLY: D2RIVLEN, D2RIVMAN, D2DWNELV, D2ELEVSLOPE
-USE YOS_CMF_PROG,       ONLY: D2RIVSTO, D2RIVOUT, D2FLDSTO, D2FLDOUT
-USE YOS_CMF_PROG,       ONLY: D2RIVOUT_PRE, D2RIVDPH_PRE, D2FLDOUT_PRE, D2FLDSTO_PRE
+USE YOS_CMF_PROG,       ONLY: P2RIVSTO, D2RIVOUT, P2FLDSTO, D2FLDOUT
+USE YOS_CMF_PROG,       ONLY: D2RIVOUT_PRE, D2RIVDPH_PRE, D2FLDOUT_PRE, P2FLDSTO_PRE
 USE YOS_CMF_DIAG,       ONLY: D2RIVDPH, D2RIVVEL, D2RIVINF, D2FLDDPH, D2FLDINF, D2SFCELV
 IMPLICIT NONE
 !*** Local
@@ -85,13 +85,13 @@ DO ISEQ=1, NSEQRIV                                                    !! for nor
 !=== Floodplain Flow ===
   IF( LFLDOUT )THEN
     DFLW_F   = MAX( DSFCMAX-D2ELEVTN(ISEQ,1), 0._JPRB )
-    DARE_F   = D2FLDSTO(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
+    DARE_F   = P2FLDSTO(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
     DARE_F   = MAX( DARE_F - D2FLDDPH(ISEQ,1)*D2RIVWTH(ISEQ,1), 0._JPRB )   !! remove above river channel area
   
     DFLW_PRE_F = DSFCMAX_PRE - D2ELEVTN(ISEQ,1)
     DFLW_IMP_F = MAX( (MAX(DFLW_F*DFLW_PRE_F,0._JPRB))**0.5, 1.E-6_JPRB )
   
-    DARE_PRE_F = D2FLDSTO_PRE(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
+    DARE_PRE_F = P2FLDSTO_PRE(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
     DARE_PRE_F = MAX( DARE_PRE_F - D2FLDDPH_PRE(ISEQ,1)*D2RIVWTH(ISEQ,1), 1.E-6_JPRB )   !! remove above river channel area
     DARE_IMP_F = max( (DARE_F*DARE_PRE_F)**0.5, 1.E-6_JPRB )
   
@@ -137,7 +137,7 @@ DO ISEQ=NSEQRIV+1, NSEQALL
   ELSE
     DSLOPE = ( D2SFCELV(ISEQ,1) - D2DWNELV(ISEQ,1) ) * PDSTMTH ** (-1.)
   ENDIF
-  DSLOPE_F = MAX( -0.005_JPRB, min( 0.005_JPRB,DSLOPE ))    !! set max&min [instead of using weir equation for efficiency]
+  DSLOPE_F = max( -0.005_JPRB, min( 0.005_JPRB,DSLOPE ))    !! set max&min [instead of using weir equation for efficiency]
 !=== river mouth flow ===
 
   DFLW   = D2RIVDPH(ISEQ,1)
@@ -160,13 +160,13 @@ DO ISEQ=NSEQRIV+1, NSEQALL
   IF( LFLDOUT )THEN
     DFLW_F   = D2SFCELV(ISEQ,1)-D2ELEVTN(ISEQ,1)
   
-    DARE_F   = D2FLDSTO(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
+    DARE_F   = P2FLDSTO(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
     DARE_F   = MAX( DARE_F - D2FLDDPH(ISEQ,1)*D2RIVWTH(ISEQ,1), 0._JPRB )   !! remove above river channel area
   
     DFLW_PRE_F = D2SFCELV_PRE(ISEQ,1)-D2ELEVTN(ISEQ,1)
     DFLW_IMP_F = MAX( (MAX(DFLW_F*DFLW_PRE_F,0._JPRB))**0.5, 1.E-6_JPRB )
   
-    DARE_PRE_F = D2FLDSTO_PRE(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
+    DARE_PRE_F = P2FLDSTO_PRE(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
     DARE_PRE_F = MAX( DARE_PRE_F - D2FLDDPH_PRE(ISEQ,1)*D2RIVWTH(ISEQ,1), 1.E-6_JPRB )   !! remove above river channel area
     DARE_IMP_F = max( (DARE_F*DARE_PRE_F)**0.5, 1.E-6_JPRB )
   
@@ -194,7 +194,7 @@ END DO
 !$OMP PARALLEL DO                                                     !! outflow correcttion if total outflow > storage
 DO ISEQ=1, NSEQALL
   IF ( D2STOOUT(ISEQ,1) > 1.E-8 ) THEN
-    D2RATE(ISEQ,1)   = min( (D2RIVSTO(ISEQ,1)+D2FLDSTO(ISEQ,1)) * D2STOOUT(ISEQ,1)**(-1.), 1._JPRB )
+    D2RATE(ISEQ,1)   = min( (P2RIVSTO(ISEQ,1)+P2FLDSTO(ISEQ,1)) * D2STOOUT(ISEQ,1)**(-1.), 1._JPRD )
   ENDIF
 END DO
 !$OMP END PARALLEL DO

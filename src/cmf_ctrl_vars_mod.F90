@@ -16,8 +16,8 @@ MODULE CMF_CTRL_VARS_MOD
 !  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
-USE PARKIND1,                ONLY: JPIM, JPRM, JPRB
-USE YOS_CMF_INPUT,           ONLY: LOGNAM, LDAMOUT, LLEVEE, LWEVAP, LOUTINS
+USE PARKIND1,                ONLY: JPIM, JPRM, JPRB, JPRD
+USE YOS_CMF_INPUT,           ONLY: LOGNAM, LPTHOUT, LDAMOUT, LLEVEE, LWEVAP, LOUTINS, LGDWDLY
 IMPLICIT NONE
 CONTAINS 
 !####################################################################
@@ -27,15 +27,13 @@ CONTAINS
 !####################################################################
 SUBROUTINE CMF_PROG_INIT
 USE YOS_CMF_MAP,             ONLY: NSEQMAX, NPTHOUT, NPTHLEV
-USE YOS_CMF_PROG,            ONLY: ND2PROG,      D2PROG,       D2DAMMY,  &
-                                 & D2RUNOFF,     D2ROFSUB,     D2GDWSTO,     D2GDWRTN, &
-                                 & D2RIVSTO,     D2FLDSTO,     D2RIVOUT,     D2FLDOUT, &
-                                 & D2RIVOUT_PRE, D2FLDOUT_PRE, D2RIVDPH_PRE, D2FLDSTO_PRE, &
-                                 & D1PTHFLW,     D1PTHFLW_PRE, &
-                                 & D2DAMSTO,     D2DAMINF,     D2LEVSTO ,    D2WEVAP     !! optional
+USE YOS_CMF_PROG,            ONLY: D2RUNOFF,     D2ROFSUB,     &
+                                 & P2RIVSTO,     P2FLDSTO,     D2RIVOUT,     D2FLDOUT,     &
+                                 & D2RIVOUT_PRE, D2FLDOUT_PRE, D2RIVDPH_PRE, P2FLDSTO_PRE, &
+                                 & D1PTHFLW,     D1PTHFLW_PRE, P2GDWSTO,     D2GDWRTN,     &
+                                 & P2DAMSTO,     D2DAMINF,     P2LEVSTO ,    D2WEVAP,      &   !! optional
+                                 & D2DAMMY,      D2COPY
 IMPLICIT NONE
-!*** LOCAL
-INTEGER(KIND=JPIM),SAVE         :: IND
 !================================================
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "!---------------------!"
@@ -43,64 +41,72 @@ WRITE(LOGNAM,*) "!---------------------!"
 WRITE(LOGNAM,*) "CMF::PROG_INIT: prognostic variable initialization"
 
 !*** 1. ALLOCATE 
-ND2PROG=12                       !! # of standard prognostic variables 
-IF ( LDAMOUT ) ND2PROG=ND2PROG+2 !! dam   variables are added (D2DAMSTO, D2DAMINF)
-IF ( LLEVEE  ) ND2PROG=ND2PROG+1 !! levee variables are added (D2LEVSTO)
-IF ( LWEVAP  ) ND2PROG=ND2PROG+1 !! input evapolation (D2WEVAPs)
+! runoff input
+ALLOCATE( D2RUNOFF(NSEQMAX,1)     )
+ALLOCATE( D2ROFSUB(NSEQMAX,1)     )
 
-ALLOCATE( D2PROG(NSEQMAX,1,ND2PROG)     )
+! river+floodplain storage
+ALLOCATE( P2RIVSTO(NSEQMAX,1)     )
+ALLOCATE( P2FLDSTO(NSEQMAX,1)     )
 
-ALLOCATE( D1PTHFLW(NPTHOUT,NPTHLEV)     )
-ALLOCATE( D1PTHFLW_PRE(NPTHOUT,NPTHLEV) )
+! discharge calculation
+ALLOCATE( D2RIVOUT(NSEQMAX,1)     )
+ALLOCATE( D2FLDOUT(NSEQMAX,1)     )
+ALLOCATE( D2RIVOUT_PRE(NSEQMAX,1)     )
+ALLOCATE( D2FLDOUT_PRE(NSEQMAX,1)     )
+ALLOCATE( D2RIVDPH_PRE(NSEQMAX,1)     )
+ALLOCATE( P2FLDSTO_PRE(NSEQMAX,1)     )
 
- !! dammy variable for unused variable (depending on conffigulation)
-ALLOCATE( D2DAMMY(NSEQMAX,1) ) 
-D2DAMMY(:,:)=0._JPRB
+D2RUNOFF(:,:)=0._JPRB
+D2ROFSUB(:,:)=0._JPRB
 
-D2RUNOFF     => D2PROG(:,:,1)
-D2ROFSUB     => D2PROG(:,:,2)
-D2RIVSTO     => D2PROG(:,:,3)
-D2FLDSTO     => D2PROG(:,:,4)
-D2RIVOUT     => D2PROG(:,:,5)
-D2FLDOUT     => D2PROG(:,:,6)
-D2RIVOUT_PRE => D2PROG(:,:,7)
-D2FLDOUT_PRE => D2PROG(:,:,8)
-D2RIVDPH_PRE => D2PROG(:,:,9)
-D2FLDSTO_PRE => D2PROG(:,:,10)
-D2GDWSTO     => D2PROG(:,:,11)
-D2GDWRTN     => D2PROG(:,:,12)
+P2RIVSTO(:,:)=0._JPRD
+P2FLDSTO(:,:)=0._JPRD
 
-IND=12
-IF( LDAMOUT ) THEN  !! additional prognostics for LDAMOUT
-  IND=IND+1
-  D2DAMSTO     => D2PROG(:,:,IND)
-  IND=IND+1
-  D2DAMINF     => D2PROG(:,:,IND)
-ELSE
-  D2DAMSTO     => D2DAMMY(:,:)
-  D2DAMINF     => D2DAMMY(:,:)
+D2RIVOUT(:,:)=0._JPRB
+D2FLDOUT(:,:)=0._JPRB
+D2RIVOUT_PRE(:,:)=0._JPRB
+D2FLDOUT_PRE(:,:)=0._JPRB
+D2RIVDPH_PRE(:,:)=0._JPRB
+P2FLDSTO_PRE(:,:)=0._JPRB
+
+IF( LPTHOUT ) THEN  !! additional prognostics for bifurcation scheme
+  ALLOCATE( D1PTHFLW(NPTHOUT,NPTHLEV)     )
+  ALLOCATE( D1PTHFLW_PRE(NPTHOUT,NPTHLEV) )
+  D1PTHFLW(:,:)=0._JPRB
+  D1PTHFLW_PRE(:,:)=0._JPRB
 ENDIF
-
+IF( LDAMOUT ) THEN  !! additional prognostics for reservoir operation
+  ALLOCATE( P2DAMSTO(NSEQMAX,1)     )
+  ALLOCATE( D2DAMINF(NSEQMAX,1)     )
+  P2DAMSTO(:,:)=0._JPRD
+  D2DAMINF(:,:)=0._JPRB
+ENDIF
 IF( LLEVEE ) THEN  !! additional prognostics for LLEVEE
-  IND=IND+1
-  D2LEVSTO     => D2PROG(:,:,IND)
-ELSE
-  D2LEVSTO     => D2DAMMY(:,:)
+  ALLOCATE( P2LEVSTO(NSEQMAX,1)     )
+  P2LEVSTO(:,:)=0._JPRD
 ENDIF
 
+!! Used in ECMWF
 IF( LWEVAP ) THEN  !! additional prognostics for LLEVEE
-  IND=IND+1
-  D2WEVAP      => D2PROG(:,:,IND)
-ELSE
-  D2WEVAP      => D2DAMMY(:,:)
+  ALLOCATE( D2WEVAP(NSEQMAX,1)     )
+  D2WEVAP(:,:)=0._JPRB
 ENDIF
 
+!! keep these variables even when LGDWDLY is not used.
+ALLOCATE( P2GDWSTO(NSEQMAX,1)     )
+ALLOCATE( D2GDWRTN(NSEQMAX,1)     )
+P2GDWSTO(:,:)=0._JPRD
+D2GDWRTN(:,:)=0._JPRB
+
+!! dammy variable for data handling
+ALLOCATE( D2DAMMY(NSEQMAX,1)) !! Float64/32 switch (Dammy for unused var)
+ALLOCATE( D2COPY(NSEQMAX,1))  !! Float64/32 switch (Dammy for output)
+D2DAMMY(:,:)=0._JPRB
+D2COPY(:,:) =0._JPRB
 
 !============================
-!*** 2a. set to zero 
-D2PROG(:,:,:) = 0._JPRB
-
-!***  2b. set initial water surface elevation to sea surface level
+!***  2. set initial water surface elevation to sea surface level
 WRITE(LOGNAM,*) 'PROG_INIT: fill channels below downstream boundary'
 CALL STORAGE_SEA_SURFACE
 
@@ -132,7 +138,7 @@ DO ISEQ=NSEQRIV+1,NSEQALL
   !! set initial water level to sea level if river bed is lower than sea level
   DDPH=MAX( DSEAELV-D2RIVELV(ISEQ,1),0._JPRB )
   DDPH=MIN( DDPH,D2RIVHGT(ISEQ,1) )
-  D2RIVSTO(ISEQ,1)=DDPH*D2RIVLEN(ISEQ,1)*D2RIVWTH(ISEQ,1)
+  P2RIVSTO(ISEQ,1)=DDPH*D2RIVLEN(ISEQ,1)*D2RIVWTH(ISEQ,1)
   D2RIVDPH_PRE(ISEQ,1)=DDPH
 END DO
 !$OMP END PARALLEL DO
@@ -146,7 +152,7 @@ DO ISEQ=NSEQRIV,1, -1
   DDPH=MAX( DSEAELV-D2RIVELV(ISEQ,1),0._JPRB )
   DDPH=MIN( DDPH,D2RIVHGT(ISEQ,1) )
 
-  D2RIVSTO(ISEQ,1)=DDPH*D2RIVLEN(ISEQ,1)*D2RIVWTH(ISEQ,1)
+  P2RIVSTO(ISEQ,1)=DDPH*D2RIVLEN(ISEQ,1)*D2RIVWTH(ISEQ,1)
   D2RIVDPH_PRE(ISEQ,1)=DDPH
 END DO
 
@@ -163,7 +169,7 @@ END DO
 !  !! set initial water level to sea level if river bed is lower than sea level
 !  DDPH=MAX( DSEAELV-D2RIVELV(ISEQ,1),0._JPRB )
 !  DDPH=MIN( DDPH,D2RIVHGT(ISEQ,1) )
-!  D2RIVSTO(ISEQ,1)=DDPH*D2RIVLEN(ISEQ,1)*D2RIVWTH(ISEQ,1)
+!  P2RIVSTO(ISEQ,1)=DDPH*D2RIVLEN(ISEQ,1)*D2RIVWTH(ISEQ,1)
 !END DO
     
 END SUBROUTINE STORAGE_SEA_SURFACE
@@ -203,7 +209,7 @@ WRITE(LOGNAM,*) "CMF::DIAG_INIT: initialize diagnostic variables"
 
 !*** 1. snapshot 2D diagnostics
 N2DIAG=12
-IF ( LLEVEE  ) N2DIAG=N2DIAG+1 !! levee variables are added     (D2LEVSTO )
+IF ( LLEVEE  ) N2DIAG=N2DIAG+1 !! levee variables are added     (P2LEVSTO )
 IF ( LWEVAP  ) N2DIAG=N2DIAG+1 !! evapolation added             (D2WEVAPEX) 
 IF ( LOUTINS ) N2DIAG=N2DIAG+1 !! instantaneous discharge added (D2OUTINS )
 
