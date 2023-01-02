@@ -1,8 +1,15 @@
 module cmf_ctrl_sedrest_mod
 !==========================================================
 !* PURPOSE: physics for sediment transport
-!
 ! (C) M.Hatono  (Hiroshima-U)  May 2021
+!
+! Licensed under the Apache License, Version 2.0 (the "License");
+!   You may not use this file except in compliance with the License.
+!   You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-2.0
+!
+! Unless required by applicable law or agreed to in writing, software distributed under the License is 
+!  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
 #ifdef UseMPI_CMF
   use MPI
@@ -25,15 +32,13 @@ contains
 ! -- sediment_restart_init
 ! -- sediment_restart_write
 ! --
-! --
 !####################################################################
-
 subroutine sediment_restart_init
   use YOS_CMF_MAP,             only: D2RIVLEN, D2RIVWTH
-  use YOS_CMF_PROG,            only: D2RIVSTO
+  use YOS_CMF_PROG,            only: P2RIVSTO
   use yos_cmf_sed,             only: d2sedfrc, lyrdph, d2rivsto_pre, &
                                      d2rivout_sed, d2rivvel_sed, sadd_riv, sadd_out
-  use CMF_UTILS_MOD,           only: MAP2VEC, inquire_fid
+  use CMF_UTILS_MOD,           only: mapR2vecD, inquire_fid
 
   implicit none
   save
@@ -73,9 +78,9 @@ subroutine sediment_restart_init
 #endif
         select case(irec)
           case (1)
-            call MAP2VEC(r2temp,d2layer(:,ised))
+            call mapR2vecD(r2temp,d2layer(:,ised))
           case (2)
-            call MAP2VEC(r2temp,d2sedcon(:,ised))
+            call mapR2vecD(r2temp,d2sedcon(:,ised))
         end select
       enddo
     enddo
@@ -86,7 +91,7 @@ subroutine sediment_restart_init
 #ifdef UseMPI_CMF
         call MPI_Bcast(r2temp(1,1),NX*NY,mpi_real4,0,MPI_COMM_CAMA,ierr)
 #endif
-        call MAP2VEC(r2temp,d2seddep(:,irec,ised))
+        call mapR2vecD(r2temp,d2seddep(:,irec,ised))
       enddo
     enddo
     if ( REGIONTHIS == 1 ) close(tmpnam)
@@ -96,18 +101,20 @@ subroutine sediment_restart_init
   allocate(d2rivsto_pre(NSEQMAX), d2rivout_sed(NSEQMAX), d2rivvel_sed(NSEQMAX))
   sadd_riv = 0.d0
   sadd_out = 0.d0
-  d2rivsto_pre(:) = D2RIVSTO(:,1)
+  d2rivsto_pre(:) = P2RIVSTO(:,1)
   d2rivout_sed(:) = 0.d0
   d2rivvel_sed(:) = 0.d0
 end subroutine sediment_restart_init
-
+!==========================================================
+!+
+!==========================================================
 subroutine sediment_restart_write
   use YOS_CMF_TIME,            only: KSTEP, NSTEPS, JDD, JHHMM, JHOUR, JMIN, JYYYYMMDD
   use YOS_CMF_INPUT,           only: CSUFBIN, RMIS
   use CMF_CTRL_RESTART_MOD,    only: CRESTDIR
-  use CMF_UTILS_MOD,           only: VEC2MAP
+  use CMF_UTILS_MOD,           only: vecD2mapR
 #ifdef UseMPI_CMF
-  use CMF_CTRL_MPI_MOD,        only: CMF_MPI_REDUCE_R2MAP
+  use CMF_CTRL_MPI_MOD,        only: CMF_MPI_AllReduce_R2MAP
 #endif
   
   implicit none
@@ -153,12 +160,12 @@ subroutine sediment_restart_write
      do ised = 1, nsed
        select case(irec)
          case (1)
-           call VEC2MAP(d2layer(:,ised),r2temp)
+           call vecD2mapR(d2layer(:,ised),r2temp)
          case (2)
-           call VEC2MAP(d2sedcon(:,ised),r2temp)
+           call vecD2mapR(d2sedcon(:,ised),r2temp)
        end select
 #ifdef UseMPI_CMF
-       call CMF_MPI_REDUCE_R2MAP(r2temp)
+       call CMF_MPI_AllReduce_R2MAP(r2temp)
 #endif
        r3final(:,:,ised) = r2temp(:,:)
      enddo
@@ -168,9 +175,9 @@ subroutine sediment_restart_write
     do irec = 1, totlyrnum
       r3final(:,:,:) = RMIS
       do ised = 1, nsed
-        call VEC2MAP(d2seddep(:,irec,ised),r2temp)
+        call vecD2mapR(d2seddep(:,irec,ised),r2temp)
 #ifdef UseMPI_CMF
-        call CMF_MPI_REDUCE_R2MAP(r2temp)
+        call CMF_MPI_AllReduce_R2MAP(r2temp)
 #endif
         r3final(:,:,ised) = r2temp
       enddo

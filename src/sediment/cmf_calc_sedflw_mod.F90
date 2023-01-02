@@ -1,8 +1,15 @@
 module cmf_calc_sedflw_mod
 !==========================================================
 !* PURPOSE: physics for sediment transport
-!
 ! (C) M.Hatono  (Hiroshima-U)  May 2021
+!
+! Licensed under the Apache License, Version 2.0 (the "License");
+!   You may not use this file except in compliance with the License.
+!   You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-2.0
+!
+! Unless required by applicable law or agreed to in writing, software distributed under the License is 
+!  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
 contains
 !####################################################################
@@ -12,9 +19,9 @@ contains
 !####################################################################
 subroutine cmf_calc_sedflw
   use PARKIND1,                only: JPIM, JPRB
-  use YOS_CMF_INPUT,           only: DT, PGRV
+  use YOS_CMF_INPUT,           only: PGRV
   use YOS_CMF_MAP,             only: D2RIVLEN, D2RIVWTH, NSEQALL
-  use YOS_CMF_PROG,            only: D2RIVSTO
+  use YOS_CMF_PROG,            only: P2RIVSTO
   use YOS_CMF_DIAG,            only: D2RIVDPH
   use yos_cmf_sed,             only: lambda, nsed, sedDT, setVel, &
                                      d2layer, d2sedcon, d2rivsto_pre
@@ -44,8 +51,8 @@ subroutine cmf_calc_sedflw
 
   !$omp parallel do
   do iseq = 1, NSEQALL
-    if ( D2RIVSTO(iseq,1) < D2RIVWTH(iseq,1)*D2RIVLEN(iseq,1)*IGNORE_DPH ) cycle
-    d2sedcon(iseq,:) = sedsto(iseq,:) / D2RIVSTO(iseq,1)
+    if ( P2RIVSTO(iseq,1) < D2RIVWTH(iseq,1)*D2RIVLEN(iseq,1)*IGNORE_DPH ) cycle
+    d2sedcon(iseq,:) = sedsto(iseq,:) / P2RIVSTO(iseq,1)
   enddo
   !$omp end parallel do
 
@@ -294,8 +301,8 @@ contains
       enddo
 
       sedsto(iseq,:) = sedsto(iseq,:) + d2sedinp(iseq,:)*sedDT    
-      if ( sum(sedsto(iseq,:)) > D2RIVSTO(iseq,1) * 0.01d0 ) then
-        dTmp(iseq,:) = ( sum(sedsto(iseq,:)) - D2RIVSTO(iseq,1)*0.01d0 ) * sedsto(iseq,:)/sum(sedsto(iseq,:))
+      if ( sum(sedsto(iseq,:)) > P2RIVSTO(iseq,1) * 0.01d0 ) then
+        dTmp(iseq,:) = ( sum(sedsto(iseq,:)) - P2RIVSTO(iseq,1)*0.01d0 ) * sedsto(iseq,:)/sum(sedsto(iseq,:))
         d2netflw(iseq,:) = d2netflw(iseq,:) - dTmp(iseq,:)/sedDT
         sedsto(iseq,:) = sedsto(iseq,:) - dTmp(iseq,:)
         d2layer(iseq,:) = d2layer(iseq,:) + dTmp(iseq,:)/(1.d0-lambda)

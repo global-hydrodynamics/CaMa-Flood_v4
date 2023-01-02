@@ -1,8 +1,15 @@
 module CMF_CTRL_SED_MOD
 !==========================================================
 !* PURPOSE: physics for sediment transport
-!
 ! (C) M.Hatono  (Hiroshima-U)  May 2021
+!
+! Licensed under the Apache License, Version 2.0 (the "License");
+!   You may not use this file except in compliance with the License.
+!   You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-2.0
+!
+! Unless required by applicable law or agreed to in writing, software distributed under the License is 
+!  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
 #ifdef UseMPI_CMF
   use MPI
@@ -19,16 +26,11 @@ module CMF_CTRL_SED_MOD
   character(len=256)              :: csedfrc
   character(len=256)              :: sedD
   namelist/sediment_map/ crocdph,sedD,csedfrc
-
 contains
 !####################################################################
-! -- cmf_sed_input
+! -- cmf_sed_nmlist
 ! -- cmf_sed_init
-! -- cmf_sed_forcing_get
-! --
-! --
 !####################################################################
-
 subroutine cmf_sed_nmlist
   use yos_cmf_sed,             only: lambda, psedD, pset, pwatD, sedDT, &
                                      revEgia, visKin, vonKar
@@ -80,7 +82,9 @@ subroutine cmf_sed_nmlist
 
   close(nsetfile)
 end subroutine cmf_sed_nmlist
-
+!==========================================================
+!+
+!==========================================================
 subroutine cmf_sed_init
   use YOS_CMF_INPUT,           only: LOUTPUT
   use cmf_ctrl_sedinp_mod,     only: sediment_input_init
@@ -102,10 +106,10 @@ subroutine cmf_sed_init
   call sediment_restart_init
 
 contains
-
+!==================================
   subroutine sediment_map_init
     use YOS_CMF_INPUT,           only: NLFP, PGRV
-    use CMF_UTILS_MOD,           only: MAP2VEC
+    use CMF_UTILS_MOD,           only: mapR2vecD
     use yos_cmf_sed,             only: d2sedfrc, psedD, pset, pwatD, setVel, visKin
     use cmf_calc_sedpar_mod,     only: calc_settingVelocity
     use sed_utils_mod,           only: splitchar
@@ -153,7 +157,7 @@ contains
 #ifdef UseMPI_CMF
       call MPI_Bcast(r2temp(1,1),NX*NY,mpi_real4,0,MPI_COMM_CAMA,ierr)
 #endif
-      call MAP2VEC(r2temp,d2sedfrc(:,ised))
+      call mapR2vecD(r2temp,d2sedfrc(:,ised))
     enddo
     if ( REGIONTHIS == 1 ) close(tmpnam)
    
@@ -172,7 +176,7 @@ contains
       !$omp end parallel do
     endif
   end subroutine sediment_map_init
-
+!==================================
   subroutine sediment_vars_init
     use yos_cmf_sed,             only: d2bedout, d2netflw, d2seddep, &
                                        d2bedout_avg, d2netflw_avg,   &
@@ -210,9 +214,6 @@ contains
     d2netflw_avg => d2sedv_avg(:,:,4)
   end subroutine sediment_vars_init
 
-
 end subroutine cmf_sed_init
-
 !####################################################################
-
 end module CMF_CTRL_SED_MOD

@@ -1,8 +1,15 @@
 module cmf_ctrl_sedinp_mod
 !==========================================================
 !* PURPOSE: Manage sediment input
-!
 ! (C) M.Hatono  (Hiroshima-U)  Oct 2022
+!
+! Licensed under the Apache License, Version 2.0 (the "License");
+!   You may not use this file except in compliance with the License.
+!   You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-2.0
+!
+! Unless required by applicable law or agreed to in writing, software distributed under the License is 
+!  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
 #ifdef UseMPI_CMF
  use MPI
@@ -24,11 +31,16 @@ module cmf_ctrl_sedinp_mod
 
 contains
 !####################################################################
+!-- sediment_input_init
+!-- cmf_sed_forcing
+!-- calc_sedyld
+!-- sedinp_interp
+!####################################################################
 subroutine sediment_input_init
 #ifdef UseMPI_CMF
   use YOS_CMF_MAP,             only: MPI_COMM_CAMA
 #endif
-  use CMF_UTILS_MOD,           only: INQUIRE_FID, MAP2VEC
+  use CMF_UTILS_MOD,           only: INQUIRE_FID, mapR2vecD
 
   implicit none
   save
@@ -38,9 +50,8 @@ subroutine sediment_input_init
   call read_sedinp_nmlist
 
   call read_slope
-
 contains
-
+!================================
   subroutine read_sedinp_nmlist
     implicit none
     integer(kind=JPIM)            :: nsetfile
@@ -91,13 +102,15 @@ contains
 #ifdef UseMPI_CMF
       call MPI_Bcast(r2temp(1,1),NX*NY,mpi_real4,0,MPI_COMM_CAMA,ierr)
 #endif
-      call MAP2VEC(r2temp,d2slope(:,i))
+      call mapR2vecD(r2temp,d2slope(:,i))
     enddo
     if ( REGIONTHIS == 1 ) close(tmpnam)
   end subroutine read_slope
   
 end subroutine sediment_input_init
-
+!==========================================================
+!+
+!==========================================================
 subroutine cmf_sed_forcing
   ! read forcing from file
   use YOS_CMF_INPUT,           only: TMPNAM,NXIN,NYIN,DTIN
@@ -133,7 +146,9 @@ subroutine cmf_sed_forcing
   call sedinp_interp(r2tmp,d2temp)   ! interpolate forcing grid to model grid
   call calc_sedyld(d2temp)           ! calculate sediment yield into rivers
 end subroutine cmf_sed_forcing
-
+!==========================================================
+!+
+!==========================================================
 subroutine calc_sedyld(pbuffin)
   use PARKIND1,                only: JPIM, JPRB
   use YOS_CMF_INPUT,           only: DTIN
@@ -156,10 +171,9 @@ subroutine calc_sedyld(pbuffin)
   !$omp end parallel do
 
 contains
-!==========================================================
+!=============================
 !+ prcp_convert_sed
-!==========================================================
-
+!=============================
   subroutine prcp_convert_sed(pbuffin,pbuffout)
     use YOS_CMF_DIAG,          only: D2FLDFRC
     use YOS_CMF_INPUT,         only: NLFP
@@ -185,7 +199,9 @@ contains
   end subroutine prcp_convert_sed
     
 end subroutine calc_sedyld
-
+!==========================================================
+!+
+!==========================================================
 subroutine sedinp_interp(pbuffin,pbuffout)
 ! interporlate sediment forcing data using "input matrix"
   use YOS_CMF_INPUT,           only: NXIN, NYIN, INPN, RMIS
@@ -218,8 +234,6 @@ subroutine sedinp_interp(pbuffin,pbuffout)
   end do
   !$omp end parallel do
 end subroutine sedinp_interp
-
-
 !####################################################################
 
 end module cmf_ctrl_sedinp_mod
