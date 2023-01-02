@@ -35,14 +35,14 @@ USE YOS_CMF_INPUT,      ONLY: TMPNAM,   NSETFILE,   CSETFILE
 USE YOS_CMF_INPUT,      ONLY: LADPSTP,  LFPLAIN,  LKINE,    LFLDOUT,  LPTHOUT,  LDAMOUT,  &
                             & LROSPLIT, LGDWDLY,  LSLPMIX,  LMEANSL,  LSEALEV,  LOUTPUT,  &
                             & LRESTART, LSTOONLY, LGRIDMAP, LLEAPYR,  LMAPEND,  LBITSAFE, &
-                            & LSTG_ES,  LLEVEE,   LOUTINS,  LOUTINI,  LSEDOUT, &
+                            & LSTG_ES,  LLEVEE,   LOUTINS,  LOUTINI, &
                             & LSLOPEMOUTH,LWEVAP, LWEVAPFIX,LWEXTRACTRIV
 ! dimention & time
 USE YOS_CMF_INPUT,      ONLY: CDIMINFO, DT,       NX,NY,    NLFP,     NXIN,NYIN,    INPN, &
                             & IFRQ_INP, DTIN,     WEST,EAST,NORTH,SOUTH
 ! parameters
 USE YOS_CMF_INPUT,      ONLY: PMANRIV,  PMANFLD,  PDSTMTH,  PMINSLP,  PGRV, PCADP, &
-                            & IMIS,RMIS,DMIS,     CSUFBIN,  CSUFVEC,  CSUFPTH,  CSUFCDF
+                            & IMIS, RMIS, DMIS,   CSUFBIN,  CSUFVEC,  CSUFPTH,  CSUFCDF
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
 IMPLICIT NONE
 !* local
@@ -51,8 +51,7 @@ CHARACTER(LEN=8)              :: CREG                 !!
 NAMELIST/NRUNVER/  LADPSTP,  LFPLAIN,  LKINE,    LFLDOUT,  LPTHOUT,  LDAMOUT,  &
                    LROSPLIT, LGDWDLY,  LSLPMIX,  LMEANSL,  LSEALEV,  LOUTPUT,  &
                    LRESTART, LSTOONLY, LGRIDMAP, LLEAPYR,  LMAPEND,  LBITSAFE, &
-                   LSTG_ES,  LLEVEE,   LSEDOUT,  LSLOPEMOUTH, &
-                   LOUTINI,  LWEVAP,   LWEVAPFIX,LWEXTRACTRIV 
+                   LSTG_ES,  LLEVEE,   LSLOPEMOUTH,LWEVAP,LWEVAPFIX, LWEXTRACTRIV, LOUTINI
 
 NAMELIST/NDIMTIME/ CDIMINFO, DT, IFRQ_INP
 
@@ -78,7 +77,6 @@ LFLDOUT  = .TRUE.            !! true: floodplain flow (high-water channel flow) 
 LPTHOUT  = .FALSE.           !! true: activate bifurcation scheme
 LDAMOUT  = .FALSE.           !! true: activate dam operation (under development)
 LLEVEE   = .FALSE.           !! true: activate levee scheme  (under development)
-LSEDOUT  = .FALSE.           !! true: activate sediment transport (under development)
 LOUTINS  = .FALSE.           !! true: diagnose instantaneous discharge
 !!=== this part is used by ECMWF
 LROSPLIT = .FALSE.           !! true: input if surface (Qs) and sub-surface (Qsb) runoff
@@ -119,7 +117,6 @@ WRITE(LOGNAM,*) "LFLDOUT ",  LFLDOUT
 WRITE(LOGNAM,*) "LPTHOUT ",  LPTHOUT
 WRITE(LOGNAM,*) "LDAMOUT ",  LDAMOUT
 WRITE(LOGNAM,*) "LLEVEE  ",  LLEVEE
-WRITE(LOGNAM,*) "LSEDOUT ",  LSEDOUT
 WRITE(LOGNAM,*) "LOUTINS ",  LOUTINS
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "LROSPLIT ", LROSPLIT
@@ -221,7 +218,7 @@ PMINSLP=1.E-5                                  !! minimum slope (kinematic wave)
 
 IMIS=-9999_JPIM
 RMIS=1.E20_JPRM
-DMIS=RMIS            !! default: same for RMIS/DMIS to ensure consistency 
+DMIS=1.E20_JPRB
 
 CSUFBIN='.bin'
 CSUFVEC='.vec'
@@ -231,10 +228,6 @@ CSUFCDF='.nc'
 ! * change
 REWIND(NSETFILE)
 READ(NSETFILE,NML=NPARAM)
-
-#ifdef PARKIND1_SINGLE
-  DMIS=RMIS
-#endif
 
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "=== NAMELIST, NPARAM ==="

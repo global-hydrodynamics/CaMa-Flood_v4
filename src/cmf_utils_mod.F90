@@ -18,10 +18,11 @@ IMPLICIT NONE
 CONTAINS
 !####################################################################
 ! map related subroutines & functions
-!-- VECB2MAPR     : convert 1D vector data -> 2D map data (REAL*4)
-!-- VECB2MAPB     : convert 1D vector data -> 2D map data (REAL*4/8)
-!-- MAPR2VECB     : convert 2D map data -> 1D vector data (REAL*4/8)
-!-- MAPI2VECI    : convert 2D map data -> 1D vector data (Integer)
+!-- vecP2mapR     : convert 1D vector data -> 2D map data (REAL*4)
+!-- vecD2mapD    : convert 1D vector data -> 2D map data (REAL*8)
+!-- mapR2vecD     : convert 2D map data -> 1D vector data (REAL*4)
+!-- mapP2vecP    : convert 2D map data -> 1D vector data (REAL*8)
+!-- mapI2vecI    : convert 2D map data -> 1D vector data (Integer)
 !
 ! time related subroutines & functions
 ! -- MIN2DATE  : calculate DATE of KMIN from base time (YYYY0,MM0,DD0)
@@ -40,24 +41,11 @@ CONTAINS
 !-- INQUIRE_FID : inruire unused file FID
 !-- NCERROR     : netCDF I/O wrapper
 !####################################################################
-
-
-
-!####################################################################
-! map related subroutines & functions
-!-- VECB2MAPR     : convert 1D vector data -> 2D map data (JPRB -> REAL*4)
-!-- VECB2MAPB    : convert 1D vector data -> 2D map data (JPRB -> JPRB)
-!-- VECDMAPD    : convert 1D vector data -> 2D map data (REAL*8 -> REAL*8)
-!-- VECDMAPR    : convert 1D vector data -> 2D map data (REAL*8 -> REAL*4)
-!-- MAPR2VECB     : convert 2D map data -> 1D vector data (REAL*4)
-!-- MAPB2VECB    : convert 2D map data -> 1D vector data (REAL*8)
-!-- MAPI2VECI    : convert 2D map data -> 1D vector data (Integer)
-!####################################################################
-SUBROUTINE VECB2MAPR(B2VEC,R2MAP)
+SUBROUTINE vecD2mapR(D2VEC,R2MAP)
 USE YOS_CMF_MAP,             ONLY: I1SEQX,I1SEQY
 IMPLICIT NONE
 !* input/output
-REAL(KIND=JPRB),INTENT(IN)      :: B2VEC(NSEQMAX,1)
+REAL(KIND=JPRB),INTENT(IN)      :: D2VEC(NSEQMAX,1)
 REAL(KIND=JPRM),INTENT(OUT)     :: R2MAP(NX,NY)
 !* local variable
 INTEGER(KIND=JPIM),SAVE         ::  IX,IY,ISEQ
@@ -68,46 +56,22 @@ R2MAP(:,:) = RMIS
 DO ISEQ=1,NSEQALL
   IX=I1SEQX(ISEQ)
   IY=I1SEQY(ISEQ)
-  R2MAP(IX,IY) = REAL(B2VEC(ISEQ,1),KIND=JPRM)
+  R2MAP(IX,IY) = REAL(D2VEC(ISEQ,1),KIND=JPRM)
 ENDDO
 !$OMP END PARALLEL DO
 
-END SUBROUTINE VECB2MAPR
+END SUBROUTINE vecD2mapR
 !==========================================================
 !+
 !+
 !+
 !==========================================================
-SUBROUTINE VECB2MAPB(B2VEC,B2MAP)
+SUBROUTINE vecD2mapD(D2VEC,D2MAP)
 USE YOS_CMF_MAP,             ONLY: I1SEQX,I1SEQY
 IMPLICIT NONE
 !* input/output
-REAL(KIND=JPRB),INTENT(IN)      :: B2VEC(NSEQMAX,1)
-REAL(KIND=JPRB),INTENT(OUT)     :: B2MAP(NX,NY)
-!* local variable
-INTEGER(KIND=JPIM),SAVE         ::  IX,IY,ISEQ
-!$OMP THREADPRIVATE                (IX,IY)
-!================================================
-B2MAP(:,:) = DMIS
-!$OMP PARALLEL DO
-DO ISEQ=1,NSEQALL
-  IX=I1SEQX(ISEQ)
-  IY=I1SEQY(ISEQ)
-  B2MAP(IX,IY) = B2VEC(ISEQ,1)
-ENDDO
-!$OMP END PARALLEL DO
-END SUBROUTINE VECB2MAPB
-!==========================================================
-!+
-!+
-!+
-!==========================================================
-SUBROUTINE VECD2MAPD(D2VEC,D2MAP)
-USE YOS_CMF_MAP,             ONLY: I1SEQX,I1SEQY
-IMPLICIT NONE
-!* input/output
-REAL(KIND=JPRD),INTENT(IN)      :: D2VEC(NSEQMAX,1)
-REAL(KIND=JPRD),INTENT(OUT)     :: D2MAP(NX,NY)
+REAL(KIND=JPRB),INTENT(IN)      :: D2VEC(NSEQMAX,1)
+REAL(KIND=JPRB),INTENT(OUT)     :: D2MAP(NX,NY)
 !* local variable
 INTEGER(KIND=JPIM),SAVE         ::  IX,IY,ISEQ
 !$OMP THREADPRIVATE                (IX,IY)
@@ -120,17 +84,41 @@ DO ISEQ=1,NSEQALL
   D2MAP(IX,IY) = D2VEC(ISEQ,1)
 ENDDO
 !$OMP END PARALLEL DO
-END SUBROUTINE VECD2MAPD
+END SUBROUTINE vecD2mapD
 !==========================================================
 !+
 !+
 !+
 !==========================================================
-SUBROUTINE VECD2MAPR(D2VEC,R2MAP)
+SUBROUTINE vecP2mapP(P2VEC,P2MAP)
 USE YOS_CMF_MAP,             ONLY: I1SEQX,I1SEQY
 IMPLICIT NONE
 !* input/output
-REAL(KIND=JPRD),INTENT(IN)      :: D2VEC(NSEQMAX,1)
+REAL(KIND=JPRD),INTENT(IN)      :: P2VEC(NSEQMAX,1)
+REAL(KIND=JPRD),INTENT(OUT)     :: P2MAP(NX,NY)
+!* local variable
+INTEGER(KIND=JPIM),SAVE         ::  IX,IY,ISEQ
+!$OMP THREADPRIVATE                (IX,IY)
+!================================================
+P2MAP(:,:) = DMIS
+!$OMP PARALLEL DO
+DO ISEQ=1,NSEQALL
+  IX=I1SEQX(ISEQ)
+  IY=I1SEQY(ISEQ)
+  P2MAP(IX,IY) = P2VEC(ISEQ,1)
+ENDDO
+!$OMP END PARALLEL DO
+END SUBROUTINE vecP2mapP
+!==========================================================
+!+
+!+
+!+
+!==========================================================
+SUBROUTINE vecP2mapR(P2VEC,R2MAP)
+USE YOS_CMF_MAP,             ONLY: I1SEQX,I1SEQY
+IMPLICIT NONE
+!* input/output
+REAL(KIND=JPRD),INTENT(IN)      :: P2VEC(NSEQMAX,1)
 REAL(KIND=JPRM),INTENT(OUT)     :: R2MAP(NX,NY)
 !* local variable
 INTEGER(KIND=JPIM),SAVE         ::  IX,IY,ISEQ
@@ -141,21 +129,21 @@ R2MAP(:,:) = RMIS
 DO ISEQ=1,NSEQALL
   IX=I1SEQX(ISEQ)
   IY=I1SEQY(ISEQ)
-  R2MAP(IX,IY) = D2VEC(ISEQ,1)
+  R2MAP(IX,IY) = P2VEC(ISEQ,1)
 ENDDO
 !$OMP END PARALLEL DO
-END SUBROUTINE VECD2MAPR
+END SUBROUTINE vecP2mapR
 !==========================================================
 !+
 !+
 !+
 !==========================================================
-SUBROUTINE MAPR2VECB(R2TEMP,B2VAR)
+SUBROUTINE mapR2vecD(R2TEMP,D2VAR)
 USE YOS_CMF_MAP,             ONLY: I1SEQX,I1SEQY
 IMPLICIT NONE
 !* input/output
 REAL(KIND=JPRM),INTENT(IN)      :: R2TEMP(NX,NY)
-REAL(KIND=JPRB),INTENT(OUT)     :: B2VAR(NSEQMAX,1)
+REAL(KIND=JPRB),INTENT(OUT)     :: D2VAR(NSEQMAX,1)
 !* local variable
 INTEGER(KIND=JPIM),SAVE         :: IX,IY, ISEQ
 !$OMP THREADPRIVATE               (IX,IY)
@@ -164,44 +152,21 @@ INTEGER(KIND=JPIM),SAVE         :: IX,IY, ISEQ
 DO ISEQ=1,NSEQALL
   IX=I1SEQX(ISEQ)
   IY=I1SEQY(ISEQ)
-  B2VAR(ISEQ,1) = REAL(R2TEMP(IX,IY),KIND=JPRB)
+  D2VAR(ISEQ,1) = REAL(R2TEMP(IX,IY),KIND=JPRB)
 ENDDO
 !$OMP END PARALLEL DO
-END SUBROUTINE MAPR2VECB
+END SUBROUTINE mapR2vecD
 !==========================================================
 !+
 !+
 !+
 !==========================================================
-SUBROUTINE MAPB2VECB(B2TEMP,B2VAR)
+SUBROUTINE mapD2vecD(D2TEMP,D2VAR)
 USE YOS_CMF_MAP,             ONLY: I1SEQX,I1SEQY
 IMPLICIT NONE
 !* input/output
-REAL(KIND=JPRB),INTENT(IN)      :: B2TEMP(NX,NY)
-REAL(KIND=JPRB),INTENT(OUT)     :: B2VAR(NSEQMAX,1)
-!* local variable
-INTEGER(KIND=JPIM),SAVE         :: IX,IY, ISEQ
-!$OMP THREADPRIVATE               (IX,IY)
-!================================================
-!$OMP PARALLEL DO
-DO ISEQ=1,NSEQALL
-  IX=I1SEQX(ISEQ)
-  IY=I1SEQY(ISEQ)
-  B2VAR(ISEQ,1) = REAL(B2TEMP(IX,IY),KIND=JPRB)
-ENDDO
-!$OMP END PARALLEL DO
-END SUBROUTINE MAPB2VECB
-!==========================================================
-!+
-!+
-!+
-!==========================================================
-SUBROUTINE MAPD2VECD(D2TEMP,D2VAR)
-USE YOS_CMF_MAP,             ONLY: I1SEQX,I1SEQY
-IMPLICIT NONE
-!* input/output
-REAL(KIND=JPRD),INTENT(IN)      :: D2TEMP(NX,NY)
-REAL(KIND=JPRD),INTENT(OUT)     :: D2VAR(NSEQMAX,1)
+REAL(KIND=JPRB),INTENT(IN)      :: D2TEMP(NX,NY)
+REAL(KIND=JPRB),INTENT(OUT)     :: D2VAR(NSEQMAX,1)
 !* local variable
 INTEGER(KIND=JPIM),SAVE         :: IX,IY, ISEQ
 !$OMP THREADPRIVATE               (IX,IY)
@@ -213,18 +178,18 @@ DO ISEQ=1,NSEQALL
   D2VAR(ISEQ,1) = D2TEMP(IX,IY)
 ENDDO
 !$OMP END PARALLEL DO
-END SUBROUTINE MAPD2VECD
+END SUBROUTINE mapD2vecD
 !==========================================================
 !+
 !+
 !+
 !==========================================================
-SUBROUTINE MAPD2VECB(D2TEMP,B2VAR)
+SUBROUTINE mapP2vecP(P2TEMP,P2VAR)
 USE YOS_CMF_MAP,             ONLY: I1SEQX,I1SEQY
 IMPLICIT NONE
 !* input/output
-REAL(KIND=JPRD),INTENT(IN)      :: D2TEMP(NX,NY)
-REAL(KIND=JPRB),INTENT(OUT)     :: B2VAR(NSEQMAX,1)
+REAL(KIND=JPRD),INTENT(IN)      :: P2TEMP(NX,NY)
+REAL(KIND=JPRD),INTENT(OUT)     :: P2VAR(NSEQMAX,1)
 !* local variable
 INTEGER(KIND=JPIM),SAVE         :: IX,IY, ISEQ
 !$OMP THREADPRIVATE               (IX,IY)
@@ -233,16 +198,39 @@ INTEGER(KIND=JPIM),SAVE         :: IX,IY, ISEQ
 DO ISEQ=1,NSEQALL
   IX=I1SEQX(ISEQ)
   IY=I1SEQY(ISEQ)
-  B2VAR(ISEQ,1) = D2TEMP(IX,IY)
+  P2VAR(ISEQ,1) = P2TEMP(IX,IY)
 ENDDO
 !$OMP END PARALLEL DO
-END SUBROUTINE MAPD2VECB
+END SUBROUTINE mapP2vecP
 !==========================================================
 !+
 !+
 !+
 !==========================================================
-SUBROUTINE MAPI2VECI(I2TEMP,I2VAR)
+SUBROUTINE mapP2vecD(P2TEMP,D2VAR)
+USE YOS_CMF_MAP,             ONLY: I1SEQX,I1SEQY
+IMPLICIT NONE
+!* input/output
+REAL(KIND=JPRD),INTENT(IN)      :: P2TEMP(NX,NY)
+REAL(KIND=JPRB),INTENT(OUT)     :: D2VAR(NSEQMAX,1)
+!* local variable
+INTEGER(KIND=JPIM),SAVE         :: IX,IY, ISEQ
+!$OMP THREADPRIVATE               (IX,IY)
+!================================================
+!$OMP PARALLEL DO
+DO ISEQ=1,NSEQALL
+  IX=I1SEQX(ISEQ)
+  IY=I1SEQY(ISEQ)
+  D2VAR(ISEQ,1) = P2TEMP(IX,IY)
+ENDDO
+!$OMP END PARALLEL DO
+END SUBROUTINE mapP2vecD
+!==========================================================
+!+
+!+
+!+
+!==========================================================
+SUBROUTINE mapI2vecI(I2TEMP,I2VAR)
 USE YOS_CMF_MAP,             ONLY: I1SEQX,I1SEQY
 IMPLICIT NONE
 !* input/output
@@ -259,7 +247,7 @@ DO ISEQ=1,NSEQALL
   I2VAR(ISEQ,1) = I2TEMP(IX,IY)
 ENDDO
 !$OMP END PARALLEL DO
-END SUBROUTINE MAPI2VECI
+END SUBROUTINE mapI2vecI
 !####################################################################
 
 

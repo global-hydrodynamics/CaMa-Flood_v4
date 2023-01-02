@@ -1,8 +1,15 @@
 module CMF_CTRL_SED_MOD
 !==========================================================
 !* PURPOSE: physics for sediment transport
-!
 ! (C) M.Hatono  (Hiroshima-U)  May 2021
+!
+! Licensed under the Apache License, Version 2.0 (the "License");
+!   You may not use this file except in compliance with the License.
+!   You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-2.0
+!
+! Unless required by applicable law or agreed to in writing, software distributed under the License is 
+!  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
 #ifdef UseMPI_CMF
   use MPI
@@ -19,16 +26,11 @@ module CMF_CTRL_SED_MOD
   character(len=256)              :: csedfrc
   character(len=256)              :: sedD
   namelist/sediment_map/ crocdph,sedD,csedfrc
-
 contains
 !####################################################################
-! -- cmf_sed_input
+! -- cmf_sed_nmlist
 ! -- cmf_sed_init
-! -- cmf_sed_forcing_get
-! --
-! --
 !####################################################################
-
 subroutine cmf_sed_nmlist
   use yos_cmf_sed,             only: lambda, psedD, pset, pwatD, sedDT, &
                                      revEgia, visKin, vonKar
@@ -80,7 +82,9 @@ subroutine cmf_sed_nmlist
 
   close(nsetfile)
 end subroutine cmf_sed_nmlist
-
+!==========================================================
+!+
+!==========================================================
 subroutine cmf_sed_init
   use YOS_CMF_INPUT,           only: LOUTPUT
   use cmf_ctrl_sedinp_mod,     only: sediment_input_init
@@ -102,11 +106,11 @@ subroutine cmf_sed_init
   call sediment_restart_init
 
 contains
-
+!==================================
   subroutine sediment_map_init
     use YOS_CMF_INPUT,           only: NLFP, PGRV
-    use CMF_UTILS_MOD,           only: MAPR2VECB
-    use yos_cmf_sed,             only: b2sedfrc, psedD, pset, pwatD, setVel, visKin
+    use CMF_UTILS_MOD,           only: mapR2vecD
+    use yos_cmf_sed,             only: d2sedfrc, psedD, pset, pwatD, setVel, visKin
     use cmf_calc_sedpar_mod,     only: calc_settingVelocity
     use sed_utils_mod,           only: splitchar
 
@@ -143,7 +147,7 @@ contains
     !-----------------------------!
     ! read sediment fraction file !
     !-----------------------------!
-    allocate(b2sedfrc(NSEQMAX,nsed))
+    allocate(d2sedfrc(NSEQMAX,nsed))
     if ( REGIONTHIS == 1 ) then
       tmpnam = INQUIRE_FID()
       open(tmpnam,file=csedfrc,form='unformatted',access='direct',recl=4*NX*NY)
@@ -153,32 +157,32 @@ contains
 #ifdef UseMPI_CMF
       call MPI_Bcast(r2temp(1,1),NX*NY,mpi_real4,0,MPI_COMM_CAMA,ierr)
 #endif
-      call MAPR2VECB(r2temp,b2sedfrc(:,ised))
+      call mapR2vecD(r2temp,d2sedfrc(:,ised))
     enddo
     if ( REGIONTHIS == 1 ) close(tmpnam)
    
     ! adjust if any fractions are negative or if sum is not equal to 1
     if ( nsed == 1 ) then
-      b2sedfrc(:,:) = 1.d0
+      d2sedfrc(:,:) = 1.d0
     else
       !$omp parallel do
       do iseq = 1, NSEQALL
-        if ( minval(b2sedfrc(iseq,:)) < 0.d0 .or. sum(b2sedfrc(iseq,:)) == 0.d0 ) then
-          b2sedfrc(iseq,:) = 1.d0 / dble(nsed)
-        else if ( sum(b2sedfrc(iseq,:)) /= 1.d0 ) then
-          b2sedfrc(iseq,:) = b2sedfrc(iseq,:) / sum(b2sedfrc(iseq,:))
+        if ( minval(d2sedfrc(iseq,:)) < 0.d0 .or. sum(d2sedfrc(iseq,:)) == 0.d0 ) then
+          d2sedfrc(iseq,:) = 1.d0 / dble(nsed)
+        else if ( sum(d2sedfrc(iseq,:)) /= 1.d0 ) then
+          d2sedfrc(iseq,:) = d2sedfrc(iseq,:) / sum(d2sedfrc(iseq,:))
         endif
       enddo
       !$omp end parallel do
     endif
   end subroutine sediment_map_init
-
+!==================================
   subroutine sediment_vars_init
-    use yos_cmf_sed,             only: b2bedout, b2netflw, b2seddep, &
-                                       b2bedout_avg, b2netflw_avg,   &
-                                       b2sedout, b2sedcon, b2sedinp, &
-                                       b2sedout_avg, b2sedinp_avg, b2layer, &
-                                       b2sedv, b2sedv_avg, b2depv,   &
+    use yos_cmf_sed,             only: d2bedout, d2netflw, d2seddep, &
+                                       d2bedout_avg, d2netflw_avg,   &
+                                       d2sedout, d2sedcon, d2sedinp, &
+                                       d2sedout_avg, d2sedinp_avg, d2layer, &
+                                       d2sedv, d2sedv_avg, d2depv,   &
                                        sedDT, step_sed
     use YOS_CMF_INPUT,           only: DT
     implicit none
@@ -189,30 +193,27 @@ contains
     endif
     step_sed = int(sedDT/DT)
 
-    allocate(b2sedv(NSEQMAX,nsed,6))
-    b2sedv(:,:,:) = 0._JPRB
-    b2sedout => b2sedv(:,:,1)
-    b2sedcon => b2sedv(:,:,2)
-    b2sedinp => b2sedv(:,:,3)
-    b2bedout => b2sedv(:,:,4)
-    b2netflw => b2sedv(:,:,5)
-    b2layer => b2sedv(:,:,6)
+    allocate(d2sedv(NSEQMAX,nsed,6))
+    d2sedv(:,:,:) = 0._JPRB
+    d2sedout => d2sedv(:,:,1)
+    d2sedcon => d2sedv(:,:,2)
+    d2sedinp => d2sedv(:,:,3)
+    d2bedout => d2sedv(:,:,4)
+    d2netflw => d2sedv(:,:,5)
+    d2layer => d2sedv(:,:,6)
 
-    allocate(b2depv(NSEQMAX,totlyrnum,nsed))
-    b2depv(:,:,:) = 0._JPRB
-    b2seddep => b2depv
+    allocate(d2depv(NSEQMAX,totlyrnum,nsed))
+    d2depv(:,:,:) = 0._JPRB
+    d2seddep => d2depv
 
-    allocate(b2sedv_avg(NSEQMAX,nsed,4))
-    b2sedv_avg(:,:,:) = 0._JPRB
-    b2sedout_avg => b2sedv_avg(:,:,1)
-    b2sedinp_avg => b2sedv_avg(:,:,2)
-    b2bedout_avg => b2sedv_avg(:,:,3)
-    b2netflw_avg => b2sedv_avg(:,:,4)
+    allocate(d2sedv_avg(NSEQMAX,nsed,4))
+    d2sedv_avg(:,:,:) = 0._JPRB
+    d2sedout_avg => d2sedv_avg(:,:,1)
+    d2sedinp_avg => d2sedv_avg(:,:,2)
+    d2bedout_avg => d2sedv_avg(:,:,3)
+    d2netflw_avg => d2sedv_avg(:,:,4)
   end subroutine sediment_vars_init
 
-
 end subroutine cmf_sed_init
-
 !####################################################################
-
 end module CMF_CTRL_SED_MOD

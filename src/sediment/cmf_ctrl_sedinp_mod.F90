@@ -1,22 +1,29 @@
 module cmf_ctrl_sedinp_mod
 !==========================================================
 !* PURPOSE: Manage sediment input
-!
 ! (C) M.Hatono  (Hiroshima-U)  Oct 2022
+!
+! Licensed under the Apache License, Version 2.0 (the "License");
+!   You may not use this file except in compliance with the License.
+!   You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-2.0
+!
+! Unless required by applicable law or agreed to in writing, software distributed under the License is 
+!  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
 #ifdef UseMPI_CMF
  use MPI
 #endif
   use PARKIND1,                only: JPIM, JPRB, JPRM
   use YOS_CMF_INPUT,           only: LOGNAM
-  use YOS_CMF_MAP,             only: NSEQALL, NSEQMAX, B2GRAREA
+  use YOS_CMF_MAP,             only: NSEQALL, NSEQMAX, D2GRAREA
   use CMF_CTRL_FORCING_MOD,    only: INPX, INPY, INPA
 
   implicit none
   save
   character(len=256)              :: sedinput_dir, sedinput_pre, sedinput_suf
 
-  real(kind=JPRB),allocatable     :: b2slope(:,:)     ! floodplain slope [deg]
+  real(kind=JPRB),allocatable     :: d2slope(:,:)     ! floodplain slope [deg]
   integer(kind=JPIM)              :: iseq
 
   real(kind=JPRB)                 :: dsylunit         ! unit conversion for sediment [m3/km2] -> [m3/m2]
@@ -24,11 +31,16 @@ module cmf_ctrl_sedinp_mod
 
 contains
 !####################################################################
+!-- sediment_input_init
+!-- cmf_sed_forcing
+!-- calc_sedyld
+!-- sedinp_interp
+!####################################################################
 subroutine sediment_input_init
 #ifdef UseMPI_CMF
   use YOS_CMF_MAP,             only: MPI_COMM_CAMA
 #endif
-  use CMF_UTILS_MOD,           only: INQUIRE_FID, MAPR2VECB
+  use CMF_UTILS_MOD,           only: INQUIRE_FID, mapR2vecD
 
   implicit none
   save
@@ -38,9 +50,8 @@ subroutine sediment_input_init
   call read_sedinp_nmlist
 
   call read_slope
-
 contains
-
+!================================
   subroutine read_sedinp_nmlist
     implicit none
     integer(kind=JPIM)            :: nsetfile
@@ -81,7 +92,7 @@ contains
     implicit none
     integer                       :: ierr, tmpnam, i
     real(kind=jprm)               :: r2temp(nx,ny)
-    allocate(b2slope(NSEQMAX,NLFP))
+    allocate(d2slope(NSEQMAX,NLFP))
     if ( REGIONTHIS == 1 ) then
       tmpnam = INQUIRE_FID()
       open(tmpnam,file=cslope,form='unformatted',access='direct',recl=4*NX*NY)
@@ -91,13 +102,15 @@ contains
 #ifdef UseMPI_CMF
       call MPI_Bcast(r2temp(1,1),NX*NY,mpi_real4,0,MPI_COMM_CAMA,ierr)
 #endif
-      call MAPR2VECB(r2temp,b2slope(:,i))
+      call mapR2vecD(r2temp,d2slope(:,i))
     enddo
     if ( REGIONTHIS == 1 ) close(tmpnam)
   end subroutine read_slope
   
 end subroutine sediment_input_init
-
+!==========================================================
+!+
+!==========================================================
 subroutine cmf_sed_forcing
   ! read forcing from file
   use YOS_CMF_INPUT,           only: TMPNAM,NXIN,NYIN,DTIN
@@ -133,11 +146,13 @@ subroutine cmf_sed_forcing
   call sedinp_interp(r2tmp,d2temp)   ! interpolate forcing grid to model grid
   call calc_sedyld(d2temp)           ! calculate sediment yield into rivers
 end subroutine cmf_sed_forcing
-
+!==========================================================
+!+
+!==========================================================
 subroutine calc_sedyld(pbuffin)
   use PARKIND1,                only: JPIM, JPRB
   use YOS_CMF_INPUT,           only: DTIN
-  use yos_cmf_sed,             only: b2sedinp, b2sedinp_avg, b2sedfrc
+  use yos_cmf_sed,             only: d2sedinp, d2sedinp_avg, d2sedfrc
   
   implicit none
   save
@@ -150,18 +165,17 @@ subroutine calc_sedyld(pbuffin)
  
   !$omp parallel do 
   do iseq = 1, NSEQALL
-    b2sedinp(iseq,:) = sbuff(iseq) * b2sedfrc(iseq,:)  ! distribute sediment yield to proportionate to sediment grain fraction
-    b2sedinp_avg(iseq,:) = b2sedinp_avg(iseq,:) + b2sedinp(iseq,:) * DTIN
+    d2sedinp(iseq,:) = sbuff(iseq) * d2sedfrc(iseq,:)  ! distribute sediment yield to proportionate to sediment grain fraction
+    d2sedinp_avg(iseq,:) = d2sedinp_avg(iseq,:) + d2sedinp(iseq,:) * DTIN
   enddo
   !$omp end parallel do
 
 contains
-!==========================================================
+!=============================
 !+ prcp_convert_sed
-!==========================================================
-
+!=============================
   subroutine prcp_convert_sed(pbuffin,pbuffout)
-    use YOS_CMF_DIAG,          only: B2FLDFRC
+    use YOS_CMF_DIAG,          only: D2FLDFRC
     use YOS_CMF_INPUT,         only: NLFP
 
     implicit none
@@ -176,16 +190,18 @@ contains
       if ( pbuffin(iseq) * 86400.d0 <= 10.d0 ) cycle
 
       do i = 1, NLFP
-        if ( B2FLDFRC(iseq,1) * NLFP > dble(i) ) cycle  ! no erosion if submerged
-        pbuffout(iseq) = pbuffout(iseq) + pyld * (pbuffin(iseq)*3600.d0)**pyldpc * b2slope(iseq,i)**pyldc / 3600.d0 & 
-          & * B2GRAREA(iseq,1) * min(dble(i)/dble(NLFP)-B2FLDFRC(iseq,1), 1.d0/dble(NLFP)) * dsylunit
+        if ( D2FLDFRC(iseq,1) * NLFP > dble(i) ) cycle  ! no erosion if submerged
+        pbuffout(iseq) = pbuffout(iseq) + pyld * (pbuffin(iseq)*3600.d0)**pyldpc * d2slope(iseq,i)**pyldc / 3600.d0 & 
+          & * D2GRAREA(iseq,1) * min(dble(i)/dble(NLFP)-D2FLDFRC(iseq,1), 1.d0/dble(NLFP)) * dsylunit
       enddo
     enddo
     !$omp end parallel do
   end subroutine prcp_convert_sed
     
 end subroutine calc_sedyld
-
+!==========================================================
+!+
+!==========================================================
 subroutine sedinp_interp(pbuffin,pbuffout)
 ! interporlate sediment forcing data using "input matrix"
   use YOS_CMF_INPUT,           only: NXIN, NYIN, INPN, RMIS
@@ -210,7 +226,7 @@ subroutine sedinp_interp(pbuffin,pbuffout)
           cycle
         endif
         if( pbuffin(ixin,iyin).ne.RMIS )then
-          pbuffout(iseq) = pbuffout(iseq) + pbuffin(ixin,iyin) * INPA(iseq,inpi) / B2GRAREA(iseq,1)
+          pbuffout(iseq) = pbuffout(iseq) + pbuffin(ixin,iyin) * INPA(iseq,inpi) / D2GRAREA(iseq,1)
         endif
       endif
     end do
@@ -218,8 +234,6 @@ subroutine sedinp_interp(pbuffin,pbuffout)
   end do
   !$omp end parallel do
 end subroutine sedinp_interp
-
-
 !####################################################################
 
 end module cmf_ctrl_sedinp_mod

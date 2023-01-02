@@ -6,17 +6,21 @@ CP = /bin/cp
 
 #======================================
 # Pre-Prosessing options
-# DCDF: activate when using netCDF, comment out when not needed
+# DMPI=-DUseMPI_CMF        : activate MPI parallelization
+# DCDF=-DUseCDF_CMF        : activate netCDF, comment out when not needed
+# DSINGLE=-DSinglePrec_CMF : activate Single Precision Mode
+# DATM=-DNoAtom_CMF        : avoid OMP ATOMIC calculation (bit identical simulation)
 #======================================
 
 DCDF=-DUseCDF_CMF
 #DMPI=-DUseMPI_CMF
-#DSINGLE=-DPARKIND1_SINGLE
+DSINGLE=-DSinglePrec_CMF
 #DATM=-DNoAtom_CMF
+
 CFLAGS=$(DMPI) $(DCDF) $(DATM) $(DSINGLE)
 
 #======================================
-# Intel Fortran: Mac OSX 
+# Intel Fortran: Linux
 #======================================
 
 ## without netCDF
@@ -25,7 +29,7 @@ CFLAGS=$(DMPI) $(DCDF) $(DATM) $(DSINGLE)
 
 # with netCDF
 INC  = -I/opt/intel/include -I/opt/local/include -I/opt/local/netcdf-fortran/include
-LIB  = -L/opt/intel/lib/intel64 -L/opt/intel/mkl/lib/intel64 -L/opt/local/lib -L/opt/local/netcdf-fortran/lib -lnetcdff 
+LIB  = -L/opt/intel/lib/intel64 -L/opt/intel/mkl/lib/intel64 -L/opt/local/lib -L/opt/local/netcdf-fortran/lib -lnetcdff
 
 #==============================
 # FCMP: main program (src/), FC: pre/post process (map/ etc/)
@@ -35,4 +39,7 @@ FCMP = ifort -qopenmp
 FC = ifort
 
 LFLAGS =
-FFLAGS = -O3 -warn all -fpp -free -assume byterecl -heap-arrays -nogen-interface -lpthread -static-intel 
+FFLAGS = -O3 -warn all -fpp -free -assume byterecl -heap-arrays -nogen-interface -lpthread -static-intel
+
+# Debug Mode
+#FFLAGS = -check all  -warn all -fpp -free -assume byterecl -heap-arrays -std -nogen-interface -lpthread -fpe0 -ftrapuv -traceback  -static-intel

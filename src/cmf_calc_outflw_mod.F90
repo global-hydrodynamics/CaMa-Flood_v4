@@ -22,37 +22,37 @@ SUBROUTINE CMF_CALC_OUTFLW
 USE PARKIND1,           ONLY: JPIM, JPRB, JPRD
 USE YOS_CMF_INPUT,      ONLY: DT,       PDSTMTH,  PMANFLD,  PGRV,     LFLDOUT, LSLOPEMOUTH
 USE YOS_CMF_MAP,        ONLY: I1NEXT,   NSEQALL,  NSEQRIV,  NSEQMAX
-USE YOS_CMF_MAP,        ONLY: B2RIVELV, B2ELEVTN, B2NXTDST, B2RIVWTH, B2RIVHGT
-USE YOS_CMF_MAP,        ONLY: B2RIVLEN, B2RIVMAN, B2DWNELV, B2ELEVSLOPE
-USE YOS_CMF_PROG,       ONLY: D2RIVSTO, B2RIVOUT, D2FLDSTO, B2FLDOUT
-USE YOS_CMF_PROG,       ONLY: B2RIVOUT_PRE, B2RIVDPH_PRE, B2FLDOUT_PRE, B2FLDSTO_PRE
-USE YOS_CMF_DIAG,       ONLY: B2RIVDPH, B2RIVVEL, B2RIVINF, B2FLDDPH, B2FLDINF, B2SFCELV
+USE YOS_CMF_MAP,        ONLY: D2RIVELV, D2ELEVTN, D2NXTDST, D2RIVWTH, D2RIVHGT
+USE YOS_CMF_MAP,        ONLY: D2RIVLEN, D2RIVMAN, D2DWNELV, D2ELEVSLOPE
+USE YOS_CMF_PROG,       ONLY: P2RIVSTO, D2RIVOUT, P2FLDSTO, D2FLDOUT
+USE YOS_CMF_PROG,       ONLY: D2RIVOUT_PRE, D2RIVDPH_PRE, D2FLDOUT_PRE, P2FLDSTO_PRE
+USE YOS_CMF_DIAG,       ONLY: D2RIVDPH, D2RIVVEL, D2RIVINF, D2FLDDPH, D2FLDINF, D2SFCELV
 IMPLICIT NONE
 !*** Local
-REAL(KIND=JPRB)            :: B2SFCELV_PRE(NSEQMAX,1)                  !! water surface elevation (t-1) [m]
-REAL(KIND=JPRB)            :: B2FLDDPH_PRE(NSEQMAX,1)                      !! floodplain depth (t-1)        [m]
-REAL(KIND=JPRB)            :: B2STOOUT(NSEQMAX,1)                      !! total outflow from a grid     [m3]
-REAL(KIND=JPRB)            :: B2RATE(NSEQMAX,1)                        !! outflow correction
+REAL(KIND=JPRB)            :: D2SFCELV_PRE(NSEQMAX,1)                  !! water surface elevation (t-1) [m]
+REAL(KIND=JPRB)            :: D2FLDDPH_PRE(NSEQMAX,1)                      !! floodplain depth (t-1)        [m]
+REAL(KIND=JPRB)            :: D2STOOUT(NSEQMAX,1)                      !! total outflow from a grid     [m3]
+REAL(KIND=JPRB)            :: D2RATE(NSEQMAX,1)                        !! outflow correction
 ! save for OpenMP
 INTEGER(KIND=JPIM),SAVE    :: ISEQ, JSEQ
-REAL(KIND=JPRB),SAVE       :: BSLOPE,   BOUT_PRE,   BFLW,   BFLW_PRE,   BFLW_IMP,   BAREA 
-REAL(KIND=JPRB),SAVE       :: BSLOPE_F, BOUT_PRE_F, BFLW_F, BFLW_PRE_F, BFLW_IMP_F, BARE_F, BARE_PRE_F, BARE_IMP_F
-REAL(KIND=JPRB),SAVE       :: OUT_R1,   OUT_R2,     OUT_F1, OUT_F2,     BIUP,       BIDW,   BSFCMAX,    BSFCMAX_PRE
-!$OMP THREADPRIVATE    (JSEQ, BSLOPE,   BOUT_PRE,   BFLW,   BFLW_PRE,   BFLW_IMP,   BAREA  )
-!$OMP THREADPRIVATE    (      BSLOPE_F, BOUT_PRE_F, BFLW_F, BFLW_PRE_F, BFLW_IMP_F, BARE_F, BARE_PRE_F, BARE_IMP_F  )
-!$OMP THREADPRIVATE    (      OUT_R1,   OUT_R2,     OUT_F1, OUT_F2,     BIUP,       BIDW,   BSFCMAX,    BSFCMAX_PRE )
+REAL(KIND=JPRB),SAVE       :: DSLOPE,   DOUT_PRE,   DFLW,   DFLW_PRE,   DFLW_IMP,   DAREA 
+REAL(KIND=JPRB),SAVE       :: DSLOPE_F, DOUT_PRE_F, DFLW_F, DFLW_PRE_F, DFLW_IMP_F, DARE_F, DARE_PRE_F, DARE_IMP_F
+REAL(KIND=JPRB),SAVE       :: OUT_R1,   OUT_R2,     OUT_F1, OUT_F2,     DIUP,       DIDW,   DSFCMAX,    DSFCMAX_PRE
+!$OMP THREADPRIVATE    (JSEQ, DSLOPE,   DOUT_PRE,   DFLW,   DFLW_PRE,   DFLW_IMP,   DAREA  )
+!$OMP THREADPRIVATE    (      DSLOPE_F, DOUT_PRE_F, DFLW_F, DFLW_PRE_F, DFLW_IMP_F, DARE_F, DARE_PRE_F, DARE_IMP_F  )
+!$OMP THREADPRIVATE    (      OUT_R1,   OUT_R2,     OUT_F1, OUT_F2,     DIUP,       DIDW,   DSFCMAX,    DSFCMAX_PRE )
 !================================================
 
 !$OMP PARALLEL DO
 DO ISEQ=1, NSEQALL
-  B2SFCELV(ISEQ,1)     = B2RIVELV(ISEQ,1) + B2RIVDPH(ISEQ,1)
-  B2SFCELV_PRE(ISEQ,1) = B2RIVELV(ISEQ,1) + B2RIVDPH_PRE(ISEQ,1)
-  B2FLDDPH_PRE(ISEQ,1) = MAX( B2RIVDPH_PRE(ISEQ,1)-B2RIVHGT(ISEQ,1), 0._JPRB )
+  D2SFCELV(ISEQ,1)     = D2RIVELV(ISEQ,1) + D2RIVDPH(ISEQ,1)
+  D2SFCELV_PRE(ISEQ,1) = D2RIVELV(ISEQ,1) + D2RIVDPH_PRE(ISEQ,1)
+  D2FLDDPH_PRE(ISEQ,1) = MAX( D2RIVDPH_PRE(ISEQ,1)-D2RIVHGT(ISEQ,1), 0._JPRB )
 
-  B2RIVINF(ISEQ,1) = 0._JPRB
-  B2FLDINF(ISEQ,1) = 0._JPRB
-  B2STOOUT(ISEQ,1) = 0._JPRB
-  B2RATE(ISEQ,1)   = 1._JPRB
+  D2RIVINF(ISEQ,1) = 0._JPRB
+  D2FLDINF(ISEQ,1) = 0._JPRB
+  D2STOOUT(ISEQ,1) = 0._JPRB
+  D2RATE(ISEQ,1)   = 1._JPRB
 END DO
 !$OMP END PARALLEL DO
 
@@ -60,50 +60,50 @@ END DO
 DO ISEQ=1, NSEQRIV                                                    !! for normal cells
   JSEQ=I1NEXT(ISEQ) ! next cell's pixel
   
-  BSFCMAX    =MAX( B2SFCELV(ISEQ,1),    B2SFCELV(JSEQ,1) )
-  BSFCMAX_PRE=MAX( B2SFCELV_PRE(ISEQ,1),B2SFCELV_PRE(JSEQ,1) )
-  BSLOPE = ( B2SFCELV(ISEQ,1)-B2SFCELV(JSEQ,1) ) * B2NXTDST(ISEQ,1)**(-1.)
-  BSLOPE_F = MAX( -0.005_JPRB, min( 0.005_JPRB,BSLOPE ))    !! set max&min [instead of using weir equation for efficiency]
+  DSFCMAX    =MAX( D2SFCELV(ISEQ,1),    D2SFCELV(JSEQ,1) )
+  DSFCMAX_PRE=MAX( D2SFCELV_PRE(ISEQ,1),D2SFCELV_PRE(JSEQ,1) )
+  DSLOPE = ( D2SFCELV(ISEQ,1)-D2SFCELV(JSEQ,1) ) * D2NXTDST(ISEQ,1)**(-1.)
+  DSLOPE_F = MAX( -0.005_JPRB, min( 0.005_JPRB,DSLOPE ))    !! set max&min [instead of using weir equation for efficiency]
 
 !=== River Flow ===
-  BFLW   = BSFCMAX - B2RIVELV(ISEQ,1)        !!  flow cross-section depth
-  BAREA  = B2RIVWTH(ISEQ,1) * BFLW                                            !!  flow cross-section area
+  DFLW   = DSFCMAX - D2RIVELV(ISEQ,1)        !!  flow cross-section depth
+  DAREA  = D2RIVWTH(ISEQ,1) * DFLW                                            !!  flow cross-section area
 
-  BFLW_PRE=BSFCMAX_PRE - B2RIVELV(ISEQ,1)
-  BFLW_IMP=MAX( (BFLW*BFLW_PRE)**0.5 ,1.E-6_JPRB )                                            !! semi implicit flow depth
+  DFLW_PRE=DSFCMAX_PRE - D2RIVELV(ISEQ,1)
+  DFLW_IMP=MAX( (DFLW*DFLW_PRE)**0.5 ,1.E-6_JPRB )                                            !! semi implicit flow depth
 
-  IF( BFLW_IMP>1.E-5 .and. BAREA>1.E-5 )THEN 
-    BOUT_PRE= B2RIVOUT_PRE(ISEQ,1) * B2RIVWTH(ISEQ,1)**(-1.)                         !! outflow (t-1) [m2/s] (unit width)
-    B2RIVOUT(ISEQ,1) = B2RIVWTH(ISEQ,1) * ( BOUT_PRE + PGRV*DT*BFLW_IMP*BSLOPE ) &
-                             * ( 1. + PGRV*DT*B2RIVMAN(ISEQ,1)**2.*abs(BOUT_PRE)*BFLW_IMP**(-7./3.) )**(-1.)
-    B2RIVVEL(ISEQ,1) = B2RIVOUT(ISEQ,1) * BAREA**(-1.)
+  IF( DFLW_IMP>1.E-5 .and. DAREA>1.E-5 )THEN 
+    DOUT_PRE= D2RIVOUT_PRE(ISEQ,1) * D2RIVWTH(ISEQ,1)**(-1.)                         !! outflow (t-1) [m2/s] (unit width)
+    D2RIVOUT(ISEQ,1) = D2RIVWTH(ISEQ,1) * ( DOUT_PRE + PGRV*DT*DFLW_IMP*DSLOPE ) &
+                             * ( 1. + PGRV*DT*D2RIVMAN(ISEQ,1)**2.*abs(DOUT_PRE)*DFLW_IMP**(-7./3.) )**(-1.)
+    D2RIVVEL(ISEQ,1) = D2RIVOUT(ISEQ,1) * DAREA**(-1.)
   ELSE
-    B2RIVOUT(ISEQ,1) = 0._JPRB
-    B2RIVVEL(ISEQ,1) = 0._JPRB
+    D2RIVOUT(ISEQ,1) = 0._JPRB
+    D2RIVVEL(ISEQ,1) = 0._JPRB
   ENDIF
 
 !=== Floodplain Flow ===
   IF( LFLDOUT )THEN
-    BFLW_F   = MAX( BSFCMAX-B2ELEVTN(ISEQ,1), 0._JPRB )
-    BARE_F   = D2FLDSTO(ISEQ,1) * B2RIVLEN(ISEQ,1)**(-1.)
-    BARE_F   = MAX( BARE_F - B2FLDDPH(ISEQ,1)*B2RIVWTH(ISEQ,1), 0._JPRB )   !! remove above river channel area
+    DFLW_F   = MAX( DSFCMAX-D2ELEVTN(ISEQ,1), 0._JPRB )
+    DARE_F   = P2FLDSTO(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
+    DARE_F   = MAX( DARE_F - D2FLDDPH(ISEQ,1)*D2RIVWTH(ISEQ,1), 0._JPRB )   !! remove above river channel area
   
-    BFLW_PRE_F = BSFCMAX_PRE - B2ELEVTN(ISEQ,1)
-    BFLW_IMP_F = MAX( (MAX(BFLW_F*BFLW_PRE_F,0._JPRB))**0.5, 1.E-6_JPRB )
+    DFLW_PRE_F = DSFCMAX_PRE - D2ELEVTN(ISEQ,1)
+    DFLW_IMP_F = MAX( (MAX(DFLW_F*DFLW_PRE_F,0._JPRB))**0.5, 1.E-6_JPRB )
   
-    BARE_PRE_F = B2FLDSTO_PRE(ISEQ,1) * B2RIVLEN(ISEQ,1)**(-1.)
-    BARE_PRE_F = MAX( BARE_PRE_F - B2FLDDPH_PRE(ISEQ,1)*B2RIVWTH(ISEQ,1), 1.E-6_JPRB )   !! remove above river channel area
-    BARE_IMP_F = max( (BARE_F*BARE_PRE_F)**0.5, 1.E-6_JPRB )
+    DARE_PRE_F = P2FLDSTO_PRE(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
+    DARE_PRE_F = MAX( DARE_PRE_F - D2FLDDPH_PRE(ISEQ,1)*D2RIVWTH(ISEQ,1), 1.E-6_JPRB )   !! remove above river channel area
+    DARE_IMP_F = max( (DARE_F*DARE_PRE_F)**0.5, 1.E-6_JPRB )
   
-    IF( BFLW_IMP_F>1.E-5 .and. BARE_IMP_F>1.E-5 )THEN 
-      BOUT_PRE_F = B2FLDOUT_PRE(ISEQ,1)
-      B2FLDOUT(ISEQ,1) = ( BOUT_PRE_F + PGRV*DT*BARE_IMP_F*BSLOPE_F ) &
-                        * (1. + PGRV*DT*PMANFLD**2. * abs(BOUT_PRE_F)*BFLW_IMP_F**(-4./3.)*BARE_IMP_F**(-1.) )**(-1._JPRB)
+    IF( DFLW_IMP_F>1.E-5 .and. DARE_IMP_F>1.E-5 )THEN 
+      DOUT_PRE_F = D2FLDOUT_PRE(ISEQ,1)
+      D2FLDOUT(ISEQ,1) = ( DOUT_PRE_F + PGRV*DT*DARE_IMP_F*DSLOPE_F ) &
+                        * (1. + PGRV*DT*PMANFLD**2. * abs(DOUT_PRE_F)*DFLW_IMP_F**(-4./3.)*DARE_IMP_F**(-1.) )**(-1._JPRB)
     ELSE
-      B2FLDOUT(ISEQ,1) = 0._JPRB
+      D2FLDOUT(ISEQ,1) = 0._JPRB
     ENDIF
   
-    IF( B2FLDOUT(ISEQ,1)*B2RIVOUT(ISEQ,1)<0._JPRB ) B2FLDOUT(ISEQ,1)=0._JPRB  !! stabilization
+    IF( D2FLDOUT(ISEQ,1)*D2RIVOUT(ISEQ,1)<0._JPRB ) D2FLDOUT(ISEQ,1)=0._JPRB  !! stabilization
   ENDIF
 END DO
 !$OMP END PARALLEL DO
@@ -113,16 +113,16 @@ END DO
 #endif
 DO ISEQ=1, NSEQRIV                                                    !! for normal cells
   JSEQ=I1NEXT(ISEQ) ! next cell's pixel
-  OUT_R1 = max(  B2RIVOUT(ISEQ,1),0._JPRB )
-  OUT_R2 = max( -B2RIVOUT(ISEQ,1),0._JPRB )
-  OUT_F1 = max(  B2FLDOUT(ISEQ,1),0._JPRB )
-  OUT_F2 = max( -B2FLDOUT(ISEQ,1),0._JPRB )
-  BIUP=(OUT_R1+OUT_F1)*DT
-  BIDW=(OUT_R2+OUT_F2)*DT
+  OUT_R1 = max(  D2RIVOUT(ISEQ,1),0._JPRB )
+  OUT_R2 = max( -D2RIVOUT(ISEQ,1),0._JPRB )
+  OUT_F1 = max(  D2FLDOUT(ISEQ,1),0._JPRB )
+  OUT_F2 = max( -D2FLDOUT(ISEQ,1),0._JPRB )
+  DIUP=(OUT_R1+OUT_F1)*DT
+  DIDW=(OUT_R2+OUT_F2)*DT
 !$OMP ATOMIC
-  B2STOOUT(ISEQ,1) = B2STOOUT(ISEQ,1) + BIUP 
+  D2STOOUT(ISEQ,1) = D2STOOUT(ISEQ,1) + DIUP 
 !$OMP ATOMIC
-  B2STOOUT(JSEQ,1) = B2STOOUT(JSEQ,1) + BIDW 
+  D2STOOUT(JSEQ,1) = D2STOOUT(JSEQ,1) + DIDW 
 END DO
 #ifndef NoAtom_CMF
 !$OMP END PARALLEL DO
@@ -133,57 +133,57 @@ END DO
 DO ISEQ=NSEQRIV+1, NSEQALL
   IF ( LSLOPEMOUTH ) THEN
     ! prescribed slope 
-    BSLOPE = B2ELEVSLOPE(ISEQ,1)
+    DSLOPE = D2ELEVSLOPE(ISEQ,1)
   ELSE
-    BSLOPE = ( B2SFCELV(ISEQ,1) - B2DWNELV(ISEQ,1) ) * PDSTMTH ** (-1.)
+    DSLOPE = ( D2SFCELV(ISEQ,1) - D2DWNELV(ISEQ,1) ) * PDSTMTH ** (-1.)
   ENDIF
-  BSLOPE_F = max( -0.005_JPRB, min( 0.005_JPRB,BSLOPE ))    !! set max&min [instead of using weir equation for efficiency]
+  DSLOPE_F = max( -0.005_JPRB, min( 0.005_JPRB,DSLOPE ))    !! set max&min [instead of using weir equation for efficiency]
 !=== river mouth flow ===
 
-  BFLW   = B2RIVDPH(ISEQ,1)
-  BAREA  = B2RIVWTH(ISEQ,1) * BFLW
+  DFLW   = D2RIVDPH(ISEQ,1)
+  DAREA  = D2RIVWTH(ISEQ,1) * DFLW
 
-  BFLW_PRE=B2RIVDPH_PRE(ISEQ,1)
-  BFLW_IMP=MAX( (BFLW*BFLW_PRE)**0.5, 1.E-6_JPRB )                                    !! semi implicit flow depth
+  DFLW_PRE=D2RIVDPH_PRE(ISEQ,1)
+  DFLW_IMP=MAX( (DFLW*DFLW_PRE)**0.5, 1.E-6_JPRB )                                    !! semi implicit flow depth
 
-  IF( BFLW_IMP>1.E-5 .and. BAREA>1.E-5 )THEN 
-    BOUT_PRE = B2RIVOUT_PRE(ISEQ,1) * B2RIVWTH(ISEQ,1)**(-1.)
-    B2RIVOUT(ISEQ,1) = B2RIVWTH(ISEQ,1) * ( BOUT_PRE + PGRV*DT*BFLW_IMP*BSLOPE ) &
-                             * ( 1. + PGRV*DT*B2RIVMAN(ISEQ,1)**2. * abs(BOUT_PRE)*BFLW_IMP**(-7./3.) )**(-1.)
-    B2RIVVEL(ISEQ,1) = B2RIVOUT(ISEQ,1) * BAREA**(-1._JPRB)
+  IF( DFLW_IMP>1.E-5 .and. DAREA>1.E-5 )THEN 
+    DOUT_PRE = D2RIVOUT_PRE(ISEQ,1) * D2RIVWTH(ISEQ,1)**(-1.)
+    D2RIVOUT(ISEQ,1) = D2RIVWTH(ISEQ,1) * ( DOUT_PRE + PGRV*DT*DFLW_IMP*DSLOPE ) &
+                             * ( 1. + PGRV*DT*D2RIVMAN(ISEQ,1)**2. * abs(DOUT_PRE)*DFLW_IMP**(-7./3.) )**(-1.)
+    D2RIVVEL(ISEQ,1) = D2RIVOUT(ISEQ,1) * DAREA**(-1._JPRB)
   ELSE
-    B2RIVOUT(ISEQ,1) = 0._JPRB
-    B2RIVVEL(ISEQ,1) = 0._JPRB
+    D2RIVOUT(ISEQ,1) = 0._JPRB
+    D2RIVVEL(ISEQ,1) = 0._JPRB
   ENDIF
 
 !=== floodplain mouth flow ===
   IF( LFLDOUT )THEN
-    BFLW_F   = B2SFCELV(ISEQ,1)-B2ELEVTN(ISEQ,1)
+    DFLW_F   = D2SFCELV(ISEQ,1)-D2ELEVTN(ISEQ,1)
   
-    BARE_F   = D2FLDSTO(ISEQ,1) * B2RIVLEN(ISEQ,1)**(-1.)
-    BARE_F   = MAX( BARE_F - B2FLDDPH(ISEQ,1)*B2RIVWTH(ISEQ,1), 0._JPRB )   !! remove above river channel area
+    DARE_F   = P2FLDSTO(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
+    DARE_F   = MAX( DARE_F - D2FLDDPH(ISEQ,1)*D2RIVWTH(ISEQ,1), 0._JPRB )   !! remove above river channel area
   
-    BFLW_PRE_F = B2SFCELV_PRE(ISEQ,1)-B2ELEVTN(ISEQ,1)
-    BFLW_IMP_F = MAX( (MAX(BFLW_F*BFLW_PRE_F,0._JPRB))**0.5, 1.E-6_JPRB )
+    DFLW_PRE_F = D2SFCELV_PRE(ISEQ,1)-D2ELEVTN(ISEQ,1)
+    DFLW_IMP_F = MAX( (MAX(DFLW_F*DFLW_PRE_F,0._JPRB))**0.5, 1.E-6_JPRB )
   
-    BARE_PRE_F = B2FLDSTO_PRE(ISEQ,1) * B2RIVLEN(ISEQ,1)**(-1.)
-    BARE_PRE_F = MAX( BARE_PRE_F - B2FLDDPH_PRE(ISEQ,1)*B2RIVWTH(ISEQ,1), 1.E-6_JPRB )   !! remove above river channel area
-    BARE_IMP_F = max( (BARE_F*BARE_PRE_F)**0.5, 1.E-6_JPRB )
+    DARE_PRE_F = P2FLDSTO_PRE(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
+    DARE_PRE_F = MAX( DARE_PRE_F - D2FLDDPH_PRE(ISEQ,1)*D2RIVWTH(ISEQ,1), 1.E-6_JPRB )   !! remove above river channel area
+    DARE_IMP_F = max( (DARE_F*DARE_PRE_F)**0.5, 1.E-6_JPRB )
   
-    IF( BFLW_IMP_F>1.E-5 .and. BARE_IMP_F>1.E-5 )THEN 
-      BOUT_PRE_F = B2FLDOUT_PRE(ISEQ,1)
-      B2FLDOUT(ISEQ,1) = ( BOUT_PRE_F + PGRV*DT*BARE_IMP_F*BSLOPE_F ) &
-                        * (1. + PGRV*DT*PMANFLD**2. * abs(BOUT_PRE_F)*BFLW_IMP_F**(-4./3.)*BARE_IMP_F**(-1.) )**(-1.)
+    IF( DFLW_IMP_F>1.E-5 .and. DARE_IMP_F>1.E-5 )THEN 
+      DOUT_PRE_F = D2FLDOUT_PRE(ISEQ,1)
+      D2FLDOUT(ISEQ,1) = ( DOUT_PRE_F + PGRV*DT*DARE_IMP_F*DSLOPE_F ) &
+                        * (1. + PGRV*DT*PMANFLD**2. * abs(DOUT_PRE_F)*DFLW_IMP_F**(-4./3.)*DARE_IMP_F**(-1.) )**(-1.)
     ELSE
-      B2FLDOUT(ISEQ,1) = 0._JPRB
+      D2FLDOUT(ISEQ,1) = 0._JPRB
     ENDIF
   
-    IF( B2FLDOUT(ISEQ,1)*B2RIVOUT(ISEQ,1)<0._JPRB ) B2FLDOUT(ISEQ,1)=0._JPRB  !! stabilization
+    IF( D2FLDOUT(ISEQ,1)*D2RIVOUT(ISEQ,1)<0._JPRB ) D2FLDOUT(ISEQ,1)=0._JPRB  !! stabilization
   ENDIF
 !=== check outflow ===
-  OUT_R1 = max(  B2RIVOUT(ISEQ,1),0._JPRB )
-  OUT_F1 = max(  B2FLDOUT(ISEQ,1),0._JPRB )
-  B2STOOUT(ISEQ,1) = B2STOOUT(ISEQ,1) + OUT_R1*DT + OUT_F1*DT
+  OUT_R1 = max(  D2RIVOUT(ISEQ,1),0._JPRB )
+  OUT_F1 = max(  D2FLDOUT(ISEQ,1),0._JPRB )
+  D2STOOUT(ISEQ,1) = D2STOOUT(ISEQ,1) + OUT_R1*DT + OUT_F1*DT
 END DO
 !$OMP END PARALLEL DO
 
@@ -193,8 +193,8 @@ END DO
 
 !$OMP PARALLEL DO                                                     !! outflow correcttion if total outflow > storage
 DO ISEQ=1, NSEQALL
-  IF ( B2STOOUT(ISEQ,1) > 1.E-8 ) THEN
-    B2RATE(ISEQ,1)   = min( (D2RIVSTO(ISEQ,1)+D2FLDSTO(ISEQ,1)) * B2STOOUT(ISEQ,1)**(-1.), 1._JPRD )
+  IF ( D2STOOUT(ISEQ,1) > 1.E-8 ) THEN
+    D2RATE(ISEQ,1)   = min( (P2RIVSTO(ISEQ,1)+P2FLDSTO(ISEQ,1)) * D2STOOUT(ISEQ,1)**(-1.), 1._JPRD )
   ENDIF
 END DO
 !$OMP END PARALLEL DO
@@ -204,17 +204,17 @@ END DO
 #endif
 DO ISEQ=1, NSEQRIV ! for normal pixels
   JSEQ=I1NEXT(ISEQ)
-  IF( B2RIVOUT(ISEQ,1) >= 0._JPRB )THEN
-    B2RIVOUT(ISEQ,1) = B2RIVOUT(ISEQ,1)*B2RATE(ISEQ,1)
-    B2FLDOUT(ISEQ,1) = B2FLDOUT(ISEQ,1)*B2RATE(ISEQ,1)
+  IF( D2RIVOUT(ISEQ,1) >= 0._JPRB )THEN
+    D2RIVOUT(ISEQ,1) = D2RIVOUT(ISEQ,1)*D2RATE(ISEQ,1)
+    D2FLDOUT(ISEQ,1) = D2FLDOUT(ISEQ,1)*D2RATE(ISEQ,1)
   ELSE
-    B2RIVOUT(ISEQ,1) = B2RIVOUT(ISEQ,1)*B2RATE(JSEQ,1)
-    B2FLDOUT(ISEQ,1) = B2FLDOUT(ISEQ,1)*B2RATE(JSEQ,1)
+    D2RIVOUT(ISEQ,1) = D2RIVOUT(ISEQ,1)*D2RATE(JSEQ,1)
+    D2FLDOUT(ISEQ,1) = D2FLDOUT(ISEQ,1)*D2RATE(JSEQ,1)
   ENDIF
 !$OMP ATOMIC
-  B2RIVINF(JSEQ,1) = B2RIVINF(JSEQ,1) + B2RIVOUT(ISEQ,1)             !! total inflow to a grid (from upstream)
+  D2RIVINF(JSEQ,1) = D2RIVINF(JSEQ,1) + D2RIVOUT(ISEQ,1)             !! total inflow to a grid (from upstream)
 !$OMP ATOMIC
-  B2FLDINF(JSEQ,1) = B2FLDINF(JSEQ,1) + B2FLDOUT(ISEQ,1)
+  D2FLDINF(JSEQ,1) = D2FLDINF(JSEQ,1) + D2FLDOUT(ISEQ,1)
 END DO
 #ifndef NoAtom_CMF
 !$OMP END PARALLEL DO
@@ -222,8 +222,8 @@ END DO
 
 !$OMP PARALLEL DO
 DO ISEQ=NSEQRIV+1, NSEQALL ! for river mouth
-  B2RIVOUT(ISEQ,1) = B2RIVOUT(ISEQ,1)*B2RATE(ISEQ,1)
-  B2FLDOUT(ISEQ,1) = B2FLDOUT(ISEQ,1)*B2RATE(ISEQ,1)
+  D2RIVOUT(ISEQ,1) = D2RIVOUT(ISEQ,1)*D2RATE(ISEQ,1)
+  D2FLDOUT(ISEQ,1) = D2FLDOUT(ISEQ,1)*D2RATE(ISEQ,1)
 END DO
 !$OMP END PARALLEL DO
 

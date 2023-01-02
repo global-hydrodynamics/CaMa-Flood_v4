@@ -37,7 +37,6 @@ LOGICAL                         :: LFLDOUT                 !! true: floodplain f
 LOGICAL                         :: LPTHOUT                 !! true: activate bifurcation scheme
 LOGICAL                         :: LDAMOUT                 !! true: activate dam operation (under development)
 LOGICAL                         :: LLEVEE                  !! true: activate levee scheme  (under development)
-LOGICAL                         :: LSEDOUT                 !! true: activate sediment transport (under development)
 
 !~~ used in ECMWF
 LOGICAL                         :: LROSPLIT                !! true: input if surface (Qs) and sub-surface (Qsb) runoff
@@ -116,12 +115,12 @@ CHARACTER(LEN=256)              :: CSUFCDF            ! .nc  suffix for netCDF
 !================================================
 #ifdef IFS_CMF
 ! Fluxes buffers for IFS coupling
-REAL(KIND=JPRB), ALLOCATABLE    :: ZBUFFO(:,:,:)
-REAL(KIND=JPRB), ALLOCATABLE    :: ZBUFFI(:,:,:)
-REAL(KIND=JPRB), ALLOCATABLE    :: ZACC0(:,:)
-REAL(KIND=JPRB), ALLOCATABLE    :: ZACC1(:,:)
+REAL(KIND=JPRB), ALLOCATABLE :: ZBUFFO(:,:,:)
+REAL(KIND=JPRB), ALLOCATABLE :: ZBUFFI(:,:,:)
+REAL(KIND=JPRB), ALLOCATABLE :: ZACC0(:,:)
+REAL(KIND=JPRB), ALLOCATABLE :: ZACC1(:,:)
 !Time step to be advanced within DRV_ADVANCE used for IFS coupling
-INTEGER(KIND=JPIM)              :: ISTEPADV
+INTEGER(KIND=JPIM)           :: ISTEPADV
 !===============================================
 #endif
 
