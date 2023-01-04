@@ -95,7 +95,7 @@ SUBROUTINE CMF_DAMOUT_INIT
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
 USE YOS_CMF_INPUT,      ONLY: NX, NY, LRESTART, LPTHOUT
 USE YOS_CMF_MAP,        ONLY: I2VECTOR, I1NEXT, NSEQALL, NSEQMAX
-USE YOS_CMF_PROG,       ONLY: P2DAMSTO, D2DAMINF
+USE YOS_CMF_PROG,       ONLY: P2RIVSTO, P2DAMSTO, D2DAMINF
 USE YOS_CMF_MAP,        ONLY: NPTHOUT, NPTHLEV, PTH_UPST, PTH_DOWN, PTH_ELV !! bifurcation pass
 
 ! reed setting from CDAMFILE
@@ -182,6 +182,7 @@ IF( .not. LRESTART )THEN
     IF( DamSeq(IDAM)>0 )THEN
       ISEQ=DamSeq(IDAM)
       P2DAMSTO(ISEQ,1)=NorVol(IDAM)  !! set initial storage to Normal Storage Volume
+      P2RIVSTO(ISEQ,1)=max(P2RIVSTO(ISEQ,1),NorVol(IDAM)*1._JPRD) !! also set initial river storage, in order to keep consistency
     ENDIF
   END DO
 ENDIF
