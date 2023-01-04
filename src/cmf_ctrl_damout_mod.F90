@@ -17,7 +17,7 @@ MODULE CMF_CTRL_DAMOUT_MOD
 !  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
-USE PARKIND1,                ONLY: JPIM, JPRB, JPRM
+USE PARKIND1,                ONLY: JPIM, JPRB, JPRM, JPRD
 USE YOS_CMF_INPUT,           ONLY: LOGNAM, IMIS
 !============================
 IMPLICIT NONE
@@ -95,7 +95,7 @@ SUBROUTINE CMF_DAMOUT_INIT
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
 USE YOS_CMF_INPUT,      ONLY: NX, NY, LRESTART, LPTHOUT
 USE YOS_CMF_MAP,        ONLY: I2VECTOR, I1NEXT, NSEQALL, NSEQMAX
-USE YOS_CMF_PROG,       ONLY: D2DAMSTO, D2DAMINF
+USE YOS_CMF_PROG,       ONLY: D2RIVSTO, D2DAMSTO, D2DAMINF
 USE YOS_CMF_MAP,        ONLY: NPTHOUT, NPTHLEV, PTH_UPST, PTH_DOWN, PTH_ELV !! bifurcation pass
 
 ! reed setting from CDAMFILE
@@ -182,6 +182,7 @@ IF( .not. LRESTART )THEN
     IF( DamSeq(IDAM)>0 )THEN
       ISEQ=DamSeq(IDAM)
       D2DAMSTO(ISEQ,1)=NorVol(IDAM)  !! set initial storage to Normal Storage Volume
+      D2RIVSTO(ISEQ,1)=max(D2RIVSTO(ISEQ,1),NorVol(IDAM)*1._JPRD) !! also set initial river storage, in order to keep consistency
     ENDIF
   END DO
 ENDIF
