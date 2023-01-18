@@ -42,7 +42,7 @@ REAL(KIND=JPRB),ALLOCATABLE,TARGET     :: D2FLDOUT(:,:)         !! floodplain ou
 REAL(KIND=JPRB),ALLOCATABLE,TARGET     :: D2RIVOUT_PRE(:,:)     !! river      outflow [m3/s] (prev t-step)
 REAL(KIND=JPRB),ALLOCATABLE,TARGET     :: D2RIVDPH_PRE(:,:)     !! river      depth   [m]    (prev t-step)
 REAL(KIND=JPRB),ALLOCATABLE,TARGET     :: D2FLDOUT_PRE(:,:)     !! floodplain outflow [m3/s] (prev t-step)
-REAL(KIND=JPRB),ALLOCATABLE,TARGET     :: P2FLDSTO_PRE(:,:)     !! floodplain storage [m3]   (prev t-step)
+REAL(KIND=JPRB),ALLOCATABLE,TARGET     :: D2FLDSTO_PRE(:,:)     !! floodplain storage [m3]   (prev t-step)
 
 !================================================
 !*** Groundwater Delay

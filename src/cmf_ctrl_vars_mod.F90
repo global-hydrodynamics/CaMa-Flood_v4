@@ -29,7 +29,7 @@ SUBROUTINE CMF_PROG_INIT
 USE YOS_CMF_MAP,             ONLY: NSEQMAX, NPTHOUT, NPTHLEV
 USE YOS_CMF_PROG,            ONLY: D2RUNOFF,     D2ROFSUB,     &
                                  & P2RIVSTO,     P2FLDSTO,     D2RIVOUT,     D2FLDOUT,     &
-                                 & D2RIVOUT_PRE, D2FLDOUT_PRE, D2RIVDPH_PRE, P2FLDSTO_PRE, &
+                                 & D2RIVOUT_PRE, D2FLDOUT_PRE, D2RIVDPH_PRE, D2FLDSTO_PRE, &
                                  & D1PTHFLW,     D1PTHFLW_PRE, P2GDWSTO,     D2GDWRTN,     &
                                  & P2DAMSTO,     D2DAMINF,     P2LEVSTO ,    D2WEVAP,      &   !! optional
                                  & D2DAMMY,      D2COPY
@@ -55,7 +55,7 @@ ALLOCATE( D2FLDOUT(NSEQMAX,1)     )
 ALLOCATE( D2RIVOUT_PRE(NSEQMAX,1)     )
 ALLOCATE( D2FLDOUT_PRE(NSEQMAX,1)     )
 ALLOCATE( D2RIVDPH_PRE(NSEQMAX,1)     )
-ALLOCATE( P2FLDSTO_PRE(NSEQMAX,1)     )
+ALLOCATE( D2FLDSTO_PRE(NSEQMAX,1)     )
 
 D2RUNOFF(:,:)=0._JPRB
 D2ROFSUB(:,:)=0._JPRB
@@ -68,7 +68,7 @@ D2FLDOUT(:,:)=0._JPRB
 D2RIVOUT_PRE(:,:)=0._JPRB
 D2FLDOUT_PRE(:,:)=0._JPRB
 D2RIVDPH_PRE(:,:)=0._JPRB
-P2FLDSTO_PRE(:,:)=0._JPRB
+D2FLDSTO_PRE(:,:)=0._JPRB
 
 IF( LPTHOUT ) THEN  !! additional prognostics for bifurcation scheme
   ALLOCATE( D1PTHFLW(NPTHOUT,NPTHLEV)     )
