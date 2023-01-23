@@ -207,6 +207,8 @@ IF( LPTHOUT )THEN
       CLOSE(TMPNAM)
       D1PTHFLW_PRE(:,:)=R1PTH(:,:)
     ENDIF
+  ELSE
+    D1PTHFLW_PRE(:,:)=0._JPRB
   ENDIF
 ENDIF
 
@@ -445,8 +447,8 @@ IF( LPTHOUT )THEN
   WRITE(LOGNAM,*) 'WRTE_REST: WRITE RESTART BIN:',CFILE
 
   !! Double Precision Restart
-  P1PTH(:,:)=D1PTHFLW_PRE(:,:)
   IF( LRESTDBL )THEN
+    P1PTH(:,:)=D1PTHFLW_PRE(:,:)
 #ifdef UseMPI_CMF
     CALL CMF_MPI_AllReduce_P1PTH(P1PTH)
 #endif
@@ -457,8 +459,8 @@ IF( LPTHOUT )THEN
     ENDIF
 
   !! Single Precision Restart
-  R1PTH(:,:)=D1PTHFLW_PRE(:,:)
   ELSE
+    R1PTH(:,:)=D1PTHFLW_PRE(:,:)
 #ifdef UseMPI_CMF
     CALL CMF_MPI_AllReduce_R1PTH(R1PTH)
 #endif
@@ -611,7 +613,7 @@ IF( REGIONTHIS==1 )THEN   !! write restart only on master node
     IF ( LPTHOUT ) THEN
       CALL NCERROR( NF90_DEF_VAR(NCID, 'pthflw_pre', NF90_DOUBLE, (/NPTHOUTID,NPTHLEVID,TIMEID/),&
                                  VARID,DEFLATE_LEVEL=6) ) 
-      CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"floodpath outflow pre" ) )
+      CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"bifurcation outflow pre" ) )
       CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m3/s") )
     ENDIF
   ENDIF
