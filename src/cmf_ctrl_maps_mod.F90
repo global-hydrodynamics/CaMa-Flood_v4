@@ -590,12 +590,13 @@ D2ELEVTN(:,:)  =0._JPRB
 D2NXTDST(:,:)  =0._JPRB
 D2RIVLEN(:,:)  =0._JPRB
 D2RIVWTH(:,:)  =0._JPRB
+D2RIVHGT(:,:)  =0._JPRB
 D2FLDHGT(:,:,:)=0._JPRB
 D2RIVMAN(:,:)  =0._JPRB
 D2MEANSL(:,:)  =0._JPRB
 D2DWNELV(:,:)  =0._JPRB
 D2GDWDLY(:,:)  =0._JPRB
-I2MASK(:,:)    =0._JPIM     !! mask for calculation (only for IFS slopemix)
+I2MASK(:,:)    =0._JPIM     !! mask for calculation (IFS slopemix: Kinemacti Wave for Mask=1; Reservoir: dam=2, dam upstream=1)
 
 !============================
 ! *** 2. Read topo map
@@ -929,7 +930,7 @@ INTEGER(KIND=JPIM)              :: NCID,VARID,STATUS
   I0=0
   I1=0
   DO ISEQ=1,NSEQALL
-    IF (I2MASK(ISEQ,1) == 1 ) THEN
+    IF (I2MASK(ISEQ,1) == 1 ) THEN  !! kinematic wave applied
       I1=I1+1
     ENDIF
     IF (I2MASK(ISEQ,1) == 0 ) THEN 

@@ -96,7 +96,7 @@ USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
 USE YOS_CMF_INPUT,      ONLY: NX, NY, LRESTART, LPTHOUT
 USE YOS_CMF_MAP,        ONLY: I2VECTOR, I1NEXT, NSEQALL, NSEQMAX
 USE YOS_CMF_PROG,       ONLY: P2RIVSTO, P2DAMSTO, D2DAMINF
-USE YOS_CMF_MAP,        ONLY: NPTHOUT, NPTHLEV, PTH_UPST, PTH_DOWN, PTH_ELV !! bifurcation pass
+USE YOS_CMF_MAP,        ONLY: NPTHOUT, NPTHLEV, PTH_UPST, PTH_DOWN, PTH_ELV , I2MASK!! bifurcation pass
 
 ! reed setting from CDAMFILE
 IMPLICIT NONE
@@ -154,6 +154,7 @@ DO IDAM = 1, NDAM
   ISEQ=I2VECTOR(IX,IY)
   DamSeq(IDAM)=ISEQ
   I1DAM(ISEQ)=1
+  I2MASK(ISEQ,1)=2   !! reservoir grid. skipped for adaptive time step
 END DO
 CLOSE(NDAMFILE)
 !==========
@@ -164,6 +165,7 @@ DO ISEQ=1, NSEQALL
     JSEQ=I1NEXT(ISEQ)
     IF( I1DAM(JSEQ)==1 .or. I1DAM(JSEQ)==11 )THEN !! if downstream is dam
       I1DAM(ISEQ)=10            !! mark upstream of dam grid by "10"
+      I2MASK(ISEQ,1)=1   !! reservoir upstream grid. skipped for adaptive time step
     ENDIF
   ENDIF
 
@@ -171,6 +173,7 @@ DO ISEQ=1, NSEQALL
     JSEQ=I1NEXT(ISEQ)
     IF( I1DAM(JSEQ)==1 .or. I1DAM(JSEQ)==11 )THEN !! if downstream is dam
       I1DAM(ISEQ)=11            !! mark upstream of dam grid by "11"
+      I2MASK(ISEQ,1)=2   !! reservoir grid (cascading). skipped for adaptive time step
     ENDIF
   ENDIF
 END DO

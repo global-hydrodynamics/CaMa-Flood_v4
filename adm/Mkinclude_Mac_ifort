@@ -12,6 +12,7 @@ CP = /bin/cp
 # UseCDF: use netCDF, UseMPI: Use MPI
 # SinglePrec: SinglePrecisionMode
 # NoAtom: Bit-identical simulation (deactivate OpenMP loop with OMP_Atomic)
+
 DCDF=-DUseCDF_CMF
 #DMPI=-DUseMPI_CMF
 DSINGLE=-DSinglePrec_CMF
