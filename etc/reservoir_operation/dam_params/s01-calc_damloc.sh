@@ -31,7 +31,7 @@ echo "============================"
 echo ""
 echo "#####  Part 1: allocate GRanD on CaMa map"
 
-# ./t01-calc_damloc.sh   $TAG $MINUPAREA
+./t01-calc_damloc.sh   $TAG $MINUPAREA
 
 # output dam allocation file : $TAG/damloc_modified.csv
 
@@ -39,14 +39,14 @@ echo "#####  Part 1: allocate GRanD on CaMa map"
 echo ""
 echo "#####  Part 2: add dam paramerters"
 
-# ./t02-calc_damparam.sh $TAG $MINUPAREA $SYEAR $EYEAR $DT
+./t02-calc_damparam.sh $TAG $MINUPAREA $SYEAR $EYEAR $DT
 
 ##==========================
 echo ""
 echo "#####  Part 3: merge dam location and parameter files"
 
 echo "@@@ ./src/complete_damcsv.py"
-#python ./src/complete_damcsv.py $TAG $MINUPAREA
+python ./src/complete_damcsv.py $TAG $MINUPAREA
 
 # output $TAG/dam_params_comp.csv 
 
