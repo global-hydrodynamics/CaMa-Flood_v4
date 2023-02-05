@@ -582,12 +582,12 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
 
 !! convert 1Dvector to 2Dmap
     IF( VAROUT(JF)%CVNAME/='pthflw' ) THEN  !! usual 2D map variable
-      IF( .not. LPTHOUT ) CYCLE
       CALL vecD2mapR(D2VEC,R2OUT)             !! MPI node data is gathered by vecP2mapR
 #ifdef UseMPI_CMF
       CALL CMF_MPI_AllReduce_R2MAP(R2OUT)
 #endif
     ELSE
+      IF( .not. LPTHOUT ) CYCLE
       R1POUT(:,:)=REAL(D1PTHFLW_AVG(:,:))
 #ifdef UseMPI_CMF
       CALL CMF_MPI_AllReduce_R1PTH(R1POUT)

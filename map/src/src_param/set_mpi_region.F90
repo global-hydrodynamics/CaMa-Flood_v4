@@ -7,7 +7,7 @@
       character*256       ::  buf
       integer             ::  nMPI
 ! river network map parameters
-      integer             ::  ix, iy
+      integer             ::  ix, iy, jx, jy
       integer             ::  nx, ny                  !! river map grid number
       real                ::  west, east, north, south
       real                ::  gsize
@@ -26,8 +26,16 @@
 !
       integer             ::  iMPI, jMPI, imin
       integer,allocatable ::  mpgrid(:)
-! 
-      character*256       ::  finp, fparam, fout, cMPI
+! bifurcation
+      integer             ::  ipth, npth, mpth                 !! bifurcation pathway ID
+      integer             ::  ilev, nlev                 !! bifurcation layers
+
+      real                ::  len, elv, dph              !! length, elevation, depth of the bifurcation channel
+      real,allocatable    ::  wth(:)                     !! bifurcation width for each layer
+      real                ::  lat, lon
+!
+      character*256       ::  finp, fparam, fout, fbifori, cMPI
+      character*256       ::  cfmt, clen
       integer             ::  ios
 ! ================================================
       print *, 'Set MPI region mask'
@@ -134,9 +142,6 @@
         end do
       end do
 
-!======
-
-
 ! ==========
 
       write(cMPI,'(i0)') nMPI
@@ -144,6 +149,47 @@
       open(11,file=fout,form='unformatted',access='direct',recl=4*nx*ny)
       write(11,rec=1) mpireg
       close(11)
+
+!===========
+print *, 'update bifprm.txt'
+
+      mpth=0
+      fbifori='../bifprm.txt'
+      open(12,file=fbifori,form='formatted')
+      read(12,*) npth, nlev
+
+      allocate( wth(nlev) )
+      do ipth=1, npth
+        read(12,*) ix,iy,jx,jy, len, elv, dph, (wth(ilev),ilev=1,nlev), lat, lon, ibsn
+        if( mpireg(ix,iy)==mpireg(jx,jy) )then
+          mpth=mpth+1
+        endif
+      end do
+      close(12)
+
+      print *, 'npth reduced: ', npth, mpth
+
+      fout='../bifprm-'//trim(cMPI)//'.txt'
+      print *, 'write to ', fout
+      open(21,file=fout,form='formatted')
+      write(21,'(2i8,a)') mpth, nlev, &
+               '   npath, nlev, (ix,iy), (jx,jy), length, elevtn, depth, (width1, width2, ... wodth_nlev), (lat,lon), basin'
+
+      fbifori='../bifprm.txt'
+      open(12,file=fbifori,form='formatted')
+      read(12,*) npth, nlev
+
+      write(clen,'(i2)') 3+nlev
+      cfmt='(4i8,'//trim(clen)//'f12.2,2f10.3,i8)'
+
+      do ipth=1, npth
+        read(12,*) ix,iy,jx,jy, len, elv, dph, (wth(ilev),ilev=1,nlev), lat, lon, ibsn
+        if( mpireg(ix,iy)==mpireg(jx,jy) )then
+          write(21,cfmt) ix, iy, jx, jy, len, elv, dph, (wth(ilev),ilev=1,nlev), lat, lon, ibsn
+        endif
+      end do
+      close(12)
+      close(21)
 
 !!================================================
 
