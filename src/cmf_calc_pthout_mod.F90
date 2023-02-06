@@ -18,7 +18,7 @@ CONTAINS
 ! --
 !####################################################################
 SUBROUTINE CMF_CALC_PTHOUT
-USE PARKIND1,           ONLY: JPIM, JPRB
+USE PARKIND1,           ONLY: JPIM, JPRB, JPRD
 USE YOS_CMF_INPUT,      ONLY: DT, PGRV, DMIS
 USE YOS_CMF_MAP,        ONLY: NSEQALL, NSEQMAX, NPTHOUT, NPTHLEV, PTH_UPST, PTH_DOWN, PTH_DST, &
                             & PTH_ELV, PTH_WTH, PTH_MAN, I2MASK
@@ -28,6 +28,7 @@ USE YOS_CMF_PROG,       ONLY: D1PTHFLW_PRE, D2RIVDPH_PRE
 USE YOS_CMF_DIAG,       ONLY: D2PTHOUT, D2PTHINF, D2RIVINF, D2FLDINF, D2SFCELV
 IMPLICIT NONE
 !*** Local
+REAL(KIND=JPRD)         ::  P2PTHOUT(NSEQMAX,1)                  !! for water conservation
 REAL(KIND=JPRB)         ::  D2SFCELV_PRE(NSEQMAX,1)                  !! water surface elev (t-1) [m] (for stable calculation)
 REAL(KIND=JPRB)         ::  D2RATE(NSEQMAX,1)                        !! outflow correction
 
@@ -39,7 +40,7 @@ REAL(KIND=JPRB),SAVE    ::  DSLOPE, DFLW, DOUT_PRE, DFLW_PRE, DFLW_IMP, DSTO_TMP
 !$OMP PARALLEL DO
 DO ISEQ=1, NSEQALL
   D2SFCELV_PRE(ISEQ,1) = D2RIVELV(ISEQ,1)+D2RIVDPH_PRE(ISEQ,1)
-  D2PTHOUT(ISEQ,1) = 0._JPRB
+  P2PTHOUT(ISEQ,1) = 0._JPRD
   D2PTHINF(ISEQ,1) = 0._JPRB
   D2RATE(ISEQ,1)   =-999._JPRB
 END DO
@@ -92,10 +93,10 @@ DO IPTH=1, NPTHOUT
   DO ILEV=1, NPTHLEV
     IF( D1PTHFLW(IPTH,ILEV) >= 0._JPRB )THEN                                  !! total outflow from each grid
 !$OMP ATOMIC
-      D2PTHOUT(ISEQP,1) = D2PTHOUT(ISEQP,1) + D1PTHFLW(IPTH,ILEV)
+      P2PTHOUT(ISEQP,1) = P2PTHOUT(ISEQP,1) + D1PTHFLW(IPTH,ILEV)
     ELSE
 !$OMP ATOMIC
-      D2PTHOUT(JSEQP,1) = D2PTHOUT(JSEQP,1) - D1PTHFLW(IPTH,ILEV)
+      P2PTHOUT(JSEQP,1) = P2PTHOUT(JSEQP,1) - D1PTHFLW(IPTH,ILEV)
     ENDIF
   END DO
 END DO
@@ -105,16 +106,18 @@ END DO
 
 !$OMP PARALLEL DO                                              !! calculate total outflow from a grid
 DO ISEQ=1, NSEQALL
-  IF( D2PTHOUT(ISEQ,1) > 1.E-10 )THEN
+  IF( P2PTHOUT(ISEQ,1) > 1.E-10 )THEN
     DSTO_TMP = ( P2RIVSTO(ISEQ,1)+P2FLDSTO(ISEQ,1) ) &
                   - D2RIVOUT(ISEQ,1)*DT + D2RIVINF(ISEQ,1)*DT - D2FLDOUT(ISEQ,1)*DT + D2FLDINF(ISEQ,1)*DT
-    D2RATE(ISEQ,1) = MIN( DSTO_TMP * (D2PTHOUT(ISEQ,1)*DT)**(-1.), 1._JPRB )
+    D2RATE(ISEQ,1) = MIN( DSTO_TMP * (P2PTHOUT(ISEQ,1)*DT)**(-1.), 1._JPRB )
   ELSE
     D2RATE(ISEQ,1) = 1._JPRB
   ENDIF
-  D2PTHOUT(ISEQ,1) = D2PTHOUT(ISEQ,1) * D2RATE(ISEQ,1)
+  P2PTHOUT(ISEQ,1) = P2PTHOUT(ISEQ,1) * D2RATE(ISEQ,1)
 END DO
 !$OMP END PARALLEL DO
+
+D2PTHOUT(:,:)=P2PTHOUT(:,:)
 
 #ifndef NoAtom_CMF
 !$OMP PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
