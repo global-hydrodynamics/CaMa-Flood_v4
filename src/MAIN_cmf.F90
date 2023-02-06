@@ -23,6 +23,11 @@ USE CMF_CTRL_FORCING_MOD,    ONLY: CMF_FORCING_GET, CMF_FORCING_PUT
 #ifdef UseMPI_CMF
 USE CMF_CTRL_MPI_MOD,        ONLY: CMF_MPI_INIT, CMF_MPI_END
 #endif
+!** sediment options**
+#ifdef sediment
+USE YOS_CMF_INPUT,           ONLY: LSEDOUT
+USE cmf_ctrl_sedinp_mod,     ONLY: cmf_sed_forcing
+#endif
 !****************************
 IMPLICIT NONE
 
@@ -60,6 +65,13 @@ DO ISTEP=1,NSTEPS,ISTEPADV
  
   !*  2c  Advance CaMa-Flood model for ISTEPADV
   CALL CMF_DRV_ADVANCE(ISTEPADV)
+
+#ifdef sediment
+  !*  2c Prepare forcing for optional sediment transport in stand-alone mode
+  IF ( LSEDOUT ) THEN
+    CALL cmf_sed_forcing
+  ENDIF
+#endif
 
 ENDDO
 !============================

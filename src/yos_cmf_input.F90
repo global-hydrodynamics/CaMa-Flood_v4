@@ -52,7 +52,6 @@ LOGICAL                         :: LSEALEV                 !! true : boundary co
 
 LOGICAL                         :: LOUTINS                 !! true: diagnose instantaneous discharge 
 
-
 LOGICAL                         :: LRESTART                !! true: initial condition from restart file
 LOGICAL                         :: LSTOONLY                !! true: storage only restart (mainly for data assimilation)
 
@@ -65,6 +64,7 @@ LOGICAL                         :: LMAPEND                 !! true: for map data
 LOGICAL                         :: LBITSAFE                !! true: for Bit Identical (removed from v410, set in Mkinclude)
 LOGICAL                         :: LSTG_ES                 !! true: for Vector Processor optimization (CMF_OPT_FLDSTG_ES) 
 
+LOGICAL                         :: LSEDOUT                 !! true: sediment scheme                 
 
 !================================================
 !*** NAMELIST/NCONF/

@@ -37,6 +37,12 @@ USE CMF_CTRL_RESTART_MOD,    ONLY: CMF_RESTART_WRITE
 USE CMF_CTRL_OUTPUT_MOD,     ONLY: CMF_OUTPUT_WRITE
 USE CMF_CALC_DIAG_MOD,       ONLY: CMF_DIAG_AVERAGE, CMF_DIAG_RESET
 USE CMF_CTRL_BOUNDARY_MOD,   ONLY: CMF_BOUNDARY_UPDATE
+#ifdef sediment
+USE YOS_CMF_INPUT,           ONLY: LSEDOUT
+USE yos_cmf_sed,             ONLY: step_sed
+USE cmf_ctrl_sedout_mod,     ONLY: cmf_sed_output
+USE cmf_calc_sedflw_mod,     ONLY: cmf_calc_sedflw
+#endif
 !$ USE OMP_LIB
 IMPLICIT NONE 
 SAVE
@@ -74,6 +80,13 @@ DO ISTEP=1,KSTEPS
   !*** 2. Advance model integration 
   CALL CMF_PHYSICS_ADVANCE
 
+#ifdef sediment
+  !*** 2b.  Advance sediment model integration
+  IF( LSEDOUT .and. MOD(KSTEP,step_sed)==0 )THEN
+    CALL cmf_calc_sedflw
+  ENDIF
+#endif
+
   CALL CPU_TIME(ZTT1)
   !$ ZTT1=OMP_GET_WTIME()
 
@@ -85,6 +98,12 @@ DO ISTEP=1,KSTEPS
 
     !*** write output data
     CALL CMF_OUTPUT_WRITE
+
+#ifdef sediment
+    IF ( LSEDOUT ) THEN
+      CALL cmf_sed_output
+    ENDIF
+#endif
 
     !*** reset variable
     CALL CMF_DIAG_RESET

@@ -38,6 +38,11 @@ USE YOS_CMF_DIAG,       ONLY: D2OUTFLW,     D2RIVVEL,     D2PTHOUT,     D2PTHINF
                             & D2RIVOUT_AVG, D2FLDOUT_AVG, D1PTHFLW_AVG, D2GDWRTN_AVG, D2RUNOFF_AVG, D2ROFSUB_AVG, &
                             & D2OUTFLW_AVG, D2RIVVEL_AVG, D2PTHOUT_AVG, D2DAMINF_AVG, D2WEVAPEX_AVG, &
                             & D2OUTFLW_MAX, D2RIVDPH_MAX, D2STORGE_MAX
+#ifdef sediment
+USE YOS_CMF_INPUT,      ONLY: LSEDOUT
+USE yos_cmf_sed,        ONLY: d2rivout_sed, d2rivvel_sed, sadd_riv
+#endif
+
 IMPLICIT NONE
 INTEGER(KIND=JPIM),SAVE  ::  ISEQ, IPTH
 !====================
@@ -82,6 +87,18 @@ IF( LPTHOUT )THEN
   !$OMP END PARALLEL DO
 ENDIF
 
+#ifdef sediment
+!calculate average rivout and rivvel for sediment timestep
+IF( LSEDOUT )THEN
+  sadd_riv = sadd_riv + DT
+  !$OMP PARALLEL DO
+  DO ISEQ=1, NSEQALL
+    d2rivout_sed(ISEQ) = d2rivout_sed(ISEQ)+D2RIVOUT(ISEQ,1)*DT
+    d2rivvel_sed(ISEQ) = d2rivvel_sed(ISEQ)+D2RIVVEL(ISEQ,1)*DT
+  END DO
+  !$OMP END PARALLEL DO
+ENDIF
+#endif
 
 END SUBROUTINE CMF_DIAG_AVEMAX
 !####################################################################
