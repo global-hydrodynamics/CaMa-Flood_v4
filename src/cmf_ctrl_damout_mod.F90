@@ -95,7 +95,7 @@ SUBROUTINE CMF_DAMOUT_INIT
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
 USE YOS_CMF_INPUT,      ONLY: NX, NY, LRESTART, LPTHOUT
 USE YOS_CMF_MAP,        ONLY: I2VECTOR, I1NEXT, NSEQALL, NSEQMAX
-USE YOS_CMF_PROG,       ONLY: P2RIVSTO, P2DAMSTO, D2DAMINF
+USE YOS_CMF_PROG,       ONLY: P2RIVSTO, P2DAMSTO, P2DAMINF
 USE YOS_CMF_MAP,        ONLY: NPTHOUT, NPTHLEV, PTH_UPST, PTH_DOWN, PTH_ELV , I2MASK!! bifurcation pass
 
 ! reed setting from CDAMFILE
@@ -180,7 +180,7 @@ END DO
 
 !! Initialize dam storage
 IF( .not. LRESTART )THEN
-  P2DAMSTO(:,1)=0._JPRB
+  P2DAMSTO(:,1)=0._JPRD
   DO IDAM=1, NDAM
     IF( DamSeq(IDAM)>0 )THEN
       ISEQ=DamSeq(IDAM)
@@ -192,7 +192,7 @@ ENDIF
 
 !! Initialize dam inflow
 DO ISEQ=1, NSEQALL
-  D2DAMINF(ISEQ,1)=0._JPRB
+  P2DAMINF(ISEQ,1)=0._JPRD
 END DO
 
 !! Stop bifurcation at dam & dam-upstream grids
@@ -221,7 +221,7 @@ SUBROUTINE CMF_DAMOUT_CALC
 USE YOS_CMF_INPUT,      ONLY: DT
 USE YOS_CMF_MAP,        ONLY: I1NEXT,   NSEQALL,  NSEQRIV
 USE YOS_CMF_PROG,       ONLY: D2RIVOUT, D2FLDOUT, P2RIVSTO, P2FLDSTO
-USE YOS_CMF_PROG,       ONLY: P2DAMSTO, D2DAMINF, D2RUNOFF    !! 
+USE YOS_CMF_PROG,       ONLY: P2DAMSTO, P2DAMINF, D2RUNOFF    !! 
 USE YOS_CMF_DIAG,       ONLY: D2RIVINF, D2FLDINF
 ! local
 IMPLICIT NONE
@@ -249,6 +249,7 @@ CALL UPDATE_INFLOW
 
 
 !* (2) Reservoir Operation
+!====================================
 !     -- compare DamVol against storage level (NorVol, ConVol, EmeVol) & DamInflow against Qf
 !$OMP PARALLEL DO
 DO IDAM=1, NDAM
@@ -257,7 +258,7 @@ DO IDAM=1, NDAM
 
   !! *** 2a update dam volume and inflow -----------------------------------
   DamVol    = P2DAMSTO(ISEQD,1)    
-  DamInflow = D2DAMINF(ISEQD,1)
+  DamInflow = P2DAMINF(ISEQD,1)
 
   !! *** 2b Reservoir Operation          ------------------------------
   !! case1: impoundment
@@ -293,6 +294,10 @@ DO IDAM=1, NDAM
   D2FLDOUT(ISEQD,1) = 0._JPRB
 END DO
 !$OMP END PARALLEL DO
+!====================================
+
+
+
 
 !* 3) modify outflow to suppless negative discharge, update RIVOUT,FLDOUT,RIVINF,FLDINF
 CALL MODIFY_OUTFLW
@@ -311,7 +316,7 @@ DO IDAM=1, NDAM
 
   DamInflow = D2RIVINF(ISEQD,1) + D2FLDINF(ISEQD,1) + D2RUNOFF(ISEQD,1)
   DamOutflw = D2RIVOUT(ISEQD,1) + D2FLDOUT(ISEQD,1)
-!!D2DAMINF(ISEQD,1)=DamInflow   !! if water balance needs to be checked in the output file, D2DAMINF should be updated.
+!!P2DAMINF(ISEQD,1)=DamInflow   !! if water balance needs to be checked in the output file, P2DAMINF should be updated.
 
   GlbDAMSTO = GlbDAMSTO + P2DAMSTO(ISEQD,1)
   GlbDAMINF = GlbDAMINF + DamInflow*DT
@@ -351,7 +356,7 @@ DO ISEQ=1, NSEQALL
   IF( I1DAM(ISEQ)>0 )THEN  !! if dam grid or upstream of dam, reset variables
     D2RIVOUT(ISEQ,1) = 0._JPRB
     D2FLDOUT(ISEQ,1) = 0._JPRB
-    D2DAMINF(ISEQ,1) = 0._JPRB
+    P2DAMINF(ISEQ,1) = 0._JPRD
   ENDIF
 END DO
 !$OMP END PARALLEL DO
@@ -364,7 +369,7 @@ DO ISEQ=1, NSEQALL
   IF( I1DAM(ISEQ)==10 .or. I1DAM(ISEQ)==11 )THEN  !! if dam grid or upstream of dam
     JSEQ=I1NEXT(ISEQ)
 !$OMP ATOMIC
-    D2DAMINF(JSEQ,1) = D2DAMINF(JSEQ,1) + D2RIVOUT_PRE(ISEQ,1) + D2FLDOUT_PRE(ISEQ,1) 
+    P2DAMINF(JSEQ,1) = P2DAMINF(JSEQ,1) + D2RIVOUT_PRE(ISEQ,1) + D2FLDOUT_PRE(ISEQ,1) 
   ENDIF
 END DO
 #ifndef NoAtom_CMF
@@ -409,7 +414,10 @@ SUBROUTINE MODIFY_OUTFLW
 USE YOS_CMF_MAP,        ONLY: NSEQMAX
 IMPLICIT NONE
 
-REAL(KIND=JPRB)            :: D2STOOUT(NSEQMAX,1)                      !! total outflow from a grid     [m3]
+REAL(KIND=JPRD)            :: P2STOOUT(NSEQMAX,1)                      !! total outflow from a grid     [m3]
+REAL(KIND=JPRD)            :: P2RIVINF(NSEQMAX,1)                      !! 
+REAL(KIND=JPRD)            :: P2FLDINF(NSEQMAX,1)                      !! 
+
 REAL(KIND=JPRB)            :: D2RATE(NSEQMAX,1)                        !! outflow correction
 ! SAVE for OpenMP
 INTEGER(KIND=JPIM),SAVE    :: ISEQ, JSEQ
@@ -417,13 +425,13 @@ REAL(KIND=JPRB),SAVE       :: OUT_R1, OUT_R2, OUT_F1, OUT_F2, DIUP, DIDW
 !$OMP THREADPRIVATE     (JSEQ,OUT_R1, OUT_R2, OUT_F1, OUT_F2, DIUP, DIDW)
 !================================================
   
-!*** 1. initialize & calculate D2STOOUT for normal cells
+!*** 1. initialize & calculate P2STOOUT for normal cells
 
 !$OMP PARALLEL DO
 DO ISEQ=1, NSEQALL
-  D2RIVINF(ISEQ,1) = 0._JPRB
-  D2FLDINF(ISEQ,1) = 0._JPRB
-  D2STOOUT(ISEQ,1) = 0._JPRB
+  P2RIVINF(ISEQ,1) = 0._JPRD
+  P2FLDINF(ISEQ,1) = 0._JPRD
+  P2STOOUT(ISEQ,1) = 0._JPRD
   D2RATE(ISEQ,1) = 1._JPRB
 END DO
 !$OMP END PARALLEL DO
@@ -441,9 +449,9 @@ DO ISEQ=1, NSEQRIV                                                    !! for nor
   DIUP=(OUT_R1+OUT_F1)*DT
   DIDW=(OUT_R2+OUT_F2)*DT
 !$OMP ATOMIC
-  D2STOOUT(ISEQ,1) = D2STOOUT(ISEQ,1) + DIUP 
+  P2STOOUT(ISEQ,1) = P2STOOUT(ISEQ,1) + DIUP 
 !$OMP ATOMIC
-  D2STOOUT(JSEQ,1) = D2STOOUT(JSEQ,1) + DIDW 
+  P2STOOUT(JSEQ,1) = P2STOOUT(JSEQ,1) + DIDW 
 END DO
 #ifndef NoAtom_CMF
 !$OMP END PARALLEL DO
@@ -454,7 +462,7 @@ END DO
 DO ISEQ=NSEQRIV+1, NSEQALL
   OUT_R1 = max( D2RIVOUT(ISEQ,1), 0._JPRB )
   OUT_F1 = max( D2FLDOUT(ISEQ,1), 0._JPRB )
-  D2STOOUT(ISEQ,1) = D2STOOUT(ISEQ,1) + OUT_R1*DT + OUT_F1*DT
+  P2STOOUT(ISEQ,1) = P2STOOUT(ISEQ,1) + OUT_R1*DT + OUT_F1*DT
 END DO
 !$OMP END PARALLEL DO
 
@@ -463,8 +471,8 @@ END DO
 
 !$OMP PARALLEL DO
 DO ISEQ=1, NSEQALL
-  IF ( D2STOOUT(ISEQ,1) > 1.E-8 ) THEN
-    D2RATE(ISEQ,1) = min( (P2RIVSTO(ISEQ,1)+P2FLDSTO(ISEQ,1)) * D2STOOUT(ISEQ,1)**(-1.), 1._JPRD )
+  IF ( P2STOOUT(ISEQ,1) > 1.E-8 ) THEN
+    D2RATE(ISEQ,1) = min( (P2RIVSTO(ISEQ,1)+P2FLDSTO(ISEQ,1)) * P2STOOUT(ISEQ,1)**(-1.), 1._JPRD )
   ENDIF
 END DO
 !$OMP END PARALLEL DO
@@ -483,13 +491,16 @@ DO ISEQ=1, NSEQRIV ! for normal pixels
     D2FLDOUT(ISEQ,1) = D2FLDOUT(ISEQ,1)*D2RATE(JSEQ,1)
   ENDIF
 !$OMP ATOMIC
-  D2RIVINF(JSEQ,1) = D2RIVINF(JSEQ,1) + D2RIVOUT(ISEQ,1)             !! total inflow to a grid (from upstream)
+  P2RIVINF(JSEQ,1) = P2RIVINF(JSEQ,1) + D2RIVOUT(ISEQ,1)             !! total inflow to a grid (from upstream)
 !$OMP ATOMIC
-  D2FLDINF(JSEQ,1) = D2FLDINF(JSEQ,1) + D2FLDOUT(ISEQ,1)
+  P2FLDINF(JSEQ,1) = P2FLDINF(JSEQ,1) + D2FLDOUT(ISEQ,1)
 END DO
 #ifndef NoAtom_CMF
 !$OMP END PARALLEL DO
 #endif
+
+D2RIVINF(:,:)=P2RIVINF(:,:)  !! needed for SinglePrecisionMode
+D2FLDINF(:,:)=P2FLDINF(:,:)
 
 !! river mouth-----------------
 !$OMP PARALLEL DO

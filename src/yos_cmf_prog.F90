@@ -57,7 +57,7 @@ REAL(KIND=JPRB),ALLOCATABLE,TARGET     :: D1PTHFLW_PRE(:,:)     !! flood path ou
 !================================================
 !!!*** dam variables
 REAL(KIND=JPRD),ALLOCATABLE,TARGET     :: P2DAMSTO(:,:)         !! reservoir storage [m3]
-REAL(KIND=JPRB),ALLOCATABLE,TARGET     :: D2DAMINF(:,:)         !! reservoir inflow [m3/s]; discharge before operatio
+REAL(KIND=JPRD),ALLOCATABLE,TARGET     :: P2DAMINF(:,:)         !! reservoir inflow [m3/s]; discharge before operation
 
 !================================================
 !!!*** levee variables
