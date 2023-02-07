@@ -524,7 +524,7 @@ DO IPTH=1, NPTHOUT
   ISEQP=PTH_UPST(IPTH)
   JSEQP=PTH_DOWN(IPTH)
   !! Avoid calculation outside of domain
-  IF (ISEQP == 0 .OR. JSEQP== 0 ) CYCLE
+  IF (ISEQP<=0 .OR. JSEQP<=0 ) CYCLE
   IF (I2MASK(ISEQP,1) == 1 .OR. I2MASK(JSEQP,1) == 1 ) CYCLE  !! I2MASK is for kinematic-inertial mixed flow scheme. 
 
 !! [1] for channel bifurcation, use river surface elevation  
@@ -578,7 +578,7 @@ DO IPTH=1, NPTHOUT
   ISEQP=PTH_UPST(IPTH)
   JSEQP=PTH_DOWN(IPTH)
   !! Avoid calculation outside of domain
-  IF (ISEQP == 0 .OR. JSEQP== 0 ) CYCLE
+  IF (ISEQP<=0 .OR. JSEQP<=0 ) CYCLE
   IF (I2MASK(ISEQP,1) == 1 .OR. I2MASK(JSEQP,1) == 1 ) CYCLE
 
   DO ILEV=1, NPTHLEV
@@ -615,7 +615,7 @@ DO IPTH=1, NPTHOUT
   ISEQP=PTH_UPST(IPTH)
   JSEQP=PTH_DOWN(IPTH)
   !! Avoid calculation outside of domain
-  IF (ISEQP == 0 .OR. JSEQP== 0 ) CYCLE
+  IF (ISEQP<=0 .OR. JSEQP<=0 ) CYCLE
   IF (I2MASK(ISEQP,1) == 1 .OR. I2MASK(JSEQP,1) == 1 ) CYCLE
   
   DO ILEV=1, NPTHLEV
