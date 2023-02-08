@@ -22,7 +22,7 @@ MODULE CMF_CTRL_OUTPUT_MOD
 USE PARKIND1,                ONLY: JPIM, JPRB, JPRM
 USE YOS_CMF_INPUT,           ONLY: LOGNAM,  IFRQ_OUT
 USE YOS_CMF_INPUT,           ONLY: CSUFBIN, CSUFVEC, CSUFPTH, CSUFCDF
-USE YOS_CMF_INPUT,           ONLY: LPTHOUT, LDAMOUT, LLEVEE,  LWEVAP, LGDWDLY, LOUTINS
+USE YOS_CMF_INPUT,           ONLY: LPTHOUT, LDAMOUT, LLEVEE,  LWEVAP, LGDWDLY, LOUTINS,LROSPLIT
 IMPLICIT NONE
 !============================
 SAVE
@@ -233,12 +233,10 @@ DO JF=1,NVARSOUT
       VAROUT(JF)%CVUNITS='m3'
 
     CASE ('pthflw')
-      IF( .not. LPTHOUT ) CYCLE
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='bifurcation channel discharge'
       VAROUT(JF)%CVUNITS='m3/s'
     CASE ('pthout')
-      IF( .not. LPTHOUT ) CYCLE
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='net bifurcation discharge'
       VAROUT(JF)%CVUNITS='m3/s'
@@ -266,61 +264,51 @@ DO JF=1,NVARSOUT
       VAROUT(JF)%CVUNITS='m3/s' 
 
     CASE ('damsto')   !!! added
-      IF( .not. LDAMOUT ) CYCLE
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='reservoir storage'
       VAROUT(JF)%CVUNITS='m3' 
     CASE ('daminf')   !!! added
-      IF( .not. LDAMOUT ) CYCLE
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='reservoir inflow'
       VAROUT(JF)%CVUNITS='m3/s' 
 
     CASE ('levsto')   !!! added
-      IF( .not. LLEVEE ) CYCLE
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='protected area storage'
       VAROUT(JF)%CVUNITS='m3' 
     CASE ('levdph')   !!! added
-      IF( .not. LLEVEE ) CYCLE
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='protected area depth'
       VAROUT(JF)%CVUNITS='m' 
 
     CASE ('gdwsto')
-      IF( .not. LGDWDLY ) CYCLE
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='ground water storage'
       VAROUT(JF)%CVUNITS='m3'
     CASE ('gwsto')
-      IF( .not. LGDWDLY ) CYCLE
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='ground water storage'
       VAROUT(JF)%CVUNITS='m3'
     CASE ('gwout')
-      IF( .not. LGDWDLY ) CYCLE
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='ground water discharge'
       VAROUT(JF)%CVUNITS='m3/s'  
 
     CASE ('wevap')
-      IF( .not. LWEVAP ) CYCLE
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='water evaporation'
       VAROUT(JF)%CVUNITS='m3/s'
-
     CASE ('outins')
-      IF( .not. LOUTINS ) CYCLE
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='instantaneous discharge'
       VAROUT(JF)%CVUNITS='m3/s' 
 
     CASE DEFAULT
     WRITE(LOGNAM,*) trim(CVNAMES(JF)), ' Not defined in CMF_CREATE_OUTCDF_MOD'
-#ifdef IFS_CMF
-    CALL ABORT
-#endif
-    stop
+!#ifdef IFS_CMF
+!    CALL ABORT
+!#endif
+!    stop
   END SELECT
   VAROUT(JF)%BINID=INQUIRE_FID()
 
@@ -513,8 +501,6 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
         D2VEC => D2PTHOUT_AVG
       CASE ('pthflw')
         IF( .not. LPTHOUT ) CYCLE
-        WRITE(LOGNAM,*) ''       !! 1d bifurcation channel (do not use D2VEC)
-
       CASE ('maxflw')
         D2VEC =>  D2OUTFLW_MAX
       CASE ('maxdph')
@@ -523,6 +509,7 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
         D2VEC =>  D2STORGE_MAX
 
       CASE ('outins')
+        IF( .not. LOUTINS ) CYCLE
         D2VEC =>  D2OUTINS
 
       CASE ('gwsto')
@@ -543,6 +530,7 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
       CASE ('runoff')             !!  compatibility for previous file name
         D2VEC =>  D2RUNOFF_AVG  
       CASE ('runoffsub')           !!  compatibility for previous file name
+        IF( .not. LROSPLIT ) CYCLE
         D2VEC =>  D2ROFSUB_AVG  
       CASE ('rofsfc')
         D2VEC =>  D2RUNOFF_AVG
@@ -569,10 +557,10 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
         D2VEC =>  D2LEVDPH
 
       CASE DEFAULT
-        WRITE(LOGNAM,*) VAROUT(JF)%CVNAME, ' Not defined in CMF_OUTPUT_MOD'
-#ifdef IFS_CMF
-        CALL ABORT
-#endif
+!        WRITE(LOGNAM,*) VAROUT(JF)%CVNAME, ' Not defined in CMF_OUTPUT_MOD'
+!#ifdef IFS_CMF
+!        CALL ABORT
+!#endif
     END SELECT   !! variable name select
 
     IF( KSTEP==0 .and. LOUTINI )THEN  !! write storage only when LOUTINI specified
