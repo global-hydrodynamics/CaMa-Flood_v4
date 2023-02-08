@@ -31,8 +31,12 @@ IMPLICIT NONE
 !*** Local
 REAL(KIND=JPRB)            :: D2SFCELV_PRE(NSEQMAX,1)                  !! water surface elevation (t-1) [m]
 REAL(KIND=JPRB)            :: D2FLDDPH_PRE(NSEQMAX,1)                      !! floodplain depth (t-1)        [m]
-REAL(KIND=JPRB)            :: D2STOOUT(NSEQMAX,1)                      !! total outflow from a grid     [m3]
+REAL(KIND=JPRD)            :: P2STOOUT(NSEQMAX,1)                      !! total outflow from a grid     [m3]
 REAL(KIND=JPRB)            :: D2RATE(NSEQMAX,1)                        !! outflow correction
+
+REAL(KIND=JPRD)            :: P2RIVINF(NSEQMAX,1)                      !! for nit-identical calculation
+REAL(KIND=JPRD)            :: P2FLDINF(NSEQMAX,1)                      !! for nit-identical calculation
+
 ! save for OpenMP
 INTEGER(KIND=JPIM),SAVE    :: ISEQ, JSEQ
 REAL(KIND=JPRB),SAVE       :: DSLOPE,   DOUT_PRE,   DFLW,   DFLW_PRE,   DFLW_IMP,   DAREA 
@@ -49,9 +53,9 @@ DO ISEQ=1, NSEQALL
   D2SFCELV_PRE(ISEQ,1) = D2RIVELV(ISEQ,1) + D2RIVDPH_PRE(ISEQ,1)
   D2FLDDPH_PRE(ISEQ,1) = MAX( D2RIVDPH_PRE(ISEQ,1)-D2RIVHGT(ISEQ,1), 0._JPRB )
 
-  D2RIVINF(ISEQ,1) = 0._JPRB
-  D2FLDINF(ISEQ,1) = 0._JPRB
-  D2STOOUT(ISEQ,1) = 0._JPRB
+  P2RIVINF(ISEQ,1) = 0._JPRD
+  P2FLDINF(ISEQ,1) = 0._JPRD
+  P2STOOUT(ISEQ,1) = 0._JPRD
   D2RATE(ISEQ,1)   = 1._JPRB
 END DO
 !$OMP END PARALLEL DO
@@ -120,9 +124,9 @@ DO ISEQ=1, NSEQRIV                                                    !! for nor
   DIUP=(OUT_R1+OUT_F1)*DT
   DIDW=(OUT_R2+OUT_F2)*DT
 !$OMP ATOMIC
-  D2STOOUT(ISEQ,1) = D2STOOUT(ISEQ,1) + DIUP 
+  P2STOOUT(ISEQ,1) = P2STOOUT(ISEQ,1) + DIUP 
 !$OMP ATOMIC
-  D2STOOUT(JSEQ,1) = D2STOOUT(JSEQ,1) + DIDW 
+  P2STOOUT(JSEQ,1) = P2STOOUT(JSEQ,1) + DIDW 
 END DO
 #ifndef NoAtom_CMF
 !$OMP END PARALLEL DO
@@ -183,7 +187,7 @@ DO ISEQ=NSEQRIV+1, NSEQALL
 !=== check outflow ===
   OUT_R1 = max(  D2RIVOUT(ISEQ,1),0._JPRB )
   OUT_F1 = max(  D2FLDOUT(ISEQ,1),0._JPRB )
-  D2STOOUT(ISEQ,1) = D2STOOUT(ISEQ,1) + OUT_R1*DT + OUT_F1*DT
+  P2STOOUT(ISEQ,1) = P2STOOUT(ISEQ,1) + OUT_R1*DT + OUT_F1*DT
 END DO
 !$OMP END PARALLEL DO
 
@@ -193,8 +197,8 @@ END DO
 
 !$OMP PARALLEL DO                                                     !! outflow correcttion if total outflow > storage
 DO ISEQ=1, NSEQALL
-  IF ( D2STOOUT(ISEQ,1) > 1.E-8 ) THEN
-    D2RATE(ISEQ,1)   = min( (P2RIVSTO(ISEQ,1)+P2FLDSTO(ISEQ,1)) * D2STOOUT(ISEQ,1)**(-1.), 1._JPRD )
+  IF ( P2STOOUT(ISEQ,1) > 1.E-8 ) THEN
+    D2RATE(ISEQ,1)   = min( (P2RIVSTO(ISEQ,1)+P2FLDSTO(ISEQ,1)) * P2STOOUT(ISEQ,1)**(-1.), 1._JPRD )
   ENDIF
 END DO
 !$OMP END PARALLEL DO
@@ -212,9 +216,9 @@ DO ISEQ=1, NSEQRIV ! for normal pixels
     D2FLDOUT(ISEQ,1) = D2FLDOUT(ISEQ,1)*D2RATE(JSEQ,1)
   ENDIF
 !$OMP ATOMIC
-  D2RIVINF(JSEQ,1) = D2RIVINF(JSEQ,1) + D2RIVOUT(ISEQ,1)             !! total inflow to a grid (from upstream)
+  P2RIVINF(JSEQ,1) = P2RIVINF(JSEQ,1) + D2RIVOUT(ISEQ,1)             !! total inflow to a grid (from upstream)
 !$OMP ATOMIC
-  D2FLDINF(JSEQ,1) = D2FLDINF(JSEQ,1) + D2FLDOUT(ISEQ,1)
+  P2FLDINF(JSEQ,1) = P2FLDINF(JSEQ,1) + D2FLDOUT(ISEQ,1)
 END DO
 #ifndef NoAtom_CMF
 !$OMP END PARALLEL DO
@@ -226,6 +230,9 @@ DO ISEQ=NSEQRIV+1, NSEQALL ! for river mouth
   D2FLDOUT(ISEQ,1) = D2FLDOUT(ISEQ,1)*D2RATE(ISEQ,1)
 END DO
 !$OMP END PARALLEL DO
+
+D2RIVINF(:,:)=P2RIVINF(:,:)
+D2FLDINF(:,:)=P2FLDINF(:,:)
 
 END SUBROUTINE CMF_CALC_OUTFLW
 !####################################################################

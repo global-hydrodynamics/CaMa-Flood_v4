@@ -24,10 +24,14 @@ IMPLICIT NONE
 SAVE
 !*** NAMELIST/NDAM/
 CHARACTER(LEN=256)              :: CDAMFILE    !! dam paramter file
-NAMELIST/NDAMOUT/   CDAMFILE
+LOGICAL                         :: LDAMTXT     !! true: dam inflow-outflw txt output
+LOGICAL                         :: LDAMH22     !! true: Use Hanazaki 2022 scheme
+NAMELIST/NDAMOUT/   CDAMFILE, LDAMTXT, LDAMH22
 
 !*** dam parameters
 INTEGER(KIND=JPIM)              :: IDAM, NDAM  !! number of dams
+INTEGER(KIND=JPIM)              :: NDAMX       !! exclude dams
+
 INTEGER(KIND=JPIM),ALLOCATABLE  :: GRanD_ID(:) !! GRanD ID
 CHARACTER(LEN=256),ALLOCATABLE  :: DamName(:)  !! 
 INTEGER(KIND=JPIM),ALLOCATABLE  :: DamIX(:), DamIY(:)  !! IX,IY of dam grid
@@ -69,6 +73,8 @@ WRITE(LOGNAM,*) "CMF::DAMOUT_NMLIST: namelist OPEN in unit: ", TRIM(CSETFILE), N
 
 !*** 2. default value
 CDAMFILE="./dam_params.csv"
+LDAMTXT=.TRUE.
+LDAMH22=.FALSE.
 
 !*** 3. read namelist
 REWIND(NSETFILE)
@@ -77,6 +83,8 @@ READ(NSETFILE,NML=NDAMOUT)
 IF( LDAMOUT )THEN
   WRITE(LOGNAM,*)   "=== NAMELIST, NDAMOUT ==="
   WRITE(LOGNAM,*)   "CDAMFILE: ", CDAMFILE
+  WRITE(LOGNAM,*)   "LDAMTXT: " , LDAMTXT
+  WRITE(LOGNAM,*)   "LDAMH22: " , LDAMH22
 ENDIF
 
 CLOSE(NSETFILE)
@@ -95,7 +103,7 @@ SUBROUTINE CMF_DAMOUT_INIT
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
 USE YOS_CMF_INPUT,      ONLY: NX, NY, LRESTART, LPTHOUT
 USE YOS_CMF_MAP,        ONLY: I2VECTOR, I1NEXT, NSEQALL, NSEQMAX
-USE YOS_CMF_PROG,       ONLY: P2RIVSTO, P2DAMSTO, D2DAMINF
+USE YOS_CMF_PROG,       ONLY: P2RIVSTO, P2DAMSTO, P2DAMINF
 USE YOS_CMF_MAP,        ONLY: NPTHOUT, NPTHLEV, PTH_UPST, PTH_DOWN, PTH_ELV , I2MASK!! bifurcation pass
 
 ! reed setting from CDAMFILE
@@ -104,6 +112,7 @@ INTEGER(KIND=JPIM)         :: NDAMFILE
 INTEGER(KIND=JPIM)         :: ISEQ, JSEQ
 INTEGER(KIND=JPIM)         :: IX, IY
 REAL(KIND=JPRB)            :: FldVol_mcm, ConVol_mcm, TotVol_mcm !! from file in Million Cubic Metter
+REAL(KIND=JPRB)            :: Qsto, Vyr
 
 INTEGER(KIND=JPIM)         :: IPTH, ILEV, ISEQP, JSEQP
 !####################################################################
@@ -136,6 +145,7 @@ ALLOCATE(I1DAM(NSEQMAX))
 !! =================
 DamSeq(:)=IMIS
 I1DAM(:)=0
+NDAMX=0
 !! read dam parameters
 DO IDAM = 1, NDAM
   READ(NDAMFILE,*) GRanD_ID(IDAM), DamName(IDAM), DamLon(IDAM), DamLat(IDAM), upreal(IDAM), &
@@ -144,19 +154,32 @@ DO IDAM = 1, NDAM
   !! storage parameter --- from Million Cubic Meter to m3
   FldVol(IDAM) = FldVol_mcm * 1.E6                  ! Flood control storage capacity: exclusive for flood control
   ConVol(IDAM) = ConVol_mcm * 1.E6
+
   EmeVol(IDAM) = ConVol(IDAM) + FldVol(IDAM) * 0.8     ! storage to start emergency operation
   NorVol(IDAM) = ConVol(IDAM) * 0.5    ! normal storage
 
   IX=DamIX(IDAM)
   IY=DamIY(IDAM)
-  if (IX<=0 .or. IX > NX .or. IY<=0 .or. IY > NY ) cycle
+  IF (IX<=0 .or. IX > NX .or. IY<=0 .or. IY > NY ) cycle
 
   ISEQ=I2VECTOR(IX,IY)
+  IF( I1NEXT(ISEQ)==-9999 ) cycle
+  NDAMX=NDAMX+1
+
   DamSeq(IDAM)=ISEQ
   I1DAM(ISEQ)=1
   I2MASK(ISEQ,1)=2   !! reservoir grid. skipped for adaptive time step
+
+  IF( .not. LDAMH22 )THEN       !! 
+    Vyr =Qn(IDAM)*(365.*24.*60.*60.)
+    Qsto=(ConVol(IDAM)*0.7+Vyr/8.)/(180.*24.*60.*60.)   !! possible outflow in 180day from (ConVil*0.7 + PotInflw)
+    Qn(IDAM)=min(Qn(IDAM),Qsto)*1.5
+  ENDIF
+
 END DO
 CLOSE(NDAMFILE)
+
+WRITE(LOGNAM,*) "CMF::DAMOUT_INIT: allocated dams:", NDAMX 
 !==========
 
 !! mark upstream of dam grid, for applying kinematic wave routine to suppress storage buffer effect.
@@ -180,7 +203,7 @@ END DO
 
 !! Initialize dam storage
 IF( .not. LRESTART )THEN
-  P2DAMSTO(:,1)=0._JPRB
+  P2DAMSTO(:,1)=0._JPRD
   DO IDAM=1, NDAM
     IF( DamSeq(IDAM)>0 )THEN
       ISEQ=DamSeq(IDAM)
@@ -192,7 +215,7 @@ ENDIF
 
 !! Initialize dam inflow
 DO ISEQ=1, NSEQALL
-  D2DAMINF(ISEQ,1)=0._JPRB
+  P2DAMINF(ISEQ,1)=0._JPRD
 END DO
 
 !! Stop bifurcation at dam & dam-upstream grids
@@ -200,6 +223,7 @@ IF( LPTHOUT )THEN
   DO IPTH=1, NPTHOUT
     ISEQP=PTH_UPST(IPTH)
     JSEQP=PTH_DOWN(IPTH)
+    IF( ISEQP<=0 .or. JSEQP<=0) CYCLE
     IF( I1DAM(ISEQP)>0 .or. I1DAM(JSEQP)>0 )THEN
       DO ILEV=1, NPTHLEV
         PTH_ELV(IPTH,ILEV)=1.E20  !! no bifurcation
@@ -220,7 +244,7 @@ SUBROUTINE CMF_DAMOUT_CALC
 USE YOS_CMF_INPUT,      ONLY: DT
 USE YOS_CMF_MAP,        ONLY: I1NEXT,   NSEQALL,  NSEQRIV
 USE YOS_CMF_PROG,       ONLY: D2RIVOUT, D2FLDOUT, P2RIVSTO, P2FLDSTO
-USE YOS_CMF_PROG,       ONLY: P2DAMSTO, D2DAMINF, D2RUNOFF    !! 
+USE YOS_CMF_PROG,       ONLY: P2DAMSTO, P2DAMINF, D2RUNOFF    !! 
 USE YOS_CMF_DIAG,       ONLY: D2RIVINF, D2FLDINF
 ! local
 IMPLICIT NONE
@@ -230,10 +254,12 @@ INTEGER(KIND=JPIM),SAVE    :: ISEQD
 REAL(KIND=JPRB),SAVE       :: DamVol
 REAL(KIND=JPRB),SAVE       :: DamInflow
 REAL(KIND=JPRB),SAVE       :: DamOutflw           !! Total outflw 
+REAL(KIND=JPRB),SAVE       :: DamOutTmp           !! Total outflw 
+
 !*** water balance
 REAL(KIND=JPRD),SAVE       :: GlbDAMSTO, GlbDAMSTONXT, GlbDAMINF, GlbDAMOUT, DamMiss
 
-!$OMP THREADPRIVATE    (ISEQD,DamVol,DamInflow,DamOutflw)
+!$OMP THREADPRIVATE    (ISEQD,DamVol,DamInflow,DamOutflw,DamOutTmp)
 !====================
 !CONTAINS
 !+ UPDATE_INFLOW: replace dam upstream with kinamatic wave, calculate inflow to dam
@@ -248,6 +274,7 @@ CALL UPDATE_INFLOW
 
 
 !* (2) Reservoir Operation
+!====================================
 !     -- compare DamVol against storage level (NorVol, ConVol, EmeVol) & DamInflow against Qf
 !$OMP PARALLEL DO
 DO IDAM=1, NDAM
@@ -256,31 +283,64 @@ DO IDAM=1, NDAM
 
   !! *** 2a update dam volume and inflow -----------------------------------
   DamVol    = P2DAMSTO(ISEQD,1)    
-  DamInflow = D2DAMINF(ISEQD,1)
+  DamInflow = P2DAMINF(ISEQD,1)
 
   !! *** 2b Reservoir Operation          ------------------------------
-  !! case1: impoundment
-  IF( DamVol <= NorVol(IDAM) )THEN
-    DamOutflw = Qn(IDAM) * (DamVol / ConVol(IDAM) )
-  !! case2: water supply
-  ELSEIF( NorVol(IDAM)<DamVol .and. DamVol<=ConVol(IDAM) )THEN
-    IF( Qf(IDAM)<=DamInflow )THEN
-      DamOutflw = Qn(IDAM)*0.5 +   (DamVol-NorVol(IDAM))/( ConVol(IDAM)-NorVol(IDAM))      * (Qf(IDAM) - Qn(IDAM))
+  IF( LDAMH22 )THEN !! Hanazaki 2022 scheme
+    !! case1: impoundment
+    IF( DamVol <= NorVol(IDAM) )THEN
+      DamOutflw = Qn(IDAM) * (DamVol / ConVol(IDAM) )
+    !! case2: water supply
+    ELSEIF( NorVol(IDAM)<DamVol .and. DamVol<=ConVol(IDAM) )THEN
+      IF( Qf(IDAM)<=DamInflow )THEN
+        DamOutflw = Qn(IDAM)*0.5 +   (DamVol-NorVol(IDAM))/( ConVol(IDAM)-NorVol(IDAM))      * (Qf(IDAM) - Qn(IDAM))
+      ELSE
+        DamOutflw = Qn(IDAM)*0.5 + (((DamVol-NorVol(IDAM))/( EmeVol(IDAM)-NorVol(IDAM)))**2) * (Qf(IDAM) - Qn(IDAM))
+      ENDIF  
+    !! case3: flood control
+    ELSEIF( ConVol(IDAM)<DamVol .and. DamVol<EmeVol(IDAM) ) THEN
+      IF( Qf(IDAM) <= DamInflow ) THEN
+        DamOutflw = Qf(IDAM) + max((1. - R_VolUpa(IDAM)/0.2),0._JPRB) &
+          * (DamVol-ConVol(IDAM))/(EmeVol(IDAM)-ConVol(IDAM)) * (DamInflow-Qf(IDAM))
+      !! pre- and after flood control
+      ELSE
+        DamOutflw = Qn(IDAM)*0.5 + (((DamVol-NorVol(IDAM))/(EmeVol(IDAM)-NorVol(IDAM)))**2)* (Qf(IDAM) - Qn(IDAM))
+      ENDIF
+    !! case4: emergency operation
     ELSE
-      DamOutflw = Qn(IDAM)*0.5 + (((DamVol-NorVol(IDAM))/( EmeVol(IDAM)-NorVol(IDAM)))**2) * (Qf(IDAM) - Qn(IDAM))
-    ENDIF  
-  !! case3: flood control
-  ELSEIF( ConVol(IDAM)<DamVol .and. DamVol<EmeVol(IDAM) ) THEN
-    IF( Qf(IDAM) <= DamInflow ) THEN
-      DamOutflw = Qf(IDAM) + max((1. - R_VolUpa(IDAM)/0.2),0._JPRB) &
-        * (DamVol-ConVol(IDAM))/(EmeVol(IDAM)-ConVol(IDAM)) * (DamInflow-Qf(IDAM))
-    !! pre- and after flood control
-    ELSE
-      DamOutflw = Qn(IDAM)*0.5 + (((DamVol-NorVol(IDAM))/(EmeVol(IDAM)-NorVol(IDAM)))**2)* (Qf(IDAM) - Qn(IDAM))
+      DamOutflw = max(DamInflow, Qf(IDAM))
     ENDIF
-  !! case4: emergency operation
-  ELSE
-    DamOutflw = max(DamInflow, Qf(IDAM))
+
+  ELSE  !! improved reservoir operation 'Yamazaki & Funato'
+    IF( DamVol<=ConVol(IDAM) )THEN
+      IF( DamInflow>=Qf(IDAM) )THEN
+        !!figure left side No.3
+  !      DamOutflw = Qn(IDAM) * 0.5 +   (DamVol-NorVol(IDAM))/(ConVol(IDAM)-NorVol(IDAM)) * (Qf(IDAM) - Qn(IDAM) * 0.5)
+        DamOutflw = Qn(IDAM)
+      ELSE
+        !!figure right side No.3
+        DamOutflw =  Qn(IDAM) * (DamVol/ConVol(IDAM))**0.5
+      ENDIF  
+    !! case3: flood control(no.2)
+    ELSEIF( DamVol>ConVol(IDAM) .and. DamVol<=EmeVol(IDAM) ) THEN
+      IF( DamInflow >= Qf(IDAM) ) THEN
+        !!figure left side No.2
+        DamOutflw = Qn(IDAM) + ( (DamVol-ConVol(IDAM)) / (EmeVol(IDAM)-ConVol(IDAM)) )**1.0 * (DamInflow - Qn(IDAM))
+         DamOutTmp = Qn(IDAM) + ( (DamVol-ConVol(IDAM)) / (EmeVol(IDAM)-ConVol(IDAM)) )**0.5 * (Qf(IDAM) - Qn(IDAM))
+        DamOutflw = max( DamOutflw,DamOutTmp )
+      !! pre- and after flood control
+      ELSE
+        !!figure right side No.2
+        DamOutflw = Qn(IDAM) + ( (DamVol-ConVol(IDAM)) / (EmeVol(IDAM)-ConVol(IDAM)) )**0.5 * (Qf(IDAM) - Qn(IDAM))
+      ENDIF
+    !! case4: emergency operation(no.1)
+    ELSEIF( DamVol>EmeVol(IDAM) )THEN
+      IF( DamInflow >= Qf(IDAM) ) THEN
+        DamOutflw = DamInflow
+      ELSE
+        DamOutflw = Qf(IDAM)
+      ENDIF
+    ENDIF
   ENDIF
 
   !! *** 2c flow limitter
@@ -292,6 +352,10 @@ DO IDAM=1, NDAM
   D2FLDOUT(ISEQD,1) = 0._JPRB
 END DO
 !$OMP END PARALLEL DO
+!====================================
+
+
+
 
 !* 3) modify outflow to suppless negative discharge, update RIVOUT,FLDOUT,RIVINF,FLDINF
 CALL MODIFY_OUTFLW
@@ -310,7 +374,7 @@ DO IDAM=1, NDAM
 
   DamInflow = D2RIVINF(ISEQD,1) + D2FLDINF(ISEQD,1) + D2RUNOFF(ISEQD,1)
   DamOutflw = D2RIVOUT(ISEQD,1) + D2FLDOUT(ISEQD,1)
-!!D2DAMINF(ISEQD,1)=DamInflow   !! if water balance needs to be checked in the output file, D2DAMINF should be updated.
+!!P2DAMINF(ISEQD,1)=DamInflow   !! if water balance needs to be checked in the output file, P2DAMINF should be updated.
 
   GlbDAMSTO = GlbDAMSTO + P2DAMSTO(ISEQD,1)
   GlbDAMINF = GlbDAMINF + DamInflow*DT
@@ -350,7 +414,7 @@ DO ISEQ=1, NSEQALL
   IF( I1DAM(ISEQ)>0 )THEN  !! if dam grid or upstream of dam, reset variables
     D2RIVOUT(ISEQ,1) = 0._JPRB
     D2FLDOUT(ISEQ,1) = 0._JPRB
-    D2DAMINF(ISEQ,1) = 0._JPRB
+    P2DAMINF(ISEQ,1) = 0._JPRD
   ENDIF
 END DO
 !$OMP END PARALLEL DO
@@ -363,7 +427,7 @@ DO ISEQ=1, NSEQALL
   IF( I1DAM(ISEQ)==10 .or. I1DAM(ISEQ)==11 )THEN  !! if dam grid or upstream of dam
     JSEQ=I1NEXT(ISEQ)
 !$OMP ATOMIC
-    D2DAMINF(JSEQ,1) = D2DAMINF(JSEQ,1) + D2RIVOUT_PRE(ISEQ,1) + D2FLDOUT_PRE(ISEQ,1) 
+    P2DAMINF(JSEQ,1) = P2DAMINF(JSEQ,1) + D2RIVOUT_PRE(ISEQ,1) + D2FLDOUT_PRE(ISEQ,1) 
   ENDIF
 END DO
 #ifndef NoAtom_CMF
@@ -408,7 +472,10 @@ SUBROUTINE MODIFY_OUTFLW
 USE YOS_CMF_MAP,        ONLY: NSEQMAX
 IMPLICIT NONE
 
-REAL(KIND=JPRB)            :: D2STOOUT(NSEQMAX,1)                      !! total outflow from a grid     [m3]
+REAL(KIND=JPRD)            :: P2STOOUT(NSEQMAX,1)                      !! total outflow from a grid     [m3]
+REAL(KIND=JPRD)            :: P2RIVINF(NSEQMAX,1)                      !! 
+REAL(KIND=JPRD)            :: P2FLDINF(NSEQMAX,1)                      !! 
+
 REAL(KIND=JPRB)            :: D2RATE(NSEQMAX,1)                        !! outflow correction
 ! SAVE for OpenMP
 INTEGER(KIND=JPIM),SAVE    :: ISEQ, JSEQ
@@ -416,13 +483,13 @@ REAL(KIND=JPRB),SAVE       :: OUT_R1, OUT_R2, OUT_F1, OUT_F2, DIUP, DIDW
 !$OMP THREADPRIVATE     (JSEQ,OUT_R1, OUT_R2, OUT_F1, OUT_F2, DIUP, DIDW)
 !================================================
   
-!*** 1. initialize & calculate D2STOOUT for normal cells
+!*** 1. initialize & calculate P2STOOUT for normal cells
 
 !$OMP PARALLEL DO
 DO ISEQ=1, NSEQALL
-  D2RIVINF(ISEQ,1) = 0._JPRB
-  D2FLDINF(ISEQ,1) = 0._JPRB
-  D2STOOUT(ISEQ,1) = 0._JPRB
+  P2RIVINF(ISEQ,1) = 0._JPRD
+  P2FLDINF(ISEQ,1) = 0._JPRD
+  P2STOOUT(ISEQ,1) = 0._JPRD
   D2RATE(ISEQ,1) = 1._JPRB
 END DO
 !$OMP END PARALLEL DO
@@ -440,9 +507,9 @@ DO ISEQ=1, NSEQRIV                                                    !! for nor
   DIUP=(OUT_R1+OUT_F1)*DT
   DIDW=(OUT_R2+OUT_F2)*DT
 !$OMP ATOMIC
-  D2STOOUT(ISEQ,1) = D2STOOUT(ISEQ,1) + DIUP 
+  P2STOOUT(ISEQ,1) = P2STOOUT(ISEQ,1) + DIUP 
 !$OMP ATOMIC
-  D2STOOUT(JSEQ,1) = D2STOOUT(JSEQ,1) + DIDW 
+  P2STOOUT(JSEQ,1) = P2STOOUT(JSEQ,1) + DIDW 
 END DO
 #ifndef NoAtom_CMF
 !$OMP END PARALLEL DO
@@ -453,7 +520,7 @@ END DO
 DO ISEQ=NSEQRIV+1, NSEQALL
   OUT_R1 = max( D2RIVOUT(ISEQ,1), 0._JPRB )
   OUT_F1 = max( D2FLDOUT(ISEQ,1), 0._JPRB )
-  D2STOOUT(ISEQ,1) = D2STOOUT(ISEQ,1) + OUT_R1*DT + OUT_F1*DT
+  P2STOOUT(ISEQ,1) = P2STOOUT(ISEQ,1) + OUT_R1*DT + OUT_F1*DT
 END DO
 !$OMP END PARALLEL DO
 
@@ -462,8 +529,8 @@ END DO
 
 !$OMP PARALLEL DO
 DO ISEQ=1, NSEQALL
-  IF ( D2STOOUT(ISEQ,1) > 1.E-8 ) THEN
-    D2RATE(ISEQ,1) = min( (P2RIVSTO(ISEQ,1)+P2FLDSTO(ISEQ,1)) * D2STOOUT(ISEQ,1)**(-1.), 1._JPRD )
+  IF ( P2STOOUT(ISEQ,1) > 1.E-8 ) THEN
+    D2RATE(ISEQ,1) = min( (P2RIVSTO(ISEQ,1)+P2FLDSTO(ISEQ,1)) * P2STOOUT(ISEQ,1)**(-1.), 1._JPRD )
   ENDIF
 END DO
 !$OMP END PARALLEL DO
@@ -482,13 +549,16 @@ DO ISEQ=1, NSEQRIV ! for normal pixels
     D2FLDOUT(ISEQ,1) = D2FLDOUT(ISEQ,1)*D2RATE(JSEQ,1)
   ENDIF
 !$OMP ATOMIC
-  D2RIVINF(JSEQ,1) = D2RIVINF(JSEQ,1) + D2RIVOUT(ISEQ,1)             !! total inflow to a grid (from upstream)
+  P2RIVINF(JSEQ,1) = P2RIVINF(JSEQ,1) + D2RIVOUT(ISEQ,1)             !! total inflow to a grid (from upstream)
 !$OMP ATOMIC
-  D2FLDINF(JSEQ,1) = D2FLDINF(JSEQ,1) + D2FLDOUT(ISEQ,1)
+  P2FLDINF(JSEQ,1) = P2FLDINF(JSEQ,1) + D2FLDOUT(ISEQ,1)
 END DO
 #ifndef NoAtom_CMF
 !$OMP END PARALLEL DO
 #endif
+
+D2RIVINF(:,:)=P2RIVINF(:,:)  !! needed for SinglePrecisionMode
+D2FLDINF(:,:)=P2FLDINF(:,:)
 
 !! river mouth-----------------
 !$OMP PARALLEL DO
@@ -503,5 +573,79 @@ END SUBROUTINE MODIFY_OUTFLW
 
 END SUBROUTINE CMF_DAMOUT_CALC
 !####################################################################
+
+
+
+!####################################################################
+SUBROUTINE CMF_DAMOUT_WRTE
+USE YOS_CMF_PROG,       ONLY: P2DAMSTO, P2DAMINF, D2RIVOUT
+USE YOS_CMF_TIME,       ONLY: IYYYYMMDD,ISYYYY
+USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
+
+! local
+INTEGER(KIND=JPIM)         :: WriteID(NDAMX)
+REAL(KIND=JPRB)            :: WriteVol(NDAMX), WriteVol2(NDAMX), WriteInf(NDAMX), WriteOUt(NDAMX)
+
+! File IO
+INTEGER(KIND=JPIM),SAVE    :: ISEQD, JDAM
+INTEGER(KIND=JPIM),SAVE    :: LOGDAM
+CHARACTER(len=4),SAVE      :: cYYYY
+CHARACTER(len=256),SAVE    :: CLEN, CFMT
+CHARACTER(len=256),SAVE    :: DAMTXT
+LOGICAL,SAVE               :: IsOpen
+DATA IsOpen       /.FALSE./
+
+! ======
+
+IF( LDAMTXT )THEN
+
+  IF( .not. IsOpen)THEN
+    IsOpen=.TRUE.
+    WRITE(CYYYY,'(i4.4)') ISYYYY
+    DAMTXT='./damtxt-'//trim(cYYYY)//'.txt'
+
+    LOGDAM=INQUIRE_FID()
+    OPEN(LOGDAM,FILE=DAMTXT,FORM='formatted')
+
+    WRITE(CLEN,'(i0)') NDAMX
+    CFMT="(a10,i10,"//TRIM(CLEN)//"(i6,3f12.4))"
+
+    JDAM=0
+    DO IDAM=1, NDAM
+      IF( DamSeq(IDAM)<=0 ) CYCLE
+      JDAM=JDAM+1
+      ISEQD=DamSeq(IDAM)
+  
+      WriteID(JDAM)  = GRanD_ID(IDAM)
+      WriteVol(JDAM) = (FldVol(IDAM)+ConVol(IDAM) )
+      WriteVol2(JDAM)= ConVol(IDAM)
+      IF( LDAMH22 )THEN
+        WriteOut(JDAM) = Qn(IDAM)
+      ELSE
+        WriteOut(JDAM) = Qn(IDAM)*4.0 !! Annual Mean
+      ENDIF
+    END DO
+    WRITE(LOGDAM,CFMT) 'WriteDam:', NDAMX, ( (WriteID(JDAM),WriteVol(JDAM)*1.E-9,WriteVol2(JDAM)*1.E-9,WriteOut(JDAM)), JDAM=1, NDAMX)
+  ENDIF
+
+  JDAM=0
+  DO IDAM=1, NDAM
+    IF( DamSeq(IDAM)<=0 ) CYCLE
+    JDAM=JDAM+1
+    ISEQD=DamSeq(IDAM)
+  
+    WriteID(JDAM)  = GRanD_ID(IDAM)
+    WriteVol(JDAM) = P2DAMSTO(ISEQD,1)    
+    WriteInf(JDAM) = P2DAMINF(ISEQD,1)
+    WriteOut(JDAM) = D2RIVOUT(ISEQD,1)
+  END DO
+  
+  WRITE(LOGDAM,CFMT) 'WriteDam:', IYYYYMMDD, ( (WriteID(JDAM),WriteVol(JDAM)*1.E-9,WriteInf(JDAM),WriteOut(JDAM)), JDAM=1, NDAM)
+
+ENDIF
+
+END SUBROUTINE CMF_DAMOUT_WRTE
+!####################################################################
+
 
 END MODULE CMF_CTRL_DAMOUT_MOD

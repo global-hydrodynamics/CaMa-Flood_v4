@@ -231,18 +231,18 @@ ENDIF
 #endif
 
 !================================================
-WRITE(LOGNAM,*) "CMF::DRV_INIT: (5) set flood stage at initial condition"
-
 !** v4.03 CALC_FLDSTG moved to the top of CTRL_PHYSICS for strict restart configulation (Hatono & Yamazaki)
 
 !*** 5 reconstruct previous t-step flow (if needed)
 IF( LRESTART .AND. LSTOONLY )THEN
+  WRITE(LOGNAM,*) "CMF::DRV_INIT: (5a) set flood stage at initial condition"
   !** v4.03 CALC_FLDSTG for storagy only restart (v4.03)
   CALL CMF_PHYSICS_FLDSTG
 ENDIF
 
-!*** save initial storage if LOUTINI specified
+!*** 5b save initial storage if LOUTINI specified
 IF ( LOUTINI .AND. LOUTPUT ) THEN
+  WRITE(LOGNAM,*) "CMF::DRV_INIT: (5b) write initial condition"
   CALL CMF_OUTPUT_WRITE
 ENDIF
 
