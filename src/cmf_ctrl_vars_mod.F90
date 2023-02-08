@@ -31,7 +31,7 @@ USE YOS_CMF_PROG,            ONLY: D2RUNOFF,     D2ROFSUB,     &
                                  & P2RIVSTO,     P2FLDSTO,     D2RIVOUT,     D2FLDOUT,     &
                                  & D2RIVOUT_PRE, D2FLDOUT_PRE, D2RIVDPH_PRE, D2FLDSTO_PRE, &
                                  & D1PTHFLW,     D1PTHFLW_PRE, P2GDWSTO,     D2GDWRTN,     &
-                                 & P2DAMSTO,     D2DAMINF,     P2LEVSTO ,    D2WEVAP,      &   !! optional
+                                 & P2DAMSTO,     P2DAMINF,     P2LEVSTO ,    D2WEVAP,      &   !! optional
                                  & D2DAMMY,      D2COPY
 IMPLICIT NONE
 !================================================
@@ -78,9 +78,9 @@ IF( LPTHOUT ) THEN  !! additional prognostics for bifurcation scheme
 ENDIF
 IF( LDAMOUT ) THEN  !! additional prognostics for reservoir operation
   ALLOCATE( P2DAMSTO(NSEQMAX,1)     )
-  ALLOCATE( D2DAMINF(NSEQMAX,1)     )
+  ALLOCATE( P2DAMINF(NSEQMAX,1)     )
   P2DAMSTO(:,:)=0._JPRD
-  D2DAMINF(:,:)=0._JPRB
+  P2DAMINF(:,:)=0._JPRD
 ENDIF
 IF( LLEVEE ) THEN  !! additional prognostics for LLEVEE
   ALLOCATE( P2LEVSTO(NSEQMAX,1)     )

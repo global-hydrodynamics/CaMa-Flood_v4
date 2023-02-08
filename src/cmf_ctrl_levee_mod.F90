@@ -483,7 +483,7 @@ END SUBROUTINE CMF_LEVEE_FLDSTG
 !####################################################################
 SUBROUTINE CMF_LEVEE_OPT_PTHOUT
 ! realistic bifurcation considering levee
-USE PARKIND1,           ONLY: JPIM, JPRB
+USE PARKIND1,           ONLY: JPIM, JPRB, JPRD
 USE YOS_CMF_INPUT,      ONLY: DT, PGRV, DMIS
 USE YOS_CMF_MAP,        ONLY: NSEQALL, NSEQMAX, NPTHOUT, NPTHLEV, PTH_UPST, PTH_DOWN, PTH_DST, &
                             & PTH_ELV, PTH_WTH, PTH_MAN, I2MASK
@@ -497,6 +497,9 @@ REAL(KIND=JPRB)    ::  D2SFCELV_LEV(NSEQMAX,1)                  !! water surface
 
 REAL(KIND=JPRB)    ::  D2SFCELV_PRE(NSEQMAX,1)                  !! water surface elev (t-1) [m] (for stable calculation)
 REAL(KIND=JPRB)    ::  D2RATE(NSEQMAX,1)                        !! outflow correction
+
+REAL(KIND=JPRD)    ::  P2PTHOUT(NSEQMAX,1)                        !! for SinglePrecision Mode
+REAL(KIND=JPRD)    ::  P2PTHINF(NSEQMAX,1)                        !! 
 
 ! SAVE for OpenMP
 INTEGER(KIND=JPIM),SAVE ::  IPTH, ILEV, ISEQ, ISEQP, JSEQP
@@ -512,8 +515,8 @@ DO ISEQ=1, NSEQALL
   ENDIF
 
   D2SFCELV_PRE(ISEQ,1) = D2RIVELV(ISEQ,1)+D2RIVDPH_PRE(ISEQ,1)
-  D2PTHOUT(ISEQ,1) = 0._JPRB
-  D2PTHINF(ISEQ,1) = 0._JPRB
+  P2PTHOUT(ISEQ,1) = 0._JPRD
+  P2PTHINF(ISEQ,1) = 0._JPRD
   D2RATE(ISEQ,1)   =-999._JPRB
 END DO
 !$OMP END PARALLEL DO
@@ -524,7 +527,7 @@ DO IPTH=1, NPTHOUT
   ISEQP=PTH_UPST(IPTH)
   JSEQP=PTH_DOWN(IPTH)
   !! Avoid calculation outside of domain
-  IF (ISEQP == 0 .OR. JSEQP== 0 ) CYCLE
+  IF (ISEQP<=0 .OR. JSEQP<=0 ) CYCLE
   IF (I2MASK(ISEQP,1) == 1 .OR. I2MASK(JSEQP,1) == 1 ) CYCLE  !! I2MASK is for kinematic-inertial mixed flow scheme. 
 
 !! [1] for channel bifurcation, use river surface elevation  
@@ -578,16 +581,16 @@ DO IPTH=1, NPTHOUT
   ISEQP=PTH_UPST(IPTH)
   JSEQP=PTH_DOWN(IPTH)
   !! Avoid calculation outside of domain
-  IF (ISEQP == 0 .OR. JSEQP== 0 ) CYCLE
+  IF (ISEQP<=0 .OR. JSEQP<=0 ) CYCLE
   IF (I2MASK(ISEQP,1) == 1 .OR. I2MASK(JSEQP,1) == 1 ) CYCLE
 
   DO ILEV=1, NPTHLEV
     IF( D1PTHFLW(IPTH,ILEV) >= 0._JPRB )THEN                                  !! total outflow from each grid
 !$OMP ATOMIC
-      D2PTHOUT(ISEQP,1) = D2PTHOUT(ISEQP,1) + D1PTHFLW(IPTH,ILEV)
+      P2PTHOUT(ISEQP,1) = P2PTHOUT(ISEQP,1) + D1PTHFLW(IPTH,ILEV)
     ELSE
 !$OMP ATOMIC
-      D2PTHOUT(JSEQP,1) = D2PTHOUT(JSEQP,1) - D1PTHFLW(IPTH,ILEV)
+      P2PTHOUT(JSEQP,1) = P2PTHOUT(JSEQP,1) - D1PTHFLW(IPTH,ILEV)
     ENDIF
   END DO
 END DO
@@ -608,6 +611,9 @@ DO ISEQ=1, NSEQALL
 END DO
 !$OMP END PARALLEL DO
 
+D2PTHOUT(:,:)=P2PTHOUT(:,:)
+
+
 #ifndef NoAtom_CMF
 !$OMP PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
 #endif
@@ -615,18 +621,18 @@ DO IPTH=1, NPTHOUT
   ISEQP=PTH_UPST(IPTH)
   JSEQP=PTH_DOWN(IPTH)
   !! Avoid calculation outside of domain
-  IF (ISEQP == 0 .OR. JSEQP== 0 ) CYCLE
+  IF (ISEQP<=0 .OR. JSEQP<=0 ) CYCLE
   IF (I2MASK(ISEQP,1) == 1 .OR. I2MASK(JSEQP,1) == 1 ) CYCLE
   
   DO ILEV=1, NPTHLEV
     IF( D1PTHFLW(IPTH,ILEV) >= 0._JPRB )THEN
       D1PTHFLW(IPTH,ILEV) = D1PTHFLW(IPTH,ILEV)*D2RATE(ISEQP,1)
 !$OMP ATOMIC
-      D2PTHINF(JSEQP,1) = D2PTHINF(JSEQP,1) + D1PTHFLW(IPTH,ILEV)             !! total inflow [m3/s] (from upstream)
+      P2PTHINF(JSEQP,1) = P2PTHINF(JSEQP,1) + D1PTHFLW(IPTH,ILEV)             !! total inflow [m3/s] (from upstream)
     ELSE
       D1PTHFLW(IPTH,ILEV) = D1PTHFLW(IPTH,ILEV)*D2RATE(JSEQP,1)
 !$OMP ATOMIC
-      D2PTHINF(ISEQP,1) = D2PTHINF(ISEQP,1) - D1PTHFLW(IPTH,ILEV)             !! total inflow [m3/s] (from upstream)
+      P2PTHINF(ISEQP,1) = P2PTHINF(ISEQP,1) - D1PTHFLW(IPTH,ILEV)             !! total inflow [m3/s] (from upstream)
     ENDIF
     D1PTHFLW_PRE(IPTH,ILEV)=D1PTHFLW(IPTH,ILEV)
   END DO
@@ -634,6 +640,9 @@ END DO
 #ifndef NoAtom_CMF
 !$OMP END PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
 #endif
+
+D2PTHINF(:,:)=P2PTHINF(:,:)
+
 
 END SUBROUTINE CMF_LEVEE_OPT_PTHOUT
 !################################################################
