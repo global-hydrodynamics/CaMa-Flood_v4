@@ -120,10 +120,6 @@ IF ( LOUTINS ) THEN
   CALL CMF_CALC_OUTINS            !! reservoir operation
 ENDIF
 
-IF ( LDAMOUT ) THEN
-  CALL CMF_DAMOUT_WRTE            !! reservoir operation
-ENDIF
-
 
 CONTAINS
 !==========================================================

@@ -22,7 +22,7 @@ MODULE CMF_CTRL_OUTPUT_MOD
 USE PARKIND1,                ONLY: JPIM, JPRB, JPRM
 USE YOS_CMF_INPUT,           ONLY: LOGNAM,  IFRQ_OUT
 USE YOS_CMF_INPUT,           ONLY: CSUFBIN, CSUFVEC, CSUFPTH, CSUFCDF
-USE YOS_CMF_INPUT,           ONLY: LPTHOUT, LDAMOUT, LLEVEE,  LWEVAP, LGDWDLY, LOUTINS
+USE YOS_CMF_INPUT,           ONLY: LPTHOUT, LDAMOUT, LLEVEE,  LWEVAP, LGDWDLY, LOUTINS,LROSPLIT
 IMPLICIT NONE
 !============================
 SAVE
@@ -35,7 +35,10 @@ LOGICAL                         ::  LOUTVEC           ! TRUE FOR VECTORIAL OUTPU
 LOGICAL                         ::  LOUTCDF           ! true for netcdf outptu false for binary
 INTEGER(KIND=JPIM)              ::  NDLEVEL           ! NETCDF DEFLATION LEVEL 
 !
-NAMELIST/NOUTPUT/ COUTDIR,CVARSOUT,COUTTAG,LOUTCDF,NDLEVEL,LOUTVEC,IFRQ_OUT
+LOGICAL                         ::  LOUTTXT           ! TRUE FOR Text output for some gauges
+CHARACTER(LEN=256)              ::  CGAUTXT           ! List of Gauges (ID, IX, IY)
+!
+NAMELIST/NOUTPUT/ COUTDIR,CVARSOUT,COUTTAG,LOUTCDF,NDLEVEL,LOUTVEC,IFRQ_OUT,LOUTTXT,CGAUTXT
 !
 !*** local variables
 INTEGER(KIND=JPIM)              :: NVARS              ! temporal output var number
@@ -88,6 +91,9 @@ LOUTCDF=.FALSE.
 NDLEVEL=0
 LOUTVEC=.FALSE.
 IFRQ_OUT = 24                !! daily (24h) output
+!
+LOUTTXT=.FALSE.
+CGAUTXT="None"
 
 !*** 3. read namelist
 REWIND(NSETFILE)
@@ -105,9 +111,10 @@ ENDIF
 if( LOUTVEC )THEN
   WRITE(LOGNAM,*) "LOUTVEC:  ", LOUTVEC
 ENDIF
-
 WRITE(LOGNAM,*)   "IFRQ_OUT  ", IFRQ_OUT
 
+WRITE(LOGNAM,*)   "IFRQ_OUT  ", LOUTTXT
+WRITE(LOGNAM,*)   "CGAUTXRT  ", CGAUTXT
 
 CLOSE(NSETFILE)
 
@@ -233,12 +240,10 @@ DO JF=1,NVARSOUT
       VAROUT(JF)%CVUNITS='m3'
 
     CASE ('pthflw')
-      IF( .not. LPTHOUT ) CYCLE
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='bifurcation channel discharge'
       VAROUT(JF)%CVUNITS='m3/s'
     CASE ('pthout')
-      IF( .not. LPTHOUT ) CYCLE
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='net bifurcation discharge'
       VAROUT(JF)%CVUNITS='m3/s'
@@ -266,61 +271,51 @@ DO JF=1,NVARSOUT
       VAROUT(JF)%CVUNITS='m3/s' 
 
     CASE ('damsto')   !!! added
-      IF( .not. LDAMOUT ) CYCLE
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='reservoir storage'
       VAROUT(JF)%CVUNITS='m3' 
     CASE ('daminf')   !!! added
-      IF( .not. LDAMOUT ) CYCLE
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='reservoir inflow'
       VAROUT(JF)%CVUNITS='m3/s' 
 
     CASE ('levsto')   !!! added
-      IF( .not. LLEVEE ) CYCLE
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='protected area storage'
       VAROUT(JF)%CVUNITS='m3' 
     CASE ('levdph')   !!! added
-      IF( .not. LLEVEE ) CYCLE
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='protected area depth'
       VAROUT(JF)%CVUNITS='m' 
 
     CASE ('gdwsto')
-      IF( .not. LGDWDLY ) CYCLE
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='ground water storage'
       VAROUT(JF)%CVUNITS='m3'
     CASE ('gwsto')
-      IF( .not. LGDWDLY ) CYCLE
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='ground water storage'
       VAROUT(JF)%CVUNITS='m3'
     CASE ('gwout')
-      IF( .not. LGDWDLY ) CYCLE
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='ground water discharge'
       VAROUT(JF)%CVUNITS='m3/s'  
 
     CASE ('wevap')
-      IF( .not. LWEVAP ) CYCLE
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='water evaporation'
       VAROUT(JF)%CVUNITS='m3/s'
-
     CASE ('outins')
-      IF( .not. LOUTINS ) CYCLE
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='instantaneous discharge'
       VAROUT(JF)%CVUNITS='m3/s' 
 
     CASE DEFAULT
     WRITE(LOGNAM,*) trim(CVNAMES(JF)), ' Not defined in CMF_CREATE_OUTCDF_MOD'
-#ifdef IFS_CMF
-    CALL ABORT
-#endif
-    stop
+!#ifdef IFS_CMF
+!    CALL ABORT
+!#endif
+!    stop
   END SELECT
   VAROUT(JF)%BINID=INQUIRE_FID()
 
@@ -513,8 +508,6 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
         D2VEC => D2PTHOUT_AVG
       CASE ('pthflw')
         IF( .not. LPTHOUT ) CYCLE
-        WRITE(LOGNAM,*) ''       !! 1d bifurcation channel (do not use D2VEC)
-
       CASE ('maxflw')
         D2VEC =>  D2OUTFLW_MAX
       CASE ('maxdph')
@@ -523,6 +516,7 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
         D2VEC =>  D2STORGE_MAX
 
       CASE ('outins')
+        IF( .not. LOUTINS ) CYCLE
         D2VEC =>  D2OUTINS
 
       CASE ('gwsto')
@@ -543,6 +537,7 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
       CASE ('runoff')             !!  compatibility for previous file name
         D2VEC =>  D2RUNOFF_AVG  
       CASE ('runoffsub')           !!  compatibility for previous file name
+        IF( .not. LROSPLIT ) CYCLE
         D2VEC =>  D2ROFSUB_AVG  
       CASE ('rofsfc')
         D2VEC =>  D2RUNOFF_AVG
@@ -569,10 +564,10 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
         D2VEC =>  D2LEVDPH
 
       CASE DEFAULT
-        WRITE(LOGNAM,*) VAROUT(JF)%CVNAME, ' Not defined in CMF_OUTPUT_MOD'
-#ifdef IFS_CMF
-        CALL ABORT
-#endif
+!        WRITE(LOGNAM,*) VAROUT(JF)%CVNAME, ' Not defined in CMF_OUTPUT_MOD'
+!#ifdef IFS_CMF
+!        CALL ABORT
+!#endif
     END SELECT   !! variable name select
 
     IF( KSTEP==0 .and. LOUTINI )THEN  !! write storage only when LOUTINI specified
@@ -775,5 +770,94 @@ END SUBROUTINE CMF_OUTPUT_END
 !####################################################################
 
 
+
+!####################################################################
+SUBROUTINE CMF_OUTTXT_WRTE
+USE YOS_CMF_DIAG,       ONLY: D2OUTFLW
+USE YOS_CMF_TIME,       ONLY: IYYYYMMDD,ISYYYY
+USE YOS_CMF_MAP,        ONLY: I2VECTOR
+USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
+
+! local
+INTEGER(KIND=JPIM)                  :: GID, GIX, GIY, GISEQ
+CHARACTER(len=256),SAVE             :: GNAME
+
+INTEGER(KIND=JPIM),SAVE             :: IGAUGE, NGAUGE, NGAUGEX
+INTEGER(KIND=JPIM),ALLOCATABLE,SAVE :: WriteID(:), WriteISEQ(:)
+CHARACTER(len=9),ALLOCATABLE,SAVE   :: WriteName(:)
+REAL(KIND=JPRB),ALLOCATABLE,SAVE    :: WriteOut(:)
+
+! File IO
+INTEGER(KIND=JPIM),SAVE             :: LOGOUTTXT
+CHARACTER(len=4),SAVE               :: cYYYY
+CHARACTER(len=256),SAVE             :: CLEN, CFMT
+CHARACTER(len=256),SAVE             :: COUTTXT
+LOGICAL,SAVE                        :: IsOpen
+DATA IsOpen       /.FALSE./
+
+! ======
+
+IF( LOUTTXT )THEN
+
+  IF( .not. IsOpen)THEN
+    IsOpen=.TRUE.
+
+    NGAUGEX=0
+    LOGOUTTXT=INQUIRE_FID()
+    OPEN(LOGOUTTXT,FILE=CGAUTXT,FORM='formatted',STATUS='old')
+    READ(LOGOUTTXT,*) NGAUGE
+    DO IGAUGE=1, NGAUGE
+      READ(LOGOUTTXT,*) GID, GNAME, GIX, GIY
+      IF( I2VECTOR(GIX,GIY)>0 )THEN
+        NGAUGEX=NGAUGEX+1
+      ENDIF
+    END DO
+    CLOSE(LOGOUTTXT)
+
+    ALLOCATE( WriteID(NGAUGEX),WriteISEQ(NGAUGEX),WriteOut(NGAUGEX),WriteName(NGAUGEX))
+
+    NGAUGEX=0
+    OPEN(LOGOUTTXT,FILE=CGAUTXT,FORM='formatted',STATUS='old')
+    READ(LOGOUTTXT,*) NGAUGE
+    DO IGAUGE=1, NGAUGE
+      READ(LOGOUTTXT,*) GID, GNAME, GIX, GIY
+      IF( I2VECTOR(GIX,GIY)>0 )THEN
+        NGAUGEX=NGAUGEX+1
+        WriteID(NGAUGEX)  =GID
+        WriteName(NGAUGEX)=GNAME
+        WriteISEQ(NGAUGEX)=I2VECTOR(GIX,GIY)
+      ENDIF
+    END DO
+    CLOSE(LOGOUTTXT)
+
+    ! ============
+    WRITE(CYYYY,'(i4.4)') ISYYYY
+    COUTTXT='./outtxt-'//trim(cYYYY)//'.txt'
+
+    LOGOUTTXT=INQUIRE_FID()
+    OPEN(LOGOUTTXT,FILE=COUTTXT,FORM='formatted')
+
+    WRITE(CLEN,'(i0)') NGAUGE
+    CFMT="(i10,"//TRIM(CLEN)//"(i10))"
+    WRITE(LOGOUTTXT,CFMT) NGAUGEX, ( WriteID(IGAUGE),IGAUGE=1,NGAUGEX )
+
+    CFMT="(i10,"//TRIM(CLEN)//"(x,a9))"
+    WRITE(LOGOUTTXT,CFMT) NGAUGEX, ( WriteName(IGAUGE),IGAUGE=1,NGAUGEX )
+
+
+    CFMT="(i10,"//TRIM(CLEN)//"(f10.2))"
+  ENDIF
+
+  DO IGAUGE=1, NGAUGEX
+    GISEQ=WriteISEQ(IGAUGE)
+    WriteOut(IGAUGE) = D2OUTFLW(GISEQ,1)
+  END DO
+  
+  WRITE(LOGOUTTXT,CFMT) IYYYYMMDD, ( WriteOUT(IGAUGE),IGAUGE=1,NGAUGEX )
+
+ENDIF
+
+END SUBROUTINE CMF_OUTTXT_WRTE
+!####################################################################
 
 END MODULE CMF_CTRL_OUTPUT_MOD

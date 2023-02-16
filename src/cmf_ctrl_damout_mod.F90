@@ -18,7 +18,7 @@ MODULE CMF_CTRL_DAMOUT_MOD
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
 USE PARKIND1,                ONLY: JPIM, JPRB, JPRM, JPRD
-USE YOS_CMF_INPUT,           ONLY: LOGNAM, IMIS
+USE YOS_CMF_INPUT,           ONLY: LOGNAM, IMIS, LDAMOUT
 !============================
 IMPLICIT NONE
 SAVE
@@ -606,7 +606,7 @@ DATA IsOpen       /.FALSE./
 
 ! ======
 
-IF( LDAMTXT )THEN
+IF( LDAMTXT .and. LDAMTXT)THEN
 
   IF( .not. IsOpen)THEN
     IsOpen=.TRUE.
