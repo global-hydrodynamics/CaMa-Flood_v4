@@ -94,10 +94,14 @@ DO IPTH=1, NPTHOUT
 
   DO ILEV=1, NPTHLEV
     IF( D1PTHFLW(IPTH,ILEV) >= 0._JPRB )THEN                                  !! total outflow from each grid
+#ifndef NoAtom_CMF
 !$OMP ATOMIC
+#endif
       P2PTHOUT(ISEQP,1) = P2PTHOUT(ISEQP,1) + D1PTHFLW(IPTH,ILEV)
     ELSE
+#ifndef NoAtom_CMF
 !$OMP ATOMIC
+#endif
       P2PTHOUT(JSEQP,1) = P2PTHOUT(JSEQP,1) - D1PTHFLW(IPTH,ILEV)
     ENDIF
   END DO
@@ -134,11 +138,15 @@ DO IPTH=1, NPTHOUT
   DO ILEV=1, NPTHLEV
     IF( D1PTHFLW(IPTH,ILEV) >= 0._JPRB )THEN
       D1PTHFLW(IPTH,ILEV) = D1PTHFLW(IPTH,ILEV)*D2RATE(ISEQP,1)
+#ifndef NoAtom_CMF
 !$OMP ATOMIC
+#endif
       P2PTHINF(JSEQP,1) = P2PTHINF(JSEQP,1) + D1PTHFLW(IPTH,ILEV)             !! total inflow [m3/s] (from upstream)
     ELSE
       D1PTHFLW(IPTH,ILEV) = D1PTHFLW(IPTH,ILEV)*D2RATE(JSEQP,1)
+#ifndef NoAtom_CMF
 !$OMP ATOMIC
+#endif
       P2PTHINF(ISEQP,1) = P2PTHINF(ISEQP,1) - D1PTHFLW(IPTH,ILEV)             !! total inflow [m3/s] (from upstream)
     ENDIF
     D1PTHFLW_PRE(IPTH,ILEV)=D1PTHFLW(IPTH,ILEV)

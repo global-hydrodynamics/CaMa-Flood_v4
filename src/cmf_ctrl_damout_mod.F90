@@ -426,7 +426,9 @@ END DO
 DO ISEQ=1, NSEQALL
   IF( I1DAM(ISEQ)==10 .or. I1DAM(ISEQ)==11 )THEN  !! if dam grid or upstream of dam
     JSEQ=I1NEXT(ISEQ)
+#ifndef NoAtom_CMF
 !$OMP ATOMIC
+#endif
     P2DAMINF(JSEQ,1) = P2DAMINF(JSEQ,1) + D2RIVOUT_PRE(ISEQ,1) + D2FLDOUT_PRE(ISEQ,1) 
   ENDIF
 END DO
@@ -506,9 +508,13 @@ DO ISEQ=1, NSEQRIV                                                    !! for nor
   OUT_F2 = max( -D2FLDOUT(ISEQ,1),0._JPRB )
   DIUP=(OUT_R1+OUT_F1)*DT
   DIDW=(OUT_R2+OUT_F2)*DT
+#ifndef NoAtom_CMF
 !$OMP ATOMIC
+#endif
   P2STOOUT(ISEQ,1) = P2STOOUT(ISEQ,1) + DIUP 
+#ifndef NoAtom_CMF
 !$OMP ATOMIC
+#endif
   P2STOOUT(JSEQ,1) = P2STOOUT(JSEQ,1) + DIDW 
 END DO
 #ifndef NoAtom_CMF
@@ -548,9 +554,13 @@ DO ISEQ=1, NSEQRIV ! for normal pixels
     D2RIVOUT(ISEQ,1) = D2RIVOUT(ISEQ,1)*D2RATE(JSEQ,1)
     D2FLDOUT(ISEQ,1) = D2FLDOUT(ISEQ,1)*D2RATE(JSEQ,1)
   ENDIF
+#ifndef NoAtom_CMF
 !$OMP ATOMIC
+#endif
   P2RIVINF(JSEQ,1) = P2RIVINF(JSEQ,1) + D2RIVOUT(ISEQ,1)             !! total inflow to a grid (from upstream)
+#ifndef NoAtom_CMF
 !$OMP ATOMIC
+#endif
   P2FLDINF(JSEQ,1) = P2FLDINF(JSEQ,1) + D2FLDOUT(ISEQ,1)
 END DO
 #ifndef NoAtom_CMF
@@ -583,8 +593,7 @@ USE YOS_CMF_TIME,       ONLY: IYYYYMMDD,ISYYYY
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
 
 ! local
-INTEGER(KIND=JPIM)         :: WriteID(NDAMX)
-REAL(KIND=JPRB)            :: WriteVol(NDAMX), WriteVol2(NDAMX), WriteInf(NDAMX), WriteOUt(NDAMX)
+CHARACTER(len=36)          :: WriteTXT(NDAMX), WriteTXT2(NDAMX)
 
 ! File IO
 INTEGER(KIND=JPIM),SAVE    :: ISEQD, JDAM
@@ -608,24 +617,22 @@ IF( LDAMTXT )THEN
     OPEN(LOGDAM,FILE=DAMTXT,FORM='formatted')
 
     WRITE(CLEN,'(i0)') NDAMX
-    CFMT="(a10,i10,"//TRIM(CLEN)//"(i6,3f12.4))"
+    CFMT="(i10,"//TRIM(CLEN)//"(a36))"
 
     JDAM=0
     DO IDAM=1, NDAM
       IF( DamSeq(IDAM)<=0 ) CYCLE
       JDAM=JDAM+1
       ISEQD=DamSeq(IDAM)
-  
-      WriteID(JDAM)  = GRanD_ID(IDAM)
-      WriteVol(JDAM) = (FldVol(IDAM)+ConVol(IDAM) )
-      WriteVol2(JDAM)= ConVol(IDAM)
-      IF( LDAMH22 )THEN
-        WriteOut(JDAM) = Qn(IDAM)
-      ELSE
-        WriteOut(JDAM) = Qn(IDAM)*4.0 !! Annual Mean
-      ENDIF
+
+      WRITE(WriteTxt(JDAM), '(i12,2f12.2)') GRanD_ID(IDAM), (FldVol(IDAM)+ConVol(IDAM))*1.E-9, ConVol(IDAM)*1.E-9
+      WRITE(WriteTxt2(JDAM),'(i12,2f12.2)') upreal(IDAM),   Qf(IDAM), Qn(IDAM)
     END DO
-    WRITE(LOGDAM,CFMT) 'WriteDam:', NDAMX, ( (WriteID(JDAM),WriteVol(JDAM)*1.E-9,WriteVol2(JDAM)*1.E-9,WriteOut(JDAM)), JDAM=1, NDAMX)
+
+    WRITE(LOGDAM,CFMT) NDAMX, (WriteTXT(JDAM) ,JDAM=1, NDAMX)
+
+    CFMT="(a10,"//TRIM(CLEN)//"(a36))"
+    WRITE(LOGDAM,CFMT)  "Date", (WriteTXT2(JDAM),JDAM=1, NDAMX)
   ENDIF
 
   JDAM=0
@@ -633,14 +640,11 @@ IF( LDAMTXT )THEN
     IF( DamSeq(IDAM)<=0 ) CYCLE
     JDAM=JDAM+1
     ISEQD=DamSeq(IDAM)
-  
-    WriteID(JDAM)  = GRanD_ID(IDAM)
-    WriteVol(JDAM) = P2DAMSTO(ISEQD,1)    
-    WriteInf(JDAM) = P2DAMINF(ISEQD,1)
-    WriteOut(JDAM) = D2RIVOUT(ISEQD,1)
+    WRITE(WriteTxt(JDAM), '(3f12.2)') P2DAMSTO(ISEQD,1)*1.E-9, P2DAMINF(ISEQD,1), D2RIVOUT(ISEQD,1)
   END DO
-  
-  WRITE(LOGDAM,CFMT) 'WriteDam:', IYYYYMMDD, ( (WriteID(JDAM),WriteVol(JDAM)*1.E-9,WriteInf(JDAM),WriteOut(JDAM)), JDAM=1, NDAM)
+
+  CFMT="(i10,"//TRIM(CLEN)//"(a36))"  
+  WRITE(LOGDAM,CFMT) IYYYYMMDD, (WriteTXT(JDAM),JDAM=1, NDAMX)
 
 ENDIF
 
