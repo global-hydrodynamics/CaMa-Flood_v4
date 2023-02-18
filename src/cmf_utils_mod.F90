@@ -483,6 +483,7 @@ INTEGER                         :: i_element
 INTEGER                         :: i_element_br
 !================================================
 ! Transfer 32 bits of realIn to generic 32 bit INTEGER space:
+i_element_br=0
 i_element = TRANSFER( realIn, 0 )
 ! Reverse order of 4 bytes in 32 bit INTEGER space:
 CALL MVBITS( i_element, 24, 8, i_element_br, 0  )
@@ -508,6 +509,7 @@ INTEGER                              :: i_element
 INTEGER                              :: i_element_br
 !================================================
 ! Transfer 32 bits of realIn to generic 32 bit INTEGER space:
+i_element_br=0
 i_element = TRANSFER( IntIn, 0 )
 ! Reverse order of 4 bytes in 32 bit INTEGER space:
 CALL MVBITS( i_element, 24, 8, i_element_br, 0  )

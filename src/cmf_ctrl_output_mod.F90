@@ -824,7 +824,7 @@ IF( LOUTTXT )THEN
       IF( I2VECTOR(GIX,GIY)>0 )THEN
         NGAUGEX=NGAUGEX+1
         WriteID(NGAUGEX)  =GID
-        WriteName(NGAUGEX)=GNAME
+        WriteName(NGAUGEX)=TRIM(GNAME)
         WriteISEQ(NGAUGEX)=I2VECTOR(GIX,GIY)
       ENDIF
     END DO
@@ -832,7 +832,7 @@ IF( LOUTTXT )THEN
 
     ! ============
     WRITE(CYYYY,'(i4.4)') ISYYYY
-    COUTTXT='./outtxt-'//trim(cYYYY)//'.txt'
+    COUTTXT='./outtxt-'//TRIM(cYYYY)//'.txt'
 
     LOGOUTTXT=INQUIRE_FID()
     OPEN(LOGOUTTXT,FILE=COUTTXT,FORM='formatted')
