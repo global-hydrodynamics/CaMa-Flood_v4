@@ -35,7 +35,10 @@ LOGICAL                         ::  LOUTVEC           ! TRUE FOR VECTORIAL OUTPU
 LOGICAL                         ::  LOUTCDF           ! true for netcdf outptu false for binary
 INTEGER(KIND=JPIM)              ::  NDLEVEL           ! NETCDF DEFLATION LEVEL 
 !
-NAMELIST/NOUTPUT/ COUTDIR,CVARSOUT,COUTTAG,LOUTCDF,NDLEVEL,LOUTVEC,IFRQ_OUT
+LOGICAL                         ::  LOUTTXT           ! TRUE FOR Text output for some gauges
+CHARACTER(LEN=256)              ::  CGAUTXT           ! List of Gauges (ID, IX, IY)
+!
+NAMELIST/NOUTPUT/ COUTDIR,CVARSOUT,COUTTAG,LOUTCDF,NDLEVEL,LOUTVEC,IFRQ_OUT,LOUTTXT,CGAUTXT
 !
 !*** local variables
 INTEGER(KIND=JPIM)              :: NVARS              ! temporal output var number
@@ -88,6 +91,9 @@ LOUTCDF=.FALSE.
 NDLEVEL=0
 LOUTVEC=.FALSE.
 IFRQ_OUT = 24                !! daily (24h) output
+!
+LOUTTXT=.FALSE.
+CGAUTXT="None"
 
 !*** 3. read namelist
 REWIND(NSETFILE)
@@ -105,9 +111,10 @@ ENDIF
 if( LOUTVEC )THEN
   WRITE(LOGNAM,*) "LOUTVEC:  ", LOUTVEC
 ENDIF
-
 WRITE(LOGNAM,*)   "IFRQ_OUT  ", IFRQ_OUT
 
+WRITE(LOGNAM,*)   "IFRQ_OUT  ", LOUTTXT
+WRITE(LOGNAM,*)   "CGAUTXRT  ", CGAUTXT
 
 CLOSE(NSETFILE)
 
@@ -763,5 +770,94 @@ END SUBROUTINE CMF_OUTPUT_END
 !####################################################################
 
 
+
+!####################################################################
+SUBROUTINE CMF_OUTTXT_WRTE
+USE YOS_CMF_DIAG,       ONLY: D2OUTFLW
+USE YOS_CMF_TIME,       ONLY: IYYYYMMDD,ISYYYY
+USE YOS_CMF_MAP,        ONLY: I2VECTOR
+USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
+
+! local
+INTEGER(KIND=JPIM)                  :: GID, GIX, GIY, GISEQ
+CHARACTER(len=256),SAVE             :: GNAME
+
+INTEGER(KIND=JPIM),SAVE             :: IGAUGE, NGAUGE, NGAUGEX
+INTEGER(KIND=JPIM),ALLOCATABLE,SAVE :: WriteID(:), WriteISEQ(:)
+CHARACTER(len=9),ALLOCATABLE,SAVE   :: WriteName(:)
+REAL(KIND=JPRB),ALLOCATABLE,SAVE    :: WriteOut(:)
+
+! File IO
+INTEGER(KIND=JPIM),SAVE             :: LOGOUTTXT
+CHARACTER(len=4),SAVE               :: cYYYY
+CHARACTER(len=256),SAVE             :: CLEN, CFMT
+CHARACTER(len=256),SAVE             :: COUTTXT
+LOGICAL,SAVE                        :: IsOpen
+DATA IsOpen       /.FALSE./
+
+! ======
+
+IF( LOUTTXT )THEN
+
+  IF( .not. IsOpen)THEN
+    IsOpen=.TRUE.
+
+    NGAUGEX=0
+    LOGOUTTXT=INQUIRE_FID()
+    OPEN(LOGOUTTXT,FILE=CGAUTXT,FORM='formatted',STATUS='old')
+    READ(LOGOUTTXT,*) NGAUGE
+    DO IGAUGE=1, NGAUGE
+      READ(LOGOUTTXT,*) GID, GNAME, GIX, GIY
+      IF( I2VECTOR(GIX,GIY)>0 )THEN
+        NGAUGEX=NGAUGEX+1
+      ENDIF
+    END DO
+    CLOSE(LOGOUTTXT)
+
+    ALLOCATE( WriteID(NGAUGEX),WriteISEQ(NGAUGEX),WriteOut(NGAUGEX),WriteName(NGAUGEX))
+
+    NGAUGEX=0
+    OPEN(LOGOUTTXT,FILE=CGAUTXT,FORM='formatted',STATUS='old')
+    READ(LOGOUTTXT,*) NGAUGE
+    DO IGAUGE=1, NGAUGE
+      READ(LOGOUTTXT,*) GID, GNAME, GIX, GIY
+      IF( I2VECTOR(GIX,GIY)>0 )THEN
+        NGAUGEX=NGAUGEX+1
+        WriteID(NGAUGEX)  =GID
+        WriteName(NGAUGEX)=TRIM(GNAME)
+        WriteISEQ(NGAUGEX)=I2VECTOR(GIX,GIY)
+      ENDIF
+    END DO
+    CLOSE(LOGOUTTXT)
+
+    ! ============
+    WRITE(CYYYY,'(i4.4)') ISYYYY
+    COUTTXT='./outtxt-'//TRIM(cYYYY)//'.txt'
+
+    LOGOUTTXT=INQUIRE_FID()
+    OPEN(LOGOUTTXT,FILE=COUTTXT,FORM='formatted')
+
+    WRITE(CLEN,'(i0)') NGAUGE
+    CFMT="(i10,"//TRIM(CLEN)//"(i10))"
+    WRITE(LOGOUTTXT,CFMT) NGAUGEX, ( WriteID(IGAUGE),IGAUGE=1,NGAUGEX )
+
+    CFMT="(i10,"//TRIM(CLEN)//"(x,a9))"
+    WRITE(LOGOUTTXT,CFMT) NGAUGEX, ( WriteName(IGAUGE),IGAUGE=1,NGAUGEX )
+
+
+    CFMT="(i10,"//TRIM(CLEN)//"(f10.2))"
+  ENDIF
+
+  DO IGAUGE=1, NGAUGEX
+    GISEQ=WriteISEQ(IGAUGE)
+    WriteOut(IGAUGE) = D2OUTFLW(GISEQ,1)
+  END DO
+  
+  WRITE(LOGOUTTXT,CFMT) IYYYYMMDD, ( WriteOUT(IGAUGE),IGAUGE=1,NGAUGEX )
+
+ENDIF
+
+END SUBROUTINE CMF_OUTTXT_WRTE
+!####################################################################
 
 END MODULE CMF_CTRL_OUTPUT_MOD

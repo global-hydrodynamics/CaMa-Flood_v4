@@ -123,9 +123,13 @@ DO ISEQ=1, NSEQRIV                                                    !! for nor
   OUT_F2 = max( -D2FLDOUT(ISEQ,1),0._JPRB )
   DIUP=(OUT_R1+OUT_F1)*DT
   DIDW=(OUT_R2+OUT_F2)*DT
+#ifndef NoAtom_CMF
 !$OMP ATOMIC
+#endif
   P2STOOUT(ISEQ,1) = P2STOOUT(ISEQ,1) + DIUP 
+#ifndef NoAtom_CMF
 !$OMP ATOMIC
+#endif
   P2STOOUT(JSEQ,1) = P2STOOUT(JSEQ,1) + DIDW 
 END DO
 #ifndef NoAtom_CMF
@@ -215,9 +219,13 @@ DO ISEQ=1, NSEQRIV ! for normal pixels
     D2RIVOUT(ISEQ,1) = D2RIVOUT(ISEQ,1)*D2RATE(JSEQ,1)
     D2FLDOUT(ISEQ,1) = D2FLDOUT(ISEQ,1)*D2RATE(JSEQ,1)
   ENDIF
+#ifndef NoAtom_CMF
 !$OMP ATOMIC
+#endif
   P2RIVINF(JSEQ,1) = P2RIVINF(JSEQ,1) + D2RIVOUT(ISEQ,1)             !! total inflow to a grid (from upstream)
+#ifndef NoAtom_CMF
 !$OMP ATOMIC
+#endif
   P2FLDINF(JSEQ,1) = P2FLDINF(JSEQ,1) + D2FLDOUT(ISEQ,1)
 END DO
 #ifndef NoAtom_CMF
