@@ -238,6 +238,7 @@ IF( LRESTART .AND. LSTOONLY )THEN
   WRITE(LOGNAM,*) "CMF::DRV_INIT: (5a) set flood stage at initial condition"
   !** v4.03 CALC_FLDSTG for storagy only restart (v4.03)
   CALL CMF_PHYSICS_FLDSTG
+  CALL CMF_CALC_OUTPRE  !! bugfix in v4.12
 ENDIF
 
 !*** 5b save initial storage if LOUTINI specified
