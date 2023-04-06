@@ -43,10 +43,6 @@ Latest GitHub branch (master)  is v4.10
 ## Update in v4.06 (2022.4.8)
 ### Changes related to some developpers 
 - Computationally efficient levee scheme
-
-## Update in v4.06 (2022.4.8)
-### Changes related to some developpers 
-- Computationally efficient levee scheme
 - This version for internal development, so not released.
 
 ## Update in v4.07 (2022.10.20)
