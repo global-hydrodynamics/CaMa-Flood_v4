@@ -45,6 +45,11 @@ REAL(KIND=JPRB),ALLOCATABLE     :: FldVol(:)   !! flood control volume: exclusiv
 REAL(KIND=JPRB),ALLOCATABLE     :: ConVol(:)   !! conservative volume: mainly for water supply
 REAL(KIND=JPRB),ALLOCATABLE     :: NorVol(:)   !! normal storage volume: impoundment
 
+! internal dam param for stability
+REAL(KIND=JPRB),ALLOCATABLE     :: AdjVol(:)   !! 
+REAL(KIND=JPRB),ALLOCATABLE     :: Qa(:)       !!
+
+
 !*** dam map
 INTEGER(KIND=JPIM),ALLOCATABLE  :: DamSeq(:)   !! coresponding ISEQ of each dam
 INTEGER(KIND=JPIM),ALLOCATABLE  :: I1DAM(:)    !! dam map: 1=dam, 10=upstream of dam, 11: dam grid & downstream is also dam, 0=other
@@ -140,6 +145,9 @@ ALLOCATE(Qf(NDAM),Qn(NDAM))
 ALLOCATE(DamSeq(NDAM))
 ALLOCATE(FldVol(NDAM),ConVol(NDAM),EmeVol(NDAM),NorVol(NDAM))
 
+!! for outflw stability
+ALLOCATE(AdjVol(NDAM),Qa(NDAM))
+
 !! dam map, dam variable
 ALLOCATE(I1DAM(NSEQMAX))
 !! =================
@@ -155,25 +163,29 @@ DO IDAM = 1, NDAM
   FldVol(IDAM) = FldVol_mcm * 1.E6                  ! Flood control storage capacity: exclusive for flood control
   ConVol(IDAM) = ConVol_mcm * 1.E6
 
-  EmeVol(IDAM) = ConVol(IDAM) + FldVol(IDAM) * 0.8     ! storage to start emergency operation
-  NorVol(IDAM) = ConVol(IDAM) * 0.5    ! normal storage
+  EmeVol(IDAM) = ConVol(IDAM) + FldVol(IDAM) * 0.9     ! storage to start emergency operation
 
   IX=DamIX(IDAM)
   IY=DamIY(IDAM)
   IF (IX<=0 .or. IX > NX .or. IY<=0 .or. IY > NY ) cycle
 
   ISEQ=I2VECTOR(IX,IY)
-  IF( I1NEXT(ISEQ)==-9999 ) cycle
+  IF( I1NEXT(ISEQ)==-9999 .or. ISEQ<=0 ) cycle
   NDAMX=NDAMX+1
 
   DamSeq(IDAM)=ISEQ
   I1DAM(ISEQ)=1
   I2MASK(ISEQ,1)=2   !! reservoir grid. skipped for adaptive time step
 
-  IF( .not. LDAMH22 )THEN       !! 
+  IF( LDAMH22 )THEN       !! 
+    NorVol(IDAM) = ConVol(IDAM) * 0.5    ! normal storage
+  ELSE
     Vyr =Qn(IDAM)*(365.*24.*60.*60.)
     Qsto=(ConVol(IDAM)*0.7+Vyr/8.)/(180.*24.*60.*60.)   !! possible outflow in 180day from (ConVil*0.7 + PotInflw)
     Qn(IDAM)=min(Qn(IDAM),Qsto)*1.5
+
+    AdjVol(IDAM)=ConVol(IDAM)  + FldVol(IDAM)*0.1
+    Qa(IDAM)=( Qn(IDAM)+Qf(IDAM) )*0.5
   ENDIF
 
 END DO
@@ -207,8 +219,8 @@ IF( .not. LRESTART )THEN
   DO IDAM=1, NDAM
     IF( DamSeq(IDAM)>0 )THEN
       ISEQ=DamSeq(IDAM)
-      P2DAMSTO(ISEQ,1)=NorVol(IDAM)  !! set initial storage to Normal Storage Volume
-      P2RIVSTO(ISEQ,1)=max(P2RIVSTO(ISEQ,1),NorVol(IDAM)*1._JPRD) !! also set initial river storage, in order to keep consistency
+      P2DAMSTO(ISEQ,1)=ConVol(IDAM)*0.5  !! set initial storage to Normal Storage Volume
+      P2RIVSTO(ISEQ,1)=max(P2RIVSTO(ISEQ,1),ConVol(IDAM)*0.5_JPRD) !! also set initial river storage, in order to keep consistency
     ENDIF
   END DO
 ENDIF
@@ -287,7 +299,7 @@ DO IDAM=1, NDAM
 
   !! *** 2b Reservoir Operation          ------------------------------
   IF( LDAMH22 )THEN !! Hanazaki 2022 scheme
-    !! case1: impoundment
+    !! case1: Water
     IF( DamVol <= NorVol(IDAM) )THEN
       DamOutflw = Qn(IDAM) * (DamVol / ConVol(IDAM) )
     !! case2: water supply
@@ -310,33 +322,41 @@ DO IDAM=1, NDAM
     ELSE
       DamOutflw = max(DamInflow, Qf(IDAM))
     ENDIF
+!=============
+  ELSE  !! (not LDAMH22) improved reservoir operation 'Yamazaki & Funato'
 
-  ELSE  !! improved reservoir operation 'Yamazaki & Funato'
+    !! Case 1: water use
     IF( DamVol<=ConVol(IDAM) )THEN
-      IF( DamInflow>=Qf(IDAM) )THEN
-        !!figure left side No.3
-  !      DamOutflw = Qn(IDAM) * 0.5 +   (DamVol-NorVol(IDAM))/(ConVol(IDAM)-NorVol(IDAM)) * (Qf(IDAM) - Qn(IDAM) * 0.5)
-        DamOutflw = Qn(IDAM)
+      DamOutflw = Qn(IDAM) * (DamVol/ConVol(IDAM))**0.5
+    !! case 2: water excess (just avobe ConVol, for outflow stability)
+    ELSEIF( DamVol>ConVol(IDAM) .and. DamVol<=AdjVol(IDAM) ) THEN
+      !! (flood period)
+      IF( DamInflow >= Qf(IDAM) ) THEN
+        DamOutflw = Qn(IDAM) + ( (DamVol-ConVol(IDAM)) / (EmeVol(IDAM)-ConVol(IDAM)) )**1.0 * (DamInflow- Qn(IDAM))
+        DamOutTmp = Qn(IDAM) + ( (DamVol-ConVol(IDAM)) / (AdjVol(IDAM)-ConVol(IDAM)) )**3.0 * (Qa(IDAM) - Qn(IDAM))
+        DamOutflw = max( DamOutflw,DamOutTmp )
+      !! (non-flood period)
       ELSE
-        !!figure right side No.3
-        DamOutflw =  Qn(IDAM) * (DamVol/ConVol(IDAM))**0.5
-      ENDIF  
-    !! case3: flood control(no.2)
-    ELSEIF( DamVol>ConVol(IDAM) .and. DamVol<=EmeVol(IDAM) ) THEN
+        DamOutflw = Qn(IDAM) + ( (DamVol-ConVol(IDAM)) / (AdjVol(IDAM)-ConVol(IDAM)) )**3.0 * (Qa(IDAM) - Qn(IDAM))
+      ENDIF
+    !! case 3: water excess
+    ELSEIF( DamVol>AdjVol(IDAM) .and. DamVol<=EmeVol(IDAM) ) THEN
+      !! (flood period)
       IF( DamInflow >= Qf(IDAM) ) THEN
         !!figure left side No.2
-        DamOutflw = Qn(IDAM) + ( (DamVol-ConVol(IDAM)) / (EmeVol(IDAM)-ConVol(IDAM)) )**1.0 * (DamInflow - Qn(IDAM))
-         DamOutTmp = Qn(IDAM) + ( (DamVol-ConVol(IDAM)) / (EmeVol(IDAM)-ConVol(IDAM)) )**0.5 * (Qf(IDAM) - Qn(IDAM))
+        DamOutflw = Qn(IDAM) + ( (DamVol-ConVol(IDAM)) / (EmeVol(IDAM)-ConVol(IDAM)) )**1.0 * (DamInflow- Qn(IDAM))
+        DamOutTmp = Qa(IDAM) + ( (DamVol-AdjVol(IDAM)) / (EmeVol(IDAM)-AdjVol(IDAM)) )**0.1 * (Qf(IDAM) - Qa(IDAM))
         DamOutflw = max( DamOutflw,DamOutTmp )
-      !! pre- and after flood control
+      !! (non-flood period)
       ELSE
-        !!figure right side No.2
-        DamOutflw = Qn(IDAM) + ( (DamVol-ConVol(IDAM)) / (EmeVol(IDAM)-ConVol(IDAM)) )**0.5 * (Qf(IDAM) - Qn(IDAM))
+        DamOutflw = Qa(IDAM) + ( (DamVol-AdjVol(IDAM)) / (EmeVol(IDAM)-AdjVol(IDAM)) )**0.1 * (Qf(IDAM) - Qa(IDAM))
       ENDIF
-    !! case4: emergency operation(no.1)
+    !! case 4: emergency operation(no.1)
     ELSEIF( DamVol>EmeVol(IDAM) )THEN
+      !! (flood period)
       IF( DamInflow >= Qf(IDAM) ) THEN
         DamOutflw = DamInflow
+      !! (non-flood period)
       ELSE
         DamOutflw = Qf(IDAM)
       ENDIF
@@ -626,7 +646,7 @@ IF( LDAMTXT .and. LDAMTXT)THEN
       ISEQD=DamSeq(IDAM)
 
       WRITE(WriteTxt(JDAM), '(i12,2f12.2)') GRanD_ID(IDAM), (FldVol(IDAM)+ConVol(IDAM))*1.E-9, ConVol(IDAM)*1.E-9
-      WRITE(WriteTxt2(JDAM),'(i12,2f12.2)') upreal(IDAM),   Qf(IDAM), Qn(IDAM)
+      WRITE(WriteTxt2(JDAM),'(3f12.2)') upreal(IDAM),   Qf(IDAM), Qn(IDAM)
     END DO
 
     WRITE(LOGDAM,CFMT) NDAMX, (WriteTXT(JDAM) ,JDAM=1, NDAMX)
