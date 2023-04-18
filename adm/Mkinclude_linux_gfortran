@@ -32,5 +32,5 @@ FCMP = gfortran -fopenmp
 FC = gfortran
 
 LFLAGS =
-FFLAGS = -O3 -Wall -cpp -free -fimplicit-none -fbounds-check -fbacktrace
+FFLAGS = -O3 -Wall -cpp -ffree-line-length-none -fimplicit-none -fbounds-check -fbacktrace
 
