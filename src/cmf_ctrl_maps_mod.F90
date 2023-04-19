@@ -303,12 +303,19 @@ END SUBROUTINE READ_MAP_CDF
 !==========================================================
 SUBROUTINE CALC_REGION    !! evenly allocate pixels to mpi nodes (updated in v4.03. MPI region given from file)
 USE YOS_CMF_INPUT,           ONLY: IMIS
+#ifdef UseCDF_CMF
+USE CMF_UTILS_MOD,           ONLY: NCERROR
+USE NETCDF
+#endif
 IMPLICIT NONE
 !* local variables
 INTEGER(KIND=JPIM),ALLOCATABLE  :: REGIONGRID(:)
 !
-INTEGER(KIND=JPIM),SAVE              :: IX,IY
+INTEGER(KIND=JPIM),SAVE         :: IX,IY
 INTEGER(KIND=JPIM),SAVE         :: IREGION
+#ifdef UseCDF_CMF
+INTEGER(KIND=JPIM)              :: NCID,VARID
+#endif
 !$OMP THREADPRIVATE               (IX)
 !================================================
 WRITE(LOGNAM,*) 'RIVMAP_INIT: region code'
