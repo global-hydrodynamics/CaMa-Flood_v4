@@ -12,13 +12,6 @@ MODULE CMF_CALC_OUTFLW_MOD
 !  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
-CONTAINS
-!####################################################################
-! -- CMF_CALC_OUTFLW
-! --
-! --
-!####################################################################
-SUBROUTINE CMF_CALC_OUTFLW
 USE PARKIND1,           ONLY: JPIM, JPRB, JPRD
 USE YOS_CMF_INPUT,      ONLY: DT,       PDSTMTH,  PMANFLD,  PGRV,     LFLDOUT, LSLOPEMOUTH
 USE YOS_CMF_MAP,        ONLY: I1NEXT,   NSEQALL,  NSEQRIV,  NSEQMAX
@@ -27,24 +20,26 @@ USE YOS_CMF_MAP,        ONLY: D2RIVLEN, D2RIVMAN, D2DWNELV, D2ELEVSLOPE
 USE YOS_CMF_PROG,       ONLY: P2RIVSTO, D2RIVOUT, P2FLDSTO, D2FLDOUT
 USE YOS_CMF_PROG,       ONLY: D2RIVOUT_PRE, D2RIVDPH_PRE, D2FLDOUT_PRE, D2FLDSTO_PRE
 USE YOS_CMF_DIAG,       ONLY: D2RIVDPH, D2RIVVEL, D2RIVINF, D2FLDDPH, D2FLDINF, D2SFCELV
+!
+CONTAINS
+!####################################################################
+! -- CMF_CALC_OUTFLW
+! -- CMF_CALC_INFLOW
+! --
+!####################################################################
+SUBROUTINE CMF_CALC_OUTFLW
 IMPLICIT NONE
 !*** Local
 REAL(KIND=JPRB)            :: D2SFCELV_PRE(NSEQMAX,1)                  !! water surface elevation (t-1) [m]
 REAL(KIND=JPRB)            :: D2FLDDPH_PRE(NSEQMAX,1)                      !! floodplain depth (t-1)        [m]
-REAL(KIND=JPRD)            :: P2STOOUT(NSEQMAX,1)                      !! total outflow from a grid     [m3]
-REAL(KIND=JPRB)            :: D2RATE(NSEQMAX,1)                        !! outflow correction
-
-REAL(KIND=JPRD)            :: P2RIVINF(NSEQMAX,1)                      !! for nit-identical calculation
-REAL(KIND=JPRD)            :: P2FLDINF(NSEQMAX,1)                      !! for nit-identical calculation
-
 ! save for OpenMP
 INTEGER(KIND=JPIM),SAVE    :: ISEQ, JSEQ
 REAL(KIND=JPRB),SAVE       :: DSLOPE,   DOUT_PRE,   DFLW,   DFLW_PRE,   DFLW_IMP,   DAREA 
 REAL(KIND=JPRB),SAVE       :: DSLOPE_F, DOUT_PRE_F, DFLW_F, DFLW_PRE_F, DFLW_IMP_F, DARE_F, DARE_PRE_F, DARE_IMP_F
-REAL(KIND=JPRB),SAVE       :: OUT_R1,   OUT_R2,     OUT_F1, OUT_F2,     DIUP,       DIDW,   DSFCMAX,    DSFCMAX_PRE
+REAL(KIND=JPRB),SAVE       :: DSFCMAX,  DSFCMAX_PRE
 !$OMP THREADPRIVATE    (JSEQ, DSLOPE,   DOUT_PRE,   DFLW,   DFLW_PRE,   DFLW_IMP,   DAREA  )
 !$OMP THREADPRIVATE    (      DSLOPE_F, DOUT_PRE_F, DFLW_F, DFLW_PRE_F, DFLW_IMP_F, DARE_F, DARE_PRE_F, DARE_IMP_F  )
-!$OMP THREADPRIVATE    (      OUT_R1,   OUT_R2,     OUT_F1, OUT_F2,     DIUP,       DIDW,   DSFCMAX,    DSFCMAX_PRE )
+!$OMP THREADPRIVATE    (      DSFCMAX,  DSFCMAX_PRE )
 !================================================
 
 !$OMP PARALLEL DO
@@ -52,11 +47,6 @@ DO ISEQ=1, NSEQALL
   D2SFCELV(ISEQ,1)     = D2RIVELV(ISEQ,1) + D2RIVDPH(ISEQ,1)
   D2SFCELV_PRE(ISEQ,1) = D2RIVELV(ISEQ,1) + D2RIVDPH_PRE(ISEQ,1)
   D2FLDDPH_PRE(ISEQ,1) = MAX( D2RIVDPH_PRE(ISEQ,1)-D2RIVHGT(ISEQ,1), 0._JPRB )
-
-  P2RIVINF(ISEQ,1) = 0._JPRD
-  P2FLDINF(ISEQ,1) = 0._JPRD
-  P2STOOUT(ISEQ,1) = 0._JPRD
-  D2RATE(ISEQ,1)   = 1._JPRB
 END DO
 !$OMP END PARALLEL DO
 
@@ -112,31 +102,6 @@ DO ISEQ=1, NSEQRIV                                                    !! for nor
 END DO
 !$OMP END PARALLEL DO
 
-#ifndef NoAtom_CMF
-!$OMP PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
-#endif
-DO ISEQ=1, NSEQRIV                                                    !! for normal cells
-  JSEQ=I1NEXT(ISEQ) ! next cell's pixel
-  OUT_R1 = max(  D2RIVOUT(ISEQ,1),0._JPRB )
-  OUT_R2 = max( -D2RIVOUT(ISEQ,1),0._JPRB )
-  OUT_F1 = max(  D2FLDOUT(ISEQ,1),0._JPRB )
-  OUT_F2 = max( -D2FLDOUT(ISEQ,1),0._JPRB )
-  DIUP=(OUT_R1+OUT_F1)*DT
-  DIDW=(OUT_R2+OUT_F2)*DT
-#ifndef NoAtom_CMF
-!$OMP ATOMIC
-#endif
-  P2STOOUT(ISEQ,1) = P2STOOUT(ISEQ,1) + DIUP 
-#ifndef NoAtom_CMF
-!$OMP ATOMIC
-#endif
-  P2STOOUT(JSEQ,1) = P2STOOUT(JSEQ,1) + DIDW 
-END DO
-#ifndef NoAtom_CMF
-!$OMP END PARALLEL DO
-#endif
-
-
 !$OMP PARALLEL DO                                                     !! for river mouth grids
 DO ISEQ=NSEQRIV+1, NSEQALL
   IF ( LSLOPEMOUTH ) THEN
@@ -188,25 +153,87 @@ DO ISEQ=NSEQRIV+1, NSEQALL
   
     IF( D2FLDOUT(ISEQ,1)*D2RIVOUT(ISEQ,1)<0._JPRB ) D2FLDOUT(ISEQ,1)=0._JPRB  !! stabilization
   ENDIF
-!=== check outflow ===
+END DO
+!$OMP END PARALLEL DO
+
+END SUBROUTINE CMF_CALC_OUTFLW
+!####################################################################
+!+
+!+
+!+
+!####################################################################
+SUBROUTINE CMF_CALC_INFLOW
+USE PARKIND1,           ONLY: JPIM, JPRB, JPRD
+USE YOS_CMF_MAP,        ONLY: NSEQMAX
+IMPLICIT NONE
+REAL(KIND=JPRD)            :: P2STOOUT(NSEQMAX,1)                      !! total outflow from a grid     [m3]
+REAL(KIND=JPRD)            :: P2RIVINF(NSEQMAX,1)                      !! 
+REAL(KIND=JPRD)            :: P2FLDINF(NSEQMAX,1)                      !! 
+
+REAL(KIND=JPRB)            :: D2RATE(NSEQMAX,1)                        !! outflow correction
+! SAVE for OpenMP
+INTEGER(KIND=JPIM),SAVE    :: ISEQ, JSEQ
+REAL(KIND=JPRB),SAVE       :: OUT_R1, OUT_R2, OUT_F1, OUT_F2, DIUP, DIDW
+!$OMP THREADPRIVATE     (JSEQ,OUT_R1, OUT_R2, OUT_F1, OUT_F2, DIUP, DIDW)
+!================================================
+  
+!*** 1. initialize & calculate P2STOOUT for normal cells
+
+!$OMP PARALLEL DO
+DO ISEQ=1, NSEQALL
+  P2RIVINF(ISEQ,1) = 0._JPRD
+  P2FLDINF(ISEQ,1) = 0._JPRD
+  P2STOOUT(ISEQ,1) = 0._JPRD
+  D2RATE(ISEQ,1) = 1._JPRB
+END DO
+!$OMP END PARALLEL DO
+
+!! for normal cells ---------
+#ifndef NoAtom_CMF
+!$OMP PARALLEL DO
+#endif
+DO ISEQ=1, NSEQRIV                                                    !! for normalcells
+  JSEQ=I1NEXT(ISEQ) ! next cell's pixel
   OUT_R1 = max(  D2RIVOUT(ISEQ,1),0._JPRB )
+  OUT_R2 = max( -D2RIVOUT(ISEQ,1),0._JPRB )
   OUT_F1 = max(  D2FLDOUT(ISEQ,1),0._JPRB )
+  OUT_F2 = max( -D2FLDOUT(ISEQ,1),0._JPRB )
+  DIUP=(OUT_R1+OUT_F1)*DT
+  DIDW=(OUT_R2+OUT_F2)*DT
+#ifndef NoAtom_CMF
+!$OMP ATOMIC
+#endif
+  P2STOOUT(ISEQ,1) = P2STOOUT(ISEQ,1) + DIUP 
+#ifndef NoAtom_CMF
+!$OMP ATOMIC
+#endif
+  P2STOOUT(JSEQ,1) = P2STOOUT(JSEQ,1) + DIDW 
+END DO
+#ifndef NoAtom_CMF
+!$OMP END PARALLEL DO
+#endif
+
+!! for river mouth grids ------------
+!$OMP PARALLEL DO
+DO ISEQ=NSEQRIV+1, NSEQALL
+  OUT_R1 = max( D2RIVOUT(ISEQ,1), 0._JPRB )
+  OUT_F1 = max( D2FLDOUT(ISEQ,1), 0._JPRB )
   P2STOOUT(ISEQ,1) = P2STOOUT(ISEQ,1) + OUT_R1*DT + OUT_F1*DT
 END DO
 !$OMP END PARALLEL DO
 
+!============================
+!*** 2. modify outflow
 
-
-!! === ourflow modification to avoid negative storage ======
-
-!$OMP PARALLEL DO                                                     !! outflow correcttion if total outflow > storage
+!$OMP PARALLEL DO
 DO ISEQ=1, NSEQALL
   IF ( P2STOOUT(ISEQ,1) > 1.E-8 ) THEN
-    D2RATE(ISEQ,1)   = min( (P2RIVSTO(ISEQ,1)+P2FLDSTO(ISEQ,1)) * P2STOOUT(ISEQ,1)**(-1.), 1._JPRD )
+    D2RATE(ISEQ,1) = min( (P2RIVSTO(ISEQ,1)+P2FLDSTO(ISEQ,1)) * P2STOOUT(ISEQ,1)**(-1.), 1._JPRD )
   ENDIF
 END DO
 !$OMP END PARALLEL DO
 
+!! normal pixels------
 #ifndef NoAtom_CMF
 !$OMP PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
 #endif
@@ -232,17 +259,17 @@ END DO
 !$OMP END PARALLEL DO
 #endif
 
+!! river mouth-----------------
 !$OMP PARALLEL DO
-DO ISEQ=NSEQRIV+1, NSEQALL ! for river mouth
+DO ISEQ=NSEQRIV+1, NSEQALL
   D2RIVOUT(ISEQ,1) = D2RIVOUT(ISEQ,1)*D2RATE(ISEQ,1)
   D2FLDOUT(ISEQ,1) = D2FLDOUT(ISEQ,1)*D2RATE(ISEQ,1)
 END DO
 !$OMP END PARALLEL DO
 
-D2RIVINF(1:NSEQALL,1)=P2RIVINF(1:NSEQALL,1)
-D2FLDINF(1:NSEQALL,1)=P2FLDINF(1:NSEQALL,1)
+D2RIVINF(:,:)=P2RIVINF(:,:)  !! needed for SinglePrecisionMode
+D2FLDINF(:,:)=P2FLDINF(:,:)
 
-END SUBROUTINE CMF_CALC_OUTFLW
+END SUBROUTINE CMF_CALC_INFLOW
 !####################################################################
-
 END MODULE CMF_CALC_OUTFLW_MOD

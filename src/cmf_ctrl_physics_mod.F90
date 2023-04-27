@@ -24,13 +24,13 @@ USE YOS_CMF_INPUT,         ONLY: LOGNAM, DT,      LADPSTP
 USE YOS_CMF_INPUT,         ONLY: LKINE,  LSLPMIX, LFLDOUT,   LPTHOUT,   LDAMOUT, LLEVEE, LOUTINS
 USE YOS_CMF_PROG,          ONLY: D2FLDOUT, D2FLDOUT_PRE
 !
-USE CMF_CALC_OUTFLW_MOD,   ONLY: CMF_CALC_OUTFLW
+USE CMF_CALC_OUTFLW_MOD,   ONLY: CMF_CALC_OUTFLW, CMF_CALC_INFLOW
 USE CMF_CALC_PTHOUT_MOD,   ONLY: CMF_CALC_PTHOUT
 USE CMF_CALC_STONXT_MOD,   ONLY: CMF_CALC_STONXT
 USE CMF_CALC_DIAG_MOD,     ONLY: CMF_DIAG_AVEMAX
 ! optional
 USE CMF_OPT_OUTFLW_MOD,    ONLY: CMF_CALC_OUTFLW_KINEMIX, CMF_CALC_OUTFLW_KINE,CMF_CALC_OUTINS
-USE CMF_CTRL_DAMOUT_MOD,   ONLY: CMF_DAMOUT_CALC, CMF_DAMOUT_WRTE
+USE CMF_CTRL_DAMOUT_MOD,   ONLY: CMF_DAMOUT_CALC, CMF_DAMOUT_WATBAL, CMF_DAMOUT_WRTE
 USE CMF_CTRL_LEVEE_MOD,    ONLY: CMF_LEVEE_OPT_PTHOUT
 #ifdef ILS
 USE YOS_CMF_ICI,           ONLY: LLAKEIN
@@ -69,17 +69,24 @@ DO IT=1, NT
     D2FLDOUT_PRE(:,:)=0._JPRB
   ENDIF
 
-! ---
+! --- v4.12: damout before pthout for water buget error
+  IF ( LDAMOUT ) THEN
+    CALL CMF_DAMOUT_CALC            !! reservoir operation
+  ENDIF
+
+! --- Water budget adjustment and calculate inflow
+  CALL CMF_CALC_INFLOW
+  IF ( LDAMOUT ) THEN
+    CALL CMF_DAMOUT_WATBAL            !! reservoir operation
+  ENDIF
+
+! --- Bifurcation channel flow
   IF( LPTHOUT )THEN
     IF( LLEVEE )THEN
       CALL CMF_LEVEE_OPT_PTHOUT            !! bifurcation channel flow
     ELSE
       CALL CMF_CALC_PTHOUT            !! bifurcation channel flow
     ENDIF
-  ENDIF
-! ---
-  IF ( LDAMOUT ) THEN
-    CALL CMF_DAMOUT_CALC            !! reservoir operation
   ENDIF
 
 ! --- save value for next tstet
