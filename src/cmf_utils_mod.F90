@@ -40,6 +40,7 @@ CONTAINS
 ! file I/O
 !-- INQUIRE_FID : inruire unused file FID
 !-- NCERROR     : netCDF I/O wrapper
+!-- CMF_CheckNaN: check the value is NaN or not
 !####################################################################
 SUBROUTINE vecD2mapR(D2VEC,R2MAP)
 USE YOS_CMF_MAP,             ONLY: I1SEQX,I1SEQY
@@ -563,6 +564,18 @@ IF ( STATUS /= 0 ) THEN
 ENDIF
 END SUBROUTINE NCERROR
 #endif
+!####################################################################
+
+!####################################################################
+FUNCTION CMF_CheckNanB(VAR,zero) RESULT(FLAG)
+  implicit none
+  REAL(KIND=JPRB)      :: VAR, zero
+  LOGICAL              :: FLAG
+  FLAG = .false.
+  if(VAR*zero/=zero)then
+    FLAG = .true.
+  endif
+END FUNCTION CMF_CheckNanB
 !####################################################################
 
 END MODULE CMF_UTILS_MOD

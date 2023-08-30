@@ -106,8 +106,8 @@
         stop
       endif
 
-      nx=int( (east-west)  *cnum )      !!  hires output nx*ny
-      ny=int( (north-south)*cnum )
+      nx=int( (east-west)  *cnum +0.01)      !!  hires output nx*ny (+0.01 for cancel rounding error)
+      ny=int( (north-south)*cnum +0.01 )
 
       isTile=0
       if( trim(tag)/='1min' )then

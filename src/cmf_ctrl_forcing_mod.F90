@@ -651,6 +651,7 @@ CONTAINS
 !==========================================================
 SUBROUTINE ROFF_INTERP(PBUFFIN,PBUFFOUT)
 ! interporlate runoff using "input matrix"
+USE CMF_UTILS_MOD,           ONLY: CMF_CheckNanB
 USE YOS_CMF_MAP,             ONLY: NSEQALL
 USE YOS_CMF_INPUT,           ONLY: NXIN, NYIN, INPN, RMIS
 IMPLICIT NONE
@@ -676,6 +677,7 @@ DO ISEQ=1, NSEQALL
       IF( PBUFFIN(IXIN,IYIN).NE.RMIS )THEN
         PBUFFOUT(ISEQ,1) = PBUFFOUT(ISEQ,1) + PBUFFIN(IXIN,IYIN) * INPA(ISEQ,INPI) / DROFUNIT   !! DTIN removed in v395
       ENDIF
+      IF( CMF_CheckNanB(PBUFFIN(IXIN,IYIN),0._JPRB) ) PBUFFOUT(ISEQ,1)=0._JPRB  !! treat NaN runoff input 
     ENDIF
   END DO
   PBUFFOUT(ISEQ,1)=MAX(PBUFFOUT(ISEQ,1), 0._JPRB)
