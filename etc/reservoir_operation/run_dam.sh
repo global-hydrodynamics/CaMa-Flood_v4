@@ -50,7 +50,7 @@ export OMP_NUM_THREADS=16                    # OpenMP cpu num
 EXP="new_dam"                       # experiment name (output directory name)
 RDIR=${PWDD}/out/${EXP}                     # directory to run CaMa-Flood
 EXE="MAIN_cmf"                              # Execute file name
-PROG=${BASE}/src_new/${EXE}                     # location of Fortran main program
+PROG=${BASE}/src/${EXE}                     # location of Fortran main program
 NMLIST="./input_cmf.nam"                    # standard namelist
 LOGOUT="./log_CaMa.txt"                     # standard log output
 
