@@ -1,7 +1,7 @@
 #!/bin/sh
 
 BASE=`pwd`
-VER="v411"
+VER="v412"
 
 PKG="cmf_${VER}_pkg"
 SRC="cmf_${VER}_src"

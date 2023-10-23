@@ -168,38 +168,6 @@
       write(31,rec=1) prmwat
       close(31)
 
-CONTAINS
-      subroutine set_name(lon,lat,cname)
-! ===============================================
-      implicit none
-!
-      real            ::  lon, lat
-
-      character*1     ::  ew, sn
-      character*2     ::  clat
-      character*3     ::  clon
-      character*7     ::  cname
-! ===============================================
-      if( lon<0 )then
-        ew='w'
-        write(clon,'(i3.3)') int(-lon)
-      else
-        ew='e'
-        write(clon,'(i3.3)')  int(lon)
-      endif
-
-      if( lat<0 )then
-        sn='s'
-        write(clat,'(i2.2)') int(-lat)
-      else
-        sn='n'
-        write(clat,'(i2.2)')  int(lat)
-      endif
-
-      cname=sn//clat//ew//clon
-
-      end subroutine set_name
-
       end program CALC_PRMWAT
 
 

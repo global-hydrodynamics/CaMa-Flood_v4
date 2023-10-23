@@ -87,7 +87,14 @@ BIFLAYER=5   ## number of bifurcation layers. 1: Only channel bifurcation. max=1
 # Calculate parmanent water mask
 #   Total area of partmanent water in each unit-catchment, using water map data.
 
-echo "" 
-echo "@@@ calc_prmwat 1min"
+TAG="1min"          # tag for hires data dir (1min / 30sec / 15sec / 3sec)
+if [ -f ./1min/location.txt ]; then
+  TAG="1min"
+elif [ -f ./15sec/location.txt ]; then
+  TAG="15sec"
+fi
 
-./src_param/calc_prmwat 1min
+echo "" 
+echo "@@@ calc_prmwat $TAG"
+
+./src_param/calc_prmwat $TAG

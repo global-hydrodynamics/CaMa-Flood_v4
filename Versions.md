@@ -56,3 +56,8 @@ Latest GitHub branch (master)  is v4.10
 - Double Precision Restart is now treated as default.
 - Sediment scheme (tentative) is integrated
 - (Some codes for ILS couping were updated)
+
+## Update in v4.12 (2023.10.23)
+### Changes related to some developpers 
+- Updates on reservoir operation (new parameter file format, better method for allocation)
+- Runoff undef value treatment in cmf_utils
