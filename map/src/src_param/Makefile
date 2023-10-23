@@ -5,6 +5,7 @@ TARGETS=\
 generate_inpmat \
 calc_outclm \
 calc_rivwth \
+calc_prmwat \
 set_gwdlr \
 set_bifparam \
 wrte_ctl_map \
@@ -14,7 +15,9 @@ get_upbasin \
 get_subbasin \
 set_bif_basin \
 set_mpi_region \
-allocate_gauge
+allocate_gauge \
+allocate_dam
+
 
 all: $(TARGETS)
 

@@ -13,6 +13,6 @@
 ./s00-link.sh
 
 # Allocate GRanD dam on CaMa river map
-./s01-calc_damloc.sh
+./s01-calc_damparam.sh
 
 exit 0

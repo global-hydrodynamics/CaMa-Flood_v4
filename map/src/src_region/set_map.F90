@@ -41,8 +41,6 @@
       integer            ::  col_used(10), icol
 
       integer,allocatable::  basin_grid(:), basin_order(:), basin_new(:)
-! function
-      real               ::  rgetlen
 ! file
       character*256      ::  rfile1,  rfile2
       character*256      ::  wfile1,  wfile3,  wfile4,  wfile5,  wfile5a, wfile6, wfile7
@@ -472,14 +470,10 @@ print *, '  number of color=', color_max
       close(27)
 
 ! ====================
-
-      end program SET_MAP
-
-
-
-
-
-
+CONTAINS
+!+
+!+
+!+
        subroutine nextGRID(iXX, iYY, jXX, jYY)
 ! ===============================================
        implicit none
@@ -489,12 +483,9 @@ print *, '  number of color=', color_max
        iYY=jYY
        return
        end
-
-
-
-
-
-
+!+
+!+
+!+
       subroutine heap_sort2(nmax,a,b)
 ! ===============================================
 ! to sort array by heap
@@ -616,10 +607,9 @@ print *, '  number of color=', color_max
 
       return
       end subroutine heap_sort2
-
-
-
-
+!+
+!+
+!+
       real function rgetlen(rlon1, rlat1, rlon2, rlat2)
 ! ================================================
 ! to   get the length (m) between (rlon1, rlat1) to (rlon2, rlat2)
@@ -700,12 +690,9 @@ print *, '  number of color=', color_max
 !
       return
       end function rgetlen
-
-
-
-
-
-
+!+
+!+
+!+
       real function rgetara(rlon1, rlon2, rlat1, rlat2)
 ! ================================================
 ! to   calculate area of 1 degree longitude box at each latitude
@@ -767,3 +754,8 @@ print *, '  number of color=', color_max
 !
       return
       end function rgetara
+!+
+!+
+!+
+      end program SET_MAP
+

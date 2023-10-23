@@ -37,7 +37,7 @@
 ! ===============================================
       call getarg(1,tag)
 
-      rfile1='../params.txt'
+      rfile1='./params.txt'
       open(11,file=rfile1,form='formatted')
       read(11,*    ) nXX
       read(11,*    ) nYY
@@ -74,12 +74,12 @@
 
       allocate(nextXX(nXX,nYY),ctmare(nXX,nYY),prmwat(nXX,nYY))
 
-      rfile1='..//nextxy.bin'
+      rfile1='./nextxy.bin'
       open(21,file=rfile1,form='unformatted',access='direct',recl=4*nXX*nYY)
       read(21,rec=1) nextXX
       close(21)
 
-      rfile1='..//ctmare.bin'
+      rfile1='./ctmare.bin'
       open(21,file=rfile1,form='unformatted',access='direct',recl=4*nXX*nYY)
       read(21,rec=1) ctmare
       close(21)
@@ -93,7 +93,7 @@
         end do
       end do
 
-      hires='../'//trim(tag)//'/'
+      hires='./'//trim(tag)//'/'
 ! ###### calculation for non-tiled hires map
       list_loc=trim(hires)//'location.txt'
       open(11,file=list_loc,form='formatted')
@@ -106,10 +106,9 @@
         allocate(catmXX0(nx0,ny0),catmYY0(nx0,ny0),rivwth0(nx0,ny0),grdare0(nx0,ny0),flddif0(nx0,ny0))
 
         rfile1=trim(hires)//trim(area)//'.catmxy.bin'
-        print *, trim(rfile1)
         open(21,file=rfile1,form='unformatted',access='direct',recl=2*nx0*ny0,status='old',iostat=ios)
         if( ios==0 )then
-          print *, rfile1
+          print *, trim(rfile1)
           read(21,rec=1) catmXX0
           read(21,rec=2) catmYY0
           close(21)
@@ -164,16 +163,12 @@
         end do
       end do
 
-      wfile1='..//prmwat.bin'
+      wfile1='./prmwat.bin'
       open(31,file=wfile1,form='unformatted',access='direct',recl=4*nXX*nYY)
       write(31,rec=1) prmwat
       close(31)
 
-      end program CALC_PRMWAT
-
-
-
-
+CONTAINS
       subroutine set_name(lon,lat,cname)
 ! ===============================================
       implicit none
@@ -204,5 +199,8 @@
       cname=sn//clat//ew//clon
 
       end subroutine set_name
+
+      end program CALC_PRMWAT
+
 
 

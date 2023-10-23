@@ -21,7 +21,8 @@ tag  =sys.argv[4]
 
 outdir   = './inp/natsim/'
 mapdir   = './inp/map/'
-dam_file = './'+tag+'/damloc_modified.csv'
+#dam_file = './'+tag+'/damloc_modified.csv'
+dam_file = './inp/damlist.txt'
 
 ## get map nx, ny ----------------------------------------
 
@@ -33,7 +34,8 @@ ny   = int(data.strip().split(' ')[0])
 f.close()
 print('CaMa map dim (nx,ny):', nx,ny)
 
-damcsv = pd.read_csv(dam_file)
+damcsv = pd.read_csv(dam_file, sep='\s+', header=0, skipinitialspace=True)
+
 ndams = len(damcsv)
 print('number of dams:', ndams)
 
@@ -50,8 +52,13 @@ years = eyear - syear + 1
 max_finarray = np.zeros((years*maxdays, ndams))
 mean_yeararray = np.zeros((years, ndams))
 
+dam_output = np.zeros((3, ndams))
+
 x_arr = damcsv['ix'].values - 1
 y_arr = damcsv['iy'].values - 1
+
+print(x_arr)
+print(y_arr)
 
 for i, year in enumerate(range(syear, eyear+1, 1)):
     print(' ')
@@ -86,10 +93,14 @@ print('save flood and mean discharge at dam grids')
 max_finarray.astype('float32').tofile(max_outf)
 
 mean_finarray = np.mean(mean_yeararray, axis=0)
+mean_finarray = np.where(mean_finarray<1.E-10, 1.E-10, mean_finarray)
+
 mean_finarray.astype('float32').tofile(mean_outf)
-print('-- flood discharge', max_outf)
-print('-- mean  discharge', mean_outf)
-print('#########################')
+
+print('Output Plain Binary Files')
+print('-- flood discharge [nyear * ndams]', max_outf)
+print('-- mean  discharge [nyear * ndams]', mean_outf)
+print('###########################################')
 print(' ')
     
 # %%

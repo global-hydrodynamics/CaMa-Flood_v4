@@ -75,7 +75,6 @@
 ! function
       character*256          ::  fmt1, cnmax
       character*256          ::  buf
-      real                   ::  rgetarea
 !================================================
 print *, 'CALC_INPMAT:'
 
@@ -313,12 +312,10 @@ print *, trim(wfile1)
 
       deallocate(inpx0,inpy0,inpa0)
 !==========================================================
-      end program GENERATE_INPMAT
-
-
-
-
-
+CONTAINS
+!+
+!+
+!+
       real function rgetarea(rlon1, rlon2, rlat1, rlat2)
 !==========================================================
 ! to   calculate area of 1 degree longitude box at each latitude
@@ -387,3 +384,7 @@ print *, trim(wfile1)
       return
       end function rgetarea
 !==========================================================
+!+
+!+
+      end program GENERATE_INPMAT
+

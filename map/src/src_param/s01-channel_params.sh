@@ -82,3 +82,12 @@ BIFLAYER=5   ## number of bifurcation layers. 1: Only channel bifurcation. max=1
 
 ./src_param/set_bifparam rivhgt.bin bifprm.txt $BIFLAYER $DIMINFO 
 
+
+########################################
+# Calculate parmanent water mask
+#   Total area of partmanent water in each unit-catchment, using water map data.
+
+echo "" 
+echo "@@@ calc_prmwat 1min"
+
+./src_param/calc_prmwat 1min

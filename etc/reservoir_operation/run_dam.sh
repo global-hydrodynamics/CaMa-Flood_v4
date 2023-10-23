@@ -1,6 +1,6 @@
 #!/bin/sh
 #==========================================================
-# CaMa-Flood sample go script for reservoir operation scheme
+# CaMa-Flood sample go script for reservoir operation scheme [No Dam Operation]
 # -- Multi 1-year simulations (2000 spinup -> 2000 -> 2001)
 # -- Daily runoff forcing (plain binary) at 1deg resolution
 #
@@ -28,8 +28,8 @@
 #*** 0a. Set CaMa-Flood base directory
 PWDD=`pwd`
 BASE=`pwd`/../..
-#PWDD="/home/yamadai/work/CaMa_v411/cmf_v411_pkg/etc/reservoir_operation"
-#BASE="/home/yamadai/work/CaMa_v411/cmf_v411_pkg"  # setting for PBS in cluster
+#PWDD="/home/yamadai/work/CaMa_v412/cmf_v412_pkg/etc/reservoir_operation"
+#BASE="/home/yamadai/work/CaMa_v412/cmf_v412_pkg"  # setting for PBS in cluster
 
 echo $BASE
 
@@ -47,10 +47,10 @@ export OMP_NUM_THREADS=16                    # OpenMP cpu num
 
 #============================
 #*** 1a. Experiment directory setting
-EXP="test_dam"                       # experiment name (output directory name)
+EXP="new_dam"                       # experiment name (output directory name)
 RDIR=${PWDD}/out/${EXP}                     # directory to run CaMa-Flood
 EXE="MAIN_cmf"                              # Execute file name
-PROG=${BASE}/src/${EXE}                     # location of Fortran main program
+PROG=${BASE}/src_new/${EXE}                     # location of Fortran main program
 NMLIST="./input_cmf.nam"                    # standard namelist
 LOGOUT="./log_CaMa.txt"                     # standard log output
 
@@ -58,7 +58,7 @@ LOGOUT="./log_CaMa.txt"                     # standard log output
 #============================
 #*** 1b. Model physics option
 #DT=10800                                    # base DT (modified in physics loop by LADPSTP)
-DT=3600                                    # base DT (modified in physics loop by LADPSTP)
+DT=86400                                   # base DT (modified in physics loop by LADPSTP)
 LADPSTP=".TRUE."                            # .TRUE. for adaptive time step
 
 LFPLAIN=".TRUE."                            # .TRUE. to activate floodplain storage
@@ -67,7 +67,7 @@ LFLDOUT=".TRUE."                            # .TRUE. to activate floodplain disc
 LPTHOUT=".TRUE."                            # .TRUE. to activate bifurcation flow, mainly for delta simulation
 LDAMOUT=".TRUE."                           # .TRUE. to activate reservoir operation (under development)
 
-CDAMFILE="${PWDD}/sample_data/damparam_sample_glb_15min.csv"
+CDAMFILE="${PWDD}/damparam_glb_15min.csv"
 
 #============================
 #*** 1c. simulation time
@@ -196,13 +196,14 @@ LSEALEV=".FALSE."                           # .TRUE. to activate dynamic sea lev
 #============================
 #*** 1h. Output Settings 
 LOUTPUT=".TRUE."                            # .TRUE. to use CaMa-Flood standard output
-IFRQ_OUT=3                                 # output frequency: [1,2,3,...,24] hour
+IFRQ_OUT=24                                # output frequency: [1,2,3,...,24] hour
 
 LOUTCDF=".FALSE."                           # .TRUE. netCDF output, .FALSE. plain binary output
 COUTDIR="./"                                # output directory 
 #CVARSOUT="outflw,storge,fldfrc,maxdph,flddph" # list output variable (comma separated)
 #CVARSOUT="rivout,rivsto,rivdph,rivvel,fldout,fldsto,flddph,fldfrc,fldare,sfcelv,outflw,storge,pthflw,pthout,maxsto,maxflw,maxdph,damsto,daminf" # list output variable (comma separated)    # dam variables are added!!!!
 
+#CVARSOUT="flddph,outflw,rivdph" # list output variable (comma separated)    # dam variables are added!!!!
 CVARSOUT="flddph,outflw,daminf,damsto,rivdph" # list output variable (comma separated)    # dam variables are added!!!!
 
 COUTTAG=""  # see (3) set each year         #   output tag $(COUTDIR)/$(VARNAME)$(OUTTAG).bin

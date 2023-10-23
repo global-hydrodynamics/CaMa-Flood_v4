@@ -1,5 +1,5 @@
 #==========================================================
-# CaMa-Flood Mkinclude (for Mac, Intel fortran, OneAPI)
+# CaMa-Flood Mkinclude (for Mac, Intel CPU ifort)
 #==========================================================
 RM = /bin/rm -f
 CP = /bin/cp
@@ -9,13 +9,11 @@ CP = /bin/cp
 # DCDF: activate when using netCDF, comment out when not needed
 #======================================
 
-# Note: netCDF is not available ifort on M1/M2-chip MacOS as of Nov2023
-
 # UseCDF: use netCDF, UseMPI: Use MPI
 # SinglePrec: SinglePrecisionMode
 # NoAtom: Bit-identical simulation (deactivate OpenMP loop with OMP_Atomic)
 
-#DCDF=-DUseCDF_CMF   
+DCDF=-DUseCDF_CMF
 #DMPI=-DUseMPI_CMF
 DSINGLE=-DSinglePrec_CMF
 #DATM=-DNoAtom_CMF
@@ -27,12 +25,12 @@ CFLAGS=$(DMPI) $(DCDF) $(DATM) $(DSINGLE)
 #======================================
 
 ## without netCDF
-INC  = -I/opt/intel/include
-LIB  = -L/opt/intel/lib/intel64 -L/opt/intel/oneapi/mkl/latest/lib
+#INC  = -I/opt/intel/include
+#LIB  = -L/opt/intel/lib/intel64 -L/opt/intel/mkl/lib
 
 # with netCDF
-#INC  = -I/opt/intel/include -I/opt/local/include -I/opt/local/netcdf-fortran/include
-#LIB  = -L/opt/intel/lib/intel64 -L/opt/intel/mkl/lib/intel64 -L/opt/local/lib -L/opt/local/netcdf-fortran/lib -lnetcdff 
+INC  = -I/opt/intel/include -I/opt/local/include -I/opt/local/netcdf-fortran/include
+LIB  = -L/opt/intel/lib/intel64 -L/opt/intel/mkl/lib/intel64 -L/opt/local/lib -L/opt/local/netcdf-fortran/lib -lnetcdff 
 
 #==============================
 # FCMP: main program (src/), FC: pre/post process (map/ etc/)

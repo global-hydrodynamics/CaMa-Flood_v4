@@ -1,8 +1,11 @@
 # scripts to estimate dam parameters for reservoir operation model
-2021.3.25, written by Risa Hanazaki & Dai Yamazaki
+2021.3.25,  written by Risa Hanazaki & Dai Yamazaki
+2023.10.12  updated documenatation for v4.12 and later
 
-## input data
-- GRanD_v1_1_inp.csv
+## input Dam list
+- map/{YourMap}/GRanD_river.txt
+Please allocate reservoirs on the river map you are using.
+Script for reservoir allocation is in map/src_param/alloc
 [damid, damname, lon, lat, total storage capacity, drainage area]
 
 - GRSAD, ReGeom
@@ -12,7 +15,6 @@
 - Execute naturalized simulation without reservoir operation
 
 ## How to
-0. Please compile ./src/get_rivinfo.F90 and run auto.sh
 1. Edit s00-link.sh to specify input data locations, Run ./s00-link.sh 
 2. Edit s01-calc_damloc.sh to specify project configulations
 3. Run ./s01-calc_damloc.sh

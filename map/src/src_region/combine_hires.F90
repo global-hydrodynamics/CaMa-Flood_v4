@@ -56,7 +56,6 @@
       character*256          ::  hires, out_hdir
       integer                ::  ios
       character*256          ::  buf
-
 ! ===============================================
       call getarg(1,tag)
 
@@ -106,8 +105,8 @@
         stop
       endif
 
-      nx=int( (east-west)  *cnum +0.01)      !!  hires output nx*ny (+0.01 for cancel rounding error)
-      ny=int( (north-south)*cnum +0.01 )
+      nx=int( (east-west)  *cnum )      !!  hires output nx*ny
+      ny=int( (north-south)*cnum )
 
       isTile=0
       if( trim(tag)/='1min' )then
@@ -553,12 +552,11 @@ print *, nlon, nlat
         end do
       endif
 
-
 ! ====================
-
-      end program COMBINE_HIRES
-
-
+CONTAINS
+!+
+!+
+!+
       subroutine nextxy(ix,iy,jx,jy,dir)
 ! =============================================
       implicit none
@@ -584,10 +582,9 @@ print *, nlon, nlat
       endif
 
       end subroutine nextxy
-
-
-
-
+!+
+!+
+!+
       subroutine set_name(lon,lat,cname)
 ! ===============================================
       implicit none
@@ -618,4 +615,8 @@ print *, nlon, nlat
       cname=sn//clat//ew//clon
 
       end subroutine set_name
+!+
+!+
+!+
+      end program COMBINE_HIRES
 

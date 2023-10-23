@@ -20,7 +20,8 @@ tag  =sys.argv[3]
 pyear = 100   # return period
 maxdays = 1
 
-DAM_FILE = './'+tag+'/damloc_modified.csv'
+#dam_file = './'+tag+'/damloc_modified.csv'
+dam_file = './inp/damlist.txt'
 #=====================================================
 def PlottingPosition(n):
     ii=np.arange(n)+1
@@ -77,10 +78,12 @@ def main():
         else:
             finarray[dam] = np.nan
 
-        print('damID:', dam+1, ", 100yr discharge:", "{:.1f}".format(yp))
+        # print('damID:', dam+1, ", 100yr discharge:", "{:.1f}".format(yp))
 
     finarray.astype('float32').tofile(outputpath)
-    print('file outputted:', outputpath)
+
+    print('Output Plain Binary Files')
+    print('-- 100yr-discharge [ndams]', outputpath)
     print('###########################################')
     print(' ')
 
@@ -88,15 +91,16 @@ def main():
 
 if __name__ == '__main__':
 
-    df = pd.read_csv(DAM_FILE)
+    df = pd.read_csv(dam_file, sep='\s+', header=0, skipinitialspace=True)
     ndams = len(df)
 
     years = eyear - syear + 1
     years = years * maxdays
 
     alpha = 0.0  #weibull
-    
+
     readdatapath = './'+tag+'/tmp_p01_AnnualMax.bin'
+    print('read annual max files: ', readdatapath)
     readdata = np.fromfile(str(readdatapath), 'float32').reshape(years, ndams)
 
     outputpath = './'+tag+'/tmp_p02_'+str(pyear)+'year.bin'

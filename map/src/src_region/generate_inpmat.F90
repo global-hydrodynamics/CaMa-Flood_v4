@@ -72,7 +72,6 @@
       parameter                 (diminfo='../diminfo_test-1deg.txt')
 ! function
       character*256          ::  buf
-      real                   ::  rgetarea
 ! ===============================================
 print *, 'CALC_INPMAT:'
 
@@ -272,14 +271,11 @@ print *, wfile1
 
       deallocate(inpx0,inpy0,inpa0)
 ! ====================
-
-      end program GENERATE_INPMAT
-
-
-
-
-
-      real function rgetarea(rlon1, rlon2, rlat1, rlat2)
+CONTAINS
+!+
+!+
+!+
+     real function rgetarea(rlon1, rlon2, rlat1, rlat2)
 ! ================================================
 ! to   calculate area of 1 degree longitude box at each latitude
 ! by   algorithm by T. Oki, mathematics by S. Kanae, mod by nhanasaki
@@ -340,3 +336,8 @@ print *, wfile1
 !
       return
       end function rgetarea
+!+
+!+
+!+
+      end program GENERATE_INPMAT
+

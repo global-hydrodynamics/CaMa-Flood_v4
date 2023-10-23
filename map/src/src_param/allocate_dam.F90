@@ -11,14 +11,15 @@
       real                 ::  west2, north2, east2, south2
       character*16         ::  buf
       character*16         ::  hires
-      integer              ::  ios, inum
+      integer              ::  ios, inum, ifile
 ! index 1min
       integer              ::  ix, iy, jx, jy, kx, ky, dx, dy
       integer              ::  nx, ny
 
       integer              ::  ix0, iy0 !! allocated station xy
 ! input
-      real,allocatable     ::  uparea(:,:)                 !! drainage area (GRID base)
+      real,allocatable     ::  uparea(:,:)                 !! drainage  area 
+      real,allocatable     ::  ctmare(:,:)                 !! catchment area 
       integer,allocatable  ::  basin(:,:)                  !! next grid X
       integer,allocatable  ::  nextXX(:,:), nextYY(:,:)
 
@@ -34,7 +35,8 @@
       real,allocatable     ::  lon1m(:), lat1m(:)
 
       integer*8            ::  id, bsn
-      real                 ::  lat0, lon0, lat, lon, area0, area
+      character*32         ::  damname
+      real                 ::  lat0, lon0, lat, lon, area0, area, cap_mcm
       real                 ::  err, err0, err1, err2, dd, diff
       real                 ::  rate, rate0
       integer              ::  nn
@@ -50,14 +52,14 @@
 
 ! file
       character*128        ::  fparam
-      character*128        ::  rfile1, gaugelist, hilist
-      character*128        ::  wfile1
+      character*128        ::  rfile1, damlist, hilist
+      character*128        ::  wfile1, wfile2,  wfile3
 ! ===============================================
-      print *, 'Allocate flow gauge on CaMa-Flood river network'
+      print *, 'Allocate dam on CaMa-Flood river network'
 
       print *, 'USAGE'
-      print *, '% ./allocate_gauge GaugeListFile'
-      call getarg(1,gaugelist)
+      print *, '% ./allocate_gauge DamListFile'
+      call getarg(1,damlist)
 
       print *, 'Check Hires Map'
       hires='1min'
@@ -101,13 +103,19 @@
 
 ! ==========
 
-      allocate(uparea(nXX,nYY),basin(nXX,nYY))
+      allocate(uparea(nXX,nYY),ctmare(nXX,nYY),basin(nXX,nYY))
       allocate(nextXX(nXX,nYY),nextYY(nXX,nYY))
 
       rfile1='../uparea.bin'
       open(11, file=rfile1, form='unformatted', access='direct', recl=4*nXX*nYY,status='old',iostat=ios)
       read(11,rec=1) uparea
       close(11)
+
+      rfile1='../ctmare.bin'
+      open(11, file=rfile1, form='unformatted', access='direct', recl=4*nXX*nYY,status='old',iostat=ios)
+      read(11,rec=1) ctmare
+      close(11)
+
 
       rfile1='../basin.bin'
       open(11, file=rfile1, form='unformatted', access='direct', recl=4*nXX*nYY,status='old',iostat=ios)
@@ -123,6 +131,7 @@
       do iYY=1, nYY
         do iXX=1, nXX
           if( uparea(iXX,iYY)>0 ) uparea(iXX,iYY)=uparea(iXX,iYY)*1.e-6
+          if( ctmare(iXX,iYY)>0 ) ctmare(iXX,iYY)=ctmare(iXX,iYY)*1.e-6
         end do
       end do
 
@@ -237,18 +246,29 @@ print *, 'calc outlet pixel'
       end do
 
 ! ===============================================
-      open(11, file=gaugelist, form='formatted')
+      open(11, file=damlist, form='formatted')
       read(11,*)
 
-      wfile1='./gauge_alloc.txt'
+      wfile1='./dam_alloc_river.txt'
       open(21, file=wfile1, form='formatted')
-      write(21,'(a,a)') '        ID       lat       lon       err   area_CaMa   area_GRDC        diff ', &
-                'ups_num     ix1   iy1     ix2   iy2       area1       area2'
+      write(21,'(a,a)') '        ID       lat       lon       err   area_CaMa  area_GRanD        diff ', &
+                '     ix    iy        area     cap_mcm  damname'
+
+      wfile2='./dam_alloc_small.txt'
+      open(22, file=wfile2, form='formatted')
+      write(22,'(a,a)') '        ID       lat       lon       err   area_CaMa  area_GRanD        diff ', &
+                '     ix    iy        area     cap_mcm  damname'
+
+      wfile3='./dam_alloc_error.txt'
+      open(23, file=wfile3, form='formatted')
+      write(23,'(a,a)') '        ID       lat       lon       err   area_CaMa  area_GRanD        diff ', &
+                '     ix    iy        area     cap_mcm  damname'
 
  1000 continue
-      read(11,*,end=1090) id, buf, buf,buf,buf, lat0, lon0, area0
+      read(11,*,end=1090) id, damname, buf, buf,buf,buf, lat0, lon0, area0, buf,buf, buf,buf,buf,buf, cap_mcm
 
       if( lon0<west .or. lon0>east .or. lat0<south .or. lat0>north ) goto 1000
+      if( cap_mcm<0 ) goto 1000
 
       ix=int( (lon0 -west2)/csize )+1
       iy=int( (north2-lat0)/csize )+1
@@ -324,15 +344,28 @@ print *, 'calc outlet pixel'
         iXX0=ctx1m(ix0,iy0)
         iYY0=cty1m(ix0,iy0)
 
+        !! when allocated catchment is not treated as land in CaMa-Flood
         if( iXX0<0 .or. iYY0<0 )then
-          staX(:)=-999
-          staY(:)=-999
-          staA(:)=-999
+          staX(1)=-999
+          staY(1)=-999
+          staA(1)=-999
           upa_sum=-999
-          err1=-9
           diff=-999
+          err1=-9
           goto 3300
         endif
+
+        !! when dam is very small and cannot be allocated on river network
+        if( area0<ctmare(iXX0,iYY0)*0.3 )then
+          staX(1)=iXX
+          staY(1)=iYY
+          staA(1)=-888
+          upa_sum=-888
+          diff=-888
+          err1=-8
+          goto 3300
+        endif
+
 
         staX(1)=iXX0
         staY(1)=iYY0
@@ -378,19 +411,22 @@ print *, 'calc outlet pixel'
 
               if( uparea(jXX,jYY)<area0*0.1 ) goto 3200
 
-              area=upa_sum+uparea(jXX,jYY)  !! consider multiple upstream grids
+!              area=upa_sum+uparea(jXX,jYY)  !! consider multiple upstream grids
+!              diff=area-area0
+!              err2=diff/area0
+
+              area=uparea(jXX,jYY)
               diff=area-area0
               err2=diff/area0
 
               if( abs(err2)<abs(err1) )then
                 err1=err2
-                snum=snum+1
+                snum=1
                 staX(snum)=jXX
                 staY(snum)=jYY
                 staA(snum)=uparea(jXX,jYY)
                 upa_sum=area
 
-                if( snum==2       ) goto 3200
                 if( abs(err1)<0.1 ) goto 3200
               endif
             endif
@@ -402,19 +438,35 @@ print *, 'calc outlet pixel'
         if( snum==0 )then
           upa_sum=uparea(iXX0,iYY0)
         endif
-
         diff=upa_sum-area0
         err1=diff/area0
 
- 3300 continue
+        !! when dam is very small and cannot be allocated on river network
+        if( err1>1 )then
+          staX(1)=iXX
+          staY(1)=iYY
+          staA(1)=-888
+          upa_sum=-888
+          diff=-888
+          err1=-8
+        endif
 
-        write(21,'(i10,3f10.3,3f12.1,  i8,2(i8,i6),2f12.1)') id, lat0, lon0, err1, upa_sum, area0, diff,&
-                  snum, staX(1), staY(1), staX(2), staY(2), StaA(1), StaA(2)
+ 3300   continue
+
+        ifile=21
+        if( upa_sum==-888 ) ifile=22  !! too small dam to allocate on river map (sub-grid dams)
+        if( upa_sum==-999 ) ifile=23  !! dams which cannot be allocated 
+
+        write(ifile,'(i10,3f10.3,3f12.1,  i8,i6,2f12.1,2x,a30)') id, lat0, lon0, err1, upa_sum, area0, diff,&
+                  staX(1), staY(1), StaA(1), cap_mcm, damname
 
         iXX=staX(1)
         iYY=staY(1)
-        print '(i8,3f12.2,a,3f12.2)', id, lat0, lon0, area0, '  -->', glat(iYY),glon(iXX),uparea(iXX,iYY)
+        if( iXX>0 )then
+          print '(i8,3f12.2,a,3f12.2)', id, lat0, lon0, area0, '  -->', glat(iYY),glon(iXX),uparea(iXX,iYY)
+        endif
 
+      !! when corresponding 1min uparea pixel cannot be defined
       else
         kXX=-999
         kYY=-999
@@ -425,11 +477,14 @@ print *, 'calc outlet pixel'
         err1=-9
         diff=0
         bsn=-9
-        write(21,'(i10,3f10.3,3f12.1,  i8,2(i8,i6),2f12.1)') id, lat0, lon0, err1, upa_sum, area0, diff,&
-                  snum, staX(1), staY(1), staX(2), staY(2), StaA(1), StaA(2)
+        staX(1)=-999
+        staY(1)=-999
+        StaA(1)=-999.0
+        write(23,'(i10,3f10.3,3f12.1,  i8,i6,2f12.1,2x,a30)') id, lat0, lon0, err1, upa_sum, area0, diff,&
+                  staX(1), staY(1), StaA(1), cap_mcm, damname
 
-
-        write(6,'(i16,i8, 7f15.4,f10.4,2i6)') id, bsn, lat0, lon0, area0, lat, lon, area, diff, err1, kXX, kYY
+        write(6,'(i16,i8, 7f15.4,f10.4,2i6,f12.1,2x,a30)') id, bsn, lat0, lon0, area0, lat, lon, area, &
+                                                        diff, err1, kXX, kYY, cap_mcm, damname
 
 !!        print '(i8,3f10.2,a,3f10.2)', id, lat0, lon0, area0, '  -->', -999., -999., -999.,
 

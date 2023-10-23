@@ -401,11 +401,10 @@ print *, 'calc_outclm: calc mday maximum: mday=', mday
       END SUBROUTINE NCERROR
 #endif
 
-      end program calc_rivout
-
-
-
-
+CONTAINS
+!+
+!+
+!+
       subroutine intp_roff(nx,ny,nxin,nyin,imis,rmis,nextx,inpn,inpx,inpy,inpa,r2inp,r2out)
 ! ================================================
       implicit none
@@ -444,12 +443,9 @@ print *, 'calc_outclm: calc mday maximum: mday=', mday
       end do
 
       end subroutine intp_roff
-
-
-
-
-
-
+!+
+!+
+!+
       subroutine conv_resol(nx,ny,nxin,nyin,imis,rmis,nextx,ctmare,r2inp,r2out)
 ! ================================================
 ! to convert resolution
@@ -527,3 +523,8 @@ print *, 'calc_outclm: calc mday maximum: mday=', mday
 
       return
       end subroutine conv_resol
+!+
+!+
+!+
+      end program calc_rivout
+
