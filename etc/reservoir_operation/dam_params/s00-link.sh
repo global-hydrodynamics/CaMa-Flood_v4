@@ -26,7 +26,7 @@ NATDIR=${BASE}/out/test1-glb_15min
 #GRSADdir="/home/yamadai/work/data/Dam+Lake/GRSAD/GRSAD_timeseries/"
 GRSADdir="/Users/yamadai/work/data/Dam+Lake/GRSAD/GRSAD_timeseries/"
 
-## ReGeom data (Global Reservoir Geometry Database　＋Error File)
+## ReGeom data (Global Reservoir Geometry Database)
 ## Data can be downloaded below. Please specify the directory where "*.csv" data are located.
 ## https://zenodo.org/record/1322884#.YF1owUj7QW_
 #ReGeomdir="/home/yamadai/work/data/Dam+Lake/ReGeom/Area_Strg_Dp/Area_Strg_Dp/"
