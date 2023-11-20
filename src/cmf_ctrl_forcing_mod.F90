@@ -11,6 +11,8 @@ MODULE CMF_CTRL_FORCING_MOD
 !
 ! (C) D.Yamazaki & E. Dutra  (U-Tokyo/FCUL)  Aug 2019
 !
+! Modifications: I. Ayan-Miguez (BSC) Apr 2023: Read inpmat.nc matrix by layers and added LECMF2LAKEC switch
+!
 ! Licensed under the Apache License, Version 2.0 (the "License");
 !   You may not use this file except in compliance with the License.
 !   You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-2.0
@@ -184,10 +186,13 @@ END SUBROUTINE CMF_FORCING_NMLIST
 
 
 !####################################################################
-SUBROUTINE CMF_FORCING_INIT
+SUBROUTINE CMF_FORCING_INIT(LECMF2LAKEC)
 ! Initialize/open netcdf input 
 ! -- called from "Main Program / Coupler"
 IMPLICIT NONE
+
+INTEGER(KIND=JPIM),OPTIONAL,INTENT(IN) :: LECMF2LAKEC   !! Lake coupling: this is currently only used in ECMWF
+
 !================================================
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "!---------------------!"
@@ -201,7 +206,11 @@ ENDIF
 IF( LINTERP ) THEN
   IF( LITRPCDF )THEN
 #ifdef UseCDF_CMF
-    CALL CMF_INPMAT_INIT_CDF
+    IF(PRESENT(LECMF2LAKEC)) THEN
+      CALL CMF_INPMAT_INIT_CDF(LECMF2LAKEC)
+    ELSE
+      CALL CMF_INPMAT_INIT_CDF
+    ENDIF
 #endif
   ELSE
     CALL CMF_INPMAT_INIT_BIN
@@ -281,12 +290,15 @@ END SUBROUTINE CMF_FORCING_INIT_CDF
 !+
 !==========================================================
 #ifdef UseCDF_CMF
-SUBROUTINE CMF_INPMAT_INIT_CDF
+SUBROUTINE CMF_INPMAT_INIT_CDF(LECMF2LAKEC)
 USE YOS_CMF_INPUT,           ONLY: NX, NY, INPN, LMAPEND, NXIN,NYIN
 USE YOS_CMF_MAP,             ONLY: NSEQMAX
 USE CMF_UTILS_MOD,           ONLY: INQUIRE_FID, NCERROR, mapD2vecD, mapI2vecI
 USE NETCDF
 IMPLICIT NONE
+
+INTEGER(KIND=JPIM),OPTIONAL,INTENT(IN) :: LECMF2LAKEC  !! for lake coupling: currently only used in ECMWF
+
 INTEGER(KIND=JPIM),ALLOCATABLE  :: I2TMP(:,:,:)
 REAL(KIND=JPRB),ALLOCATABLE     :: D2TMP(:,:,:)
 
@@ -340,48 +352,50 @@ DEALLOCATE( I2TMP )
 
 !================================================
 !*** Check if inverse information is available  (only used in ECMWF/IFS v4.07)
-ISTATUS = NF90_INQ_VARID(NCID, 'levI', VARID)
-IF ( ISTATUS /= 0 ) THEN
-  WRITE(LOGNAM,*) "Could not find levI variable in inpmat.nc: inverse interpolation not available"
-  INPNI=-1  ! Not available 
-ELSE
-  !* Find levels dimension
-  CALL NCERROR( NF90_INQUIRE_VARIABLE(NCID,VARID,dimids=VDIMIDS),'getting levI dimensions ')
-  CALL NCERROR( NF90_INQUIRE_DIMENSION(NCID,VDIMIDS(1),len=INPNI),'getting time len ')
-  WRITE(LOGNAM,*) 'Alocating INP*I: NXIN, NYIN, INPNI =', NXIN, NYIN, INPNI
-  ALLOCATE( INPXI(NXIN,NYIN,INPNI),INPYI(NXIN,NYIN,INPNI),INPAI(NXIN,NYIN,INPNI) )
-  
-  WRITE(LOGNAM,*)'INIT_MAP: inpaI:',TRIM(CINPMAT)
-  CALL NCERROR ( NF90_INQ_VARID(NCID,'inpaI',VARID),'getting id' )
-  CALL NCERROR ( NF90_GET_VAR(NCID,VARID,INPAI,(/1,1,1/),(/NXIN,NYIN,INPNI/)),'reading data' ) 
+IF(PRESENT(LECMF2LAKEC) .AND. (LECMF2LAKEC .NE. 0)) THEN
 
-  WRITE(LOGNAM,*)'INIT_MAP: inpx:',TRIM(CINPMAT)
-  CALL NCERROR ( NF90_INQ_VARID(NCID,'inpxI',VARID),'getting id' )
-  CALL NCERROR ( NF90_GET_VAR(NCID,VARID,INPXI,(/1,1,1/),(/NXIN,NYIN,INPNI/)),'reading data' ) 
-
-  WRITE(LOGNAM,*)'INIT_MAP: inpy:',TRIM(CINPMAT)
-  CALL NCERROR ( NF90_INQ_VARID(NCID,'inpyI',VARID),'getting id' )
-  CALL NCERROR ( NF90_GET_VAR(NCID,VARID,INPYI,(/1,1,1/),(/NXIN,NYIN,INPNI/)),'reading data' )
+  ISTATUS = NF90_INQ_VARID(NCID, 'levI', VARID)
+  IF ( ISTATUS /= 0 ) THEN
+    WRITE(LOGNAM,*) "Could not find levI variable in inpmat.nc: inverse interpolation not available"
+    INPNI=-1  ! Not available 
+  ELSE
+    !* Find levels dimension
+    CALL NCERROR( NF90_INQUIRE_VARIABLE(NCID,VARID,dimids=VDIMIDS),'getting levI dimensions ')
+    CALL NCERROR( NF90_INQUIRE_DIMENSION(NCID,VDIMIDS(1),len=INPNI),'getting time len ')
+    WRITE(LOGNAM,*) 'Alocating INP*I: NXIN, NYIN, INPNI =', NXIN, NYIN, INPNI
+    ALLOCATE( INPXI(NXIN,NYIN,INPNI),INPYI(NXIN,NYIN,INPNI),INPAI(NXIN,NYIN,INPNI) )
   
-  !! We normalize INPAI here as it is used to interpolate flood fraction (Input Area Inversed)
-  WRITE(LOGNAM,*) 'INPAI normalization'
+    WRITE(LOGNAM,*)'INIT_MAP: inpaI:',TRIM(CINPMAT)
+    CALL NCERROR ( NF90_INQ_VARID(NCID,'inpaI',VARID),'getting id' )
+    CALL NCERROR ( NF90_GET_VAR(NCID,VARID,INPAI,(/1,1,1/),(/NXIN,NYIN,INPNI/)),'reading data' ) 
+
+    WRITE(LOGNAM,*)'INIT_MAP: inpx:',TRIM(CINPMAT)
+    CALL NCERROR ( NF90_INQ_VARID(NCID,'inpxI',VARID),'getting id' )
+    CALL NCERROR ( NF90_GET_VAR(NCID,VARID,INPXI,(/1,1,1/),(/NXIN,NYIN,INPNI/)),'reading data' ) 
+
+    WRITE(LOGNAM,*)'INIT_MAP: inpy:',TRIM(CINPMAT)
+    CALL NCERROR ( NF90_INQ_VARID(NCID,'inpyI',VARID),'getting id' )
+    CALL NCERROR ( NF90_GET_VAR(NCID,VARID,INPYI,(/1,1,1/),(/NXIN,NYIN,INPNI/)),'reading data' )
+  
+    !! We normalize INPAI here as it is used to interpolate flood fraction (Input Area Inversed)
+    WRITE(LOGNAM,*) 'INPAI normalization'
 !$OMP PARALLEL DO
-  DO IX=1,NXIN
-    DO IY=1,NYIN
-      ZTMP=0._JPRB
-      DO ILEV=1,INPNI
-        ZTMP=ZTMP+INPAI(IX,IY,ILEV)
-      ENDDO
-      IF (ZTMP > 0._JPRB) THEN
+    DO IX=1,NXIN
+      DO IY=1,NYIN
+        ZTMP=0._JPRB
         DO ILEV=1,INPNI
-          INPAI(IX,IY,ILEV) = INPAI(IX,IY,ILEV) / ZTMP
+          ZTMP=ZTMP+INPAI(IX,IY,ILEV)
         ENDDO
-      ENDIF
+        IF (ZTMP > 0._JPRB) THEN
+          DO ILEV=1,INPNI
+            INPAI(IX,IY,ILEV) = INPAI(IX,IY,ILEV) / ZTMP
+          ENDDO
+        ENDIF
+      ENDDO
     ENDDO
-  ENDDO
 !$OMP END PARALLEL DO
-ENDIF 
-
+  ENDIF
+ENDIF
 
 END SUBROUTINE CMF_INPMAT_INIT_CDF
 #endif
@@ -568,7 +582,7 @@ CALL INTERPI(D2MAPTMP,PBUFF(:,:,1))        !!  Inverse interpolation (CaMa grid 
 
 CONTAINS
 !==========================================================
-!+ INTERTI
+!+ INTERPI
 !==========================================================
 SUBROUTINE INTERPI(PBUFFIN,PBUFFOUT)
 ! interporlate field using "input matrix inverse: from catchment to other grid"
