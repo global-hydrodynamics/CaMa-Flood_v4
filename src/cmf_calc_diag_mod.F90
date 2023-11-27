@@ -20,15 +20,6 @@ MODULE CMF_CALC_DIAG_MOD
 !==========================================================
 USE PARKIND1,           ONLY: JPIM, JPRM, JPRB
 USE YOS_CMF_INPUT,      ONLY: LOGNAM
-IMPLICIT NONE
-CONTAINS 
-!####################################################################
-! -- CMF_DIAG_AVE_MAX   : Add / Max of diagnostic variables at time step
-! -- CMF_DIAG_AVERAGE   : Calculate time-average of Diagnostic Variables
-! -- CMF_DIAG_RESET     : Reset Diagnostic Variables (Average & Maximum )
-!
-!####################################################################
-SUBROUTINE CMF_DIAG_AVEMAX
 USE YOS_CMF_INPUT,      ONLY: DT, LPTHOUT,  LDAMOUT,  LWEVAP
 USE YOS_CMF_MAP,        ONLY: NSEQALL,      NPTHOUT
 USE YOS_CMF_PROG,       ONLY: D2RIVOUT,     D2FLDOUT,     D1PTHFLW,     D2GDWRTN, &
@@ -42,7 +33,15 @@ USE YOS_CMF_DIAG,       ONLY: D2OUTFLW,     D2RIVVEL,     D2PTHOUT,     D2PTHINF
 USE YOS_CMF_INPUT,      ONLY: LSEDOUT
 USE yos_cmf_sed,        ONLY: d2rivout_sed, d2rivvel_sed, sadd_riv
 #endif
-
+IMPLICIT NONE
+CONTAINS 
+!####################################################################
+! -- CMF_DIAG_AVE_MAX   : Add / Max of diagnostic variables at time step
+! -- CMF_DIAG_AVERAGE   : Calculate time-average of Diagnostic Variables
+! -- CMF_DIAG_RESET     : Reset Diagnostic Variables (Average & Maximum )
+!
+!####################################################################
+SUBROUTINE CMF_DIAG_AVEMAX
 IMPLICIT NONE
 INTEGER(KIND=JPIM),SAVE  ::  ISEQ, IPTH
 !====================
@@ -110,12 +109,28 @@ END SUBROUTINE CMF_DIAG_AVEMAX
 !####################################################################
 SUBROUTINE CMF_DIAG_AVERAGE
 USE YOS_CMF_TIME,       ONLY: JYYYYMMDD, JHHMM
-USE YOS_CMF_DIAG,       ONLY: D2DIAG_AVG, D1PTHFLW_AVG, NADD
 IMPLICIT NONE
 !================================================
 WRITE(LOGNAM,*) "CMF::DIAG_AVERAGE: time-average", NADD, JYYYYMMDD, JHHMM
-D2DIAG_AVG(:,:,:) = D2DIAG_AVG(:,:,:) /DBLE(NADD)
-D1PTHFLW_AVG(:,:) = D1PTHFLW_AVG(:,:) /DBLE(NADD)
+
+D2RIVOUT_AVG(:,:) = D2RIVOUT_AVG(:,:) / DBLE(NADD)
+D2FLDOUT_AVG(:,:) = D2FLDOUT_AVG(:,:) / DBLE(NADD)
+D2OUTFLW_AVG(:,:) = D2OUTFLW_AVG(:,:) / DBLE(NADD)
+D2RIVVEL_AVG(:,:) = D2RIVVEL_AVG(:,:) / DBLE(NADD)
+D2PTHOUT_AVG(:,:) = D2PTHOUT_AVG(:,:) / DBLE(NADD)
+D2GDWRTN_AVG(:,:) = D2GDWRTN_AVG(:,:) / DBLE(NADD)
+D2RUNOFF_AVG(:,:) = D2RUNOFF_AVG(:,:) / DBLE(NADD)
+D2ROFSUB_AVG(:,:) = D2ROFSUB_AVG(:,:) / DBLE(NADD)
+
+IF ( LDAMOUT ) THEN
+  D2DAMINF_AVG(:,:)  = D2DAMINF_AVG(:,:)  / DBLE(NADD)
+ENDIF
+IF ( LWEVAP ) THEN
+  D2WEVAPEX_AVG(:,:) = D2WEVAPEX_AVG(:,:) / DBLE(NADD)
+ENDIF
+
+D1PTHFLW_AVG(:,:) = D1PTHFLW_AVG(:,:) / DBLE(NADD)
+
 END SUBROUTINE CMF_DIAG_AVERAGE
 !####################################################################
 
@@ -126,14 +141,31 @@ END SUBROUTINE CMF_DIAG_AVERAGE
 !####################################################################
 SUBROUTINE CMF_DIAG_RESET
 USE YOS_CMF_TIME,       ONLY: JYYYYMMDD, JHHMM
-USE YOS_CMF_DIAG,       ONLY: D2DIAG_AVG, D1PTHFLW_AVG, D2DIAG_MAX, NADD
 IMPLICIT NONE
 !================================================
 WRITE(LOGNAM,*) "CMF::DIAG_AVERAGE: reset", JYYYYMMDD, JHHMM
 NADD=0
-D2DIAG_AVG(:,:,:) = 0._JPRB
+D2RIVOUT_AVG(:,:) = 0._JPRB
+D2FLDOUT_AVG(:,:) = 0._JPRB
+D2OUTFLW_AVG(:,:) = 0._JPRB
+D2RIVVEL_AVG(:,:) = 0._JPRB
+D2PTHOUT_AVG(:,:) = 0._JPRB
+D2GDWRTN_AVG(:,:) = 0._JPRB
+D2RUNOFF_AVG(:,:) = 0._JPRB
+D2ROFSUB_AVG(:,:) = 0._JPRB
+IF ( LDAMOUT ) THEN
+  D2DAMINF_AVG(:,:)  = 0._JPRB
+ENDIF
+IF ( LWEVAP ) THEN
+  D2WEVAPEX_AVG(:,:) = 0._JPRB
+ENDIF
+
 D1PTHFLW_AVG(:,:) = 0._JPRB 
-D2DIAG_MAX(:,:,:) = 0._JPRB
+
+D2STORGE_MAX(:,:)=0._JPRB
+D2OUTFLW_MAX(:,:)=0._JPRB
+D2RIVDPH_MAX(:,:)=0._JPRB
+
 END SUBROUTINE CMF_DIAG_RESET
 !####################################################################
 

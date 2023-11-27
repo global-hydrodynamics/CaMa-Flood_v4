@@ -12,7 +12,7 @@ CP = /bin/cp
 # DATM=-DNoAtom_CMF        : avoid OMP ATOMIC calculation (bit identical simulation)
 #======================================
 
-#DCDF=-DUseCDF_CMF
+DCDF=-DUseCDF_CMF
 #DMPI=-DUseMPI_CMF
 DSINGLE=-DSinglePrec_CMF
 #DATM=-DNoAtom_CMF
@@ -21,10 +21,14 @@ CFLAGS=$(DMPI) $(DCDF) $(DATM) $(DSINGLE)
 
 #======================================
 # gfortran Mac OSX 
-#======================================
 
-INC = -I/usr/local/include 
-LIB = -L/usr/local/lib
+# without netCDF
+#INC = -I/opt/homebrew/include 
+#LIB = -L/opt/homebrew/lib 
+
+# with netCDF
+INC = -I/opt/homebrew/include 
+LIB = -L/opt/homebrew/lib -lnetcdff
 
 #==============================
 # FCMP: main program (src/), FC: pre/post process (map/ etc/)

@@ -15,59 +15,51 @@ USE PARKIND1, ONLY: JPIM, JPRB, JPRM, JPRD
 IMPLICIT NONE
 SAVE
 !================================================
+! Pointer was removed in v4.12 in order to keep simple codes when activating Single Precision Mode
+!*** prognostics / state variables initial conditions
+
 !*** Inst. diagnostics 
-REAL(KIND=JPRB),ALLOCATABLE,TARGET :: D2DIAG(:,:,:)        !! Storage array for average diagnostics
+REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2RIVINF(:,:)           !! river      inflow   [m3/s] (from upstream)
+REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2RIVDPH(:,:)           !! river      depth    [m]
+REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2RIVVEL(:,:)           !! flow velocity       [m/s]
 
-REAL(KIND=JPRB),POINTER         :: D2RIVINF(:,:)           !! river      inflow   [m3/s] (from upstream)
-REAL(KIND=JPRB),POINTER         :: D2RIVDPH(:,:)           !! river      depth    [m]
-REAL(KIND=JPRB),POINTER         :: D2RIVVEL(:,:)           !! flow velocity       [m/s]
+REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2FLDINF(:,:)           !! floodplain inflow   [m3/s]
+REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2FLDDPH(:,:)           !! floodplain depth    [m]
+REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2FLDFRC(:,:)           !! flooded    fractipn [m2/m2]
+REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2FLDARE(:,:)           !! flooded    area     [m2]
 
-REAL(KIND=JPRB),POINTER         :: D2FLDINF(:,:)           !! floodplain inflow   [m3/s]
-REAL(KIND=JPRB),POINTER         :: D2FLDDPH(:,:)           !! floodplain depth    [m]
-REAL(KIND=JPRB),POINTER         :: D2FLDFRC(:,:)           !! flooded    fractipn [m2/m2]
-REAL(KIND=JPRB),POINTER         :: D2FLDARE(:,:)           !! flooded    area     [m2]
+REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2PTHOUT(:,:)           !! flood path outflow   [m3/s]
+REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2PTHINF(:,:)           !! flood path inflow   [m3/s]
 
-REAL(KIND=JPRB),POINTER         :: D2PTHOUT(:,:)           !! flood path outflow   [m3/s]
-REAL(KIND=JPRB),POINTER         :: D2PTHINF(:,:)           !! flood path inflow   [m3/s]
+REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2SFCELV(:,:)           !! water surface elev  [m]    (elevtn - rivhgt + rivdph)
+REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2OUTFLW(:,:)           !! total outflow       [m3/s] (rivout + fldout)
+REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2STORGE(:,:)           !! total storage       [m3]   (rivsto + fldsto)
 
-REAL(KIND=JPRB),POINTER         :: D2SFCELV(:,:)           !! water surface elev  [m]    (elevtn - rivhgt + rivdph)
-REAL(KIND=JPRB),POINTER         :: D2OUTFLW(:,:)           !! total outflow       [m3/s] (rivout + fldout)
-REAL(KIND=JPRB),POINTER         :: D2STORGE(:,:)           !! total storage       [m3]   (rivsto + fldsto)
-
-REAL(KIND=JPRB),POINTER         :: D2OUTINS(:,:)           !! instantaneous discharge [m3/s] (unrouted runoff)
-REAL(KIND=JPRB),POINTER         :: D2WEVAPEX(:,:)          !! Evaporation water extracted
-
-INTEGER(KIND=JPIM)              :: N2DIAG                  !! number of 2D diagnostics
+REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2OUTINS(:,:)           !! instantaneous discharge [m3/s] (unrouted runoff)
+REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2WEVAPEX(:,:)          !! Evaporation water extracted
 
 !================================================
 !*** Average diagnostics 
-REAL(KIND=JPRB),ALLOCATABLE,TARGET :: D2DIAG_AVG(:,:,:)    !! Storage array for average diagnostics (nseqmax,1,variable)
+REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2RIVOUT_AVG(:,:)       !! average river       discharge
+REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2OUTFLW_AVG(:,:)       !! average total outflow       [m3/s] (rivout + fldout)  !! bugfix v362
+REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2FLDOUT_AVG(:,:)       !! average floodplain  discharge
+REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2RIVVEL_AVG(:,:)       !! average flow velocity
+REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2PTHOUT_AVG(:,:)       !! flood pathway net outflow (2D)
 
-REAL(KIND=JPRB),POINTER         :: D2RIVOUT_AVG(:,:)       !! average river       discharge
-REAL(KIND=JPRB),POINTER         :: D2OUTFLW_AVG(:,:)       !! average total outflow       [m3/s] (rivout + fldout)  !! bugfix v362
-REAL(KIND=JPRB),POINTER         :: D2FLDOUT_AVG(:,:)       !! average floodplain  discharge
-REAL(KIND=JPRB),POINTER         :: D2RIVVEL_AVG(:,:)       !! average flow velocity
-REAL(KIND=JPRB),POINTER         :: D2PTHOUT_AVG(:,:)       !! flood pathway net outflow (2D)
+REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2GDWRTN_AVG(:,:)       !! average ground water return flow
+REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2RUNOFF_AVG(:,:)       !! average input runoff
+REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2ROFSUB_AVG(:,:)       !! average input sub-surface runoff
+REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2WEVAPEX_AVG(:,:)      !! average extracted water evaporation
 
-REAL(KIND=JPRB),POINTER         :: D2GDWRTN_AVG(:,:)       !! average ground water return flow
-REAL(KIND=JPRB),POINTER         :: D2RUNOFF_AVG(:,:)       !! average input runoff
-REAL(KIND=JPRB),POINTER         :: D2ROFSUB_AVG(:,:)       !! average input sub-surface runoff
-REAL(KIND=JPRB),POINTER         :: D2WEVAPEX_AVG(:,:)      !! average extracted water evaporation
-
-INTEGER(KIND=JPIM)              :: N2DIAG_AVG              !! Number of 2D diagnostics averages
 REAL(KIND=JPRB)                 :: NADD                    !! sum DT to calculate average
 !*** Average diagnostics (1D)
 REAL(KIND=JPRB),ALLOCATABLE  :: D1PTHFLW_AVG(:,:)          !! bifurcation channel flow (1D, not 2D variable)
 
 !================================================
 !*** Daily max diagnostics 
-REAL(KIND=JPRB),ALLOCATABLE,TARGET :: D2DIAG_MAX(:,:,:)    !! Storage array for maximum diagnostics (nseqmax,1,variable)
-
-REAL(KIND=JPRB),POINTER         :: D2OUTFLW_MAX(:,:)       !! max total outflow       [m3/s] (rivout + fldout)
-REAL(KIND=JPRB),POINTER         :: D2STORGE_MAX(:,:)       !! max total outflow       [m3/s] (rivout + fldout)
-REAL(KIND=JPRB),POINTER         :: D2RIVDPH_MAX(:,:)       !! max total outflow       [m3/s] (rivout + fldout)
-
-INTEGER(KIND=JPRB)              :: N2DIAG_MAX              !! Number of 2D diagnostics maximum
+REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2OUTFLW_MAX(:,:)       !! max total outflow       [m3/s] (rivout + fldout)
+REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2STORGE_MAX(:,:)       !! max total outflow       [m3/s] (rivout + fldout)
+REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2RIVDPH_MAX(:,:)       !! max total outflow       [m3/s] (rivout + fldout)
 
 !================================================
 !*** Global total
@@ -88,11 +80,11 @@ REAL(KIND=JPRD)                 :: P0GLBFLDARE              !! global flooded ar
 
 !================================================
 !*** dam variable
-REAL(KIND=JPRB),POINTER         :: D2DAMINF_AVG(:,:)       !! average reservoir inflow [m3/s]  !!!added
+REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2DAMINF_AVG(:,:)       !! average reservoir inflow [m3/s]  !!!added
 
 !================================================
 !!!*** levee variables
-REAL(KIND=JPRB),POINTER         :: D2LEVDPH(:,:)           !! flood depth in protected side (water depth betwen river & levee)
+REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2LEVDPH(:,:)           !! flood depth in protected side (water depth betwen river & levee)
 
 
 
