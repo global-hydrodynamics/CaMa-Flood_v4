@@ -61,3 +61,8 @@ Latest GitHub branch (master)  is v4.10
 ### Changes related to some developpers 
 - Updates on reservoir operation (new parameter file format, better method for allocation)
 - Runoff undef value treatment in cmf_utils
+
+## Update in v4.12 (2023.12.1)
+### Changes related to some developpers 
+- Updates on reservoir operation (parameter estimation in map/src/src_dam/)
+- Better netCDF map treatment
