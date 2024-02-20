@@ -8,6 +8,11 @@ Sample script for downscaling
 - Downscale to 1min resolution using high-res topo data  (map/glb_15min/1min)
 - Target: 2000 Sep
 
+Note: 
+Advanced downscaling option which consider tributary inundation is used as default.
+Please check t01-downscale.sh
+
+
 ### s11-downscale_duration.sh
 Sample script to downscale flood duration. 
 - Global 15min simulation

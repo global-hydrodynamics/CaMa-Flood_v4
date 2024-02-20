@@ -43,7 +43,11 @@ do
         FLDDPH="./out/flddph${IYEAR}.bin"      # input:  original flood depth file
         FFLOOD="./flood/flood_${CDATE}.bin"    # output: downscaled flood depth file
 
-        ./src/downscale_flddph $WEST $EAST $SOUTH $NORTH $RES $FLDDPH $FFLOOD $IREC &
+# Default downscaling (only consider outlet pixel flood depth)
+#        ./src/downscale_flddph $WEST $EAST $SOUTH $NORTH $RES $FLDDPH $FFLOOD $IREC &
+
+# Advanced downscaling (consider tributary inundation, using upstream flood depth)
+        ./src/downscale_flddph_trib $WEST $EAST $SOUTH $NORTH $RES $FLDDPH $FFLOOD $IREC &
 
         ## for parallel computation using multiple CPUs 
         NUM=`ps aux | grep $USER | grep src/downscale_flddph | wc -l | awk '{print $1}'`

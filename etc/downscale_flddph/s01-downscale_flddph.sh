@@ -25,6 +25,7 @@ RES=1min
 #RES=30sec
 #RES=15sec
 #RES=5sec
+#RES=3sec
 
 ## For visualization:  NGRID=pixels to aggregate,  MAXDPH:maximum water depth for colorbar
 NGRID=1
