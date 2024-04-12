@@ -14,17 +14,17 @@ We are now discussing how to merge contributions from multiple developpers.
 Below is a tentative idea.
 
 ## Branches
-- **master**        : main repository (latest stable code is here).
-- **release_v4.XX** : the code archive released as v4.XX (Do not modify)
-- **develop4XX**    : development branch based on v4.XX (please fork from here to make a contribution)
+- **master**        : main repository (latest code is here. If you want to make a comit, please fork from here).
+- **release_v4.XX** : the code archive released as v4.XX stable version (Do not modify)
+- **develop4XX**    : development branch based on v4.XX, created when multiple developments are in parallelly in progress
 - **dev4XX_PROJ**   : working branch for merging a project (when you make pull request, we creat a specific branch for your project)
 
 
 ## When you make some update
 
-0. Please contact the developper (Dai Yamazaki) in advance to make a discussion on the new scheme to be integrated to **CaMa-Food master**.
+0. Please contact the primary developper (Dai Yamazaki) in advance to make a discussion on the new scheme to be integrated to **CaMa-Food master**.
 
-1. We recommend you to fork the **develop4XX** branch.
+1. We recommend you to fork the **master** branch. If some other works are ongoing, the core development team will tell you which branch to work on.
 
 2. Make some modifications, following the below rules:
 
@@ -34,7 +34,7 @@ Below is a tentative idea.
 - If the new scheme require additional data to run, please prepare a sample data required by the new sheme (better if the size of sample data is minimum). However, the data should be kept outside of GitHub. If your new scheme required data, please contact Yamazaki to discuss a better way of data management in CaMa-Flood package.
 
 3. When your code is ready to be merged, please contact the repository manager (Dai Yamazaki). Then, we create a working branch **dev4XX_PROJ** for merging your commit. 
-- Please fork **dev4XX_PROJ**, reflect your changes on this branch (only include nesessary changes).
+- Please fork the **master** (or specified branch by developer), reflect your changes on this branch (only include nesessary changes).
 - If you find a conflict which cannot be solved, please contact the code manager.
 
 4. Please make a pull request to **dev4XX_PROJ** branch.
