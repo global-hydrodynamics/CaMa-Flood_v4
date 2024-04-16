@@ -13,7 +13,7 @@ tag = sys.argv[1]
 MINUPAREA = int(sys.argv[2])
 
 DAM_FILE    = './inp/damlist.txt'
-output_file = './'+tag+'/dam_params_comp.csv'
+output_file = './'+tag+'/tmp_p04_damparams.csv'
 
 #### other file paths -----------------------
 Qmean_file   = './'+tag+'/tmp_p01_AnnualMean.bin'

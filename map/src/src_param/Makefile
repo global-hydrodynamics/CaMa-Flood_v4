@@ -15,7 +15,8 @@ get_upbasin \
 get_subbasin \
 set_bif_basin \
 set_mpi_region \
-allocate_gauge \
+allocate_flow_gauge \
+allocate_level_gauge \
 allocate_dam
 
 

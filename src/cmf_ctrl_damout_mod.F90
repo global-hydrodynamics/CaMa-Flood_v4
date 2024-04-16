@@ -180,12 +180,13 @@ DO IDAM = 1, NDAM
   I1DAM(ISEQ)=1
   I2MASK(ISEQ,1)=2   !! reservoir grid. skipped for adaptive time step
 
-  IF( LDAMH22 )THEN       !! 
+  IF( LDAMH22 )THEN    !! Hanazaki 2022 scheme 
     NorVol(IDAM)   = ConVol(IDAM) * 0.5    ! normal storage
     R_VolUpa(NDAM) = FldVol(IDAM) * 1.E-6 / upreal(IDAM)
-  ELSE
+
+  ELSE  !! Yamazaki&Funato scheme (paper in prep)
     Vyr =Qn(IDAM)*(365.*24.*60.*60.)                    !! Annual inflow -> assume dry period inflow is 1/8 of annual flow 
-    Qsto=(ConVol(IDAM)*0.7+Vyr/8.)/(180.*24.*60.*60.)   !! possible mean outflow in dry period (6month, ConVol*0.7 + Inflow)
+    Qsto=(ConVol(IDAM)*0.7+Vyr/4.)/(180.*24.*60.*60.)   !! possible mean outflow in dry period (6month, ConVol*0.7 + Inflow)
     Qn(IDAM)=min(Qn(IDAM),Qsto)*1.5                     !! Outflow at normal volume (*1.5 is parameter to decide outflw balance)
 
     AdjVol(IDAM)=ConVol(IDAM)  + FldVol(IDAM)*0.1       !! AdjVol is for outflow stability (result is not so sensitive)
@@ -503,9 +504,9 @@ LOGICAL,SAVE               :: IsOpen
 DATA IsOpen       /.FALSE./
 ! ==========================================
 
-IF( LDAMTXT .and. LDAMTXT)THEN
+IF( LDAMTXT )THEN
 
-  IF( .not. IsOpen)THEN
+  IF( .not. IsOpen )THEN
     IsOpen=.TRUE.
     WRITE(CYYYY,'(i4.4)') ISYYYY
     DAMTXT='./damtxt-'//trim(cYYYY)//'.txt'

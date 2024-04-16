@@ -2,11 +2,11 @@
 from datetime import datetime
 import os
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.ticker as tick
 import pandas as pd
-from matplotlib import colors
-from scipy.signal import argrelmax
+#import matplotlib.pyplot as plt
+#import matplotlib.ticker as tick
+#from matplotlib import colors
+#from scipy.signal import argrelmax
 import sys
 
 print(os.path.basename(__file__))

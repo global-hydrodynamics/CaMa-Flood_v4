@@ -103,7 +103,7 @@ CDIMINFO="${FMAP}/diminfo_test-1deg.txt"    # dimention information file
 CINPMAT=${FMAP}/inpmat_test-1deg.bin        # runoff input matrix for interporlation
 
 # Dam Parameter File
-CDAMFILE="${FMAP}/dam_param.csv"
+CDAMFILE="${FMAP}/dam_param.csv"            # dam parameter list
 
 #----- for plain binary map input
 #** basic topography
@@ -304,6 +304,8 @@ EOF
 cat >> ${NMLIST} << EOF
 &NDAMOUT
 CDAMFILE = "${CDAMFILE}"               ! Reservoir Parameter File
+LDAMTXT  = ".TRUE."                    ! True for text-based reservoir data output
+LDAMH22  = ".FALSE."                   ! True to use Hanazaki 2022 dam scheme. (False for Yamazaki&Funato scheme)
 /
 EOF
 

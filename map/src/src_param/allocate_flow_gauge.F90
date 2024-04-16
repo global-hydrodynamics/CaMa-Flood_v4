@@ -1,8 +1,14 @@
-      program allocate_dam
+      program allocate_gauge
 ! ===============================================
-! to set various maps
+! to allocate river flow gauge on CaMa-Flood river map.
+!   input: gauge list, allocated on MERIT Hydro or J-FlwDir.
+!          1st-4th column should be (ID, Lat, Lon, Uparea)
 ! ===============================================
       implicit none
+!
+      character*16         ::  mode   !! multi  = up to 2 corresponding grid
+                                      !! single = only  1 corresponding grid (primary for dam allocation)
+
 ! index TRIP
       integer              ::  iXX, iYY, jXX, jYY
       integer              ::  nXX, nYY                        !! x-y matrix GLOBAL
@@ -11,16 +17,15 @@
       real                 ::  west2, north2, east2, south2
       character*16         ::  buf
       character*16         ::  hires                           !! hires map directory (default: 1min global / 15sec Japan)
-      integer              ::  ios, inum, ifile
+      integer              ::  ios, inum
 ! index 1min
       integer              ::  ix, iy, jx, jy, kx, ky, dx, dy
       integer              ::  nx, ny                          !! high-resolution map coordinate
 
-      integer              ::  ix0, iy0                    !! allocated station xy
+      integer              ::  ix0, iy0                        !! allocated station xy
 ! input
-      real,allocatable     ::  uparea(:,:)                 !! drainage  area 
-      real,allocatable     ::  ctmare(:,:)                 !! catchment area 
-      integer,allocatable  ::  nextXX(:,:), nextYY(:,:)   !! next grid X
+      real,allocatable     ::  uparea(:,:)                    !! drainage area (GRID base)
+      integer,allocatable  ::  nextXX(:,:), nextYY(:,:)       !! next grid X
 
       real,allocatable     ::  maxupa(:,:)                    !! maximum drainage area of upstream grids 
       integer,allocatable  ::  upstXX(:,:,:), upstYY(:,:,:)   !! list of upstream grid
@@ -33,33 +38,40 @@
       real,allocatable     ::  upa1m(:,:)                     !! high-res upstream area 
       real,allocatable     ::  lon1m(:), lat1m(:)             !! high-res pixel lat lon
 
-      integer              ::  id
-      character*32         ::  damname, rivname
-      integer              ::  year
-      real                 ::  lat0, lon0, lat, lon, area0, area, cap_mcm
+      integer*8            ::  id
+      real                 ::  lat0, lon0, lat, lon, area0, area
       real                 ::  err, err0, err1, err2, dd, diff
       real                 ::  rate, rate0
       integer              ::  nn
 
-      integer              ::  ista, jsta, nsta
+      integer              ::  i_ups, j_ups, n_ups            !! upstream grid 
       integer              ::  snum
 
       integer              ::  iXX0, iYY0, jXX0, jYY0
       integer              ::  isFound
 
-      integer              ::  staX(3), staY(3)
-      real                 ::  staA(3), area_cmf
+      integer              ::  staX(2), staY(2)
+      real                 ::  staA(2), upa_sum
 
 ! file
       character*128        ::  fparam
-      character*128        ::  rfile1, damlist, hilist
-      character*128        ::  wfile1, wfile2,  wfile3
+      character*128        ::  rfile1, gaugelist, hilist
+      character*128        ::  wfile1
 ! ===============================================
-      print *, 'Allocate dam on CaMa-Flood river network'
+      print *, 'Allocate gauge on CaMa-Flood river network'
 
       print *, 'USAGE'
-      print *, '% ./allocate_dam DamListFile'
-      call getarg(1,damlist)
+      print *, '% ./allocate_flow_gauge GaugeListFile (multi/single)'
+      call getarg(1,gaugelist)
+      call getarg(2,mode)
+
+      if( trim(mode)=='multi' )then
+        mode='multi'
+      elseif( trim(mode)=='single' )then
+        mode='single'
+      else
+        mode='multi'
+      endif
 
       print *, 'Check Hires Map'
       hires='1min'
@@ -89,6 +101,7 @@
         print *, '  hires map= ', trim(hires)
       endif
 
+      !! read CaMa-Flood map parameter
       fparam='../params.txt'
       open(11,file=fparam,form='formatted')
       read(11,*) nXX
@@ -103,17 +116,12 @@
 
 ! ==========
       !! read CaMa-Flood map files
-      allocate(uparea(nXX,nYY),ctmare(nXX,nYY))
+      allocate(uparea(nXX,nYY))
       allocate(nextXX(nXX,nYY),nextYY(nXX,nYY))
 
       rfile1='../uparea.bin'
       open(11, file=rfile1, form='unformatted', access='direct', recl=4*nXX*nYY,status='old',iostat=ios)
       read(11,rec=1) uparea
-      close(11)
-
-      rfile1='../ctmare.bin'
-      open(11, file=rfile1, form='unformatted', access='direct', recl=4*nXX*nYY,status='old',iostat=ios)
-      read(11,rec=1) ctmare
       close(11)
 
       rfile1='../nextxy.bin'
@@ -124,8 +132,7 @@
 
       do iYY=1, nYY
         do iXX=1, nXX
-          if( uparea(iXX,iYY)>0 ) uparea(iXX,iYY)=uparea(iXX,iYY)*1.e-6
-          if( ctmare(iXX,iYY)>0 ) ctmare(iXX,iYY)=ctmare(iXX,iYY)*1.e-6
+          if( uparea(iXX,iYY)>0 ) uparea(iXX,iYY)=uparea(iXX,iYY)*1.e-6   !! convert m2 --> km2
         end do
       end do
 
@@ -176,32 +183,33 @@
       do ix=1, nx
         lon1m(ix)=  west2+(ix-0.5)*csize
       end do
+
 ! ===============================================
 print *, 'check upstream grid'
 
-      nsta=8  !! number of upstream grid considered
-      allocate(upstXX(nXX,nYY,nsta),upstYY(nXX,nYY,nsta),maxupa(nXX,nYY))
+      n_ups=8  !! number of upstream grid considered
+      allocate(upstXX(nXX,nYY,n_ups),upstYY(nXX,nYY,n_ups),maxupa(nXX,nYY))
 
       upstXX(:,:,:)=-9999
       upstYY(:,:,:)=-9999
-      do ista=1, nsta
+      do i_ups=1, n_ups
         maxupa(:,:)=0
         do iYY=1, nYY
           do iXX=1, nXX
             if( nextXX(iXX,iYY)>0 ) then
               jXX=nextXX(iXX,iYY)
               jYY=nextYY(iXX,iYY)
-              if( ista>=2 )then
-                do jsta=1, ista-1
-                  if( iXX==upstXX(jXX,jYY,jsta).and.iYY==upstYY(jXX,jYY,jsta) )then
-                    goto 2000
+              if( i_ups>=2 )then
+                do j_ups=1, i_ups-1
+                  if( iXX==upstXX(jXX,jYY,j_ups).and.iYY==upstYY(jXX,jYY,j_ups) )then
+                    goto 2000    !! already registered, skip
                   endif
                 end do
               endif
-              if( uparea(iXX,iYY)>maxupa(jXX,jYY) )then
+              if( uparea(iXX,iYY)>maxupa(jXX,jYY) )then  !! register grid from larger uparea
                 maxupa(jXX,jYY)=uparea(iXX,iYY)
-                upstXX(jXX,jYY,ista)=iXX
-                upstYY(jXX,jYY,ista)=iYY
+                upstXX(jXX,jYY,i_ups)=iXX
+                upstYY(jXX,jYY,i_ups)=iYY
               endif
             endif
    2000     continue
@@ -245,43 +253,29 @@ print *, 'calc outlet pixel location of each unit catchment'
           endif
         end do
       end do
-      
+
 ! ===============================================
-      open(11, file=damlist, form='formatted')
+      open(11, file=gaugelist, form='formatted')
       read(11,*)
 
-      wfile1='./dam_alloc_river.txt'
+      wfile1='./gauge_alloc.txt'
       open(21, file=wfile1, form='formatted')
-      write(21,'(a,a)') '        ID       lat       lon   area_CaMa  area_Input       error        diff', &
-                        '      ix      iy     cap_mcm  year  damname                         rivname'
-
-      wfile2='./dam_alloc_small.txt'
-      open(22, file=wfile2, form='formatted')
-      write(22,'(a,a)') '        ID       lat       lon   area_CaMa  area_Input       error        diff', &
-                        '      ix      iy     cap_mcm  year  damname                         rivname'
-
-      wfile3='./dam_alloc_error.txt'
-      open(23, file=wfile3, form='formatted')
-      write(23,'(a,a)') '        ID       lat       lon   area_CaMa  area_Input       error        diff', &
-                        '      ix      iy     cap_mcm  year  damname                         rivname'
-
-
+      write(21,'(a,a)') '        ID       lat       lon  area_Input   area_CaMa       error        diff', &
+                '    Type     ix1   iy1     ix2   iy2       area1       area2'
 
  1000 continue
-      read(11,*,end=1090) id, lat0,lon0,area0, damname, rivname, cap_mcm, year
-
-      if( lon0<west .or. lon0>east .or. lat0<south .or. lat0>north ) goto 1000
-      if( cap_mcm<0 ) goto 1000
+      read(11,*,end=1090) id, lat0, lon0, area0  !! read from gauge list
+      if( lon0<west .or. lon0>east .or. lat0<south .or. lat0>north ) goto 1000 !! out of domain
 
       ix=int( (lon0 -west2)/csize )+1
       iy=int( (north2-lat0)/csize )+1
 
-      err0=1.e20
-      err1=1.e20
+      err0 =1.e20
+      err1 =1.e20
       rate0=1.e20
-      nn=3
 
-!!    search high-res uparea and find the best fit
+!!    search high-res uparea and find the best fit pixel
+      nn=3
       do dy=-nn, nn
         do dx=-nn, nn
           jx=ix+dx
@@ -296,18 +290,18 @@ print *, 'calc outlet pixel location of each unit catchment'
 
           if( jy>0 .and. jy<=ny )then
             if( upa1m(jx,jy)>area0*0.05 )then
-              err=(upa1m(jx,jy)-area0)/area0      !! relative uparea error
+              err=(upa1m(jx,jy)-area0)/area0     !! relative uparea error
 
-              err2=err                            !! error considering location difference
+              err2=err                           !! error considering location difference
               dd=(  (jy-iy)**2.+(jy-iy)**2. )**0.5
               if( err>0 ) err2=err+0.02*dd
               if( err<0 ) err2=err-0.02*dd
 
               !! calculate error rate separately for overestimation and underestimation
               if( err2>=0 )then
-                rate=(1+err2)
+                rate=(1+err2)        !! 1.x times as large
               elseif( err2>-1 .and. err2<0 )then
-                rate=1./(1+err2)
+                rate=1./(1+err2)     !! 1.x times as small
                 rate=min(rate,1000.)
               else
                 rate=1000
@@ -330,8 +324,8 @@ print *, 'calc outlet pixel location of each unit catchment'
 
       !! if gauge cannot be allocated on CaMa-Flood map
       if( err0==1.e20 .or. area0<=0 ) then
-        write(23,'(i10,2f10.3,4f12.1, 2i8,f12.1,i6,2x,a30,2x,a30)') id, lat0,lon0, -999. ,area0, -999., -999.,&
-                -999, -999, cap_mcm, year, trim(damname), trim(rivname)
+        write(21,'(i10,2f10.3,4f12.2,  i8,2(i8,i6),2f12.1)') id, lat0, lon0, area0, -999.0, -999.0, -999.0,&
+                  -9, -999, -999, -999, -999, -999.0, -999.0
         goto 1000
       endif
 
@@ -339,53 +333,42 @@ print *, 'calc outlet pixel location of each unit catchment'
       !! find best grid for the gauge
       ix0=kx  !! GRDC allocated on 1min
       iy0=ky
-      iXX0=ctx1m(ix0,iy0)
+      iXX0=ctx1m(ix0,iy0)   !! unit-catchment iXX,iYY
       iYY0=cty1m(ix0,iy0)
 
       if( iXX0<0 .or. iYY0<0 )then   !! if allocated pixel is not considered in CaMa-Flood (e.g. coastal small basin), skip
-        write(23,'(i10,2f10.3,4f12.1, 2i8,f12.1,i6,2x,a30,2x,a30)') id, lat0,lon0, -999. ,area0, -999., -999.,&
-                -999, -999, cap_mcm, year, trim(damname), trim(rivname)
+        write(21,'(i10,2f10.3,4f12.2,  i8,2(i8,i6),2f12.1)') id, lat0, lon0, area0, -999.0, -999.0, -999.0,&
+                  -9, -999, -999, -999, -999, -999.0, -999.0
         goto 1000
       endif
 
-      !! when dam is very small and cannot be allocated on river network (treat as subgrid dam, receive runoff)
-      if( area0<ctmare(iXX0,iYY0)*0.3 )then
-        staX(1)=iXX
-        staY(1)=iYY
-        staA(1)=-888
-        area_cmf=-888
-        diff=-888
-        err1=-8
-        goto 3300
-      endif
-
-        !! when dam is very small and cannot be allocated on river network
-        if( area0<ctmare(iXX0,iYY0)*0.3 )then
-
-        endif
-
-      staX(1)=iXX0
+      staX(1)=iXX0  !! primary corresponding grid
       staY(1)=iYY0
       staA(1)=uparea(iXX0,iYY0)
+
+      staX(2)=-999  !! secondary corresponding grid
+      staY(2)=-999
+      staA(2)=-999
 
       jXX0=iXX0
       jYY0=iYY0
       area=uparea(jXX0,jYY0)
       diff=area-area0
-      err1=diff/area0
+      err1=diff/area0        !! relative error of uparea (outlet uparea - gauge uparea)
       isFound=0
 
-! ======
-      snum=0    !! when upstream is used to represent gauge, count number of upstream
-      area_cmf=0
-      if( abs(err1)>0.2 )then    !! uparea error is large. consider using upstream grid
+! =============
+      !! if uparea of outlet is >5% larger than gauge's uparea, consider using upstream grids as alternative corresponding grid
+      snum=0       !! when upstream is used to represent gauge, count number of upstream
+      upa_sum=0    !! summation of upstream uparea
+      if( abs(err1)>0.05 )then 
 
-        do ista=1, nsta  !! check upstream grids
-          jXX=upstXX(iXX0,iYY0,ista)
-          jYY=upstYY(iXX0,iYY0,ista)
+        do i_ups=1, n_ups  !! check upstream grids
+          jXX=upstXX(iXX0,iYY0,i_ups)
+          jYY=upstYY(iXX0,iYY0,i_ups)
           if( jXX<=0 ) goto 3100
 
-          ix=outx(jXX,jYY)  !! outlet pixel of upstream grid
+          ix=outx(jXX,jYY)  !! check outlet pixel of upstream grid
           iy=outy(jXX,jYY)
           call nextxy(ix,iy,jx,jy)
           isFound=0
@@ -406,21 +389,23 @@ print *, 'calc outlet pixel location of each unit catchment'
           if( isFound==1 )then
             jXX=ctx1m(ix,iy)
             jYY=cty1m(ix,iy)
-            if( uparea(jXX,jYY)<area0*0.1 ) goto 3200
+            if( uparea(jXX,jYY)<area0*0.1 ) goto 3200   !! upstream grid uparea is 1-order smaller than gauge uparea --> small tributary: skip
 
-            area=uparea(jXX,jYY)
+            area=upa_sum+uparea(jXX,jYY)    !! consider multiple upstream grids
             diff=area-area0
             err2=diff/area0
 
-            if( abs(err2)<abs(err1) )then
-              err1=err2
-              snum=1
+            if( abs(err2)<abs(err1) )then   !! if error of "(sum of) upstream uparea" is smaller than using downstream uparea, 
+              err1=err2                     !!  use upstream to represent gauge location
+              snum=snum+1
               staX(snum)=jXX
               staY(snum)=jYY
               staA(snum)=uparea(jXX,jYY)
-              area_cmf=area
+              upa_sum=area
 
-              if( abs(err1)<0.1 ) goto 3200
+              if( snum==2       ) goto 3200   !! maximum 2 upstream grids  to represent gauges
+              if( trim(mode)=='single' .and. snum==1 ) goto 3200  !! single corresponding grid mode
+              if( abs(err1)<0.1 ) goto 3200   !! if upstream error is smaller than 10%, stop searching corresponding grid
             endif
           endif
  3100     continue
@@ -429,29 +414,19 @@ print *, 'calc outlet pixel location of each unit catchment'
  3200 continue
 
       if( snum==0 )then
-        area_cmf=uparea(iXX0,iYY0)   !! if no upstream corresponding grid, use downstream uparea as CaMa uparea
+        upa_sum=uparea(iXX0,iYY0)   !! if no upstream corresponding grid, use downstream uparea as CaMa uparea
       endif
-      diff=area_cmf-area0  !! difference: CaMa uparea - gauge uparea
-      err1=diff/area0      !! relative error
+      diff=upa_sum-area0  !! difference: CaMa uparea - gauge uparea
+      err1=diff/area0     !! relative error
 
-      !! when dam is very small and cannot be allocated on river network
-      if( err1>1 )then
-        staX(1)=iXX
-        staY(1)=iYY
-        staA(1)=-888
-        area_cmf=-888
-        diff=-888
-        err1=-8
+      if( snum==0 .and. err1>1 )then !! gauge is on small tributary, and no corresponding CaMa grid
+        write(21,'(i10,2f10.3,4f12.2,  i8,2(i8,i6),2f12.1)') id, lat0, lon0, area0, -999.0, -999.0, -999.0,&
+                  -9, -999, -999, -999, -999, -999.0, -999.0
+        goto 1000
       endif
 
- 3300 continue
-
-      ifile=21
-      if( area_cmf==-888 ) ifile=22  !! too small dam to allocate on river map (sub-grid dams)
-      if( area_cmf==-999 ) ifile=23  !! dams which cannot be allocated 
-
-      write(ifile,'(i10,2f10.3,4f12.1, 2i8,f12.1,i6,2x,a30,2x,a30)') id, lat0,lon0, area_cmf,area0, err1,diff,&
-                staX(1), staY(1), cap_mcm, year, damname, rivname
+      write(21,'(i10,2f10.3,4f12.2,  i8,2(i8,i6),2f12.1)') id, lat0, lon0, area0, upa_sum, err1, diff,&
+              snum, staX(1), staY(1), staX(2), staY(2), StaA(1), StaA(2)
 
       iXX=staX(1)
       iYY=staY(1)
@@ -481,5 +456,5 @@ CONTAINS
 
 
 
-      end program  allocate_dam
+      end program  allocate_gauge
 

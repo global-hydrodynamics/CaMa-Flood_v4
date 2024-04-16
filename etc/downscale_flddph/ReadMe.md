@@ -1,6 +1,10 @@
 # Flood depth downscale
 Written by Dai Yamazaki
 
+Detailed Notes are in $CaMa-Flood/doc/ directory.
+Please check Note_downscale.docx
+
+
 ## Contents
 ### s01-downscale_flddph.sh
 Sample script for downscaling
