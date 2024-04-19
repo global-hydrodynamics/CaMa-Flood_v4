@@ -28,7 +28,7 @@
 
 #*** 0a. Set CaMa-Flood base directory
 BASE=`pwd`/..
-# BASE="/home/yamadai/work/CaMa_v411/cmf_v411_pkg"  # setting for PBS in cluster
+# BASE="/home/yamadai/work/CaMa_v420/cmf_v420_pkg"  # setting for PBS in cluster
 
 echo $BASE
 
@@ -81,7 +81,35 @@ LRESTCDF=".TRUE."                           # .TRUE. to use netCDF restart file
 IFRQ_RST="30"                               # output restat frequency.
                                             # [0]: only at last time, [1,2,3,...,24] hourly restart, [30]: monthly restart
 #============================
-#*** 1e. forcing setting
+#*** 1e. river map & topography
+FMAP="${BASE}/map/conus_06min"              # map directory
+
+#----- for plain binary map input
+#** basic topography
+LMAPCDF=".FALSE."                           # .TRUE. for netCDF map
+CNEXTXY="${FMAP}/nextxy.bin"                # downstream xy (river network map)
+CGRAREA="${FMAP}/ctmare.bin"                # unit-catchment area   [m2]
+CELEVTN="${FMAP}/elevtn.bin"                # channel top elevation [m]
+CNXTDST="${FMAP}/nxtdst.bin"                # downstream distance   [m]
+CRIVLEN="${FMAP}/rivlen.bin"                # channel length        [m]
+CFLDHGT="${FMAP}/fldhgt.bin"                # floodplain elevation profile (height above 'elevtn') [m]
+
+#** channel parameter
+###CRIVWTH=${FMAP}/rivwth.bin"              # channel width [m] (empirical power-low)
+CRIVWTH="${FMAP}/rivwth_gwdlr.bin"          # channel width [m] (GWD-LR + filled with empirical)
+CRIVHGT="${FMAP}/rivhgt.bin"                # channel depth [m] (empirical power-low)
+CRIVMAN="${FMAP}/rivman.bin"                # manning coefficient river (The one in flood plain is a global parameter; set $PMANFLD below.)
+
+#** bifurcation channel info
+CPTHOUT="${FMAP}/bifprm.txt"                #   bifurcation channel list
+
+#============================
+#*** 1f. forcing setting
+#CDIMINFO="${FMAP}/diminfo_test-1deg.txt"    # dimention information file
+#CINPMAT=${FMAP}/inpmat_test-1deg.bin        # runoff input matrix for interporlation
+CDIMINFO="${FMAP}/diminfo_test-15min_nc.txt" # dimention information file
+CINPMAT=${FMAP}/inpmat_test-15min_nc.bin     # runoff input matrix for interporlation
+
 IFRQ_INP="24"                               # input forcing frequency: [1,2,3,...,24] hour
 DROFUNIT="86400000"   # [mm/day->m/s]       # runoff unit conversion
 
@@ -106,33 +134,6 @@ CVNROF="Runoff"                                # netCDF runoff    variable name
 #SDAYIN=""       # see (3) set each year
 #SHOURIN=""      # see (3) set each year
 
-
-#============================
-#*** 1f. river map & topography
-FMAP="${BASE}/map/conus_06min"              # map directory
-#CDIMINFO="${FMAP}/diminfo_test-1deg.txt"    # dimention information file
-#CINPMAT=${FMAP}/inpmat_test-1deg.bin        # runoff input matrix for interporlation
-CDIMINFO="${FMAP}/diminfo_test-15min_nc.txt" # dimention information file
-CINPMAT=${FMAP}/inpmat_test-15min_nc.bin     # runoff input matrix for interporlation
-
-#----- for plain binary map input
-#** basic topography
-LMAPCDF=".FALSE."                           # .TRUE. for netCDF map
-CNEXTXY="${FMAP}/nextxy.bin"                # downstream xy (river network map)
-CGRAREA="${FMAP}/ctmare.bin"                # unit-catchment area   [m2]
-CELEVTN="${FMAP}/elevtn.bin"                # channel top elevation [m]
-CNXTDST="${FMAP}/nxtdst.bin"                # downstream distance   [m]
-CRIVLEN="${FMAP}/rivlen.bin"                # channel length        [m]
-CFLDHGT="${FMAP}/fldhgt.bin"                # floodplain elevation profile (height above 'elevtn') [m]
-
-#** channel parameter
-###CRIVWTH=${FMAP}/rivwth.bin"              # channel width [m] (empirical power-low)
-CRIVWTH="${FMAP}/rivwth_gwdlr.bin"          # channel width [m] (GWD-LR + filled with empirical)
-CRIVHGT="${FMAP}/rivhgt.bin"                # channel depth [m] (empirical power-low)
-CRIVMAN="${FMAP}/rivman.bin"                # manning coefficient river (The one in flood plain is a global parameter; set $PMANFLD below.)
-
-#** bifurcation channel info
-CPTHOUT="${FMAP}/bifprm.txt"                #   bifurcation channel list
 
 #============================
 #*** 1h. Output Settings 

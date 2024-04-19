@@ -62,8 +62,11 @@ LFPLAIN=".TRUE."                            # .TRUE. to activate floodplain stor
 LKINE=".FALSE."                             # .TRUE. to use kinematic wave equation
 LFLDOUT=".TRUE."                            # .TRUE. to activate floodplain discharge
 LPTHOUT=".TRUE."                            # .TRUE. to activate bifurcation flow, mainly for delta simulation
-LDAMOUT=".FALSE."                           # .TRUE. to activate reservoir operation (under development)
 
+#LDAMOUT=".FALSE."                          # .TRUE. to activate reservoir operation (under development)
+LDAMOUT=".TRUE."                            # .TRUE. to activate reservoir operation (under development)
+LDAMYBY= ".FALSE."                        # .TRUE. to use Year-By-Year dam activation scheme. .False. for All-reservoirs-in scheme
+LiVnorm= ".FALSE."                        # .TRUE. to use Noemal Volume as initial reservoir storage. False for zero-additional storage.
 
 #============================
 #*** 1c. simulation time
@@ -89,48 +92,9 @@ LRESTDBL=".FALSE."                           # .TRUE. for binary restart double 
 IFRQ_RST="0"                                # output restat frequency.
                                             # [0]: only at last time, [1,2,3,...,24] hourly restart, [30]: monthly restart
 
-
 #============================
-#*** 1e. forcing setting
-IFRQ_INP="24"                               # input forcing frequency: [1,2,3,...,24] hour
-DROFUNIT="86400000"   # [mm/day->m/s]       # runoff unit conversion
-
-#----- for plain binary runoff forcing
-LINPCDF=".FALSE."                           # true for netCDF runoff
-LINTERP=".TRUE."                            # .TRUE. to interporlate with input matrix
-LINTERPCDF=".FALSE."                        # .TRUE. to use netCDF input matrix
-CROFDIR="${BASE}/inp/test_1deg/runoff/"     # runoff directory
-CROFPRE="Roff____"                          # runoff prefix/suffix  
-CROFSUF=".one"                              #   $(CROFPRE)YYYYMMDD$(CROFSUF)
-
-###** sub-surface runoff scheme (not available with plain binary runoff)
-LROSPLIT=".FALSE."                          # .TRUE. for sub-surface runoff
-###CSUBDIR="NONE"                              # sub-surface runoff directory
-###CSUBPRE="NONE"                              # sub-surface runoff prefix/suffix  
-###CSUBSUF="NONE"                              #   $(PREFIX)YYYYMMDD$(SUFFIX)
-
-#----- for netCDF runoff forcing ###
-###LINPCDF=".TRUE."                              # true for netCDF runoff
-###LINTERP=".TRUE."                              # .TRUE. to interporlate with input matrix
-###LINTERPCDF=".FALSE."                          # .TRUE. to use netCDF input matrix
-###CROFDIR="${BASE}/inp/test_15min_nc/"          # runoff directory
-###CROFPRE="e2o_ecmwf_wrr2_glob15_day_Runoff_"   # runoff prefix/suffix  
-###CROFCDF=""     # see (3) set each year        # netCDF runoff file
-###CVNROF="Runoff"                               # netCDF runoff    variable name
-###CVNSUB=""                                     # netCDF runoffsub variable name
-###SYEARIN=""     # see (3) set each year        #   netCDF runoff file, start date
-###SMONIN=""      # see (3) set each year
-###SDAYIN=""      # see (3) set each year
-###SHOURIN=""     # see (3) set each year
-
-
-#============================
-#*** 1f. river map & topography
+#*** 1e. river map & topography
 FMAP="${BASE}/map/glb_15min"                # map directory
-CDIMINFO="${FMAP}/diminfo_test-1deg.txt"    # dimention information file
-CINPMAT=${FMAP}/inpmat_test-1deg.bin        # runoff input matrix for interporlation
-#CDIMINFO="${FMAP}/diminfo_test-15min_nc.txt" # dimention information file
-#CINPMAT=${FMAP}/inpmat_test-15min_nc.bin     # runoff input matrix for interporlation
 
 #----- for plain binary map input
 #** basic topography
@@ -164,6 +128,45 @@ LMEANSL=".FALSE."                           # .TRUE. to use mean sea level data
 ###CRIVCLINC=""                             # netCDF topography map
 ###CRIVPARNC=""                             # netCDF river parameters
 ###CMEANSLNC=""                             # netCDF mean sea level
+
+#============================
+#*** 1f. forcing setting
+CDIMINFO="${FMAP}/diminfo_test-1deg.txt"    # dimention information file
+CINPMAT=${FMAP}/inpmat_test-1deg.bin        # runoff input matrix for interporlation
+#CDIMINFO="${FMAP}/diminfo_test-15min_nc.txt" # dimention information file
+#CINPMAT=${FMAP}/inpmat_test-15min_nc.bin     # runoff input matrix for interporlation
+
+IFRQ_INP="24"                               # input forcing frequency: [1,2,3,...,24] hour
+DROFUNIT="86400000"   # [mm/day->m/s]       # runoff unit conversion
+
+#----- for plain binary runoff forcing
+LINPCDF=".FALSE."                           # true for netCDF runoff
+LINTERP=".TRUE."                            # .TRUE. to interporlate with input matrix
+LINTERPCDF=".FALSE."                        # .TRUE. to use netCDF input matrix
+CROFDIR="${BASE}/inp/test_1deg/runoff/"     # runoff directory
+CROFPRE="Roff____"                          # runoff prefix/suffix  
+CROFSUF=".one"                              #   $(CROFPRE)YYYYMMDD$(CROFSUF)
+
+###** sub-surface runoff scheme (not available with plain binary runoff)
+LROSPLIT=".FALSE."                          # .TRUE. for sub-surface runoff
+###CSUBDIR="NONE"                              # sub-surface runoff directory
+###CSUBPRE="NONE"                              # sub-surface runoff prefix/suffix  
+###CSUBSUF="NONE"                              #   $(PREFIX)YYYYMMDD$(SUFFIX)
+
+#----- for netCDF runoff forcing ###
+###LINPCDF=".TRUE."                              # true for netCDF runoff
+###LINTERP=".TRUE."                              # .TRUE. to interporlate with input matrix
+###LINTERPCDF=".FALSE."                          # .TRUE. to use netCDF input matrix
+###CROFDIR="${BASE}/inp/test_15min_nc/"          # runoff directory
+###CROFPRE="e2o_ecmwf_wrr2_glob15_day_Runoff_"   # runoff prefix/suffix  
+###CROFCDF=""     # see (3) set each year        # netCDF runoff file
+###CVNROF="Runoff"                               # netCDF runoff    variable name
+###CVNSUB=""                                     # netCDF runoffsub variable name
+###SYEARIN=""     # see (3) set each year        #   netCDF runoff file, start date
+###SMONIN=""      # see (3) set each year
+###SDAYIN=""      # see (3) set each year
+###SHOURIN=""     # see (3) set each year
+
 
 
 #============================
@@ -440,6 +443,17 @@ EOF
 #IFRQ_SL    = ${IFRQ_SL}                ! sea level boundary update frequency (min)
 #/
 #EOF
+
+#*** Opt. Reservoir Operation
+cat >> ${NMLIST} << EOF
+&NDAMOUT
+CDAMFILE = "${CDAMFILE}"               ! Reservoir Parameter File
+LDAMTXT  = ".TRUE."                    ! True for text-based reservoir data output
+LDAMH22  = ".FALSE."                   ! True to use Hanazaki 2022 dam scheme. (False for Yamazaki&Funato scheme)
+LDAMYBY  = "${LDAMYBY}"                ! .TRUE. to use Year-By-Year dam activation scheme. .False. for All-reservoirs-in scheme
+LiVnorm  = "${LiVnorm}"                ! .TRUE. to use Noemal Volume as initial reservoir storage. False for zero-additional storage.
+/
+EOF
 
 #================================================
 # (5) Execute main program

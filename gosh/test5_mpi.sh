@@ -27,7 +27,7 @@
 
 #*** 0a. Set CaMa-Flood base directory
 BASE=`pwd`/..
-# BASE="/home/yamadai/work/CaMa_v411/cmf_v411_pkg"  # setting for PBS in cluster
+# BASE="/home/yamadai/work/CaMa_v420/cmf_v420_pkg"  # setting for PBS in cluster
 
 echo $BASE
 
@@ -80,26 +80,10 @@ CVNREST="restart"                           # output restart file prefix
 LRESTCDF=".FALSE."                          # .TRUE. to use netCDF restart file
 IFRQ_RST="0"                                # output restat frequency.
                                             # [0]: only at last time, [1,2,3,...,24] hourly restart, [30]: monthly restart
-#============================
-#*** 1e. forcing setting
-IFRQ_INP="24"                               # input forcing frequency: [1,2,3,...,24] hour
-DROFUNIT="86400000"   # [mm/day->m/s]       # runoff unit conversion
-
-#----- for plain binary runoff forcing
-LINPCDF=".FALSE."                           # true for netCDF runoff
-LINTERP=".TRUE."                            # .TRUE. to interporlate with input matrix
-LINTERPCDF=".FALSE."                        # .TRUE. to use netCDF input matrix
-CROFDIR="${BASE}/inp/test_1deg/runoff/"     # runoff directory
-CROFPRE="Roff____"                          # runoff prefix/suffix  
-CROFSUF=".one"                              #   $(CROFPRE)YYYYMMDD$(CROFSUF)
 
 #============================
-#*** 1f. river map & topography
+#*** 1e. river map & topography
 FMAP="${BASE}/map/glb_15min"                # map directory
-CDIMINFO="${FMAP}/diminfo_test-1deg.txt"    # dimention information file
-CINPMAT=${FMAP}/inpmat_test-1deg.bin        # runoff input matrix for interporlation
-#CDIMINFO="${FMAP}/diminfo_test-15min_nc.txt" # dimention information file
-#CINPMAT=${FMAP}/inpmat_test-15min_nc.bin     # runoff input matrix for interporlation
 
 #----- for plain binary map input
 #** basic topography
@@ -120,6 +104,25 @@ CRIVMAN="${FMAP}/rivman.bin"                # manning coefficient river (The one
 
 #** bifurcation channel info
 CPTHOUT="${FMAP}/bifprm.txt"                #   bifurcation channel list
+
+#============================
+#*** 1f. forcing setting
+CDIMINFO="${FMAP}/diminfo_test-1deg.txt"    # dimention information file
+CINPMAT=${FMAP}/inpmat_test-1deg.bin        # runoff input matrix for interporlation
+#CDIMINFO="${FMAP}/diminfo_test-15min_nc.txt" # dimention information file
+#CINPMAT=${FMAP}/inpmat_test-15min_nc.bin     # runoff input matrix for interporlation
+
+IFRQ_INP="24"                               # input forcing frequency: [1,2,3,...,24] hour
+DROFUNIT="86400000"   # [mm/day->m/s]       # runoff unit conversion
+
+#----- for plain binary runoff forcing
+LINPCDF=".FALSE."                           # true for netCDF runoff
+LINTERP=".TRUE."                            # .TRUE. to interporlate with input matrix
+LINTERPCDF=".FALSE."                        # .TRUE. to use netCDF input matrix
+CROFDIR="${BASE}/inp/test_1deg/runoff/"     # runoff directory
+CROFPRE="Roff____"                          # runoff prefix/suffix  
+CROFSUF=".one"                              #   $(CROFPRE)YYYYMMDD$(CROFSUF)
+
 
 #============================
 #*** 1h. Output Settings 

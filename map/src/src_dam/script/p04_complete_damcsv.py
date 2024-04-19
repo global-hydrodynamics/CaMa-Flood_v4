@@ -111,7 +111,7 @@ print(damcsv2)
 
 #### Save Dam CSV ####
 damcsv2 = damcsv2.rename(columns={'ID': 'GRAND_ID', 'damname':'DamName', 'lon':'DamLon', 'lat':'DamLat', 'ix':'DamIX', 'iy':'DamIY', 'fldsto_mcm':'FldVol_mcm', 'consto_mcm':'ConVol_mcm', 'cap_mcm':'TotalVol_mcm'})
-damcsv2 = damcsv2[['GRAND_ID', 'DamName', 'DamLon', 'DamLat', 'area_CaMa', 'DamIX', 'DamIY', 'FldVol_mcm', 'ConVol_mcm', 'TotalVol_mcm', 'Qn', 'Qf', 'year']]
+damcsv2 = damcsv2[['GRAND_ID', 'DamName', 'DamLat', 'DamLon', 'area_CaMa', 'DamIX', 'DamIY', 'FldVol_mcm', 'ConVol_mcm', 'TotalVol_mcm', 'Qn', 'Qf', 'year']]
 
 damcsv2.to_csv(output_file, index=None)
 print(' ')

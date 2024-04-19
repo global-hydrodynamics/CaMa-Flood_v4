@@ -120,6 +120,7 @@
 
 
 ! ###### calculation for non-tiled hires map
+      isDownXY=0
       if( isTile==0 )then
 
         CCname=trim(tag)

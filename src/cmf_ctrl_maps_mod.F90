@@ -313,8 +313,11 @@ INTEGER(KIND=JPIM),ALLOCATABLE  :: REGIONGRID(:)
 !
 INTEGER(KIND=JPIM),SAVE         :: IX,IY
 INTEGER(KIND=JPIM),SAVE         :: IREGION
+#ifdef UseMPI_CMF
 #ifdef UseCDF_CMF
-INTEGER(KIND=JPIM)              :: NCID,VARID
+INTEGER(KIND=JPIM)              :: NCID
+INTEGER(KIND=JPIM)              :: VARID
+#endif
 #endif
 !$OMP THREADPRIVATE               (IX)
 !================================================
