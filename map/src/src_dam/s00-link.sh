@@ -24,17 +24,17 @@ NATDIR=${BASE}/out/test1-glb_15min
 ## Data can be downloaded below. Please specify the directory where "*_intp" files are located.
 ## https://dataverse.tdl.org/dataset.xhtml?persistentId=doi:10.18738/T8/DF80WG
 
-#GRSAD="${BASE}/map/data/GRSAD_sample/"  # sample data
+GRSAD="${BASE}/map/data/GRSAD_sample/"  # sample data
 #GRSADdir="/home/yamadai/work/data/Dam+Lake/GRSAD/GRSAD_timeseries/"
-GRSAD="/Users/yamadai/work/data/Dam+Lake/GRSAD/GRSAD_timeseries/"
+#GRSAD="/Users/yamadai/work/data/Dam+Lake/GRSAD/GRSAD_timeseries/"
 
 # ReGeom data (Global Reservoir Geometry Database)
 ## Data can be downloaded below. Please specify the directory where "*.csv" data are located.
 ## https://zenodo.org/record/1322884#.YF1owUj7QW_
 
-#ReGeom="${BASE}/map/data/ReGeom_sample/" # sample data
+ReGeom="${BASE}/map/data/ReGeom_sample/" # sample data
 #ReGeomdir="/home/yamadai/work/data/Dam+Lake/ReGeom/Area_Strg_Dp/Area_Strg_Dp/"
-ReGeom="/Users/yamadai/work/data/Dam+Lake/ReGeom/Area_Strg_Dp/"
+#ReGeom="/Users/yamadai/work/data/Dam+Lake/ReGeom/Area_Strg_Dp/"
 
 #===========================================================
 
