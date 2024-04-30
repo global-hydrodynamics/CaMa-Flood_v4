@@ -8,6 +8,9 @@ http://hydro.iis.u-tokyo.ac.jp/~yamadai/cama-flood/
 Now the codes of CaMa-Flood v4 is distributed under **Apache 2.0** license (so Open Source!). 
 So you can feel free to use/modify the code. (note: data is distributed under difference license)
 
+If you need to cite CaMa-Flood based on versions (rather than published papers), please refer to Zenodo repository.
+https://zenodo.org/search?q=parent.id%3A4609654&f=allversions%3Atrue&l=list&p=1&s=10&sort=version
+
 We are also happy to collaborate with external contributers for further development of CaMa-Flood.
 We are now discussing how to merge contributions from multiple developpers.
 
