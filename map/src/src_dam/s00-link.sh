@@ -25,7 +25,7 @@ NATDIR=${BASE}/out/test1-glb_15min
 ## https://dataverse.tdl.org/dataset.xhtml?persistentId=doi:10.18738/T8/DF80WG
 
 GRSAD="${BASE}/map/data/GRSAD_sample/"  # sample data
-#GRSADdir="/home/yamadai/work/data/Dam+Lake/GRSAD/GRSAD_timeseries/"
+#GRSAD="/home/yamadai/work/data/Dam+Lake/GRSAD/GRSAD_timeseries/"
 #GRSAD="/Users/yamadai/work/data/Dam+Lake/GRSAD/GRSAD_timeseries/"
 
 # ReGeom data (Global Reservoir Geometry Database)
@@ -33,7 +33,7 @@ GRSAD="${BASE}/map/data/GRSAD_sample/"  # sample data
 ## https://zenodo.org/record/1322884#.YF1owUj7QW_
 
 ReGeom="${BASE}/map/data/ReGeom_sample/" # sample data
-#ReGeomdir="/home/yamadai/work/data/Dam+Lake/ReGeom/Area_Strg_Dp/Area_Strg_Dp/"
+#ReGeom="/home/yamadai/work/data/Dam+Lake/ReGeom/Area_Strg_Dp/Area_Strg_Dp/"
 #ReGeom="/Users/yamadai/work/data/Dam+Lake/ReGeom/Area_Strg_Dp/"
 
 #===========================================================
