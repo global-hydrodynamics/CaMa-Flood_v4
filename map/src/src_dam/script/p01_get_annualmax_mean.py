@@ -1,12 +1,6 @@
-import calendar
-from datetime import datetime
 import os
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.ticker as tick
 import pandas as pd
-import matplotlib.dates as mdates
-from matplotlib import colors
 from scipy.signal import argrelmax
 import sys
 

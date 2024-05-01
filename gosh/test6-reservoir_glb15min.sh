@@ -60,8 +60,8 @@ LADPSTP=".TRUE."                            # .TRUE. for adaptive time step
 LPTHOUT=".TRUE."                            # .TRUE. to activate bifurcation flow, mainly for delta simulation
 #LDAMOUT=".FALSE."                          # .TRUE. to activate reservoir operation (under development)
 LDAMOUT=".TRUE."                            # .TRUE. to activate reservoir operation (under development)
-LDAMYBY= ".FALSE."                        # .TRUE. to use Year-By-Year dam activation scheme. .False. for All-reservoirs-in scheme
-LiVnorm= ".FALSE."                        # .TRUE. to use Noemal Volume as initial reservoir storage. False for zero-additional storage.
+LDAMYBY=".FALSE."                        # .TRUE. to use Year-By-Year dam activation scheme. .False. for All-reservoirs-in scheme
+LiVnorm=".FALSE."                        # .TRUE. to use Noemal Volume as initial reservoir storage. False for zero-additional storage.
 #============================
 #*** 1c. simulation time
 YSTA=2000                                   # start year ( from YSTA / Jan  1st _ 00:00)
@@ -296,7 +296,7 @@ cat >> ${NMLIST} << EOF
 COUTDIR  = "${COUTDIR}"                ! OUTPUT DIRECTORY
 CVARSOUT = "${CVARSOUT}"               ! Comma-separated list of output variables to save 
 COUTTAG  = "${COUTTAG}"                ! Output Tag Name for each experiment
-LOUTVEC  = .FALSE                      ! TRUE FOR VECTORIAL OUTPUT, FALSE FOR NX,NY OUTPUT
+LOUTVEC  = .FALSE.                     ! TRUE FOR VECTORIAL OUTPUT, FALSE FOR NX,NY OUTPUT
 LOUTCDF  = ${LOUTCDF}                  ! * true for netcdf outptu false for binary
 NDLEVEL  = 0                           ! * NETCDF DEFLATION LEVEL 
 IFRQ_OUT = ${IFRQ_OUT}                 ! output data write frequency (hour)
@@ -307,10 +307,10 @@ EOF
 cat >> ${NMLIST} << EOF
 &NDAMOUT
 CDAMFILE = "${CDAMFILE}"               ! Reservoir Parameter File
-LDAMTXT  = ".TRUE."                    ! True for text-based reservoir data output
-LDAMH22  = ".FALSE."                   ! True to use Hanazaki 2022 dam scheme. (False for Yamazaki&Funato scheme)
-LDAMYBY  = "${LDAMYBY}"                ! .TRUE. to use Year-By-Year dam activation scheme. .False. for All-reservoirs-in scheme
-LiVnorm  = "${LiVnorm}"                ! .TRUE. to use Noemal Volume as initial reservoir storage. False for zero-additional storage.
+LDAMTXT  = .TRUE.                      ! True for text-based reservoir data output
+LDAMH22  = .FALSE.                     ! True to use Hanazaki 2022 dam scheme. (False for Yamazaki&Funato scheme)
+LDAMYBY  = ${LDAMYBY}                  ! .TRUE. to use Year-By-Year dam activation scheme. .False. for All-reservoirs-in scheme
+LiVnorm  = ${LiVnorm}                  ! .TRUE. to use Noemal Volume as initial reservoir storage. False for zero-additional storage.
 /
 EOF
 

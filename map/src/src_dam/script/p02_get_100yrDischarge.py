@@ -1,12 +1,7 @@
 # to calculate 100yr discharge at dam grids using natsim data
-from datetime import datetime
 import os
 import numpy as np
 import pandas as pd
-#import matplotlib.pyplot as plt
-#import matplotlib.ticker as tick
-#from matplotlib import colors
-#from scipy.signal import argrelmax
 import sys
 
 print(os.path.basename(__file__))
