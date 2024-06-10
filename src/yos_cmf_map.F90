@@ -11,7 +11,7 @@ MODULE YOS_CMF_MAP
 !  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
-USE PARKIND1, ONLY: JPIM, JPRM, JPRB
+USE PARKIND1, ONLY: JPIM, JPRM, JPRB,JPRD
 IMPLICIT NONE
 SAVE 
 !================================================
@@ -54,11 +54,14 @@ INTEGER(KIND=JPIM),ALLOCATABLE           ::  I2MASK(:,:)        !! Mask
 
 !================================================
 !*** Floodplain Topography (diagnosed)
-REAL(KIND=JPRB),ALLOCATABLE              ::  D2RIVSTOMAX(:,:)   !! maximum river storage [m3]
 REAL(KIND=JPRB),ALLOCATABLE              ::  D2RIVELV(:,:)      !! elevation of river bed [m3]
-REAL(KIND=JPRB),ALLOCATABLE              ::  D2FLDSTOMAX(:,:,:) !! MAXIMUM FLOODPLAIN STORAGE [M3]
 REAL(KIND=JPRB),ALLOCATABLE              ::  D2FLDGRD(:,:,:)    !! FLOODPLAIN GRADIENT
 REAL(KIND=JPRB)                          ::  DFRCINC            !! FLOODPLAIN FRACTION INCREMENT [-] (1/NLFP)
+
+!================================================
+!*** Floodplain Topography (prognostic)
+REAL(KIND=JPRD),ALLOCATABLE              ::  P2RIVSTOMAX(:,:)   !! maximum river storage [m3]
+REAL(KIND=JPRD),ALLOCATABLE              ::  P2FLDSTOMAX(:,:,:) !! MAXIMUM FLOODPLAIN STORAGE [M3]
 
 !================================================
 !*** Downstream boundary
