@@ -18,7 +18,7 @@ MODULE CMF_CTRL_MAPS_MOD
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
 ! shared variables in module
-USE PARKIND1,                ONLY: JPIM, JPRB, JPRM
+USE PARKIND1,                ONLY: JPIM, JPRB, JPRD, JPRM
 USE YOS_CMF_INPUT,           ONLY: LOGNAM
 IMPLICIT NONE
 SAVE
@@ -905,7 +905,7 @@ REAL(KIND=JPRB),SAVE     ::  DHGTPRE
 REAL(KIND=JPRB),SAVE     ::  DWTHINC
 !$OMP THREADPRIVATE               (I,DSTONOW,DSTOPRE,DHGTPRE,DWTHINC)
 !================================================
-P2FLDSTOMAX(:,:,:) = 0._JPRB
+P2FLDSTOMAX(:,:,:) = 0._JPRD
 D2FLDGRD(:,:,:)    = 0._JPRB
 DFRCINC=dble(NLFP)**(-1.)
 !

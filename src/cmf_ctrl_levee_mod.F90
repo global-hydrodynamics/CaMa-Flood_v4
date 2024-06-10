@@ -143,7 +143,7 @@ ALLOCATE( D2LEVBASSTO(NSEQMAX,1) )
 ALLOCATE( D2LEVTOPSTO(NSEQMAX,1) )
 ALLOCATE( D2LEVFILSTO(NSEQMAX,1) )
 
-P2FLDSTOMAX(:,:,:) = 0._JPRB   !! max floodplain  storage  at each layer
+P2FLDSTOMAX(:,:,:) = 0._JPRD   !! max floodplain  storage  at each layer
 D2FLDGRD(:,:,:)    = 0._JPRB   !! floodplain topo gradient of each layer
 DFRCINC=dble(NLFP)**(-1.)   !! fration of each layer
 
