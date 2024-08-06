@@ -17,8 +17,8 @@ SAVE
 !*** Integer Kinds
 INTEGER, PARAMETER :: JPIT = SELECTED_INT_KIND(2)
 INTEGER, PARAMETER :: JPIS = SELECTED_INT_KIND(4)
-INTEGER, PARAMETER :: JPIM = SELECTED_INT_KIND(9)
-INTEGER, PARAMETER :: JPIB = SELECTED_INT_KIND(12)
+INTEGER, PARAMETER :: JPIM = SELECTED_INT_KIND(9)  !! 4 byte integer
+INTEGER, PARAMETER :: JPIB = SELECTED_INT_KIND(12) !! 8 byte long integer
 !Special integer type to be used for sensative adress calculations
 !should be *8 for a machine with 8byte adressing for optimum performance
 #ifdef ADDRESS64
@@ -30,15 +30,15 @@ INTEGER, PARAMETER :: JPIA = JPIM
 !*** Real Kinds
 INTEGER, PARAMETER :: JPRT = SELECTED_REAL_KIND(2,1)
 INTEGER, PARAMETER :: JPRS = SELECTED_REAL_KIND(4,2)
-INTEGER, PARAMETER :: JPRM = SELECTED_REAL_KIND(6,37)
+INTEGER, PARAMETER :: JPRM = SELECTED_REAL_KIND(6,37)  !! 4 byte float
 #ifdef SinglePrec_CMF
-INTEGER, PARAMETER :: JPRB = SELECTED_REAL_KIND(6,37)
+INTEGER, PARAMETER :: JPRB = SELECTED_REAL_KIND(6,37)  !! JPRB is switchable (4 byte in Single Precision Mode)
 #else
 INTEGER, PARAMETER :: JPRB = SELECTED_REAL_KIND(13,300)
 #endif
 ! Double real for C code and special places requiring 
 !    higher precision. 
-INTEGER, PARAMETER :: JPRD = SELECTED_REAL_KIND(13,300)
+INTEGER, PARAMETER :: JPRD = SELECTED_REAL_KIND(13,300)  !! 8 byte double-precison float (primary used for precise water budget)
 
 !================================================
 ! Logical Kinds for RTTOV....
