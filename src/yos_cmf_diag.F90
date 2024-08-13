@@ -41,7 +41,7 @@ REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2WEVAPEX(:,:)          !! Evapora
 !================================================
 !*** Average diagnostics 
 REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2RIVOUT_AVG(:,:)       !! average river       discharge
-REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2OUTFLW_AVG(:,:)       !! average total outflow       [m3/s] (rivout + fldout)  !! bugfix v362
+REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2OUTFLW_AVG(:,:)       !! average total outflow [m3/s] (rivout + fldout)
 REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2FLDOUT_AVG(:,:)       !! average floodplain  discharge
 REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2RIVVEL_AVG(:,:)       !! average flow velocity
 REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2PTHOUT_AVG(:,:)       !! flood pathway net outflow (2D)
@@ -84,7 +84,7 @@ REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2DAMINF_AVG(:,:)       !! average
 
 !================================================
 !!!*** levee variables
-REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2LEVDPH(:,:)           !! flood depth in protected side (water depth betwen river & levee)
+REAL(KIND=JPRB),ALLOCATABLE,TARGET   :: D2LEVDPH(:,:)      !! flood depth in protected side (water depth betwen river & levee)
 
 
 
