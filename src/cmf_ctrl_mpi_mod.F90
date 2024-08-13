@@ -1,5 +1,5 @@
 MODULE CMF_CTRL_MPI_MOD
-!! contains nothing is UseMPI_CMF is not defined
+!! contains nothing if UseMPI_CMF is not defined
 #ifdef UseMPI_CMF
 !==========================================================
 !* PURPOSE: modules related to MPI usage 

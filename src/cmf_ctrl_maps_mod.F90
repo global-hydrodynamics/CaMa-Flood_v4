@@ -44,7 +44,7 @@ LOGICAL                         :: LMAPCDF         !! true for netCDF map input
 CHARACTER(LEN=256)              :: CRIVCLINC       !! river map netcdf
 CHARACTER(LEN=256)              :: CRIVPARNC       !! river parameter netcdf (WIDTH,HEIGHT, Manning, ground wateer delay)
 CHARACTER(LEN=256)              :: CMEANSLNC       !! mean sea level netCDF
-CHARACTER(LEN=256)              :: CMPIREGNC       !! MPI Region netCDF
+CHARACTER(LEN=256)              :: CMPIREGNC       !! MPI region map in netcdf
 
 NAMELIST/NMAP/     CNEXTXY,  CGRAREA,  CELEVTN,  CNXTDST, CRIVLEN, CFLDHGT, &
                    CRIVWTH,  CRIVHGT,  CRIVMAN,  CPTHOUT, CGDWDLY, CMEANSL, &
