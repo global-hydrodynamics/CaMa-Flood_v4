@@ -270,6 +270,7 @@ IF ( LWEVAP ) THEN
   ALLOCATE(D2WEVAPEX_AVG(NSEQMAX,1))
   D2WEVAPEX_AVG(:,:)=0._JPRB
 ENDIF
+
 NADD=0
 
 !*** 2b time-average 1D Diagnostics (bifurcation channel)
