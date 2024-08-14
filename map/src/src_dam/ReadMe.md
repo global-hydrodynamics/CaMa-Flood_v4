@@ -1,7 +1,8 @@
 # Sample workflow to activate reservoir operation scheme.
 
-2021.3.25,  written by Risa Hanazaki & Dai Yamazaki
-2023.12.1,  updated documenatation for v4.13 and later
+2021.03.25,  (v4.01) written by Risa Hanazaki & Dai Yamazaki
+2023.12.1,   (v4.13 update) updated documenatation for v4.13 and later
+2024.05.01,  (v4.20 update) More detailed documentation on Dam Allocation and Reservoir Operation is available in doc/Manual_ReservoirOperation_v420.docx. 
 
 
 Note: 
