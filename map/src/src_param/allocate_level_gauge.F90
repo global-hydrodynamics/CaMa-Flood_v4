@@ -265,7 +265,7 @@ print *, 'calc outlet pixel location of each unit catchment'
       wfile1='./gauge_alloc.txt'
       open(21, file=wfile1, form='formatted')
       write(21,'(a,a)') '        ID       lat       lon        area    Type     ix1   iy1     ix2   iy2',&
-                        '  elv_outlet   elv_gauge    elv_upst  dst_outlet    dst_upst'
+                        '  elv_outlet   elv_gauge    elv_upst  dst_outlet    dst_upst     upa_outlet'
 
  1000 continue
       read(11,*,end=1090) id, lat0, lon0, area0  !! read from gauge list
@@ -331,8 +331,8 @@ print *, 'calc outlet pixel location of each unit catchment'
 
       !! if gauge cannot be allocated on CaMa-Flood map
       if( err0==1.e20 .or. area0<=0 ) then
-        write(21,'(i10,2f10.3,f12.1, i8,2(i8,i6), 5f12.2)')      id, lat0, lon0, area0, &
-                  -9, -999, -999, -999, -999,   -999.0,-999.0,-999.0, -999.0, -999.0
+        write(21,'(i10,2f10.3,f12.1, i8,2(i8,i6), 5f12.2,f15.2)')      id, lat0, lon0, area0, &
+                  -9, -999, -999, -999, -999,   -999.0,-999.0,-999.0, -999.0, -999.0, -999.0
         goto 1000
       endif
 
@@ -341,8 +341,8 @@ print *, 'calc outlet pixel location of each unit catchment'
       iXX0=ctx1m(ix0,iy0)   !! unit-catchment iXX,iYY
       iYY0=cty1m(ix0,iy0)
       if( iXX0<0 .or. iYY0<0 )then   !! if allocated pixel is not considered in CaMa-Flood (e.g. coastal small basin), skip
-        write(21,'(i10,2f10.3,f12.1, i8,2(i8,i6), 5f12.2)')      id, lat0, lon0, area0, &
-                  -9, -999, -999, -999, -999,   -999.0,-999.0,-999.0, -999.0, -999.0
+        write(21,'(i10,2f10.3,f12.1, i8,2(i8,i6), 5f12.2,f15.2)')      id, lat0, lon0, area0, &
+                  -9, -999, -999, -999, -999,   -999.0,-999.0,-999.0, -999.0, -999.0, -999.0
         goto 1000
       endif
 
@@ -409,8 +409,10 @@ print *, 'calc outlet pixel location of each unit catchment'
         dst_upst=-999.0
       endif
 
-      write(21,'(i10,2f10.3,f12.1, i8,2(i8,i6), 5f12.2)')      id, lat0, lon0, area0, &
-        type, iXX0,iYY0,jXX0,jYY0, elv_outlt,elv_gauge,elv_upst, dst_outlt,dst_upst
+
+
+      write(21,'(i10,2f10.3,f12.1, i8,2(i8,i6), 5f12.2,f15.2)')      id, lat0, lon0, area0, &
+        type, iXX0,iYY0,jXX0,jYY0, elv_outlt,elv_gauge,elv_upst, dst_outlt,dst_upst, uparea(iXX0,iYY0)
 
       print *, id, lat0,lon0,area0, '-->', glat(iYY0),glon(iXX0), dst_outlt
 
