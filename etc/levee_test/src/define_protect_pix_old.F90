@@ -27,12 +27,11 @@
 !
       integer*4,allocatable    ::  nextXX(:,:)                    !! downstream (jXX,jYY)
       integer*2,allocatable    ::  catmXX(:,:), catmYY(:,:)        !! catchment (iXX,iYY) of pixel (ix,iy)
-      integer*1,allocatable    ::  catmZZ(:,:)                    !! catchment Z layer (100 levels)
-
       real,allocatable         ::  flddif(:,:), rivwth(:,:), hand(:,:)      !! height above channel [m]
       real,allocatable         ::  lon(:), lat(:)
 
-      real,allocatable         ::  levfrc(:,:)                   !! levee unprotected fraction
+      real,allocatable         ::  levbas(:,:)                   !! flood depth [m] (coarse resolution)
+      real,allocatable         ::  levhgt(:,:)                   !! flood depth [m] (coarse resolution)
 !
       real,allocatable         ::  protect(:,:)                    !! downscaled flood depth [m]
       real,allocatable         ::  flddif2(:,:),hand2(:,:)                    !! downscaled flood depth [m]
@@ -41,7 +40,7 @@
       character*256            ::  mapdir, hires
       parameter                   (mapdir='./map/')              !! map directory (please make a symbolic link)
       character*256            ::  fnextxy, fflood, rfile
-      character*256            ::  flevfrc
+      character*256            ::  flevbas, flevhgt
       character*256            ::  buf
       integer                  ::  ios
 ! ===============================================
@@ -56,8 +55,6 @@
         read(buf,*) north2
 
       call getarg(5,hires)       !! downscale resolution
-
-      call getarg(6,flevfrc)       !! downscale resolution
 
       param=trim(mapdir)//'params.txt'
 
@@ -105,19 +102,25 @@
 
 ! ==========
 
-      allocate(nextXX(nXX,nYY),levfrc(nXX,nYY))
+      allocate(nextXX(nXX,nYY),levbas(nXX,nYY),levhgt(nXX,nYY))
       allocate(protect(mx,my),flddif2(mx,my),hand2(mx,my))
       protect(:,:)=-9999
 
 ! ===============================================
       fnextxy=trim(mapdir)//'nextxy.bin'
+      flevbas=trim(mapdir)//'levbas.bin'
+      flevhgt=trim(mapdir)//'levhgt.bin'
 
       open(11, file=fnextxy, form='unformatted', access='direct', recl=4*nXX*nYY)
       read(11,rec=1) nextXX
       close(11)
 
-      open(12, file=flevfrc, form='unformatted', access='direct', recl=4*nXX*nYY)
-      read(12,rec=1) levfrc
+      open(12, file=flevbas, form='unformatted', access='direct', recl=4*nXX*nYY)
+      read(12,rec=1) levbas
+      close(12)
+
+      open(12, file=flevhgt, form='unformatted', access='direct', recl=4*nXX*nYY)
+      read(12,rec=1) levhgt
       close(12)
 
 
@@ -131,7 +134,7 @@
         read(11,*) buf, area, lon_ori, lon_end, lat_end, lat_ori, nx, ny, csize
 
         if( lon_end<west2 .or. lon_ori>east2 .or.lat_ori<south2 .or. lat_end>north2 ) goto 1090  !! out of domain
-        allocate(catmXX(nx,ny),catmYY(nx,ny),catmZZ(nx,ny),flddif(nx,ny),rivwth(nx,ny),hand(nx,ny))
+        allocate(catmXX(nx,ny),catmYY(nx,ny),flddif(nx,ny),rivwth(nx,ny),hand(nx,ny))
         allocate(lon(nx),lat(ny))
   
         rfile=trim(mapdir)//trim(hires)//'/'//trim(area)//'.catmxy.bin'
@@ -146,19 +149,7 @@
           print *, 'no data: ', rfile
           stop
         endif
-
-        rfile=trim(mapdir)//trim(hires)//'/'//trim(area)//'.catmz100.bin'
-        print *, rfile
-        open(21,file=rfile,form='unformatted',access='direct',recl=1*nx*ny,status='old',iostat=ios)
-        if( ios==0 )then
-          read(21,rec=1) catmZZ
-          close(21)
-        else
-          print *, '*******************'
-          print *, 'no data: ', rfile
-          stop
-        endif
-
+  
         rfile=trim(mapdir)//trim(hires)//'/'//trim(area)//'.flddif.bin'
         open(21,file=rfile,form='unformatted',access='direct',recl=4*nx*ny,status='old',iostat=ios)
         if( ios==0 )then
@@ -218,11 +209,12 @@
               endif
 
               if( catmXX(ix,iy)>0 )then
-                protect(jx,jy)=0                                                    !! 
+                protect(jx,jy)=0
                 iXX=catmXX(ix,iy)
                 iYY=catmYY(ix,iy)
-                if( catmZZ(ix,iy)>levfrc(iXX,iYY)*100 )then  !! protected pixel
+                if( flddif(ix,iy)>levbas(iXX,iYY) .and. levbas(iXX,iYY)>0 )then
                   protect(jx,jy)=5
+                  if( flddif(ix,iy)>levhgt(iXX,iYY) ) protect(jx,jy)=6
                 endif
 
                 if( rivwth(ix,iy)/=-9999 .and. rivwth(ix,iy)/=0 )then !! permanent water
@@ -235,7 +227,7 @@
           end do
         end do
 
-        deallocate(catmXX,catmYY,catmZZ,flddif,rivwth,hand)
+        deallocate(catmXX,catmYY,flddif,rivwth,hand)
         deallocate(lon,lat)
 
  1090   continue

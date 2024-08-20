@@ -2,30 +2,43 @@
 
 # link output directory
 
-ln -sf ../../out/levee_test       out_lev
+ln -sf ../../out/levee_sample     out_lev
 ln -sf ../../out/test1-glb_15min  out_ori
+ln -sf ../../map/glb_15min        map
 
 mkdir -p data
 mkdir -p fig
 
 # some analysis on river depth & flood fraction
 
-./src/analysis_output
+#./src/analysis_output
 
 ###########
 
 # Downscale flood depth for Mississippi
 
-WEST=-93
+WEST=-94
 EAST=-86
-SOUTH=29
-NORTH=35
-HIRES="3sec"
-#HIRES="1min"
+SOUTH=34
+NORTH=40
+#HIRES="3sec"
+HIRES="1min"
+
+LEVFRC="map/lev_frc_global.bin"
+
+############
+
+rm -f dph_lev.bin
+rm -f dph_ori.bin
+rm -f flood_lev.bin
+rm -f flood_ori.bin
+rm -f hand.bin
+rm -f protect_pix.bin
 
 # define levee protected pixels 
-echo "./src/define_protect_pix  $WEST $EAST $SOUTH $NORTH $HIRES"
-./src/define_protect_pix  $WEST $EAST $SOUTH $NORTH $HIRES
+echo "./src/define_protect_pix  $WEST $EAST $SOUTH $NORTH $HIRES $LEVFRC"
+./src/define_protect_pix  $WEST $EAST $SOUTH $NORTH $HIRES  $LEVFRC
+
 
 # downscale flood depth with levee
 

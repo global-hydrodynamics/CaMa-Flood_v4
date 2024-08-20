@@ -511,4 +511,12 @@ fi
 
 done # loop to next year simulation
 
+
+# Simulation without levee
+echo "please execute gosh/test1-glb_15min.sh as reference simulation"
+
+
 exit 0
+
+
+
