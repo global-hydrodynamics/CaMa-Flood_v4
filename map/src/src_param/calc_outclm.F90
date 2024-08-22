@@ -4,7 +4,7 @@
 ! using runoff climatology (daily mean over 20~30 years)
 ! -- 30day max discharge calculation is deactivated in CaMa-Flood v4. Please set lout30=.true.
 ! ================================================
-#ifdef UseCDF
+#ifdef UseCDF_CMF
 USE NETCDF
 #endif
       implicit none
@@ -32,7 +32,7 @@ USE NETCDF
       logical             ::  lout30                  !! set lout30=.true. if 30day max discharge should be calculated.
       parameter              (lout30=.false.)
 
-#ifdef UseCDF
+#ifdef UseCDF_CMF
       integer             ::  ncid, varid
 #endif
 
@@ -267,7 +267,7 @@ print *, trim(crofbin)
         close(14)
       endif
 
-#ifdef UseCDF
+#ifdef UseCDF_CMF
       if( type=='cdf')then
 print *, trim(crofcdf)
         CALL NCERROR ( NF90_OPEN(crofcdf,NF90_NOWRITE,NCID),'READING'//TRIM(crofcdf) )
@@ -316,6 +316,9 @@ print *, 'calc_outclm: calc annual average'
       do iy=1, ny
         do ix=1, nx
           if( nextx(ix,iy)==-9999 )then
+            rivout(ix,iy)=-9999
+          endif
+          if( nextx(ix,iy)>1.e10 )then
             rivout(ix,iy)=-9999
           endif
         end do
@@ -379,8 +382,8 @@ print *, 'calc_outclm: calc mday maximum: mday=', mday
 
 ! ============================================================
 
-#ifdef UseCDF
       CONTAINS
+#ifdef UseCDF_CMF
 
 !!==================================================
       SUBROUTINE NCERROR(STATUS,STRING)
@@ -401,7 +404,6 @@ print *, 'calc_outclm: calc mday maximum: mday=', mday
       END SUBROUTINE NCERROR
 #endif
 
-CONTAINS
 !+
 !+
 !+
