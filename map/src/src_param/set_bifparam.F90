@@ -5,7 +5,7 @@
 ! (if needed, number of bifurcation layers can be modified.)
 ! -- 10 layer exist in original. Reduced to 5 by s01-*sh script to reduce computation cost
 ! ================================================
-#ifdef UseCDF
+#ifdef UseCDF_CMF
 USE NETCDF
 #endif
       implicit none
@@ -196,7 +196,7 @@ print *, 'set_bifparam: read bifori.txt'
 
 
 
-#ifdef UseCDF
+#ifdef UseCDF_CMF
       CONTAINS
 !!================================================
       SUBROUTINE NCERROR(STATUS,STRING)

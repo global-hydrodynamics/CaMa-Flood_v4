@@ -4,7 +4,7 @@
 ! using power-law function of annual mean discharge (outclm.bin)
 ! + distributed manning roughness is also generated (rivman.bin)
 ! ================================================
-#ifdef UseCDF
+#ifdef UseCDF_CMF
 USE NETCDF
 #endif
       implicit none
@@ -55,7 +55,7 @@ USE NETCDF
       parameter              (crivman='./rivman.bin')
       integer             ::  ios
 !
-#ifdef UseCDF
+#ifdef UseCDF_CMF
       character*256       ::  crivpar
       parameter              (crivpar='./rivpar.nc')
       integer             ::  ncid,varid,xid,yid
@@ -186,7 +186,7 @@ print *, 'calc_rivwth: width & depth calculation'
       write(23,rec=1) rivhgt_inf
       close(23)
 
-#ifdef UseCDF
+#ifdef UseCDF_CMF
       if( type=='cdf' )then
 
         !! == create netcdf and define dimensions
@@ -240,7 +240,7 @@ print *, 'calc_rivwth: width & depth calculation'
 
 
 
-#ifdef UseCDF
+#ifdef UseCDF_CMF
       CONTAINS
 !!================================================
       SUBROUTINE NCERROR(STATUS,STRING)
