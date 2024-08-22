@@ -381,10 +381,9 @@ print *, 'calc_outclm: calc mday maximum: mday=', mday
 
 
 ! ============================================================
-
       CONTAINS
-#ifdef UseCDF_CMF
 
+#ifdef UseCDF_CMF
 !!==================================================
       SUBROUTINE NCERROR(STATUS,STRING)
       USE NETCDF
@@ -403,7 +402,6 @@ print *, 'calc_outclm: calc mday maximum: mday=', mday
 
       END SUBROUTINE NCERROR
 #endif
-
 !+
 !+
 !+
