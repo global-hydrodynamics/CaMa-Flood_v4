@@ -75,3 +75,12 @@ Reservoir operation recommended as default scheme
 - Updates on reservoir operation (parameter estimation in map/src/src_dam/)
 - Better netCDF map treatment
 - Better downscaling considering tributary inundation
+
+### v4.21 is internal release 
+
+### Update in v4.22 (tentative, 2024.Autumn)
+#### Changes related to some developpers 
+- Output Variable OUTFLW was wrongly set as "OUTFLW = RIVOUT + FLDOUT + PTHOUT". It was corrected as "OUTFLOW = RIVOUT + FLDOUT" (main river network discharge)
+- Definition of output variable PTHOUT was updated. It is now "net outflow-inflow through bifurcation channels at each grid".
+- Improved numerical stability of bifurcation flow scheme, by updating Flow Limitter in CALC_INFLOW
+- Tentative Version of Tracer Scheme was developped.
