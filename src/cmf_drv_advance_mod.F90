@@ -28,7 +28,7 @@ CONTAINS
 !
 !####################################################################
 SUBROUTINE CMF_DRV_ADVANCE(KSTEPS)
-USE YOS_CMF_INPUT,           ONLY: LOUTPUT, LSEALEV, IFRQ_OUT
+USE YOS_CMF_INPUT,           ONLY: LOUTPUT, LSEALEV, LTRACE, IFRQ_OUT
 USE YOS_CMF_TIME,            ONLY: KSTEP, JYYYYMMDD, JHHMM, JHOUR, JMIN
 !
 USE CMF_CTRL_TIME_MOD,       ONLY: CMF_TIME_NEXT, CMF_TIME_UPDATE
@@ -37,8 +37,10 @@ USE CMF_CTRL_RESTART_MOD,    ONLY: CMF_RESTART_WRITE
 USE CMF_CTRL_OUTPUT_MOD,     ONLY: CMF_OUTPUT_WRITE, CMF_OUTTXT_WRTE
 USE CMF_CTRL_DAMOUT_MOD,     ONLY: CMF_DAMOUT_WRTE
 
-USE CMF_CALC_DIAG_MOD,       ONLY: CMF_DIAG_AVERAGE, CMF_DIAG_RESET
+USE CMF_CALC_DIAG_MOD,       ONLY: CMF_DIAG_AVEMAX_OUTPUT, CMF_DIAG_GETAVE_OUTPUT, CMF_DIAG_RESET_OUTPUT
 USE CMF_CTRL_BOUNDARY_MOD,   ONLY: CMF_BOUNDARY_UPDATE
+USE CMF_CTRL_TRACER_MOD,     ONLY: CMF_TRACER_DENSITY, CMF_TRACER_FLUX
+USE CMF_CTRL_TRACER_MOD,     ONLY: CMF_TRACER_OUTPUT_WRITE, CMF_TRACER_RESTART_WRITE
 #ifdef sediment
 USE YOS_CMF_INPUT,           ONLY: LSEDOUT
 USE yos_cmf_sed,             ONLY: step_sed
@@ -78,6 +80,10 @@ DO ISTEP=1,KSTEPS
     CALL CMF_BOUNDARY_UPDATE
   ENDIF
 
+  IF( LTRACE )THEN
+    CALL CMF_TRACER_DENSITY
+  ENDIF
+
   !============================
   !*** 2. Advance model integration 
   CALL CMF_PHYSICS_ADVANCE
@@ -89,6 +95,12 @@ DO ISTEP=1,KSTEPS
   ENDIF
 #endif
 
+  IF( LTRACE )THEN
+    CALL CMF_TRACER_FLUX
+  ENDIF
+
+  CALL CMF_DIAG_AVEMAX_OUTPUT   !! average & maximum calculation for output
+
   CALL CPU_TIME(ZTT1)
   !$ ZTT1=OMP_GET_WTIME()
 
@@ -96,7 +108,7 @@ DO ISTEP=1,KSTEPS
   !*** 3. Write output file (when needed)
   IF( LOUTPUT .and. MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 )then
     !*** average variable
-    CALL CMF_DIAG_AVERAGE
+    CALL CMF_DIAG_GETAVE_OUTPUT !! average & maximum calculation for output: finalize
 
     !*** write output data
     CALL CMF_OUTPUT_WRITE
@@ -111,14 +123,20 @@ DO ISTEP=1,KSTEPS
     CALL CMF_OUTTXT_WRTE            !! reservoir operation
     CALL CMF_DAMOUT_WRTE            !! reservoir operation
 
+    IF( LTRACE )THEN
+      CALL CMF_TRACER_OUTPUT_WRITE
+    ENDIF
 
     !*** reset variable
-    CALL CMF_DIAG_RESET
+    CALL CMF_DIAG_RESET_OUTPUT  !! average & maximum calculation for output: reset
   ENDIF
 
   !============================ 
   !*** 4. Write restart file 
   CALL CMF_RESTART_WRITE
+  IF( LTRACE )THEN
+    CALL CMF_TRACER_RESTART_WRITE
+  ENDIF
 
   !============================ 
   !*** 5. Update current time      !! Update KMIN, IYYYYMMDD, IHHMM (to KMINNEXT, JYYYYMMDD, JHHMM)

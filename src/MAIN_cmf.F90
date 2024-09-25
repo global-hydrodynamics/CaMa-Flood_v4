@@ -13,11 +13,12 @@ PROGRAM MAIN_cmf
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
 USE PARKIND1,                ONLY: JPRB, JPRM, JPIM
-USE YOS_CMF_INPUT,           ONLY: NXIN, NYIN, DT,DTIN
+USE YOS_CMF_INPUT,           ONLY: NXIN, NYIN, DT,DTIN, LTRACE
 USE YOS_CMF_TIME,            ONLY: NSTEPS
 USE CMF_DRV_CONTROL_MOD,     ONLY: CMF_DRV_INPUT,   CMF_DRV_INIT,    CMF_DRV_END
 USE CMF_DRV_ADVANCE_MOD,     ONLY: CMF_DRV_ADVANCE
 USE CMF_CTRL_FORCING_MOD,    ONLY: CMF_FORCING_GET, CMF_FORCING_PUT
+USE CMF_CTRL_TRACER_MOD,     ONLY: CMF_TRACER_FORC_GET, CMF_TRACER_FORC_INTERP
 !** parallelization options**
 !$ USE OMP_LIB
 #ifdef UseMPI_CMF
@@ -28,6 +29,7 @@ USE CMF_CTRL_MPI_MOD,        ONLY: CMF_MPI_INIT, CMF_MPI_END
 USE YOS_CMF_INPUT,           ONLY: LSEDOUT
 USE cmf_ctrl_sedinp_mod,     ONLY: cmf_sed_forcing
 #endif
+!** tracer options**
 !****************************
 IMPLICIT NONE
 
@@ -35,7 +37,6 @@ IMPLICIT NONE
 INTEGER(KIND=JPIM)              :: ISTEP              ! total time step
 INTEGER(KIND=JPIM)              :: ISTEPADV           ! time step to be advanced within DRV_ADVANCE
 REAL(KIND=JPRB),ALLOCATABLE     :: ZBUFF(:,:,:)       ! Buffer to store forcing runoff
-
 !================================================
 !*** 0. MPI Initialization
 #ifdef UseMPI_CMF
@@ -59,15 +60,20 @@ DO ISTEP=1,NSTEPS,ISTEPADV
 
   !*  2a Read forcing from file, This is only relevant in Stand-alone mode 
   CALL CMF_FORCING_GET(ZBUFF(:,:,:))
-
   !*  2b Interporlate runoff & send to CaMa-Flood 
   CALL CMF_FORCING_PUT(ZBUFF(:,:,:))
+
+  IF( LTRACE )THEN
+    CALL CMF_TRACER_FORC_GET
+    CALL CMF_TRACER_FORC_INTERP
+  ENDIF
  
   !*  2c  Advance CaMa-Flood model for ISTEPADV
   CALL CMF_DRV_ADVANCE(ISTEPADV)
 
+
 #ifdef sediment
-  !*  2c Prepare forcing for optional sediment transport in stand-alone mode
+  !*  2d Prepare forcing for optional sediment transport in stand-alone mode
   IF ( LSEDOUT ) THEN
     CALL cmf_sed_forcing
   ENDIF

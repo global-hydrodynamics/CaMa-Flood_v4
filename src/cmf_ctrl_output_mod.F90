@@ -42,7 +42,7 @@ NAMELIST/NOUTPUT/ COUTDIR,CVARSOUT,COUTTAG,LOUTCDF,NDLEVEL,LOUTVEC,IFRQ_OUT,LOUT
 !
 !*** local variables
 INTEGER(KIND=JPIM)              :: NVARS              ! temporal output var number
-PARAMETER                         (NVARS=30)          ! actual   output var number
+PARAMETER                         (NVARS=100)          ! actual   output var number
 INTEGER(KIND=JPIM)              :: NVARSOUT
 INTEGER(KIND=JPIM)              :: IRECOUT            ! Output file irec
 
@@ -111,7 +111,6 @@ ENDIF
 if( LOUTVEC )THEN
   WRITE(LOGNAM,*) "LOUTVEC:  ", LOUTVEC
 ENDIF
-
 WRITE(LOGNAM,*)   "IFRQ_OUT  ", IFRQ_OUT
 
 WRITE(LOGNAM,*)   "IFRQ_OUT  ", LOUTTXT
@@ -160,7 +159,7 @@ DO J=1,LEN(TRIM(CVARSOUT))
   ENDIF
 ENDDO
 ! Last one 
-IF ( J0 < LEN(TRIM(CVARSOUT)) ) THEN
+IF ( J0 <= LEN(TRIM(CVARSOUT)) ) THEN
   J=LEN(TRIM(CVARSOUT))
   CTMP=TRIM(ADJUSTL(CVARSOUT(J0:J)))
   IF (LEN(CTMP) > 0 ) THEN
@@ -313,7 +312,6 @@ DO JF=1,NVARSOUT
 
     CASE DEFAULT
     WRITE(LOGNAM,*) trim(CVNAMES(JF)), ' Not defined in CMF_CREATE_OUTCDF_MOD'
-
   END SELECT
   VAROUT(JF)%BINID=INQUIRE_FID()
 
@@ -440,10 +438,10 @@ USE YOS_CMF_TIME,       ONLY: JYYYYMMDD, JHHMM, JHOUR, JMIN, KSTEP
 USE YOS_CMF_PROG,       ONLY: P2RIVSTO,     P2FLDSTO,     P2GDWSTO, &
                             & P2DAMSTO,     P2LEVSTO,     D2COPY       !!! added
 USE YOS_CMF_DIAG,       ONLY: D2RIVDPH,     D2FLDDPH,     D2FLDFRC,     D2FLDARE,     D2SFCELV,     D2STORGE, &
-                            & D2OUTFLW_AVG, D2RIVOUT_AVG, D2FLDOUT_AVG, D2PTHOUT_AVG, D1PTHFLW_AVG,  &
-                            & D2RIVVEL_AVG, D2GDWRTN_AVG, D2RUNOFF_AVG, D2ROFSUB_AVG, D2WEVAPEX_AVG, &
-                            & D2OUTFLW_MAX, D2STORGE_MAX, D2RIVDPH_MAX, &
-                            & D2DAMINF_AVG, D2OUTINS, D2LEVDPH   !!! added
+                            & D2OUTFLW_oAVG, D2RIVOUT_oAVG, D2FLDOUT_oAVG, D2PTHOUT_oAVG, D1PTHFLW_oAVG,  &
+                            & D2RIVVEL_oAVG, D2GDWRTN_oAVG, D2RUNOFF_oAVG, D2ROFSUB_oAVG, D2WEVAPEX_oAVG, &
+                            & D2OUTFLW_oMAX, D2STORGE_oMAX, D2RIVDPH_oMAX, &
+                            & D2DAMINF_oAVG, D2OUTINS, D2LEVDPH   !!! added
 #ifdef UseMPI_CMF
 USE CMF_CTRL_MPI_MOD,   ONLY: CMF_MPI_AllReduce_R2MAP, CMF_MPI_AllReduce_R1PTH
 #endif
@@ -475,13 +473,13 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
         D2VEC => D2COPY
 
       CASE ('rivout')
-        D2VEC => D2RIVOUT_AVG
+        D2VEC => D2RIVOUT_oAVG
       CASE ('rivdph')
         D2VEC => D2RIVDPH
       CASE ('rivvel')
-        D2VEC => D2RIVVEL_AVG
+        D2VEC => D2RIVVEL_oAVG
       CASE ('fldout')
-        D2VEC => D2FLDOUT_AVG
+        D2VEC => D2FLDOUT_oAVG
 
       CASE ('flddph')
         D2VEC => D2FLDDPH
@@ -493,9 +491,9 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
         D2VEC => D2SFCELV
 
       CASE ('totout')
-        D2VEC => D2OUTFLW_AVG
+        D2VEC => D2OUTFLW_oAVG
       CASE ('outflw')            !!  compatibility for previous file name
-        D2VEC => D2OUTFLW_AVG
+        D2VEC => D2OUTFLW_oAVG
       CASE ('totsto')
         D2VEC => D2STORGE
       CASE ('storge')            !!  compatibility for previous file name
@@ -503,15 +501,15 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
 
       CASE ('pthout')
         IF( .not. LPTHOUT ) CYCLE
-        D2VEC => D2PTHOUT_AVG
+        D2VEC => D2PTHOUT_oAVG
       CASE ('pthflw')
         IF( .not. LPTHOUT ) CYCLE
       CASE ('maxflw')
-        D2VEC =>  D2OUTFLW_MAX
+        D2VEC =>  D2OUTFLW_oMAX
       CASE ('maxdph')
-        D2VEC =>  D2RIVDPH_MAX
+        D2VEC =>  D2RIVDPH_oMAX
       CASE ('maxsto')
-        D2VEC =>  D2STORGE_MAX
+        D2VEC =>  D2STORGE_oMAX
 
       CASE ('outins')
         IF( .not. LOUTINS ) CYCLE
@@ -527,23 +525,23 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
         D2VEC =>  D2COPY
       CASE ('gwout')
         IF( .not. LGDWDLY ) CYCLE
-        D2VEC =>  D2GDWRTN_AVG
+        D2VEC =>  D2GDWRTN_oAVG
       CASE ('gdwrtn')
         IF( .not. LGDWDLY ) CYCLE
-        D2VEC =>  D2GDWRTN_AVG
+        D2VEC =>  D2GDWRTN_oAVG
 
       CASE ('runoff')             !!  compatibility for previous file name
-        D2VEC =>  D2RUNOFF_AVG  
+        D2VEC =>  D2RUNOFF_oAVG  
       CASE ('runoffsub')           !!  compatibility for previous file name
         IF( .not. LROSPLIT ) CYCLE
-        D2VEC =>  D2ROFSUB_AVG  
+        D2VEC =>  D2ROFSUB_oAVG  
       CASE ('rofsfc')
-        D2VEC =>  D2RUNOFF_AVG
+        D2VEC =>  D2RUNOFF_oAVG
       CASE ('rofsub')
-        D2VEC =>  D2ROFSUB_AVG
+        D2VEC =>  D2ROFSUB_oAVG
       CASE ('wevap')
         IF( .not. LWEVAP ) CYCLE
-        D2VEC => D2WEVAPEX_AVG
+        D2VEC => D2WEVAPEX_oAVG
 
       CASE ('damsto')   !!! added
         IF( .not. LDAMOUT ) CYCLE
@@ -551,7 +549,7 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
         D2VEC => D2COPY
       CASE ('daminf')   !!! added
         IF( .not. LDAMOUT ) CYCLE
-        D2VEC =>  d2daminf_avg
+        D2VEC =>  d2daminf_oAVG
 
       CASE ('levsto')   !!! added
         IF( .not. LLEVEE ) CYCLE
@@ -581,7 +579,7 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
 #endif
     ELSE
       IF( .not. LPTHOUT ) CYCLE
-      R1POUT(:,:)=REAL(D1PTHFLW_AVG(:,:))
+      R1POUT(:,:)=REAL(D1PTHFLW_oAVG(:,:))
 #ifdef UseMPI_CMF
       CALL CMF_MPI_AllReduce_R1PTH(R1POUT)
 #endif

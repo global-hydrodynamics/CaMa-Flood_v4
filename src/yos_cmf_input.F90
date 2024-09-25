@@ -65,6 +65,7 @@ LOGICAL                         :: LBITSAFE                !! true: for Bit Iden
 LOGICAL                         :: LSTG_ES                 !! true: for Vector Processor optimization (CMF_OPT_FLDSTG_ES) 
 
 LOGICAL                         :: LSEDOUT                 !! true: sediment scheme                 
+LOGICAL                         :: LTRACE                  !! true: tracer   scheme                 
 
 !================================================
 !*** NAMELIST/NCONF/

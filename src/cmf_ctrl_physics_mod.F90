@@ -27,7 +27,7 @@ USE YOS_CMF_PROG,          ONLY: D2FLDOUT, D2FLDOUT_PRE
 USE CMF_CALC_OUTFLW_MOD,   ONLY: CMF_CALC_OUTFLW, CMF_CALC_INFLOW
 USE CMF_CALC_PTHOUT_MOD,   ONLY: CMF_CALC_PTHOUT
 USE CMF_CALC_STONXT_MOD,   ONLY: CMF_CALC_STONXT
-USE CMF_CALC_DIAG_MOD,     ONLY: CMF_DIAG_AVEMAX
+USE CMF_CALC_DIAG_MOD,     ONLY: CMF_DIAG_RESET_ADPSTP, CMF_DIAG_AVEMAX_ADPSTP, CMF_DIAG_GETAVE_ADPSTP
 ! optional
 USE CMF_OPT_OUTFLW_MOD,    ONLY: CMF_CALC_OUTFLW_KINEMIX, CMF_CALC_OUTFLW_KINE,CMF_CALC_OUTINS
 USE CMF_CTRL_DAMOUT_MOD,   ONLY: CMF_DAMOUT_CALC, CMF_DAMOUT_WATBAL, CMF_DAMOUT_WRTE
@@ -52,6 +52,8 @@ IF( LADPSTP )THEN    ! adoptive time step
   CALL CALC_ADPSTP
 ENDIF
 
+CALL CMF_DIAG_RESET_ADPSTP  !! average & max calculation: reset
+
 !! ==========
 DO IT=1, NT
 
@@ -74,12 +76,6 @@ DO IT=1, NT
     CALL CMF_DAMOUT_CALC            !! reservoir operation
   ENDIF
 
-! --- Water budget adjustment and calculate inflow
-  CALL CMF_CALC_INFLOW
-  IF ( LDAMOUT ) THEN
-    CALL CMF_DAMOUT_WATBAL            !! reservoir operation
-  ENDIF
-
 ! --- Bifurcation channel flow
   IF( LPTHOUT )THEN
     IF( LLEVEE )THEN
@@ -87,6 +83,12 @@ DO IT=1, NT
     ELSE
       CALL CMF_CALC_PTHOUT            !! bifurcation channel flow
     ENDIF
+  ENDIF
+
+! --- Water budget adjustment and calculate inflow
+  CALL CMF_CALC_INFLOW
+  IF ( LDAMOUT ) THEN
+    CALL CMF_DAMOUT_WATBAL            !! reservoir operation
   ENDIF
 
 ! --- save value for next tstet
@@ -110,7 +112,7 @@ DO IT=1, NT
 
 
 !=== 5. calculate averages, maximum
-  CALL CMF_DIAG_AVEMAX
+  CALL CMF_DIAG_AVEMAX_ADPSTP
 
 !=== option for ILS coupling
 #ifdef ILS
@@ -122,9 +124,11 @@ DO IT=1, NT
 END DO
 DT=DT_DEF   !! reset DT
 
+CALL CMF_DIAG_GETAVE_ADPSTP   !! average & max calculation: finalize
+
 ! --- Optional: calculate instantaneous discharge (only at the end of outer time step)
 IF ( LOUTINS ) THEN
-  CALL CMF_CALC_OUTINS            !! reservoir operation
+  CALL CMF_CALC_OUTINS 
 ENDIF
 
 

@@ -23,6 +23,7 @@ MODULE CMF_CTRL_FORCING_MOD
 !==========================================================
 USE PARKIND1,                ONLY: JPIM, JPRB, JPRM
 USE YOS_CMF_INPUT,           ONLY: LOGNAM
+USE YOS_CMF_MAP,             ONLY: INPX, INPY, INPA, INPXI, INPYI, INPAI, INPNI
 !============================
 IMPLICIT NONE
 SAVE
@@ -71,18 +72,6 @@ INTEGER(KIND=JPIM)              :: NSTART      !! Start date of netNDF (in KMIN)
 END TYPE TYPEROF
 TYPE(TYPEROF)                   :: ROFCDF      !! Derived type for Runoff input 
 #endif
-
-! input matrix (converted from NX:NY*INPN to NSEQMAX*INPN)
-INTEGER(KIND=JPIM),ALLOCATABLE  :: INPX(:,:)        !! INPUT GRID XIN
-INTEGER(KIND=JPIM),ALLOCATABLE  :: INPY(:,:)        !! INPUT GRID YIN
-REAL(KIND=JPRB),ALLOCATABLE     :: INPA(:,:)        !! INPUT AREA
-
-! input matrix Inverse
-INTEGER(KIND=JPIM),ALLOCATABLE  :: INPXI(:,:,:)        !! OUTPUT GRID XOUT
-INTEGER(KIND=JPIM),ALLOCATABLE  :: INPYI(:,:,:)        !! OUTPUT GRID YOUT
-REAL(KIND=JPRB),ALLOCATABLE     :: INPAI(:,:,:)        !! OUTPUT AREA
-INTEGER(KIND=JPIM)              :: INPNI               !! MAX INPUT NUMBER for inverse interpolation
-
 
 CONTAINS
 !####################################################################

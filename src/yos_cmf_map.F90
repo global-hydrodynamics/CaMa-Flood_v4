@@ -78,6 +78,18 @@ REAL(KIND=JPRB),ALLOCATABLE              ::  PTH_ELV(:,:)         !! FLOOD PATHW
 REAL(KIND=JPRB),ALLOCATABLE              ::  PTH_WTH(:,:)         !! FLOOD PATHWAY WIDTH [m]
 REAL(KIND=JPRB),ALLOCATABLE              ::  PTH_MAN(:)         !! FLOOD PATHWAY Manning
 
+!================================================
+! input matrix (converted from NX:NY*INPN to NSEQMAX*INPN)
+INTEGER(KIND=JPIM),ALLOCATABLE           :: INPX(:,:)        !! INPUT GRID XIN
+INTEGER(KIND=JPIM),ALLOCATABLE           :: INPY(:,:)        !! INPUT GRID YIN
+REAL(KIND=JPRB),ALLOCATABLE              :: INPA(:,:)        !! INPUT AREA
+
+! input matrix Inverse
+INTEGER(KIND=JPIM),ALLOCATABLE           :: INPXI(:,:,:)        !! OUTPUT GRID XOUT
+INTEGER(KIND=JPIM),ALLOCATABLE           :: INPYI(:,:,:)        !! OUTPUT GRID YOUT
+REAL(KIND=JPRB),ALLOCATABLE              :: INPAI(:,:,:)        !! OUTPUT AREA
+INTEGER(KIND=JPIM)                       :: INPNI               !! MAX INPUT NUMBER for inverse interpolation
+
 DATA REGIONALL  /1/
 DATA REGIONTHIS /1/
 
