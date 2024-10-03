@@ -235,18 +235,18 @@ SUBROUTINE CALC_VARS_PRE
 USE YOS_CMF_MAP,             ONLY: NSEQALL
 USE YOS_CMF_PROG,            ONLY: D2RIVOUT,     D2FLDOUT,     P2FLDSTO
 USE YOS_CMF_PROG,            ONLY: D2RIVOUT_PRE, D2FLDOUT_PRE, D2FLDSTO_PRE, D2RIVDPH_PRE
+USE YOS_CMF_PROG,            ONLY: D1PTHFLW, D1PTHFLW_PRE
 USE YOS_CMF_DIAG,            ONLY: D2RIVDPH
 IMPLICIT NONE
-INTEGER(KIND=JPIM),SAVE         :: ISEQ
 ! ================================================
-!$OMP PARALLEL DO
-DO ISEQ=1, NSEQALL ! for river mouth
-  D2RIVOUT_PRE(ISEQ,1)=D2RIVOUT(ISEQ,1)                              !! save outflow (t)
-  D2RIVDPH_PRE(ISEQ,1)=D2RIVDPH(ISEQ,1)                              !! save depth   (t)
-  D2FLDOUT_PRE(ISEQ,1)=D2FLDOUT(ISEQ,1)                              !! save outflow (t)
-  D2FLDSTO_PRE(ISEQ,1)=P2FLDSTO(ISEQ,1)
-END DO
-!$OMP END PARALLEL DO
+D2RIVOUT_PRE(:,:)=D2RIVOUT(:,:)                              !! save outflow (t)
+D2RIVDPH_PRE(:,:)=D2RIVDPH(:,:)                              !! save depth   (t)
+D2FLDOUT_PRE(:,:)=D2FLDOUT(:,:)                              !! save outflow (t)
+D2FLDSTO_PRE(:,:)=P2FLDSTO(:,:)
+
+IF( LPTHOUT )THEN
+  D1PTHFLW_PRE(:,:)=D1PTHFLW(:,:)
+ENDIF
 
 END SUBROUTINE CALC_VARS_PRE
 !==========================================================

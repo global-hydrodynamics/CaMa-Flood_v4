@@ -28,6 +28,7 @@ REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2FLDDPH(:,:)           !! floodpl
 REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2FLDFRC(:,:)           !! flooded    fractipn [m2/m2]
 REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2FLDARE(:,:)           !! flooded    area     [m2]
 
+REAL(KIND=JPRB),ALLOCATABLE                :: D1PTHFLWSUM(:)          !! bifurcation channel flow (1D, not 2D variable), all layer sum
 REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2PTHOUT(:,:)           !! flood path outflow   [m3/s]
 REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2PTHINF(:,:)           !! flood path inflow   [m3/s]
 

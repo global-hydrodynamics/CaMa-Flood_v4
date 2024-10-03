@@ -24,7 +24,7 @@ USE YOS_CMF_MAP,        ONLY: NSEQALL, NSEQMAX, NPTHOUT, NPTHLEV, PTH_UPST, PTH_
                             & PTH_ELV, PTH_WTH, PTH_MAN, I2MASK
 USE YOS_CMF_MAP,        ONLY: D2RIVELV
 USE YOS_CMF_PROG,       ONLY: D1PTHFLW, D1PTHFLW_PRE, D2RIVDPH_PRE
-USE YOS_CMF_DIAG,       ONLY: D2SFCELV
+USE YOS_CMF_DIAG,       ONLY: D2SFCELV, D1PTHFLWSUM
 IMPLICIT NONE
 !*** Local
 REAL(KIND=JPRB)         ::  D2SFCELV_PRE(NSEQMAX,1)                  !! water surface elev (t-1) [m] (for stable calculation)
@@ -40,9 +40,10 @@ DO ISEQ=1, NSEQALL
 END DO
 !$OMP END PARALLEL DO
 
-D1PTHFLW(:,:) = DMIS
+D1PTHFLW(:,:) = 0._JPRB
 !$OMP PARALLEL DO
 DO IPTH=1, NPTHOUT  
+
   ISEQP=PTH_UPST(IPTH)
   JSEQP=PTH_DOWN(IPTH)
   !! Avoid calculation outside of domain
@@ -53,7 +54,6 @@ DO IPTH=1, NPTHOUT
   DSLOPE = max(-0.005_JPRB,min(0.005_JPRB,DSLOPE))                                    !! v390 stabilization
 
   DO ILEV=1, NPTHLEV
-
     DFLW = MAX(D2SFCELV(ISEQP,1),D2SFCELV(JSEQP,1)) - PTH_ELV(IPTH,ILEV) 
     DFLW = MAX(DFLW,0._JPRB)
 
@@ -61,7 +61,7 @@ DO IPTH=1, NPTHOUT
     DFLW_PRE = MAX(DFLW_PRE,0._JPRB)
 
     DFLW_IMP = (DFLW*DFLW_PRE)**0.5                                       !! semi implicit flow depth
-    IF( DFLW_IMP<=0._JPRB ) DFLW_IMP=DFLW
+    DFLW_IMP = MAX( DFLW_IMP,(DFLW*0.01)**0.5 )
 
     IF( DFLW_IMP>1.E-5 )THEN                         !! local inertial equation, see [Bates et al., 2010, J.Hydrol.]
       DOUT_PRE = D1PTHFLW_PRE(IPTH,ILEV) * PTH_WTH(IPTH,ILEV)**(-1.)                         !! outflow (t-1) [m2/s] (unit width)
@@ -73,6 +73,11 @@ DO IPTH=1, NPTHOUT
   END DO
 END DO
 !$OMP END PARALLEL DO
+
+D1PTHFLWSUM(:)=0._JPRB
+DO ILEV=1, NPTHLEV
+  D1PTHFLWSUM(:)=D1PTHFLWSUM(:)+D1PTHFLW(:,ILEV)  !! bifurcation height layer summation
+END DO
 
 
 END SUBROUTINE CMF_CALC_PTHOUT

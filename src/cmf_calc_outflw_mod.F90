@@ -166,7 +166,7 @@ SUBROUTINE CMF_CALC_INFLOW
 USE PARKIND1,           ONLY: JPIM, JPRB, JPRD
 USE YOS_CMF_MAP,        ONLY: NSEQMAX,  NPTHOUT, NPTHLEV, I2MASK, PTH_UPST, PTH_DOWN
 USE YOS_CMF_PROG,       ONLY: D1PTHFLW
-USE YOS_CMF_DIAG,       ONLY: D2PTHOUT
+USE YOS_CMF_DIAG,       ONLY: D2PTHOUT, D1PTHFLWSUM
 IMPLICIT NONE
 !*** Local
 REAL(KIND=JPRD)            :: P2STOOUT(NSEQMAX,1)                      !! total outflow from a grid     [m3]
@@ -240,20 +240,18 @@ IF( LPTHOUT )THEN
     IF (ISEQP<=0 .OR. JSEQP<=0 ) CYCLE
     IF (I2MASK(ISEQP,1)>0 .OR. I2MASK(JSEQP,1)>0 ) CYCLE  !! I2MASK is for 1: kinemacit 2: dam  no bifurcation
   
-    DO ILEV=1, NPTHLEV
-      OUT_R1 = max(  D1PTHFLW(IPTH,ILEV),0._JPRB )
-      OUT_R2 = max( -D1PTHFLW(IPTH,ILEV),0._JPRB )
-      DIUP=(OUT_R1)*DT
-      DIDW=(OUT_R2)*DT
+    OUT_R1 = max(  D1PTHFLWSUM(IPTH),0._JPRB )
+    OUT_R2 = max( -D1PTHFLWSUM(IPTH),0._JPRB )
+    DIUP=(OUT_R1)*DT
+    DIDW=(OUT_R2)*DT
 #ifndef NoAtom_CMF
 !$OMP ATOMIC
 #endif
-      P2STOOUT(ISEQP,1) = P2STOOUT(ISEQP,1) + DIUP
+    P2STOOUT(ISEQP,1) = P2STOOUT(ISEQP,1) + DIUP
 #ifndef NoAtom_CMF
 !$OMP ATOMIC
 #endif
-      P2STOOUT(JSEQP,1) = P2STOOUT(JSEQP,1) + DIDW
-    END DO
+    P2STOOUT(JSEQP,1) = P2STOOUT(JSEQP,1) + DIDW
   END DO
 #ifndef NoAtom_CMF
 !$OMP END PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
@@ -320,26 +318,26 @@ IF( LPTHOUT )THEN
     DO ILEV=1, NPTHLEV
       IF( D1PTHFLW(IPTH,ILEV) >= 0._JPRB )THEN                                  !! total outflow from each grid
         D1PTHFLW(IPTH,ILEV) = D1PTHFLW(IPTH,ILEV)*D2RATE(ISEQP,1)
-#ifndef NoAtom_CMF
-!$OMP ATOMIC
-#endif
-        P2PTHOUT(ISEQP,1) = P2PTHOUT(ISEQP,1) + D1PTHFLW(IPTH,ILEV)
-#ifndef NoAtom_CMF
-!$OMP ATOMIC
-#endif
-        P2PTHOUT(JSEQP,1) = P2PTHOUT(JSEQP,1) - D1PTHFLW(IPTH,ILEV)
       ELSE
         D1PTHFLW(IPTH,ILEV) = D1PTHFLW(IPTH,ILEV)*D2RATE(JSEQP,1)
-#ifndef NoAtom_CMF
-!$OMP ATOMIC
-#endif
-        P2PTHOUT(JSEQP,1) = P2PTHOUT(JSEQP,1) - D1PTHFLW(IPTH,ILEV)
-#ifndef NoAtom_CMF
-!$OMP ATOMIC
-#endif
-        P2PTHOUT(ISEQP,1) = P2PTHOUT(ISEQP,1) + D1PTHFLW(IPTH,ILEV)
       ENDIF
     END DO
+
+    IF( D1PTHFLWSUM(IPTH) >= 0._JPRB )THEN                                  !! total outflow from each grid
+      D1PTHFLWSUM(IPTH) = D1PTHFLWSUM(IPTH)*D2RATE(ISEQP,1)
+    ELSE
+      D1PTHFLWSUM(IPTH) = D1PTHFLWSUM(IPTH)*D2RATE(JSEQP,1)
+    ENDIF    
+
+#ifndef NoAtom_CMF
+!$OMP ATOMIC
+#endif
+    P2PTHOUT(ISEQP,1) = P2PTHOUT(ISEQP,1) + D1PTHFLWSUM(IPTH)
+#ifndef NoAtom_CMF
+!$OMP ATOMIC
+#endif
+    P2PTHOUT(JSEQP,1) = P2PTHOUT(JSEQP,1) - D1PTHFLWSUM(IPTH)
+
   END DO
 #ifndef NoAtom_CMF
 !$OMP END PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
