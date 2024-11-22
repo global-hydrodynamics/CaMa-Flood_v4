@@ -567,12 +567,12 @@ END SUBROUTINE NCERROR
 !####################################################################
 
 !####################################################################
-FUNCTION CMF_CheckNanB(VAR,zero) RESULT(FLAG)
+FUNCTION CMF_CheckNanB(VAR,zero) RESULT(FLAG)  !! check UndefinedValue function
   implicit none
   REAL(KIND=JPRB)      :: VAR, zero
   LOGICAL              :: FLAG
   FLAG = .false.
-  if(VAR*zero/=zero)then
+  if( VAR*zero/=zero)then   !! if VAR is NaN (Not a number), VAR*zero is not zero
     FLAG = .true.
   endif
 END FUNCTION CMF_CheckNanB

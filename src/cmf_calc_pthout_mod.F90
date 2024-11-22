@@ -19,7 +19,7 @@ CONTAINS
 !####################################################################
 SUBROUTINE CMF_CALC_PTHOUT
 USE PARKIND1,           ONLY: JPIM, JPRB, JPRD
-USE YOS_CMF_INPUT,      ONLY: DT, PGRV, DMIS
+USE YOS_CMF_INPUT,      ONLY: DT, PGRV
 USE YOS_CMF_MAP,        ONLY: NSEQALL, NSEQMAX, NPTHOUT, NPTHLEV, PTH_UPST, PTH_DOWN, PTH_DST, &
                             & PTH_ELV, PTH_WTH, PTH_MAN, I2MASK
 USE YOS_CMF_MAP,        ONLY: D2RIVELV
