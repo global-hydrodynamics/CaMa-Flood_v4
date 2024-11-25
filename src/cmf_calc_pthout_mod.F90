@@ -24,15 +24,15 @@ USE YOS_CMF_MAP,        ONLY: NSEQALL, NSEQMAX, NPTHOUT, NPTHLEV, PTH_UPST, PTH_
                             & PTH_ELV, PTH_WTH, PTH_MAN, I2MASK
 USE YOS_CMF_MAP,        ONLY: D2RIVELV
 USE YOS_CMF_PROG,       ONLY: D1PTHFLW, D1PTHFLW_PRE, D2RIVDPH_PRE
-USE YOS_CMF_DIAG,       ONLY: D2SFCELV, D1PTHFLWSUM
+USE YOS_CMF_DIAG,       ONLY: D2SFCELV, D2STORGE, D1PTHFLWSUM
 IMPLICIT NONE
 !*** Local
 REAL(KIND=JPRB)         ::  D2SFCELV_PRE(NSEQMAX,1)                  !! water surface elev (t-1) [m] (for stable calculation)
 
 ! Save for OpenMP
 INTEGER(KIND=JPIM),SAVE ::  IPTH, ILEV, ISEQ, ISEQP, JSEQP
-REAL(KIND=JPRB),SAVE    ::  DSLOPE, DFLW, DOUT_PRE, DFLW_PRE, DFLW_IMP
-!$OMP THREADPRIVATE        (DSLOPE, DFLW, DOUT_PRE, DFLW_PRE, DFLW_IMP, ILEV, ISEQP, JSEQP)
+REAL(KIND=JPRB),SAVE    ::  DSLOPE, DFLW, DOUT_PRE, DFLW_PRE, DFLW_IMP, RATE
+!$OMP THREADPRIVATE        (DSLOPE, DFLW, DOUT_PRE, DFLW_PRE, DFLW_IMP, ILEV, ISEQP, JSEQP, RATE)
 !================================================
 !$OMP PARALLEL DO
 DO ISEQ=1, NSEQALL
@@ -54,6 +54,7 @@ DO IPTH=1, NPTHOUT
   DSLOPE = max(-0.005_JPRB,min(0.005_JPRB,DSLOPE))                                    !! v390 stabilization
 
   DO ILEV=1, NPTHLEV
+
     DFLW = MAX(D2SFCELV(ISEQP,1),D2SFCELV(JSEQP,1)) - PTH_ELV(IPTH,ILEV) 
     DFLW = MAX(DFLW,0._JPRB)
 
@@ -79,6 +80,19 @@ DO ILEV=1, NPTHLEV
   D1PTHFLWSUM(:)=D1PTHFLWSUM(:)+D1PTHFLW(:,ILEV)  !! bifurcation height layer summation
 END DO
 
+!! Storage change limitter (to prevent sudden increase of upstream water level) (v423)
+!$OMP PARALLEL DO
+DO IPTH=1, NPTHOUT  
+  ISEQP=PTH_UPST(IPTH)
+  JSEQP=PTH_DOWN(IPTH)
+  IF( D1PTHFLWSUM(IPTH)/=0._JPRB )THEN
+    RATE= 0.05*min(D2STORGE(ISEQP,1),D2STORGE(JSEQP,1)) / abs(D1PTHFLWSUM(IPTH)*DT)  !! flow limit: 5% storage of upstream or downstream grid
+    RATE= min(RATE, 1.0_JPRB )
+    D1PTHFLW(IPTH,:) =D1PTHFLW(IPTH,:) *RATE
+    D1PTHFLWSUM(IPTH)=D1PTHFLWSUM(IPTH)*RATE
+  ENDIF
+END DO
+!$OMP END PARALLEL DO
 
 END SUBROUTINE CMF_CALC_PTHOUT
 !####################################################################

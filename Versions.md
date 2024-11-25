@@ -84,3 +84,7 @@ Reservoir operation recommended as default scheme
 - Definition of output variable PTHOUT was updated. It is now "net outflow-inflow through bifurcation channels at each grid".
 - Improved numerical stability of bifurcation flow scheme, by updating Flow Limitter in CALC_INFLOW
 - Tentative Version of Tracer Scheme was developped.
+
+### Update in v4.23 (2024.11.25)
+#### Improved stability
+- New storage change limitter for stability improvement
