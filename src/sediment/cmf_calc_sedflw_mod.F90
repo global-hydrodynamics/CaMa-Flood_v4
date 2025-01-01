@@ -37,14 +37,17 @@ subroutine cmf_calc_sedflw
   real(kind=JPRB), parameter      :: IGNORE_DPH = 0.05d0
   !================================================
 
-  call sed_diag_average 
+  !! calculate average of river water variables within sediment time step
+  call sed_diag_average
+
+  !! sediment concentration
   !$omp parallel do
-  do iseq = 1, NSEQALL
+  do iseq = 1, NSEQALL 
     sedsto(iseq,:) = d2sedcon(iseq,:) * max(d2rivsto_pre(iseq), 0.d0)
   enddo
   !$omp end parallel do
 
-  call calc_params
+  call calc_params         !! calculate sediment transfer parameters
   call calc_advection
   call calc_entrainment
   call calc_exchange
@@ -60,7 +63,7 @@ subroutine cmf_calc_sedflw
 
 contains
 !==========================================================
-!+ calc_params
+!+ calc_params       !! calculate sediment transfer parameters
 !+ calc_advection
 !+ calc_entrainment
 !+ calc_exchange
@@ -81,7 +84,7 @@ contains
       
       if ( sum(d2layer(iseq,:)) <= 0.d0 ) then
         critShearVel(iseq,:) = 1e20
-      else if ( revEgia ) then
+      else if ( revEgia ) then       !! use Egiazoroff equation for mixed-size sedimnt
         dMean(iseq) = 0.d0
         do ised = 1, nsed
           dMean(iseq) = dMean(iseq) + sDiam(ised)*d2layer(iseq,ised)/sum(d2layer(iseq,:))

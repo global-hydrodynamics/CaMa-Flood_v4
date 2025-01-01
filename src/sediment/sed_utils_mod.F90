@@ -14,7 +14,7 @@ module sed_utils_mod
 contains
 !####################################################################
 !-- splitchar           : same function as splitting characters in CaMa
-!-- sed_diag_average    : 
+!-- sed_diag_average    : calculate average of river water variables within sediment time step
 !-- sed_diag_reset      :
 !####################################################################
 subroutine splitchar(allvars,vnames)
@@ -57,6 +57,7 @@ subroutine sed_diag_average
   use yos_cmf_sed,             only: d2rivout_sed, d2rivvel_sed, sadd_riv
   implicit none
 
+  !! calculate average of river water variables within sediment time step
   d2rivout_sed(:) = d2rivout_sed(:) /dble(sadd_riv)
   d2rivvel_sed(:) = d2rivvel_sed(:) /dble(sadd_riv)
 end subroutine sed_diag_average
