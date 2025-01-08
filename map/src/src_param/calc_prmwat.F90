@@ -33,7 +33,9 @@
       character*256          ::  hires
       integer                ::  ios
       character*256          ::  buf
-
+! function
+      real*8,allocatable     ::  clat(:)
+      real*8,allocatable     ::  carea(:)
 ! ===============================================
       call getarg(1,tag)
 
@@ -125,8 +127,27 @@
 
         rfile1=trim(hires)//trim(area)//'.grdare.bin'
         open(21,file=rfile1,form='unformatted',access='direct',recl=4*nx0*ny0,status='old',iostat=ios)
-        read(21,rec=1) grdare0
-        close(21)
+        if( ios==0 )then
+          read(21,rec=1) grdare0
+          close(21)
+        else
+          allocate(clat(ny0))
+          allocate(carea(ny0))
+          do iy0=1, ny0
+            clat(iy0) =north0 - csize*(real(iy0)-0.5)
+            carea(iy0)=rgetarea(dble(0.),10.*csize,clat(iy0)+5.*csize,clat(iy0)-5.*csize)*0.01*1.e-6    !! km2
+          end do
+          do iy0=1, ny0
+            do ix0=1, nx0
+              if( catmXX0(ix0,iy0)/=-9999 )then
+                grdare0(ix0,iy0)=real(carea(iy0))
+              else
+                grdare0(ix0,iy0)=-9999
+              endif
+            end do
+          end do
+          deallocate(clat,carea)
+        endif
 
         rfile1=trim(hires)//trim(area)//'.flddif.bin'
         open(21,file=rfile1,form='unformatted',access='direct',recl=4*nx0*ny0,status='old',iostat=ios)
@@ -167,6 +188,74 @@
       open(31,file=wfile1,form='unformatted',access='direct',recl=4*nXX*nYY)
       write(31,rec=1) prmwat
       close(31)
+
+
+
+CONTAINS
+      real*8 function rgetarea(rlon1, rlon2, rlat1, rlat2)
+! ================================================
+! to   calculate area of lat-lon bounding box
+! by   algorithm by T. Oki, mathematics by S. Kanae, mod by nhanasaki
+! on   26th Oct 2003
+! at   IIS,UT
+!
+!     rlat1, rlat2 : latitude -90.0 (south pole) to 90.0 (north pole)
+!     returns arealat : in [m^2]
+!     by approximated equation
+! ================================================
+      implicit none
+!
+      real*8              ::  rlon1               !! longitude
+      real*8              ::  rlon2               !! longitude
+      real*8              ::  rlat1               !! latitude
+      real*8              ::  rlat2               !! latitude
+!
+      real                ::  rpi                 !! Pi
+      double precision    ::  dpi                 !! Pi
+      double precision    ::  de                  !! e
+      double precision    ::  de2                 !! e2
+      double precision    ::  drad                !! radius of the earth
+      double precision    ::  dfnc1               !! result of function for dlat1
+      double precision    ::  dfnc2               !! result of function for dlat2
+      double precision    ::  dsin1               !! result of sin(dlat1)
+      double precision    ::  dsin2               !! result of sin(dlat2)
+!
+      data                    de2/0.00669447/
+      data                    rpi/3.141592653589793238462643383/
+      data                    dpi/3.141592653589793238462643383/
+      data                    drad/6378136/
+! ================================================
+      de=sqrt(de2)
+
+      rlat1=min(max(rlat1,-90.),90.)
+      rlat2=min(max(rlat2,-90.),90.)
+!
+      if ((rlat1.gt.90).or.(rlat1.lt.-90).or.&
+          (rlat2.gt.90).or.(rlat2.lt.-90)) then
+!        write(6,*) 'rgetara: latitude out of range.'
+!        write(*,*) 'rlon1(east) : ',rlon1
+!        write(*,*) 'rlon2(west) : ',rlon2
+!        write(*,*) 'rlat1(north): ',rlat1
+!        write(*,*) 'rlat1(south): ',rlat2
+        rgetarea = 0.0
+      else
+        dsin1 = dble(sin(rlat1 * rpi/180))
+        dsin2 = dble(sin(rlat2 * rpi/180))
+!
+        dfnc1 = dsin1*(1+(de*dsin1)**2/2)
+        dfnc2 = dsin2*(1+(de*dsin2)**2/2)
+!
+        rgetarea = real(dpi*drad**2*(1-de**2)/180*(dfnc1-dfnc2))*(rlon2-rlon1)
+      end if
+! ================================================
+! Sign has been changed - to +.'
+! ================================================
+      if (rgetarea.lt.0.0) then
+        rgetarea = - rgetarea
+      end if
+
+      end function rgetarea
+
 
       end program CALC_PRMWAT
 
