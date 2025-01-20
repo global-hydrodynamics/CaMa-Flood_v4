@@ -35,19 +35,19 @@
 
 ! regional hires map
       integer*2,allocatable  ::  catmXX(:,:), catmYY(:,:), downx(:,:), downy(:,:)
-      integer*1,allocatable  ::  catmZZ(:,:)
+      integer*1,allocatable  ::  catmZZ(:,:), flwdir(:,:)
       real,allocatable       ::  flddif(:,:), grdare(:,:)
       real,allocatable       ::  elevtn(:,:), uparea(:,:), rivwth(:,:), hand(:,:) 
       integer*1,allocatable  ::  visual(:,:)
 
 ! input hires map
       integer*2,allocatable  ::  catmXX0(:,:), catmYY0(:,:), downx0(:,:), downy0(:,:)
-      integer*1,allocatable  ::  catmZZ0(:,:)
+      integer*1,allocatable  ::  catmZZ0(:,:), flwdir0(:,:)
       real,allocatable       ::  flddif0(:,:), grdare0(:,:)
       real,allocatable       ::  elevtn0(:,:), uparea0(:,:), rivwth0(:,:), hand0(:,:)
       integer*1,allocatable  ::  visual0(:,:) 
 
-      integer                ::  isDownXY
+      integer                ::  isDownXY, isFdir
 
       real,allocatable       ::  lon0(:), lat0(:)
 
@@ -121,16 +121,18 @@
 
 ! ###### calculation for non-tiled hires map
       isDownXY=0
+      isFdir=0
       if( isTile==0 )then
 
         CCname=trim(tag)
 
         allocate(catmXX(nx,ny),catmYY(nx,ny),catmZZ(nx,ny),flddif(nx,ny),grdare(nx,ny))
-        allocate(hand(nx,ny),elevtn(nx,ny),uparea(nx,ny),rivwth(nx,ny),visual(nx,ny),downx(nx,ny),downy(nx,ny))
+        allocate(flwdir(nx,ny),hand(nx,ny),elevtn(nx,ny),uparea(nx,ny),rivwth(nx,ny),visual(nx,ny),downx(nx,ny),downy(nx,ny))
 
         catmXX(:,:)=-9999
         catmYY(:,:)=-9999
         catmZZ(:,:)=-9
+        flwdir(:,:)=-9
         flddif(:,:)=-9999
         grdare(:,:)=-9999
         elevtn(:,:)=-9999
@@ -155,7 +157,7 @@
           endif
 
           allocate(catmXX0(nx0,ny0),catmYY0(nx0,ny0),catmZZ0(nx0,ny0),flddif0(nx0,ny0),grdare0(nx0,ny0))
-          allocate(hand0(nx0,ny0),elevtn0(nx0,ny0),uparea0(nx0,ny0),rivwth0(nx0,ny0),visual0(nx0,ny0))
+          allocate(flwdir(nx0,ny0),hand0(nx0,ny0),elevtn0(nx0,ny0),uparea0(nx0,ny0),rivwth0(nx0,ny0),visual0(nx0,ny0))
           allocate(downx0(nx0,ny0),downy0(nx0,ny0))
           allocate(lon0(nx0),lat0(ny0))
 
@@ -183,6 +185,18 @@
             close(21)
           else
             isDownXY=0
+          endif
+
+          isFdir=0
+          rfile1=trim(hires)//trim(area)//'.flwdir.bin'
+          print *, trim(rfile1)
+          open(21,file=rfile1,form='unformatted',access='direct',recl=1*nx0*ny0,status='old',iostat=ios)
+          if( ios==0 )then
+            isFdir=1
+            read(21,rec=1) flwdir0
+            close(21)
+          else
+            isFdir=0
           endif
 
           rfile1=trim(hires)//trim(area)//'.catmzz.bin'
@@ -276,6 +290,9 @@
                   downx(ix,iy)=downx0(ix0,iy0)
                   downy(ix,iy)=downy0(ix0,iy0)
                 endif
+                if( isFdir==1 )then
+                  flwdir(ix,iy)=flwdir0(ix0,iy0)
+                endif
 
                 visual(ix,iy)=visual0(ix0,iy0)
                 flddif(ix,iy)=flddif0(ix0,iy0)
@@ -289,7 +306,7 @@
           end do
  1000     continue
           deallocate(catmXX0,catmYY0,catmZZ0,flddif0,grdare0,downx0,downy0)
-          deallocate(hand0,elevtn0,uparea0,rivwth0,visual0,lon0,lat0)
+          deallocate(flwdir0,hand0,elevtn0,uparea0,rivwth0,visual0,lon0,lat0)
  2000     continue
         end do
 
@@ -349,6 +366,13 @@
           close(21)
         endif
 
+        if( isFdir==1 )then
+          wfile1=trim(out_hdir)//'/'//trim(CCname)//'.flwdir.bin'
+          open(21,file=wfile1,form='unformatted',access='direct',recl=1*nx*ny)
+          write(21,rec=1) flwdir
+          close(21)
+        endif
+
         wfile1=trim(out_hdir)//'/location.txt'
 
         open(21,file=wfile1,form='formatted')
@@ -360,7 +384,7 @@
 
 !###########################################################
 
-      if( isTile==1 )then
+      if( isTile==1 )then        !! Tiles High Resolution Data
         if( trim(tag)=="30sec" )then
           cnum=120
           csize=1./dble(cnum)
@@ -392,8 +416,8 @@
 
 print *, nx, ny
 
-        allocate(catmXX(nx,ny),catmYY(nx,ny),catmZZ(nx,ny),flddif(nx,ny))
-        allocate(hand(nx,ny),elevtn(nx,ny),uparea(nx,ny),rivwth(nx,ny),visual(nx,ny))
+        allocate(catmXX(nx,ny),catmYY(nx,ny),catmZZ(nx,ny),flddif(nx,ny),downx(nx,ny),downy(nx,ny))
+        allocate(flwdir(nx,ny),hand(nx,ny),elevtn(nx,ny),uparea(nx,ny),rivwth(nx,ny),visual(nx,ny))
 
 print *, nlon, nlat
 
@@ -470,6 +494,31 @@ print *, nlon, nlat
               close(21)
             endif
 
+            isDownXY=0
+            rfile1=trim(hires)//trim(CCname)//'.downxy.bin'
+            print *, trim(rfile1)
+            open(21,file=rfile1,form='unformatted',access='direct',recl=2*nx*ny,status='old',iostat=ios)
+            if( ios==0 )then
+              isDownXY=1
+              read(21,rec=1) downx
+              read(21,rec=2) downy
+              close(21)
+            else
+              isDownXY=0
+            endif
+  
+            isFdir=0
+            rfile1=trim(hires)//trim(CCname)//'.flwdir.bin'
+            print *, trim(rfile1)
+            open(21,file=rfile1,form='unformatted',access='direct',recl=1*nx*ny,status='old',iostat=ios)
+            if( ios==0 )then
+              isFdir=1
+              read(21,rec=1) flwdir
+              close(21)
+            else
+              isFdir=0
+            endif
+
             do iy=1, ny
               do ix=1, nx
                 if( catmXX(ix,iy)>-100 )then
@@ -523,6 +572,21 @@ print *, nlon, nlat
             open(21,file=wfile1,form='unformatted',access='direct',recl=1*nx*ny)
             write(21,rec=1) visual
             close(21)
+
+            if( isDownXY==1 )then
+              wfile1=trim(out_hdir)//'/'//trim(CCname)//'.downxy.bin'
+              open(21,file=wfile1,form='unformatted',access='direct',recl=2*nx*ny)
+              write(21,rec=1) downx
+              write(21,rec=2) downy
+              close(21)
+            endif
+
+            if( isFdir==1 )then
+              wfile1=trim(out_hdir)//'/'//trim(CCname)//'.flwdir.bin'
+              open(21,file=wfile1,form='unformatted',access='direct',recl=1*nx*ny)
+              write(21,rec=1) flwdir
+              close(21)
+            endif
 
  3000       continue
           end do

@@ -33,6 +33,8 @@ if [ -f ./${MAPDIR}/${TAG}/${TAG}.catmxy.bin ]; then   ## when non-tiled data ex
   cd tmpctl
   rm -f *.ctl
 
+  echo ${TAG}  $CNUM $WESN_G
+
   ### hires ###
   ../wrte_ctl_hires ${TAG}.catmxy.bin  ${TAG}.catmxy.ctl  int2 xy  $CNUM $WESN_G
   ../wrte_ctl_hires ${TAG}.catmzz.bin  ${TAG}.catmzz.ctl  int1 x   $CNUM $WESN_G
@@ -42,6 +44,14 @@ if [ -f ./${MAPDIR}/${TAG}/${TAG}.catmxy.bin ]; then   ## when non-tiled data ex
   ../wrte_ctl_hires ${TAG}.uparea.bin  ${TAG}.uparea.ctl  real x   $CNUM $WESN_G
   ../wrte_ctl_hires ${TAG}.rivwth.bin  ${TAG}.rivwth.ctl  real x   $CNUM $WESN_G
   ../wrte_ctl_hires ${TAG}.hand.bin    ${TAG}.hand.ctl    real x   $CNUM $WESN_G
+  ../wrte_ctl_hires ${TAG}.visual.bin  ${TAG}.visual.ctl  int1 x   $CNUM $WESN_G
+
+  if [ -f ../${MAPDIR}/${TAG}/${TAG}.flwdir.bin ]; then
+    ../wrte_ctl_hires ${TAG}.flwdir.bin  ${TAG}.flwdir.ctl  int1 x   $CNUM $WESN_G
+  fi
+  if [ -f ../${MAPDIR}/${TAG}/${TAG}.downxy.bin ]; then
+    ../wrte_ctl_hires ${TAG}.downxy.bin  ${TAG}.downxy.ctl  int2 xy  $CNUM $WESN_G
+  fi
 
   mv *.ctl ../${MAPDIR}/${TAG}/
 
@@ -67,6 +77,8 @@ if [ $MWIN -gt 0 ]; then
         LON2=$(( $LON + $MWIN ))
         LAT2=$(( $LAT + $MWIN ))
 
+        echo $CNAME $CNUM $LON $LON2 $LAT $LAT2
+
         ../wrte_ctl_hires ${CNAME}.catmxy.bin  ${CNAME}.catmxy.ctl  int2 xy  $CNUM $LON $LON2 $LAT $LAT2
         ../wrte_ctl_hires ${CNAME}.catmzz.bin  ${CNAME}.catmzz.ctl  int1 x   $CNUM $LON $LON2 $LAT $LAT2
         ../wrte_ctl_hires ${CNAME}.flddif.bin  ${CNAME}.flddif.ctl  real x   $CNUM $LON $LON2 $LAT $LAT2
@@ -75,6 +87,15 @@ if [ $MWIN -gt 0 ]; then
         ../wrte_ctl_hires ${CNAME}.uparea.bin  ${CNAME}.uparea.ctl  real x   $CNUM $LON $LON2 $LAT $LAT2
         ../wrte_ctl_hires ${CNAME}.rivwth.bin  ${CNAME}.rivwth.ctl  real x   $CNUM $LON $LON2 $LAT $LAT2
         ../wrte_ctl_hires ${CNAME}.hand.bin    ${CNAME}.hand.ctl    real x   $CNUM $LON $LON2 $LAT $LAT2
+        ../wrte_ctl_hires ${CNAME}.visual.bin  ${CNAME}.visual.ctl  int1 x   $CNUM $LON $LON2 $LAT $LAT2
+
+        if [ -f ../${MAPDIR}/${TAG}/${CNAME}.flwdir.bin ]; then
+          ../wrte_ctl_hires ${CNAME}.flwdir.bin  ${CNAME}.flwdir.ctl  int1 x   $CNUM $LON $LON2 $LAT $LAT2
+        fi
+        if [ -f ../${MAPDIR}/${TAG}/${CNAME}.downxy.bin ]; then
+          ../wrte_ctl_hires ${CNAME}.downxy.bin  ${CNAME}.downxy.ctl  int2 xy  $CNUM $LON $LON2 $LAT $LAT2
+        fi
+
 
         mv *.ctl ../${MAPDIR}/${TAG}/
 

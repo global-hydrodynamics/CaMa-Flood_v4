@@ -3,7 +3,7 @@
       implicit none
 ! vars
       integer            ::  nx,  ny
-      real*8             ::  gsize, csize
+      real*8             ::  csize
       integer            ::  cnum
 
       real*8             ::  west, east, south, north      !! center of lower left pixel
@@ -34,7 +34,7 @@
       nx=nint( (east -west )/csize )
       ny=nint( (north-south)/csize )
 
-      shift=gsize*dble(0.5)
+      shift=csize*dble(0.5)
 
       if( trim(type)=='int4' )then
         ctype=' 1 -1,40,4,-1 '
@@ -57,8 +57,8 @@
         endif
         write(21,'(a)')                   'title Flow Direction'
         write(21,'(a)')                   'options yrev little_endian'
-        write(21,'(a5,i6,a8,f22.16,f22.16)') 'xdef ', nx, ' linear ', west+ shift ,gsize
-        write(21,'(a5,i6,a8,f22.16,f22.16)') 'ydef ', ny, ' linear ', south+shift ,gsize
+        write(21,'(a5,i6,a8,f22.16,f22.16)') 'xdef ', nx, ' linear ', west+ shift ,csize
+        write(21,'(a5,i6,a8,f22.16,f22.16)') 'ydef ', ny, ' linear ', south+shift ,csize
         write(21,'(a)')                   'tdef 1 linear 00Z01jan2000 1yr'
 
         if( trim(type)=='fldp' )then
