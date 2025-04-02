@@ -17,18 +17,20 @@ TYPE='bin'          # plain binary (Fortran direct access)
 INTERP='inpmat'     # runoff interpolation using input matrix
 
 DIMINFO='./diminfo_test-1deg.txt'                 # dimention info to specity CaMa-Flood and Input Data resolutions
-#CROFBIN='../data/runoff_1981-2000_day.bin'   # Climatology of Daily Runoff (365 day records in mm/day)
-CROFBIN="../data/ELSE_GPCC_coastmod_dayclm-1981-2010.one"
 
-#######
+CROFBIN="../data/ELSE_GPCC_clm-1981-2010.one"     # long term mean runoff [mm/s]
 
 ## calculate annual discharge
-##   (max of 30-day moving average of climatological discharge)
-
 echo ""
 echo "@@@ calc_outclm $TYPE $INTERP $DIMINFO $CROFBIN"
 
 ./src_param/calc_outclm $TYPE $INTERP $DIMINFO $CROFBIN
+
+
+######## below for old version (365 day climatology)
+####CROFBIN='../data/runoff_1981-2000_day.bin'   # Climatology of Daily Runoff (365 day records in mm/day)
+####CROFBIN="../data/ELSE_GPCC_coastmod_dayclm-1981-2010.one"
+####./src_param/calc_outclmday $TYPE $INTERP $DIMINFO $CROFBIN
 
 
 ###  for netCDF runoff climatology  ###

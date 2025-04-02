@@ -21,13 +21,16 @@ USE NETCDF
       character*256       ::  diminfo                 !! dimention info file
       data                    diminfo /'./diminfo_test-1deg.txt'/
 
-      character*256       ::  crofbin                 !! runoff climatology (plain binary) in [mm/sec]
-      data                    crofbin /'../data/runoff_1981-2000_ave.bin'/
+      character*256       ::  crofbin                 !! daily runoff climatology (plain binary), 365 day data in [mm/day]
+      data                    crofbin /'../data/runoff_1981-2000_day.bin'/
 
-      character*256       ::  crofcdf                 !! runoff climatology (/netCDF)      in [mm/sec]
+      character*256       ::  crofcdf                 !! daily runoff climatology (/netCDF), 365 day data in [mm/day]
       character*256       ::  crofvar                 !! netCDF runoff variable name
-      data                    crofcdf /'../data/rofcdf_ave.nc'/
+      data                    crofcdf /'../data/rofcdf.nc'/
       data                    crofvar /'RO'/
+
+      logical             ::  lout30                  !! set lout30=.true. if 30day max discharge should be calculated.
+      parameter              (lout30=.false.)
 
 #ifdef UseCDF_CMF
       integer             ::  ncid, varid
@@ -38,6 +41,11 @@ USE NETCDF
       integer             ::  nx, ny                  !! river map dimention
       integer             ::  nxin, nyin              !! input map dimention
       integer             ::  nflp                    !! floodplain layer
+
+! parameter
+      integer             ::  mday, dday              !! avaraging span, moving day
+      parameter              (mday=30)                !!   30 day moving average
+      parameter              (dday=5)                 !!   calculate moving ave. for each 5 day
 
 ! river network map
       integer,allocatable ::  nextx(:,:), nexty(:,:)  !! downstream xy
@@ -59,15 +67,22 @@ USE NETCDF
       real,allocatable    ::  inpa(:,:,:)             !! input area [m2]
 
 ! input runoff
-      real,allocatable    ::  roffin(:,:)             !! runof (input: nxin, nyin) [mm/s]
+      real,allocatable    ::  roffin(:,:,:)           !! runof (input) [mm/day]
+
 ! variables
-      real,allocatable    ::  runoff(:,:)             !! runof (converted: nx, ny) [m3/s]     
+      real,allocatable    ::  runoff(:,:)             !! runof (converted) [m3/s]     
       real,allocatable    ::  rivout(:,:)             !! discharge [m3/s]
+      real,allocatable    ::  rivout30(:,:)           !! annual max discharge, calculated from 30day mean
+!
+      integer             ::  iday, irec
+      real,allocatable    ::  r2tmp(:,:), r2max1(:,:)
+
 ! files
       character*256       ::  cnextxy, cctmare        !! river network map, grid area
       integer             ::  ios
 
       character*256       ::  cinpmat                 !! input matrix
+
       character*256       ::  crivout                 !! annual max discharge [m3/s], rec=1: annual max;  rec=2; annual mean
       parameter              (crivout='./outclm.bin')
 
@@ -137,8 +152,10 @@ print *, 'calc_outclm: read parameters from arguments'
       print *, nx, ny, nxin, nyin, inpn
 
       allocate(nextx(nx,ny),nexty(nx,ny),ctmare(nx,ny))
-      allocate(roffin(nxin,nyin))
-      allocate(runoff(nx,ny),rivout(nx,ny))
+      allocate(roffin(nxin,nyin,365+mday))
+      allocate(runoff(nx,ny),rivout(nx,ny),rivout30(nx,ny))
+
+      allocate(r2tmp(nxin,nyin),r2max1(nx,ny))
 
 ! ===========================================
       allocate(lon(nx),lat(ny))
@@ -237,7 +254,16 @@ print *, 'calc_outclm: read runoff climatology file'
       if( type=='bin' )then
 print *, trim(crofbin)
         open(14,file=crofbin,form='unformatted',access='direct',recl=4*nxin*nyin)
-        read(14,rec=1) roffin
+        irec=0
+        roffin=0
+        do irec=1, 365
+          read(14,rec=irec) r2tmp
+          roffin(:,:,irec)=r2tmp(:,:)
+        end do
+        do irec=1,mday
+          read(14,rec=irec) r2tmp
+          roffin(:,:,irec+365)=r2tmp(:,:)
+        end do
         close(14)
       endif
 
@@ -246,18 +272,37 @@ print *, trim(crofbin)
 print *, trim(crofcdf)
         CALL NCERROR ( NF90_OPEN(crofcdf,NF90_NOWRITE,NCID),'READING'//TRIM(crofcdf) )
         CALL NCERROR ( NF90_INQ_VARID(NCID,crofvar,VARID) )
-        CALL NCERROR ( NF90_GET_VAR(NCID,VARID,roffin,(/1,1,1/),(/nxin,nyin,1/)) )
+        irec=0
+        roffin=0
+        do irec=1, 365
+          CALL NCERROR ( NF90_GET_VAR(NCID,VARID,r2tmp,(/1,1,irec/),(/nxin,nyin,1/)) )
+          roffin(:,:,irec)=r2tmp(:,:)  
+        end do
+        do irec=1,mday
+          CALL NCERROR ( NF90_GET_VAR(NCID,VARID,r2tmp,(/1,1,irec/),(/nxin,nyin,1/)) )
+          roffin(:,:,irec+365)=r2tmp(:,:)
+        end do
         CALL NCERROR ( NF90_CLOSE(NCID) )
       endif
 #endif
 
+      roffin(:,:,:)=roffin(:,:,:)/(24.*60.*60.)
+
 ! ============================================================
 print *, 'calc_outclm: calc annual average'
+      r2tmp(:,:)=0.
+      do irec=1, 365
+        r2tmp(:,:)=r2tmp(:,:)+roffin(:,:,irec)/365.  !! read all daily data, and take annual average
+      end do
       if( intp=='near' )then
-        call conv_resol(nx,ny,nxin,nyin,imis,rmis,nextx,ctmare,roffin,runoff)
+        call conv_resol(nx,ny,nxin,nyin,imis,rmis,nextx,ctmare,r2tmp,runoff)
       else
-        call intp_roff(nx,ny,nxin,nyin,imis,rmis,nextx,inpn,inpx,inpy,inpa,roffin,runoff)
+        call intp_roff(nx,ny,nxin,nyin,imis,rmis,nextx,inpn,inpx,inpy,inpa,r2tmp,runoff)
       endif
+
+      open(141,file='tmp.bin',form='unformatted',access='direct',recl=4*nxin*nyin)
+      write(141,rec=1) r2tmp
+      close(141)
 
       !! sum runoff from upstream to downstream
       rivout(:,:)=0
@@ -287,6 +332,56 @@ print *, 'calc_outclm: calc annual average'
       open(21,file=crivout,form='unformatted',access='direct',recl=4*nx*ny)
       write(21,rec=1) rivout       !! rec=1, annual average
       close(21)
+
+! =======================================
+      if (lout30 )then
+print *, 'calc_outclm: calc mday maximum: mday=', mday
+
+        r2max1(:,:)=-9999
+        do irec=1, 365, dday  !! for each day (with dday interval to reduce computational cost)
+          r2tmp(:,:)=0
+          do iday=1, mday
+            r2tmp(:,:)=r2tmp(:,:)+roffin(:,:,irec+iday-1)/real(mday) !! take m-day average runoff
+          end do
+          if( intp=='near' )then
+            call conv_resol(nx,ny,nxin,nyin,imis,rmis,nextx,ctmare,r2tmp,runoff)
+          else
+            call intp_roff(nx,ny,nxin,nyin,imis,rmis,nextx,inpn,inpx,inpy,inpa,r2tmp,runoff)
+          endif
+  
+          rivout(:,:)=0
+          do iseq=1, nseqnow
+            ix=xseq(iseq)
+            iy=yseq(iseq)
+            rivout(ix,iy)=rivout(ix,iy)+runoff(ix,iy)
+            if( nextx(ix,iy)>0 )then
+              jx=nextx(ix,iy)
+              jy=nexty(ix,iy)
+              rivout(jx,jy)=rivout(jx,jy)+rivout(ix,iy)
+            endif
+          end do
+  
+          do iy=1, ny
+            do ix=1, nx
+              if( nextx(ix,iy)/=-9999 )then
+                r2max1(ix,iy)=max(r2max1(ix,iy),rivout(ix,iy))
+              else
+                r2max1(ix,iy)=-9999
+              endif
+            end do
+          end do
+  
+        end do
+  
+        rivout(:,:)=r2max1(:,:)
+        rivout30(:,:)=rivout
+  
+  !! annual average
+        open(21,file=crivout,form='unformatted',access='direct',recl=4*nx*ny)
+        write(21,rec=2) rivout30     !! rec=2, max of 30day moving ave
+        close(21)
+
+      endif
 
 
 ! ============================================================
