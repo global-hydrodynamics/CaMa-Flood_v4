@@ -27,5 +27,5 @@ clean:
 
 .SUFFIXES : .F90
 .F90:
-	$(FC) $(FFLAGS) $(LFLAG) $(CFLAGS) $(INC) $(LIB) $^ -o $@
+	$(FC) $(FFLAGS) $(LFLAG) $(CFLAGS) $(INC) $(LIB) $^ -o $@ $(LIB)
 
