@@ -189,7 +189,8 @@ DO IDAM = 1, NDAM
   IF (IX<=0 .or. IX > NX .or. IY<=0 .or. IY > NY ) cycle
 
   ISEQ=I2VECTOR(IX,IY)
-  IF( I1NEXT(ISEQ)==-9999 .or. ISEQ<=0 ) cycle
+  IF( ISEQ<=0 ) cycle
+  IF( I1NEXT(ISEQ)==-9999 ) cycle
   NDAMX=NDAMX+1
 
   DamSeq(IDAM) =ISEQ
