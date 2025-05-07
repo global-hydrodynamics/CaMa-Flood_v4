@@ -152,10 +152,11 @@ END SUBROUTINE CMF_MAPS_NMLIST
 SUBROUTINE CMF_RIVMAP_INIT
 ! read & set river network map 
 ! -- call from CMF_DRV_INIT
-USE YOS_CMF_INPUT,      ONLY: TMPNAM, NX,NY,NLFP, LPTHOUT
+USE YOS_CMF_INPUT,      ONLY: TMPNAM, NX,NY,NLFP, LPTHOUT, LSPAMAT
 USE YOS_CMF_MAP,        ONLY: I2NEXTX,I2NEXTY, I2REGION, REGIONALL,REGIONTHIS, &
                             & I1SEQX, I1SEQY,  I1NEXT,  I2VECTOR, D1LON,    D1LAT,      &
                             & NSEQRIV,  NSEQALL,  NSEQMAX
+USE YOS_CMF_MAP,        ONLY: I1UPST, I1UPN, I1P_OUT, I1P_OUTN, I1P_INF, I1P_INFN
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
 IMPLICIT NONE
 !================================================
@@ -398,6 +399,7 @@ USE YOS_CMF_INPUT,           ONLY: IMIS
 IMPLICIT NONE
 !* local variables
 INTEGER(KIND=JPIM)              :: IX,IY,JX,JY,ISEQ,JSEQ,ISEQ1,ISEQ2,AGAIN
+INTEGER(KIND=JPIM)              :: UPNMAX
 
 INTEGER(KIND=JPIM),ALLOCATABLE  :: NUPST(:,:), UPNOW(:,:)
 !================================================
@@ -418,12 +420,14 @@ I2VECTOR(:,:)=0
 ! count number of upstream 
 NUPST(:,:)=0
 UPNOW(:,:)=0
+UPNMAX=0
 DO IY=1, NY
   DO IX=1, NX
     IF( I2NEXTX(IX,IY).GT.0 .and. I2REGION(IX,IY)==REGIONTHIS )THEN
       JX=I2NEXTX(IX,IY)
       JY=I2NEXTY(IX,IY)
       NUPST(JX,JY)=NUPST(JX,JY)+1
+      UPNMAX=max(UPNMAX,NUPST(JX,JY))
     ENDIF
   END DO
 END DO
@@ -494,7 +498,20 @@ DO ISEQ=1, NSEQALL
 END DO
 
 DEALLOCATE(NUPST,UPNOW)
-      
+
+!====
+IF( LSPAMAT )THEN
+  WRITE(LOGNAM,*) 'RIVMAP_INIT: Upstream Matrix size', UPNMAX
+  ALLOCATE(I1UPST(NSEQMAX,UPNMAX),I1UPN(NSEQMAX))
+  I1UPST(:,:)=-9999
+  I1UPN(:)=0
+  DO ISEQ=1, NSEQRIV
+    JSEQ=I1NEXT(ISEQ)
+    I1UPN(JSEQ)=I1UPN(JSEQ)+1
+    I1UPST(JSEQ,I1UPN(JSEQ))=ISEQ
+  END DO
+ENDIF
+
 END SUBROUTINE CALC_1D_SEQ
 !==========================================================
 !+
@@ -504,13 +521,15 @@ END SUBROUTINE CALC_1D_SEQ
 SUBROUTINE READ_BIFPARAM    !! evenly allocate pixels to mpi nodes (not used in vcurrent version)
 USE YOS_CMF_INPUT,      ONLY: PMANRIV, PMANFLD
 USE YOS_CMF_MAP,        ONLY: NPTHOUT, NPTHLEV, PTH_UPST, PTH_DOWN,&
-                            & PTH_DST, PTH_ELV, PTH_WTH,  PTH_MAN
+                            & PTH_DST, PTH_ELV, PTH_WTH,  PTH_MAN,   NSEQALL
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
 IMPLICIT NONE
 !* local variables
-INTEGER(KIND=JPIM)         :: IX,IY, JX,JY
+INTEGER(KIND=JPIM)         :: IX,IY, JX,JY, ISEQ, JSEQ
 INTEGER(KIND=JPIM)         :: IPTH,  ILEV,  NPTHOUT1
 REAL(KIND=JPRB)            :: PELV,  PWTH,  PDPH
+INTEGER(KIND=JPIM)         :: ONMAX,  INMAX
+INTEGER(KIND=JPIM)         :: OCOUNT(NSEQALL),  ICOUNT(NSEQALL)
 !================================================
 WRITE(LOGNAM,*)"RIVMAP_INIT: Bifuraction channel:", TRIM(CPTHOUT)
 
@@ -527,13 +546,20 @@ ALLOCATE( PTH_ELV(NPTHOUT,NPTHLEV) )
 ALLOCATE( PTH_WTH(NPTHOUT,NPTHLEV) )
 ALLOCATE( PTH_MAN(NPTHLEV)  )
 
+OCOUNT(:)=0
+ICOUNT(:)=0
+
 NPTHOUT1=0
 DO IPTH=1, NPTHOUT
   READ(TMPNAM,*) IX, IY, JX, JY, PTH_DST(IPTH), PELV, PDPH, (PTH_WTH(IPTH,ILEV),ILEV=1,NPTHLEV)
   PTH_UPST(IPTH)=I2VECTOR(IX,IY)
   PTH_DOWN(IPTH)=I2VECTOR(JX,JY)
-  IF (PTH_UPST(IPTH) > 0 .AND. PTH_DOWN(IPTH) > 0) THEN
+  IF (PTH_UPST(IPTH) > 0 .AND. PTH_DOWN(IPTH) > 0) THEN  ! both upst and down grids are within domain
     NPTHOUT1=NPTHOUT1+1
+    ISEQ=PTH_UPST(IPTH)
+    JSEQ=PTH_DOWN(IPTH)
+    OCOUNT(ISEQ)=OCOUNT(ISEQ)+1
+    ICOUNT(JSEQ)=ICOUNT(JSEQ)+1
   ENDIF
   DO ILEV=1, NPTHLEV
     IF( ILEV==1 )THEN            !!ILEV=1: water channel bifurcation. consider bifurcation channel depth
@@ -567,8 +593,42 @@ IF (NPTHOUT /= NPTHOUT1) THEN
   WRITE(LOGNAM,*)"Bifuraction channel outside of domain. Only valid:", NPTHOUT1
 ENDIF
 
+!=====
+IF( LSPAMAT )THEN
+  ONMAX=0
+  INMAX=0
+  DO ISEQ=1, NSEQALL
+    ONMAX=max(ONMAX,OCOUNT(ISEQ))
+    INMAX=max(INMAX,ICOUNT(ISEQ))
+  END DO
+  WRITE(LOGNAM,*) "Max # of Bifuraction channel in each grid (Out, Inf):", ONMAX, INMAX
+  
+  ALLOCATE(I1P_OUT(NSEQALL,ONMAX))
+  ALLOCATE(I1P_INF(NSEQALL,INMAX))
+  ALLOCATE(I1P_OUTN(NSEQALL))
+  ALLOCATE(I1P_INFN(NSEQALL))
+  I1P_OUT(:,:)=0
+  I1P_INF(:,:)=0
+  I1P_OUTN(:)=0
+  I1P_INFN(:)=0
+
+  DO IPTH=1, NPTHOUT
+    IF (PTH_UPST(IPTH) > 0 .AND. PTH_DOWN(IPTH) > 0) THEN  ! both upst and down grids are within domain
+      ISEQ=PTH_UPST(IPTH)
+      JSEQ=PTH_DOWN(IPTH)
+  
+      I1P_OUTN(ISEQ)=I1P_OUTN(ISEQ)+1
+      I1P_OUT(ISEQ,I1P_OUTN(ISEQ))=IPTH
+  
+      I1P_INFN(JSEQ)=I1P_INFN(JSEQ)+1
+      I1P_INF(JSEQ,I1P_INFN(JSEQ))=IPTH
+    ENDIF
+  END DO
+ENDIF
+
 END SUBROUTINE READ_BIFPARAM
 !==========================================================
+
 
 END SUBROUTINE CMF_RIVMAP_INIT
 !####################################################################

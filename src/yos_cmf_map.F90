@@ -32,6 +32,16 @@ INTEGER(KIND=JPIM)                       ::  REGIONALL          !! REGION TOTAL
 INTEGER(KIND=JPIM)                       ::  REGIONTHIS         !! REGION THIS CPU
 INTEGER(KIND=JPIM)                       ::  MPI_COMM_CAMA      !! MPI COMMUNICATOR
 
+INTEGER(KIND=JPIM),ALLOCATABLE           ::  I1UPST(:,:)        !! UPSTREAM SEQ
+INTEGER(KIND=JPIM),ALLOCATABLE           ::  I1UPN(:)           !! MAX UPSTREAM NUMBER
+
+INTEGER(KIND=JPIM),ALLOCATABLE           ::  I1P_OUT(:,:)        !! BIF PTH OUT
+INTEGER(KIND=JPIM),ALLOCATABLE           ::  I1P_OUTN(:)           !! MAX UPSTREAM NUMBER
+
+INTEGER(KIND=JPIM),ALLOCATABLE           ::  I1P_INF(:,:)        !! UPSTREAM SEQ
+INTEGER(KIND=JPIM),ALLOCATABLE           ::  I1P_INFN(:)           !! MAX UPSTREAM NUMBER
+
+
 !================================================
 !*** lat, lon
 REAL(KIND=JPRB),ALLOCATABLE              ::  D1LON(:)           !! longitude [degree_east]

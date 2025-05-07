@@ -1,0 +1,47 @@
+#==========================================================
+# CaMa-Flood Mkinclude (for Mac, Intel CPU ifort)
+#==========================================================
+RM = /bin/rm -f
+CP = /bin/cp
+
+#======================================
+# Pre-Prosessing options
+# DCDF: activate when using netCDF, comment out when not needed
+#======================================
+
+# UseCDF: use netCDF, UseMPI: Use MPI
+# SinglePrec: SinglePrecisionMode
+# NoAtom: Bit-identical simulation (deactivate OpenMP loop with OMP_Atomic)
+
+#DCDF=-DUseCDF_CMF
+#DMPI=-DUseMPI_CMF
+DSINGLE=-DSinglePrec_CMF
+#DATM=-DNoAtom_CMF
+
+CFLAGS=$(DMPI) $(DCDF) $(DATM) $(DSINGLE)
+
+#======================================
+# Intel Fortran: Mac OSX 
+#======================================
+
+## without netCDF
+#INC  = -I/opt/intel/include
+#LIB  = -L/opt/intel/lib/intel64 -L/opt/intel/mkl/lib
+
+# with netCDF
+#INC  = -I/opt/intel/include -I/opt/local/include -I/opt/local/netcdf-fortran/include
+#LIB  = -L/opt/intel/lib/intel64 -L/opt/intel/mkl/lib/intel64 -L/opt/local/lib -L/opt/local/netcdf-fortran/lib -lnetcdff 
+
+#==============================
+# FCMP: main program (src/), FC: pre/post process (map/ etc/)
+FCMP = ifort -qopenmp
+#FCMP = mpif90 -qopenmp
+#FCMP = mpif90
+FC = ifort
+
+#LFLAGS =
+#FFLAGS = -O3 -warn all -fpp -free -assume byterecl -heap-arrays -nogen-interface -lpthread -static-intel 
+
+# Debug Mode
+FFLAGS = -check all  -warn all -fpp -free -assume byterecl -heap-arrays -std -nogen-interface -lpthread -fpe0 -ftrapuv -traceback  -static-intel
+

@@ -63,6 +63,7 @@ LOGICAL                         :: LLEAPYR                 !! true: neglect leap
 LOGICAL                         :: LMAPEND                 !! true: for map data endian conversion
 LOGICAL                         :: LBITSAFE                !! true: for Bit Identical (removed from v410, set in Mkinclude)
 LOGICAL                         :: LSTG_ES                 !! true: for Vector Processor optimization (CMF_OPT_FLDSTG_ES) 
+LOGICAL                         :: LSPAMAT                 !! true: use quasi sparse matrix to avoid OMP_Atomix (fast but use large memory) 
 
 LOGICAL                         :: LSEDOUT                 !! true: sediment scheme                 
 LOGICAL                         :: LTRACE                  !! true: tracer   scheme                 

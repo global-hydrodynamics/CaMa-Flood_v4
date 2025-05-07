@@ -36,7 +36,7 @@ USE YOS_CMF_INPUT,      ONLY: LADPSTP,  LFPLAIN,  LKINE,    LFLDOUT,  LPTHOUT,  
                             & LROSPLIT, LGDWDLY,  LSLPMIX,  LMEANSL,  LSEALEV,  LOUTPUT,  &
                             & LRESTART, LSTOONLY, LGRIDMAP, LLEAPYR,  LMAPEND,  LBITSAFE, &
                             & LSTG_ES,  LLEVEE,   LOUTINS,  LOUTINI,  LSEDOUT,  LTRACE,   &
-                            & LSLOPEMOUTH,LWEVAP, LWEVAPFIX,LWEXTRACTRIV
+                            & LSLOPEMOUTH,LWEVAP, LWEVAPFIX,LWEXTRACTRIV,       LSPAMAT
 ! dimention & time
 USE YOS_CMF_INPUT,      ONLY: CDIMINFO, DT,       NX,NY,    NLFP,     NXIN,NYIN,    INPN, &
                             & IFRQ_INP, DTIN,     WEST,EAST,NORTH,SOUTH
@@ -52,7 +52,7 @@ NAMELIST/NRUNVER/  LADPSTP,  LFPLAIN,  LKINE,    LFLDOUT,  LPTHOUT,  LDAMOUT,   
                    LROSPLIT, LGDWDLY,  LSLPMIX,  LMEANSL,  LSEALEV,  LOUTPUT,      &
                    LRESTART, LSTOONLY, LGRIDMAP, LLEAPYR,  LMAPEND,  LBITSAFE,     &
                    LSTG_ES,  LLEVEE,   LSEDOUT,  LTRACE,   LOUTINS,  LSLOPEMOUTH,  &
-                   LWEVAP,   LWEVAPFIX,LWEXTRACTRIV,       LOUTINI
+                   LWEVAP,   LWEVAPFIX,LWEXTRACTRIV,       LOUTINI,  LSPAMAT
 
 NAMELIST/NDIMTIME/ CDIMINFO, DT, IFRQ_INP
 
@@ -81,6 +81,8 @@ LLEVEE   = .FALSE.           !! true: activate levee scheme  (under development)
 LSEDOUT  = .FALSE.           !! true: activate sediment transport (under development)
 LTRACE   = .FALSE.           !! true: activate tracer             (under development)
 LOUTINS  = .FALSE.           !! true: diagnose instantaneous discharge
+LSPAMAT  = .TRUE.            !! true: use quasi sparse matrix (fast but additional memory req)
+
 !!=== this part is used by ECMWF
 LROSPLIT = .FALSE.           !! true: input if surface (Qs) and sub-surface (Qsb) runoff
 LWEVAP   = .FALSE.           !! true: input evaporation to extract from river 
@@ -145,6 +147,7 @@ WRITE(LOGNAM,*) "LLEAPYR  ", LLEAPYR
 WRITE(LOGNAM,*) "LMAPEND  ", LMAPEND
 WRITE(LOGNAM,*) "LBITSAFE ", LBITSAFE
 WRITE(LOGNAM,*) "LSTG_ES " , LSTG_ES
+WRITE(LOGNAM,*) "LSPAMAT " , LSPAMAT
 
 !============================
 !*** 2. set model dimention & time

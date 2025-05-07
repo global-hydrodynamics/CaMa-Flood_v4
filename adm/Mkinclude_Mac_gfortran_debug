@@ -1,0 +1,45 @@
+#==========================================================
+# CaMa-Flood Mkinclude (for MaxOSX, gfortran)
+#==========================================================
+RM = /bin/rm -f
+CP = /bin/cp
+
+#======================================
+# Pre-Prosessing options
+# DMPI=-DUseMPI_CMF        : activate MPI parallelization
+# DCDF=-DUseCDF_CMF        : activate netCDF, comment out when not needed
+# DSINGLE=-DSinglePrec_CMF : activate Single Precision Mode
+# DATM=-DNoAtom_CMF        : avoid OMP ATOMIC calculation (bit identical simulation)
+#======================================
+
+DCDF=-DUseCDF_CMF
+#DMPI=-DUseMPI_CMF
+DSINGLE=-DSinglePrec_CMF
+#DATM=-DNoAtom_CMF
+
+CFLAGS=$(DMPI) $(DCDF) $(DATM) $(DSINGLE)
+
+#======================================
+# gfortran Mac OSX 
+
+# without netCDF
+#INC = -I/opt/homebrew/include 
+#LIB = -L/opt/homebrew/lib 
+
+# with netCDF
+INC = -I/opt/homebrew/include 
+LIB = -L/opt/homebrew/lib -lnetcdff
+
+#==============================
+# FCMP: main program (src/), FC: pre/post process (map/ etc/)
+FCMP = gfortran -fopenmp
+#FCMP = mpif90 -fopenmp
+#FCMP = mpif90
+FC = gfortran
+
+LFLAGS =
+
+# note: underflow is unavoidable
+# FFLAGS = -O3 -Wall -cpp -ffree-line-length-none -fimplicit-none 
+# FFLAGS = -O3 -Wall -g -ffpe-trap=invalid,zero,overflow,underflow -fbounds-check -fbacktrace -fdump-core
+FFLAGS = -O3 -Wall -g -ffpe-trap=invalid,zero,overflow -fbounds-check -fbacktrace -fdump-core
