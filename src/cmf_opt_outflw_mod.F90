@@ -41,16 +41,16 @@ REAL(KIND=JPRB),SAVE      ::  DSLOPE,   DAREA , DVEL,   DSLOPE_F, DARE_F, DVEL_F
 
 !*** 0. calculate surface water elevation, reset inflow
 
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO SIMD
 DO ISEQ=1, NSEQALL
   D2SFCELV(ISEQ,1) = D2RIVELV(ISEQ,1) + D2RIVDPH(ISEQ,1)
 END DO
-!$OMP END PARALLEL DO
+!$OMP END PARALLEL DO SIMD
 
 !============================
 !*** 1a. discharge for usual river grid
 
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO SIMD
 DO ISEQ=1, NSEQRIV
   JSEQ   = I1NEXT(ISEQ)
 ! === river flow
@@ -73,12 +73,12 @@ DO ISEQ=1, NSEQRIV
     D2FLDOUT(ISEQ,1) = MIN(  D2FLDOUT(ISEQ,1)*1._JPRD, P2FLDSTO(ISEQ,1)/DT )
   ENDIF
 END DO
-!$OMP END PARALLEL DO
+!$OMP END PARALLEL DO SIMD
 
 !============================
 !*** 1b. discharge for river mouth grids
 
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO SIMD
 DO ISEQ=NSEQRIV+1, NSEQALL
 !=== Kinematic approach, river mouth flow
   IF ( LSLOPEMOUTH ) THEN
@@ -105,7 +105,7 @@ DO ISEQ=NSEQRIV+1, NSEQALL
     D2FLDOUT(ISEQ,1) = MIN(  D2FLDOUT(ISEQ,1)*1._JPRD, P2FLDSTO(ISEQ,1)/DT )
   ENDIF
 END DO
-!$OMP END PARALLEL DO
+!$OMP END PARALLEL DO SIMD
 
 END SUBROUTINE CMF_CALC_OUTFLW_KINE
 !####################################################################
@@ -140,15 +140,15 @@ REAL(KIND=JPRB),SAVE       :: DSFCMAX, DSFCMAX_PRE
 !$OMP THREADPRIVATE    (      DSFCMAX, DSFCMAX_PRE)
 !================================================
 
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO SIMD
 DO ISEQ=1, NSEQALL
   D2SFCELV(ISEQ,1)     = D2RIVELV(ISEQ,1) + D2RIVDPH(ISEQ,1)
   D2SFCELV_PRE(ISEQ,1) = D2RIVELV(ISEQ,1) + D2RIVDPH_PRE(ISEQ,1)
   D2FLDDPH_PRE(ISEQ,1) = MAX( D2RIVDPH_PRE(ISEQ,1)-D2RIVHGT(ISEQ,1), 0._JPRB )
 END DO
-!$OMP END PARALLEL DO
+!$OMP END PARALLEL DO SIMD
 
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO SIMD
 DO ISEQ=1, NSEQRIV                                                    !! for normal cells
   JSEQ=I1NEXT(ISEQ) ! next cell's pixel
   
@@ -222,9 +222,9 @@ DO ISEQ=1, NSEQRIV                                                    !! for nor
   ENDIF 
     
 END DO
-!$OMP END PARALLEL DO
+!$OMP END PARALLEL DO SIMD
 
-!$OMP PARALLEL DO                                                     !! for river mouth grids
+!$OMP PARALLEL DO SIMD                                                     !! for river mouth grids
 DO ISEQ=NSEQRIV+1, NSEQALL
   IF (I2MASK(ISEQ,1) == 0 ) THEN
 
@@ -295,7 +295,7 @@ DO ISEQ=NSEQRIV+1, NSEQALL
     ENDIF
   ENDIF
 END DO
-!$OMP END PARALLEL DO
+!$OMP END PARALLEL DO SIMD
 
 END SUBROUTINE CMF_CALC_OUTFLW_KINEMIX
 !####################################################################
@@ -322,14 +322,14 @@ REAL(KIND=JPRB),SAVE    :: DSFCMAX, DSLOPE, DAREA, DFLW, DSLOPE_F, DARE_F, DFLW_
 !$OMP THREADPRIVATE       (DSFCMAX, DSLOPE, DAREA, DFLW, DSLOPE_F, DARE_F, DFLW_F, JSEQ, ILEV, ISEQP, JSEQP)
 !================================================
 
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO SIMD
 DO ISEQ=1, NSEQALL
   D2SFCELV(ISEQ,1)     = D2RIVELV(ISEQ,1) + D2RIVDPH(ISEQ,1)
   D2RIVDPH_PRE(ISEQ,1) = D2RIVDPH(ISEQ,1)                           !! bugfix v362
 END DO
-!$OMP END PARALLEL DO
+!$OMP END PARALLEL DO SIMD
 
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO SIMD
 DO ISEQ=1, NSEQRIV                                                    !! for normal cells
   JSEQ=I1NEXT(ISEQ)
 
@@ -360,10 +360,10 @@ DO ISEQ=1, NSEQRIV                                                    !! for nor
     D2FLDOUT_PRE(ISEQ,1) = 0._JPRB
   ENDIF
 END DO
-!$OMP END PARALLEL DO
+!$OMP END PARALLEL DO SIMD
 
 
-!$OMP PARALLEL DO                                                     !! for river mouth grids
+!$OMP PARALLEL DO SIMD                                                     !! for river mouth grids
 DO ISEQ=NSEQRIV+1, NSEQALL
   DSLOPE = ( D2SFCELV(ISEQ,1)-D2DWNELV(ISEQ,1) ) * PDSTMTH**(-1.)
   DSLOPE_F = MAX( -0.005_JPRB, min( 0.005_JPRB,DSLOPE ))    !! set max&min [instead of using weir equation for efficiency]
@@ -388,11 +388,11 @@ DO ISEQ=NSEQRIV+1, NSEQALL
     D2FLDOUT_PRE(ISEQ,1) = 0._JPRB
   ENDIF
 END DO
-!$OMP END PARALLEL DO
+!$OMP END PARALLEL DO SIMD
 
 
 IF( LPTHOUT )THEN
- !$OMP PARALLEL DO
+ !$OMP PARALLEL DO SIMD
  DO IPTH=1, NPTHOUT  
   ISEQP=PTH_UPST(IPTH)
   JSEQP=PTH_DOWN(IPTH)
@@ -410,7 +410,7 @@ IF( LPTHOUT )THEN
     ENDIF
   END DO
  END DO
- !$OMP END PARALLEL DO
+ !$OMP END PARALLEL DO SIMD
 ENDIF
 
 !! when high-water flow is not defined

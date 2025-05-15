@@ -43,15 +43,15 @@ REAL(KIND=JPRB),SAVE       :: DSFCMAX,  DSFCMAX_PRE, RATE
 !$OMP THREADPRIVATE    (      DSFCMAX,  DSFCMAX_PRE, RATE )
 !================================================
 
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO SIMD
 DO ISEQ=1, NSEQALL
   D2SFCELV(ISEQ,1)     = D2RIVELV(ISEQ,1) + D2RIVDPH(ISEQ,1)
   D2SFCELV_PRE(ISEQ,1) = D2RIVELV(ISEQ,1) + D2RIVDPH_PRE(ISEQ,1)
   D2FLDDPH_PRE(ISEQ,1) = MAX( D2RIVDPH_PRE(ISEQ,1)-D2RIVHGT(ISEQ,1), 0._JPRB )
 END DO
-!$OMP END PARALLEL DO
+!$OMP END PARALLEL DO SIMD
 
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO SIMD
 DO ISEQ=1, NSEQRIV                                                    !! for normal cells
   JSEQ=I1NEXT(ISEQ) ! next cell's pixel
   
@@ -109,9 +109,9 @@ DO ISEQ=1, NSEQRIV                                                    !! for nor
     D2FLDOUT(ISEQ,1)=D2FLDOUT(ISEQ,1)*RATE
   ENDIF
 END DO
-!$OMP END PARALLEL DO
+!$OMP END PARALLEL DO SIMD
 
-!$OMP PARALLEL DO                                                     !! for river mouth grids
+!$OMP PARALLEL DO SIMD                                                     !! for river mouth grids
 DO ISEQ=NSEQRIV+1, NSEQALL
   IF ( LSLOPEMOUTH ) THEN
     ! prescribed slope 
@@ -163,7 +163,7 @@ DO ISEQ=NSEQRIV+1, NSEQALL
     IF( D2FLDOUT(ISEQ,1)*D2RIVOUT(ISEQ,1)<0._JPRB ) D2FLDOUT(ISEQ,1)=0._JPRB  !! stabilization
   ENDIF
 END DO
-!$OMP END PARALLEL DO
+!$OMP END PARALLEL DO SIMD
 
 END SUBROUTINE CMF_CALC_OUTFLW
 !####################################################################
@@ -193,7 +193,7 @@ REAL(KIND=JPRB),SAVE       :: OUT_R1, OUT_R2, OUT_F1, OUT_F2, DIUP, DIDW, ISEQP,
   
 !*** 1. initialize & calculate P2STOOUT for normal cells
 
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO SIMD
 DO ISEQ=1, NSEQALL
   P2RIVINF(ISEQ,1) = 0._JPRD
   P2FLDINF(ISEQ,1) = 0._JPRD
@@ -201,11 +201,11 @@ DO ISEQ=1, NSEQALL
   P2STOOUT(ISEQ,1) = 0._JPRD
   D2RATE(ISEQ,1) = 1._JPRB
 END DO
-!$OMP END PARALLEL DO
+!$OMP END PARALLEL DO SIMD
 
 !! for normal cells ---------
 #ifndef NoAtom_CMF
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO SIMD
 #endif
 DO ISEQ=1, NSEQRIV                                                    !! for normalcells
   JSEQ=I1NEXT(ISEQ) ! next cell's pixel
@@ -225,22 +225,22 @@ DO ISEQ=1, NSEQRIV                                                    !! for nor
   P2STOOUT(JSEQ,1) = P2STOOUT(JSEQ,1) + DIDW 
 END DO
 #ifndef NoAtom_CMF
-!$OMP END PARALLEL DO
+!$OMP END PARALLEL DO SIMD
 #endif
 
 !! for river mouth grids ------------
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO SIMD
 DO ISEQ=NSEQRIV+1, NSEQALL
   OUT_R1 = max( D2RIVOUT(ISEQ,1), 0._JPRB )
   OUT_F1 = max( D2FLDOUT(ISEQ,1), 0._JPRB )
   P2STOOUT(ISEQ,1) = P2STOOUT(ISEQ,1) + OUT_R1*DT + OUT_F1*DT
 END DO
-!$OMP END PARALLEL DO
+!$OMP END PARALLEL DO SIMD
 
 !! for bifurcation channels ------------
 IF( LPTHOUT )THEN
 #ifndef NoAtom_CMF
-!$OMP PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
+!$OMP PARALLEL DO SIMD  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
 #endif
   DO IPTH=1, NPTHOUT  
     ISEQP=PTH_UPST(IPTH)
@@ -263,24 +263,24 @@ IF( LPTHOUT )THEN
     P2STOOUT(JSEQP,1) = P2STOOUT(JSEQP,1) + DIDW
   END DO
 #ifndef NoAtom_CMF
-!$OMP END PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
+!$OMP END PARALLEL DO SIMD  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
 #endif
 ENDIF
 
 !============================
 !*** 2. modify outflow
 
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO SIMD
 DO ISEQ=1, NSEQALL
   IF ( P2STOOUT(ISEQ,1) > 1.E-8 ) THEN
     D2RATE(ISEQ,1) = min( (P2RIVSTO(ISEQ,1)+P2FLDSTO(ISEQ,1)) * P2STOOUT(ISEQ,1)**(-1.), 1._JPRD )
   ENDIF
 END DO
-!$OMP END PARALLEL DO
+!$OMP END PARALLEL DO SIMD
 
 !! normal pixels------
 #ifndef NoAtom_CMF
-!$OMP PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
+!$OMP PARALLEL DO SIMD  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
 #endif
 DO ISEQ=1, NSEQRIV ! for normal pixels
   JSEQ=I1NEXT(ISEQ)
@@ -301,21 +301,21 @@ DO ISEQ=1, NSEQRIV ! for normal pixels
   P2FLDINF(JSEQ,1) = P2FLDINF(JSEQ,1) + D2FLDOUT(ISEQ,1)
 END DO
 #ifndef NoAtom_CMF
-!$OMP END PARALLEL DO
+!$OMP END PARALLEL DO SIMD
 #endif
 
 !! river mouth-----------------
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO SIMD
 DO ISEQ=NSEQRIV+1, NSEQALL
   D2RIVOUT(ISEQ,1) = D2RIVOUT(ISEQ,1)*D2RATE(ISEQ,1)
   D2FLDOUT(ISEQ,1) = D2FLDOUT(ISEQ,1)*D2RATE(ISEQ,1)
 END DO
-!$OMP END PARALLEL DO
+!$OMP END PARALLEL DO SIMD
 
 !! bifurcation channels --------
 IF( LPTHOUT )THEN
 #ifndef NoAtom_CMF
-!$OMP PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
+!$OMP PARALLEL DO SIMD  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
 #endif
   DO IPTH=1, NPTHOUT  
     ISEQP=PTH_UPST(IPTH)
@@ -349,7 +349,7 @@ IF( LPTHOUT )THEN
 
   END DO
 #ifndef NoAtom_CMF
-!$OMP END PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
+!$OMP END PARALLEL DO SIMD  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
 #endif
 ENDIF
 
@@ -385,7 +385,7 @@ REAL(KIND=JPRB),SAVE       :: OUT_R1, OUT_R2, OUT_F1, OUT_F2, DIUP, DIDW, ISEQP,
   
 !*** 1. initialize & calculate P2STOOUT for normal cells
 
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO SIMD
 DO ISEQ=1, NSEQALL
   P2RIVINF(ISEQ,1) = 0._JPRD
   P2FLDINF(ISEQ,1) = 0._JPRD
@@ -393,10 +393,10 @@ DO ISEQ=1, NSEQALL
   P2STOOUT(ISEQ,1) = 0._JPRD
   D2RATE(ISEQ,1) = 1._JPRB
 END DO
-!$OMP END PARALLEL DO
+!$OMP END PARALLEL DO SIMD
 
 !! for normal cells ---------
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO SIMD
 DO ISEQ=1, NSEQALL
   P2STOOUT(ISEQ,1) = max( D2RIVOUT(ISEQ,1),0._JPRB ) + max( D2FLDOUT(ISEQ,1),0._JPRB )
   IF( I1UPN(ISEQ)>0 )THEN
@@ -407,11 +407,11 @@ DO ISEQ=1, NSEQALL
   ENDIF
   P2STOOUT(ISEQ,1) = P2STOOUT(ISEQ,1) *DT
 END DO
-!$OMP END PARALLEL DO
+!$OMP END PARALLEL DO SIMD
 
 !! for bifurcation channels ------------
 IF( LPTHOUT )THEN
-!$OMP PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
+!$OMP PARALLEL DO SIMD  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
   DO ISEQ=1, NSEQALL
     IF( I1P_OUTN(ISEQ)>0 )THEN
       DO INUM=1, I1P_OUTN(ISEQ)
@@ -427,22 +427,22 @@ IF( LPTHOUT )THEN
       END DO
     ENDIF
   END DO
-!$OMP END PARALLEL DO
+!$OMP END PARALLEL DO SIMD
 ENDIF
 
 !============================
 !*** 2. modify outflow
 
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO SIMD
 DO ISEQ=1, NSEQALL
   IF ( P2STOOUT(ISEQ,1) > 1.E-8 ) THEN
     D2RATE(ISEQ,1) = min( (P2RIVSTO(ISEQ,1)+P2FLDSTO(ISEQ,1)) * P2STOOUT(ISEQ,1)**(-1.), 1._JPRD )
   ENDIF
 END DO
-!$OMP END PARALLEL DO
+!$OMP END PARALLEL DO SIMD
 
 !! normal pixels------
-!$OMP PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
+!$OMP PARALLEL DO SIMD  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
 DO ISEQ=1, NSEQRIV ! for normal pixels
   JSEQ=I1NEXT(ISEQ)
   IF( D2RIVOUT(ISEQ,1) >= 0._JPRB )THEN
@@ -453,18 +453,18 @@ DO ISEQ=1, NSEQRIV ! for normal pixels
     D2FLDOUT(ISEQ,1) = D2FLDOUT(ISEQ,1)*D2RATE(JSEQ,1)
   ENDIF
 END DO
-!$OMP END PARALLEL DO
+!$OMP END PARALLEL DO SIMD
 
 !! river mouth-----------------
-!$OMP PARALLEL DO
+!$OMP PARALLEL DO SIMD
 DO ISEQ=NSEQRIV+1, NSEQALL
   D2RIVOUT(ISEQ,1) = D2RIVOUT(ISEQ,1)*D2RATE(ISEQ,1)
   D2FLDOUT(ISEQ,1) = D2FLDOUT(ISEQ,1)*D2RATE(ISEQ,1)
 END DO
-!$OMP END PARALLEL DO
+!$OMP END PARALLEL DO SIMD
 
 
-!$OMP PARALLEL DO 
+!$OMP PARALLEL DO SIMD 
 DO ISEQ=1, NSEQALL ! for normal pixels
   IF( I1UPN(ISEQ)>0 )THEN
     DO INUM=1, I1UPN(ISEQ)
@@ -474,12 +474,12 @@ DO ISEQ=1, NSEQALL ! for normal pixels
     END DO
   ENDIF
 END DO
-!$OMP END PARALLEL DO
+!$OMP END PARALLEL DO SIMD
 
 
 !! bifurcation channels --------
 IF( LPTHOUT )THEN
-!$OMP PARALLEL DO  
+!$OMP PARALLEL DO SIMD  
   DO IPTH=1, NPTHOUT  
     ISEQP=PTH_UPST(IPTH)
     JSEQP=PTH_DOWN(IPTH)
@@ -501,9 +501,9 @@ IF( LPTHOUT )THEN
       D1PTHFLWSUM(IPTH) = D1PTHFLWSUM(IPTH)*D2RATE(JSEQP,1)
     ENDIF    
   END DO
-!$OMP END PARALLEL DO  
+!$OMP END PARALLEL DO SIMD  
 
-!$OMP PARALLEL DO  
+!$OMP PARALLEL DO SIMD  
   DO ISEQ=1, NSEQALL
     IF( I1P_OUTN(ISEQ)>0 )THEN
       DO INUM=1, I1P_OUTN(ISEQ)
@@ -519,7 +519,7 @@ IF( LPTHOUT )THEN
       END DO
     ENDIF
   END DO
-!$OMP END PARALLEL DO  
+!$OMP END PARALLEL DO SIMD  
 ENDIF
 
 D2RIVINF(:,:)=P2RIVINF(:,:)  !! needed for SinglePrecisionMode

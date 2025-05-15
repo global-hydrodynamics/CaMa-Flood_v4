@@ -77,11 +77,11 @@ REGIONTHIS=Nid+1
 ! Write to standard output (log file is not opened yet)
 !!!!!#ifdef _OPENMP
 !!!!!nOMP = omp_get_max_threads();
-!!!!!!$OMP PARALLEL DO
+!!!!!!$OMP PARALLEL DO SIMD
 !!!!!DO iOMP=1, nOMP
 !!!!!  print *, 'MPI: ', REGIONTHIS, REGIONALL, ' OMP: ', omp_get_thread_num(), nOMP
 !!!!!END DO
-!!!!!!$OMP END PARALLEL DO
+!!!!!!$OMP END PARALLEL DO SIMD
 !!!!!#endif
 
 END SUBROUTINE CMF_MPI_INIT
