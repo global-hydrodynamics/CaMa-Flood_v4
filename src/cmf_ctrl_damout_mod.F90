@@ -441,6 +441,7 @@ DO ISEQ=1, NSEQALL
     D2RIVOUT(ISEQ,1) = 0._JPRB
     D2FLDOUT(ISEQ,1) = 0._JPRB
     P2DAMINF(ISEQ,1) = 0._JPRD
+    D2DAMINF(ISEQ,1) = D2RUNOFF(ISEQ,1)  !! consider local runoff as inflow to dam
   ENDIF
 END DO
 !$OMP END PARALLEL DO
