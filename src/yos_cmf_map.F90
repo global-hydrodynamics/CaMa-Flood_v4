@@ -22,9 +22,9 @@ INTEGER(KIND=JPIM),ALLOCATABLE           ::  I2NEXTY(:,:)       !! POINT DOWNSTR
 INTEGER(KIND=JPIM),ALLOCATABLE           ::  I1SEQX(:)          !! 1D SEQUENCE HORIZONTAL
 INTEGER(KIND=JPIM),ALLOCATABLE           ::  I1SEQY(:)          !! 1D SEQUENCE VERTICAL
 INTEGER(KIND=JPIM),ALLOCATABLE           ::  I1NEXT(:)          !! 1D DOWNSTREAM
-INTEGER(KIND=JPIM)                       ::  NSEQRIV            !! LENGTH OF 1D SEQUNECE FOR RIVER
-INTEGER(KIND=JPIM)                       ::  NSEQALL            !! LENGTH OF 1D SEQUNECE FOR RIVER AND MOUTH
-INTEGER(KIND=JPIM)                       ::  NSEQMAX            !! MAX OF NSEQALL (PARALLEL)
+INTEGER(KIND=JPIM)                       ::  NSEQRIV            !! END OF RIVER-LINK  SEQUENCE (1 ~ NSEQRIV)
+INTEGER(KIND=JPIM)                       ::  NSEQALL            !! END OF RIVER-MOUTH SEQUENCE (NSEQRUV+1 ~ NSEQALL)
+INTEGER(KIND=JPIM)                       ::  NSEQMAX            !! TOTAL GRIDS ON RIVER MAP (lakes to be added in future development)
 
 INTEGER(KIND=JPIM),ALLOCATABLE           ::  I2VECTOR(:,:)      !! VECTOR INDEX
 INTEGER(KIND=JPIM),ALLOCATABLE           ::  I2REGION(:,:)      !! REGION INDEX

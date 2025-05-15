@@ -148,7 +148,7 @@ END SUBROUTINE CMF_BOUNDARY_NMLIST
 
 !####################################################################
 SUBROUTINE CMF_BOUNDARY_INIT
-USE YOS_CMF_MAP,        ONLY: NSEQMAX, D2SEALEV
+USE YOS_CMF_MAP,        ONLY: NSEQALL, D2SEALEV
 
 IMPLICIT NONE
 !####################################################################
@@ -156,7 +156,7 @@ WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "!---------------------!"
 WRITE(LOGNAM,*) "CMF::BOUNDARY_INIT: initialize boundary" 
 
-ALLOCATE( D2SEALEV(NSEQMAX,1) )
+ALLOCATE( D2SEALEV(NSEQALL,1) )
 
 IF( LSEALEVCDF )THEN
 #ifdef UseCDF_CMF

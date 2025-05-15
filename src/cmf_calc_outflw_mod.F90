@@ -14,7 +14,7 @@ MODULE CMF_CALC_OUTFLW_MOD
 !==========================================================
 USE PARKIND1,           ONLY: JPIM, JPRB, JPRD
 USE YOS_CMF_INPUT,      ONLY: DT,       PDSTMTH,  PMANFLD,  PGRV,     LFLDOUT, LPTHOUT, LSLOPEMOUTH
-USE YOS_CMF_MAP,        ONLY: I1NEXT,   NSEQALL,  NSEQRIV,  NSEQMAX
+USE YOS_CMF_MAP,        ONLY: I1NEXT,   NSEQALL,  NSEQRIV,  NSEQALL
 USE YOS_CMF_MAP,        ONLY: D2RIVELV, D2ELEVTN, D2NXTDST, D2RIVWTH, D2RIVHGT
 USE YOS_CMF_MAP,        ONLY: D2RIVLEN, D2RIVMAN, D2DWNELV, D2ELEVSLOPE
 USE YOS_CMF_MAP,        ONLY: I1UPST,   I1UPN,    I1P_OUT,  I1P_OUTN, I1P_INF, I1P_INFN
@@ -31,8 +31,8 @@ CONTAINS
 SUBROUTINE CMF_CALC_OUTFLW
 IMPLICIT NONE
 !*** Local
-REAL(KIND=JPRB)            :: D2SFCELV_PRE(NSEQMAX,1)                  !! water surface elevation (t-1) [m]
-REAL(KIND=JPRB)            :: D2FLDDPH_PRE(NSEQMAX,1)                      !! floodplain depth (t-1)        [m]
+REAL(KIND=JPRB)            :: D2SFCELV_PRE(NSEQALL,1)                  !! water surface elevation (t-1) [m]
+REAL(KIND=JPRB)            :: D2FLDDPH_PRE(NSEQALL,1)                      !! floodplain depth (t-1)        [m]
 ! save for OpenMP
 INTEGER(KIND=JPIM),SAVE    :: ISEQ, JSEQ
 REAL(KIND=JPRB),SAVE       :: DSLOPE,   DOUT_PRE,   DFLW,   DFLW_PRE,   DFLW_IMP,   DAREA 
@@ -173,18 +173,18 @@ END SUBROUTINE CMF_CALC_OUTFLW
 !####################################################################
 SUBROUTINE CMF_CALC_INFLOW
 USE PARKIND1,           ONLY: JPIM, JPRB, JPRD
-USE YOS_CMF_MAP,        ONLY: NSEQMAX,  NPTHOUT, NPTHLEV, I2MASK, PTH_UPST, PTH_DOWN
+USE YOS_CMF_MAP,        ONLY: NSEQALL,  NPTHOUT, NPTHLEV, I2MASK, PTH_UPST, PTH_DOWN
 USE YOS_CMF_PROG,       ONLY: D1PTHFLW
 USE YOS_CMF_DIAG,       ONLY: D2PTHOUT, D1PTHFLWSUM
 IMPLICIT NONE
 !*** Local
-REAL(KIND=JPRD)            :: P2STOOUT(NSEQMAX,1)                      !! total outflow from a grid     [m3]
-REAL(KIND=JPRD)            :: P2RIVINF(NSEQMAX,1)                      !! 
-REAL(KIND=JPRD)            :: P2FLDINF(NSEQMAX,1)                      !! 
+REAL(KIND=JPRD)            :: P2STOOUT(NSEQALL,1)                      !! total outflow from a grid     [m3]
+REAL(KIND=JPRD)            :: P2RIVINF(NSEQALL,1)                      !! 
+REAL(KIND=JPRD)            :: P2FLDINF(NSEQALL,1)                      !! 
 
-REAL(KIND=JPRD)            :: P2PTHOUT(NSEQMAX,1)                  !! for water conservation
+REAL(KIND=JPRD)            :: P2PTHOUT(NSEQALL,1)                  !! for water conservation
 
-REAL(KIND=JPRB)            :: D2RATE(NSEQMAX,1)                        !! outflow correction
+REAL(KIND=JPRB)            :: D2RATE(NSEQALL,1)                        !! outflow correction
 ! SAVE for OpenMP
 INTEGER(KIND=JPIM),SAVE    :: ISEQ, JSEQ, IPTH, ILEV, ISEQP, JSEQP
 REAL(KIND=JPRB),SAVE       :: OUT_R1, OUT_R2, OUT_F1, OUT_F2, DIUP, DIDW
@@ -365,18 +365,18 @@ END SUBROUTINE CMF_CALC_INFLOW
 !####################################################################
 SUBROUTINE CMF_CALC_INFLOW_LSMAPAT
 USE PARKIND1,           ONLY: JPIM, JPRB, JPRD
-USE YOS_CMF_MAP,        ONLY: NSEQMAX,  NPTHOUT, NPTHLEV, I2MASK, PTH_UPST, PTH_DOWN
+USE YOS_CMF_MAP,        ONLY: NSEQALL,  NPTHOUT, NPTHLEV, I2MASK, PTH_UPST, PTH_DOWN
 USE YOS_CMF_PROG,       ONLY: D1PTHFLW
 USE YOS_CMF_DIAG,       ONLY: D2PTHOUT, D1PTHFLWSUM
 IMPLICIT NONE
 !*** Local
-REAL(KIND=JPRD)            :: P2STOOUT(NSEQMAX,1)                      !! total outflow from a grid     [m3]
-REAL(KIND=JPRD)            :: P2RIVINF(NSEQMAX,1)                      !! 
-REAL(KIND=JPRD)            :: P2FLDINF(NSEQMAX,1)                      !! 
+REAL(KIND=JPRD)            :: P2STOOUT(NSEQALL,1)                      !! total outflow from a grid     [m3]
+REAL(KIND=JPRD)            :: P2RIVINF(NSEQALL,1)                      !! 
+REAL(KIND=JPRD)            :: P2FLDINF(NSEQALL,1)                      !! 
 
-REAL(KIND=JPRD)            :: P2PTHOUT(NSEQMAX,1)                  !! for water conservation
+REAL(KIND=JPRD)            :: P2PTHOUT(NSEQALL,1)                  !! for water conservation
 
-REAL(KIND=JPRB)            :: D2RATE(NSEQMAX,1)                        !! outflow correction
+REAL(KIND=JPRB)            :: D2RATE(NSEQALL,1)                        !! outflow correction
 ! SAVE for OpenMP
 INTEGER(KIND=JPIM),SAVE    :: ISEQ, JSEQ, IPTH, ILEV, INUM, JPTH, ISEQP, JSEQP
 !$OMP THREADPRIVATE          (JSEQ,ISEQP, JSEQP, ILEV, INUM, JPTH)

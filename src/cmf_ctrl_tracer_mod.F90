@@ -19,11 +19,11 @@ MODULE CMF_CTRL_TRACER_MOD
 !==========================================================
 USE PARKIND1,                ONLY: JPIM, JPRB, JPRM, JPRD
 USE CMF_UTILS_MOD,           ONLY: INQUIRE_FID, CMF_CheckNanB
-USE YOS_CMF_INPUT,           ONLY: LOGNAM, LTRACE, TMPNAM, NX, NY, NXIN, NYIN, INPN, RMIS
-USE YOS_CMF_INPUT,           ONLY: LOGNAM,  IFRQ_OUT
-USE YOS_CMF_INPUT,           ONLY: CSUFBIN, CSUFVEC
-USE YOS_CMF_MAP,             ONLY: NSEQALL, NSEQRIV, NSEQMAX, NPTHOUT
-USE YOS_CMF_MAP,             ONLY: I1NEXT,  PTH_UPST,PTH_DOWN
+USE YOS_CMF_INPUT,           ONLY: LOGNAM,   LTRACE,  TMPNAM, NX, NY, NXIN, NYIN, INPN, RMIS
+USE YOS_CMF_INPUT,           ONLY: IFRQ_OUT, CSUFBIN, CSUFVEC, LSPAMAT
+USE YOS_CMF_MAP,             ONLY: NSEQALL, NSEQRIV, NSEQALL, NPTHOUT
+USE YOS_CMF_MAP,             ONLY: I1NEXT,  PTH_UPST,PTH_DOWN, I2MASK
+USE YOS_CMF_MAP,             ONLY: I1UPST,   I1UPN,    I1P_OUT,  I1P_OUTN, I1P_INF, I1P_INFN
 USE YOS_CMF_MAP,             ONLY: INPX, INPY, INPA
 USE YOS_CMF_PROG,            ONLY: P2RIVSTO, P2FLDSTO
 !============================
@@ -273,24 +273,24 @@ ENDIF
 
 !==========
 WRITE(LOGNAM,*) "  Allocate Tracer Variables"
-ALLOCATE( P2TRCSTO(NSEQMAX,NTRACE) )
-ALLOCATE( D2TRCDNS(NSEQMAX,NTRACE) )
-ALLOCATE( D2TRCOUT(NSEQMAX,NTRACE) )
-ALLOCATE( D2TRCINP(NSEQMAX,NTRACE) )
+ALLOCATE( P2TRCSTO(NSEQALL,NTRACE) )
+ALLOCATE( D2TRCDNS(NSEQALL,NTRACE) )
+ALLOCATE( D2TRCOUT(NSEQALL,NTRACE) )
+ALLOCATE( D2TRCINP(NSEQALL,NTRACE) )
 P2TRCSTO(:,:)=0._JPRB
 D2TRCDNS(:,:)=0._JPRB
 D2TRCOUT(:,:)=0._JPRB
 D2TRCINP(:,:)=0._JPRB
 
 ALLOCATE( D1TRCPFLW(NPTHOUT,NTRACE) )
-ALLOCATE( D2TRCPOUT(NSEQMAX,NTRACE) )
+ALLOCATE( D2TRCPOUT(NSEQALL,NTRACE) )
 D1TRCPFLW(:,:)=0._JPRB
 D2TRCPOUT(:,:)=0._JPRB
 
 Nadd_out=0._JPRB
-ALLOCATE( D2TRCDNS_oAVG(NSEQMAX,NTRACE) )
-ALLOCATE( D2TRCOUT_oAVG(NSEQMAX,NTRACE) )
-ALLOCATE( D2TRCPOUT_oAVG(NSEQMAX,NTRACE) )
+ALLOCATE( D2TRCDNS_oAVG(NSEQALL,NTRACE) )
+ALLOCATE( D2TRCOUT_oAVG(NSEQALL,NTRACE) )
+ALLOCATE( D2TRCPOUT_oAVG(NSEQALL,NTRACE) )
 D2TRCDNS_oAVG(:,:)=0._JPRB
 D2TRCOUT_oAVG(:,:)=0._JPRB
 D2TRCPOUT_oAVG(:,:)=0._JPRB
@@ -309,7 +309,7 @@ IMPLICIT NONE
 !*** LOCAL
 REAL(KIND=JPRM)                 :: R2TEMP(NX,NY)
 REAL(KIND=JPRD)                 :: P2TEMP(NX,NY)
-REAL(KIND=JPRD)                 :: P2VEC(NSEQMAX,1)
+REAL(KIND=JPRD)                 :: P2VEC(NSEQALL,1)
 CHARACTER(LEN=256)              :: CFILE
 !================================================
 CFILE=TRIM(CRESTTRC)
@@ -345,12 +345,14 @@ SUBROUTINE CMF_TRACER_RESTART_WRITE
 USE YOS_CMF_TIME,       ONLY: KSTEP,  NSTEPS, JYYYYMMDD, JHHMM, JDD, JHOUR, JMIN
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID, vecP2mapP, vecP2mapR
 USE YOS_CMF_MAP,        ONLY: REGIONTHIS
+#ifdef UseMPI_CMF
 USE CMF_CTRL_MPI_MOD,   ONLY: CMF_MPI_AllReduce_P2MAP, CMF_MPI_AllReduce_R2MAP
+#endif
 IMPLICIT NONE
 !* local variable
 INTEGER(KIND=JPIM)         :: IREST
 CHARACTER(LEN=256)         :: CFILE,CDATE
-REAL(KIND=JPRD)            :: P2VAR(NSEQMAX,1)  !! use Real*8 for code simplicity
+REAL(KIND=JPRD)            :: P2VAR(NSEQALL,1)  !! use Real*8 for code simplicity
 REAL(KIND=JPRM)            :: R2TEMP(NX,NY)
 REAL(KIND=JPRD)            :: P2TEMP(NX,NY)
 !================================================
@@ -532,14 +534,13 @@ USE YOS_CMF_INPUT,      ONLY: DT
 USE YOS_CMF_DIAG,       ONLY: D2OUTFLW_aAVG, D1PTHFLWSUM_aAVG
 
 IMPLICIT NONE
-REAL(KIND=JPRD)            :: P2STOOUT(NSEQMAX)                      !! total outflow from a grid     [m3]
-REAL(KIND=JPRD)            :: P2TRCINF(NSEQMAX)                      !! 
-REAL(KIND=JPRB)            :: D2RATE(NSEQMAX)                        !! outflow correction
+REAL(KIND=JPRD)            :: P2STOOUT(NSEQALL)                      !! total outflow from a grid     [m3]
+REAL(KIND=JPRD)            :: P2TRCINF(NSEQALL)                      !! 
+REAL(KIND=JPRB)            :: D2RATE(NSEQALL)                        !! outflow correction
 
 ! SAVE for OpenMP
-INTEGER(KIND=JPIM),SAVE    :: ISEQ, JSEQ, IPTH, ISEQP, JSEQP
-REAL(KIND=JPRB),SAVE       :: OUT_R1, OUT_R2, DIUP, DIDW
-!$OMP THREADPRIVATE     (JSEQ,OUT_R1, OUT_R2, DIUP, DIDW, ISEQP, JSEQP)
+INTEGER(KIND=JPIM),SAVE    :: ISEQ, IPTH, JSEQ, INUM, JPTH, ISEQP, JSEQP
+!$OMP THREADPRIVATE                      (JSEQ, INUM, JPTH, ISEQP, JSEQP)
 !============================
 
 ! ****** 1. calculate flux
@@ -583,63 +584,40 @@ DO ITRACE=1, NTRACE
   ENDIF
 
 ! ****** 2. calculate total outflow from each catchment
-
 !! flux adjustment for mass balance
   !! for normal cells ---------
-#ifndef NoAtom_CMF
   !$OMP PARALLEL DO SIMD
-#endif
-  DO ISEQ=1, NSEQRIV                                                    !! for normalcells
-    JSEQ=I1NEXT(ISEQ) ! next cell's pixel
-    OUT_R1 = max(  D2TRCOUT(ISEQ,ITRACE),0._JPRB )
-    OUT_R2 = max( -D2TRCOUT(ISEQ,ITRACE),0._JPRB )
-    DIUP=OUT_R1*DT
-    DIDW=OUT_R2*DT
-#ifndef NoAtom_CMF
-  !$OMP ATOMIC
-#endif
-    P2STOOUT(ISEQ) = P2STOOUT(ISEQ) + DIUP 
-#ifndef NoAtom_CMF
-  !$OMP ATOMIC
-#endif
-    P2STOOUT(JSEQ) = P2STOOUT(JSEQ) + DIDW 
-  END DO
-#ifndef NoAtom_CMF
-  !$OMP END PARALLEL DO SIMD
-#endif
-  
-  !! for river mouth grids ------------
-  !$OMP PARALLEL DO SIMD
-  DO ISEQ=NSEQRIV+1, NSEQALL
-    OUT_R1 = max( D2TRCOUT(ISEQ,ITRACE), 0._JPRB )
-    P2STOOUT(ISEQ) = P2STOOUT(ISEQ) + OUT_R1*DT
+  DO ISEQ=1, NSEQALL
+    P2STOOUT(ISEQ) = max( D2TRCOUT(ISEQ,ITRACE),0._JPRB ) 
+    IF( I1UPN(ISEQ)>0 )THEN
+      DO INUM=1, I1UPN(ISEQ)
+        JSEQ=I1UPST(ISEQ,INUM)
+        P2STOOUT(ISEQ) = P2STOOUT(ISEQ) + max( -D2TRCOUT(JSEQ,ITRACE),0._JPRB ) 
+      END DO
+    ENDIF
+    P2STOOUT(ISEQ) = P2STOOUT(ISEQ) *DT
   END DO
   !$OMP END PARALLEL DO SIMD
 
-  IF( LTRCBIF ) THEN
-#ifndef NoAtom_CMF
-    !$OMP PARALLEL DO SIMD
-#endif
-    DO IPTH=1, NPTHOUT  
-      ISEQP=PTH_UPST(IPTH)
-      JSEQP=PTH_DOWN(IPTH)
-      IF (ISEQP<=0 .OR. JSEQP<=0 ) CYCLE  !! Avoid calculation outside of domain
-      OUT_R1 = max(  D1TRCPFLW(IPTH,ITRACE),0._JPRB )
-      OUT_R2 = max( -D1TRCPFLW(IPTH,ITRACE),0._JPRB )
-      DIUP=OUT_R1*DT
-      DIDW=OUT_R2*DT
-#ifndef NoAtom_CMF
-      !$OMP ATOMIC
-#endif
-      P2STOOUT(ISEQP) = P2STOOUT(ISEQP) + DIUP 
-#ifndef NoAtom_CMF
-      !$OMP ATOMIC
-#endif
-      P2STOOUT(JSEQP) = P2STOOUT(JSEQP) + DIDW 
+  !! for bifurcation channels ------------
+  IF( LTRCBIF )THEN
+  !$OMP PARALLEL DO SIMD  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
+    DO ISEQ=1, NSEQALL
+      IF( I1P_OUTN(ISEQ)>0 )THEN
+        DO INUM=1, I1P_OUTN(ISEQ)
+          JPTH=I1P_OUT(ISEQ,INUM)
+          P2STOOUT(ISEQ) = P2STOOUT(ISEQ) + max(  D1TRCPFLW(JPTH,ITRACE),0._JPRB )*DT
+        END DO
+      ENDIF
+  
+      IF( I1P_INFN(ISEQ)>0 )THEN
+        DO INUM=1, I1P_INFN(ISEQ)
+          JPTH=I1P_INF(ISEQ,INUM)
+          P2STOOUT(ISEQ) = P2STOOUT(ISEQ) + max( -D1TRCPFLW(JPTH,ITRACE),0._JPRB )*DT
+        END DO
+      ENDIF
     END DO
-#ifndef NoAtom_CMF
-    !$OMP END PARALLEL DO SIMD
-#endif
+  !$OMP END PARALLEL DO SIMD
   ENDIF
 
   !! calculate modification rate
@@ -655,9 +633,7 @@ DO ITRACE=1, NTRACE
   !****** 3. modify outflow
 
   !! normal pixels------
-#ifndef NoAtom_CMF
   !$OMP PARALLEL DO SIMD  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
-#endif
   DO ISEQ=1, NSEQRIV ! for normal pixels
     JSEQ=I1NEXT(ISEQ)
     IF( D2TRCOUT(ISEQ,ITRACE) >= 0._JPRB )THEN
@@ -665,15 +641,9 @@ DO ITRACE=1, NTRACE
     ELSE
       D2TRCOUT(ISEQ,ITRACE) = D2TRCOUT(ISEQ,ITRACE)*D2RATE(JSEQ)
     ENDIF
-#ifndef NoAtom_CMF
-  !$OMP ATOMIC
-#endif
-    P2TRCINF(JSEQ) = P2TRCINF(JSEQ) + D2TRCOUT(ISEQ,ITRACE)             !! total inflow to a grid (from upstream)
   END DO
-#ifndef NoAtom_CMF
   !$OMP END PARALLEL DO SIMD
-#endif
-  
+
   !! river mouth-----------------
   !$OMP PARALLEL DO SIMD
   DO ISEQ=NSEQRIV+1, NSEQALL
@@ -681,35 +651,52 @@ DO ITRACE=1, NTRACE
   END DO
   !$OMP END PARALLEL DO SIMD
 
+  !$OMP PARALLEL DO SIMD 
+  DO ISEQ=1, NSEQALL ! for normal pixels
+    IF( I1UPN(ISEQ)>0 )THEN
+      DO INUM=1, I1UPN(ISEQ)
+        JSEQ=I1UPST(ISEQ,INUM)
+        P2TRCINF(ISEQ) = P2TRCINF(ISEQ) + D2TRCOUT(JSEQ,ITRACE)   !! total inflow to a grid (from upstream)
+      END DO
+    ENDIF
+  END DO
+  !$OMP END PARALLEL DO SIMD
 
-  !! bifurcation channel
-  IF( LTRCBIF ) THEN
-#ifndef NoAtom_CMF
-    !$OMP PARALLEL DO SIMD
-#endif
+  !! bifurcation channels --------
+  IF( LTRCBIF )THEN
+    !$OMP PARALLEL DO SIMD  
     DO IPTH=1, NPTHOUT  
       ISEQP=PTH_UPST(IPTH)
       JSEQP=PTH_DOWN(IPTH)
-      IF (ISEQP<=0 .OR. JSEQP<=0 ) CYCLE  !! Avoid calculation outside of domain
-
+      !! Avoid calculation outside of domain
+      IF (ISEQP<=0 .OR. JSEQP<=0 ) CYCLE
+      IF (I2MASK(ISEQP,1)>0 .OR. I2MASK(JSEQP,1)>0 ) CYCLE  !! I2MASK is for 1: kinemacit 2: dam  no bifurcation
+      
       IF( D1TRCPFLW(IPTH,ITRACE) >= 0._JPRB )THEN
         D1TRCPFLW(IPTH,ITRACE)  = D1TRCPFLW(IPTH,ITRACE)*D2RATE(ISEQP)
       ELSE
         D1TRCPFLW(IPTH,ITRACE)  = D1TRCPFLW(IPTH,ITRACE)*D2RATE(JSEQP)  !! reverse flow
       ENDIF
-
-#ifndef NoAtom_CMF
-!$OMP ATOMIC
-#endif
-      D2TRCPOUT(ISEQP,ITRACE) = D2TRCPOUT(ISEQP,ITRACE) + D1TRCPFLW(IPTH,ITRACE)
-#ifndef NoAtom_CMF
-!$OMP ATOMIC
-#endif
-      D2TRCPOUT(JSEQP,ITRACE) = D2TRCPOUT(JSEQP,ITRACE) - D1TRCPFLW(IPTH,ITRACE)
     END DO
-#ifndef NoAtom_CMF
-    !$OMP END PARALLEL DO SIMD
-#endif
+    !$OMP END PARALLEL DO SIMD  
+
+    !$OMP PARALLEL DO SIMD  
+    DO ISEQ=1, NSEQALL
+      IF( I1P_OUTN(ISEQ)>0 )THEN
+        DO INUM=1, I1P_OUTN(ISEQ)
+          JPTH=I1P_OUT(ISEQ,INUM)
+          D2TRCPOUT(ISEQ,ITRACE) = D2TRCPOUT(ISEQ,ITRACE) + D1TRCPFLW(JPTH,ITRACE)
+        END DO
+      ENDIF
+  
+      IF( I1P_INFN(ISEQ)>0 )THEN
+        DO INUM=1, I1P_INFN(ISEQ)
+          JPTH=I1P_INF(ISEQ,INUM)
+          D2TRCPOUT(ISEQ,ITRACE) = D2TRCPOUT(ISEQ,ITRACE) - D1TRCPFLW(JPTH,ITRACE)
+        END DO
+      ENDIF
+    END DO
+    !$OMP END PARALLEL DO SIMD  
   ENDIF
 
   !============================
@@ -781,7 +768,7 @@ DO JF=1,NVARSOUT
 
   IF( LOUTVEC )THEN   !!  1D land only output
     VAROUT(JF)%CFILE=TRIM(COUTDIR)//TRIM(VAROUT(JF)%CVNAME)//TRIM(COUTTAG)//TRIM(CSUFVEC)
-    OPEN(VAROUT(JF)%BINID,FILE=VAROUT(JF)%CFILE,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NSEQMAX)
+    OPEN(VAROUT(JF)%BINID,FILE=VAROUT(JF)%CFILE,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NSEQALL)
     WRITE(LOGNAM,*) "output file opened in unit: ", TRIM(VAROUT(JF)%CFILE), VAROUT(JF)%BINID
   ELSE                   !!  2D default map output
     IF( REGIONTHIS==1 )THEN
@@ -816,8 +803,8 @@ IMPLICIT NONE
 INTEGER(KIND=JPIM)          :: JF
 !*** LOCAL
 REAL(KIND=JPRM)             :: R2OUT(NX,NY)
-REAL(KIND=JPRM)             :: R2COPY(NSEQMAX,1)
-REAL(KIND=JPRB)             :: D2COPY(NSEQMAX,1)        !! Dammy Array for Float64/32 switch
+REAL(KIND=JPRM)             :: R2COPY(NSEQALL,1)
+REAL(KIND=JPRB)             :: D2COPY(NSEQALL,1)        !! Dammy Array for Float64/32 switch
 !================================================
 !*** 0. check date:hour with output frequency
 IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of time step , NFPPH: output frequency (hour)
