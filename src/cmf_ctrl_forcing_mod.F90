@@ -203,6 +203,8 @@ WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "!---------------------!"
 
 WRITE(LOGNAM,*) "CMF::FORCING_INIT: Initialize runoff forcing file (only for netCDF)" 
+WRITE(LOGNAM,*) " ECMWF Lake Module LECMF2LAKEC",  LECMF2LAKEC
+
 IF( LINPCDF ) THEN
 #ifdef UseCDF_CMF
   CALL CMF_FORCING_INIT_CDF

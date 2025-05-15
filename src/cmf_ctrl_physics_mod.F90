@@ -59,8 +59,8 @@ CALL CMF_DIAG_RESET_ADPSTP  !! average & max calculation: reset
 DO IT=1, NT
 
 !=== 1. Calculate river discharge 
-  D2STORGE(:,:)=P2RIVSTO(:,:)+P2FLDSTO(:,:)
-  IF( LLEVEE ) D2STORGE(:,:)=D2STORGE(:,:)+P2LEVSTO(:,:)
+  D2STORGE(:,:)=REAL(P2RIVSTO(:,:)+P2FLDSTO(:,:),KIND=JPRB)
+  IF( LLEVEE ) D2STORGE(:,:)=D2STORGE(:,:)+REAL(P2LEVSTO(:,:),KIND=JPRB)
 
   IF ( LKINE ) THEN
     CALL CMF_CALC_OUTFLW_KINE       !!  OPTION: kinematic
@@ -241,7 +241,6 @@ END SUBROUTINE CALC_WATBAL
 !+
 !==========================================================
 SUBROUTINE CALC_VARS_PRE
-USE YOS_CMF_MAP,             ONLY: NSEQALL
 USE YOS_CMF_PROG,            ONLY: D2RIVOUT,     D2FLDOUT,     P2FLDSTO
 USE YOS_CMF_PROG,            ONLY: D2RIVOUT_PRE, D2FLDOUT_PRE, D2FLDSTO_PRE, D2RIVDPH_PRE
 USE YOS_CMF_PROG,            ONLY: D1PTHFLW, D1PTHFLW_PRE
@@ -251,7 +250,7 @@ IMPLICIT NONE
 D2RIVOUT_PRE(:,:)=D2RIVOUT(:,:)                              !! save outflow (t)
 D2RIVDPH_PRE(:,:)=D2RIVDPH(:,:)                              !! save depth   (t)
 D2FLDOUT_PRE(:,:)=D2FLDOUT(:,:)                              !! save outflow (t)
-D2FLDSTO_PRE(:,:)=P2FLDSTO(:,:)
+D2FLDSTO_PRE(:,:)=REAL(P2FLDSTO(:,:),KIND=JPRB)
 
 IF( LPTHOUT )THEN
   D1PTHFLW_PRE(:,:)=D1PTHFLW(:,:)

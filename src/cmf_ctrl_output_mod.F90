@@ -466,10 +466,10 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
   DO JF=1,NVARSOUT
     SELECT CASE (VAROUT(JF)%CVNAME)
       CASE ('rivsto')
-        D2COPY=P2RIVSTO  !! convert Double to Single precision when using SinglePrecisionMode 
+        D2COPY=REAL(P2RIVSTO,KIND=JPRB)  !! convert Double to Single precision when using SinglePrecisionMode 
         D2VEC => D2COPY  !!   (Storage variables are kept as Float64 in SinglePrecisionMode)
       CASE ('fldsto')
-        D2COPY=P2FLDSTO
+        D2COPY=REAL(P2FLDSTO,KIND=JPRB)
         D2VEC => D2COPY
 
       CASE ('rivout')
@@ -517,11 +517,11 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
 
       CASE ('gwsto')
         IF( .not. LGDWDLY ) CYCLE
-        D2COPY=P2GDWSTO
+        D2COPY=REAL(P2GDWSTO,KIND=JPRB)
         D2VEC =>  D2COPY
       CASE ('gdwsto')
         IF( .not. LGDWDLY ) CYCLE
-        D2COPY=P2GDWSTO
+        D2COPY=REAL(P2GDWSTO,KIND=JPRB)
         D2VEC =>  D2COPY
       CASE ('gwout')
         IF( .not. LGDWDLY ) CYCLE
@@ -545,7 +545,7 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
 
       CASE ('damsto')   !!! added
         IF( .not. LDAMOUT ) CYCLE
-        D2COPY=P2DAMSTO
+        D2COPY=REAL(P2DAMSTO,KIND=JPRB)
         D2VEC => D2COPY
       CASE ('daminf')   !!! added
         IF( .not. LDAMOUT ) CYCLE
@@ -553,7 +553,7 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
 
       CASE ('levsto')   !!! added
         IF( .not. LLEVEE ) CYCLE
-        D2COPY=P2LEVSTO
+        D2COPY=REAL(P2LEVSTO,KIND=JPRB)
         D2VEC => D2COPY
       CASE ('levdph')   !!! added
         IF( .not. LLEVEE ) CYCLE

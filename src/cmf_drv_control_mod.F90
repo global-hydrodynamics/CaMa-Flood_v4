@@ -176,7 +176,7 @@ WRITE(LOGNAM,*) "CMF::DRV_INIT: initialization start"
 
 !*** 0b. get start time
 CALL CPU_TIME(ZTT0)
-!$ ZTT0=OMP_GET_WTIME()
+!$ ZTT0=REAL(OMP_GET_WTIME(),KIND=JPRB)
 
 !================================================
 WRITE(LOGNAM,*) "CMF::DRV_INIT: (1) Set Time"
@@ -274,7 +274,7 @@ ENDIF
 
 !*** get initialization end time time
 CALL CPU_TIME(ZTT1)
-!$ ZTT1=OMP_GET_WTIME()
+!$ ZTT1=REAL(OMP_GET_WTIME(),KIND=JPRB)
 
 WRITE(LOGNAM,*) "CMF::DRV_INIT: initialization finished:"
 WRITE(LOGNAM,*) "Elapsed cpu time (Init)", ZTT1-ZTT0,"Seconds"
@@ -320,7 +320,7 @@ ENDIF
 
 !*** get simulation end time
 CALL CPU_TIME(ZTT2)
-!$ ZTT2=OMP_GET_WTIME()
+!$ ZTT2=REAL(OMP_GET_WTIME(),KIND=JPRB)
 WRITE(LOGNAM,*) "CMF::DRV_END: simulation finished in:",ZTT2-ZTT0,' Seconds'
 
 WRITE(LOGNAM,*) "CMF::DRV_END: close logfile"

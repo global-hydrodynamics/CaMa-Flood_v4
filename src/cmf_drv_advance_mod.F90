@@ -69,7 +69,7 @@ DO ISTEP=1,KSTEPS
   !============================
   !*** 0. get start CPU time
   CALL CPU_TIME(ZTT0)
-  !$ ZTT0=OMP_GET_WTIME()
+  !$ ZTT0=REAL(OMP_GET_WTIME(),KIND=JPRB)
 
   !============================
   !*** 1. Set next time
@@ -102,7 +102,7 @@ DO ISTEP=1,KSTEPS
   CALL CMF_DIAG_AVEMAX_OUTPUT   !! average & maximum calculation for output
 
   CALL CPU_TIME(ZTT1)
-  !$ ZTT1=OMP_GET_WTIME()
+  !$ ZTT1=REAL(OMP_GET_WTIME(),KIND=JPRB)
 
   !============================
   !*** 3. Write output file (when needed)
@@ -145,7 +145,7 @@ DO ISTEP=1,KSTEPS
   !============================
   !*** 6. Check CPU time 
   CALL CPU_TIME(ZTT2)
-  !$ ZTT2=OMP_GET_WTIME()
+  !$ ZTT2=REAL(OMP_GET_WTIME(),KIND=JPRB)
   WRITE(LOGNAM,*) "CMF::DRV_ADVANCE END: KSTEP, time (end of Tstep):", KSTEP, JYYYYMMDD, JHHMM
   WRITE(LOGNAM,'(a,f8.1,a,f8.1,a)') "Elapsed cpu time", ZTT2-ZTT0,"Sec. // File output ", ZTT2-ZTT1, "Sec"
 
