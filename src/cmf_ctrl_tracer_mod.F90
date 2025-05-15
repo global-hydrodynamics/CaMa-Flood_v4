@@ -345,6 +345,7 @@ SUBROUTINE CMF_TRACER_RESTART_WRITE
 USE YOS_CMF_TIME,       ONLY: KSTEP,  NSTEPS, JYYYYMMDD, JHHMM, JDD, JHOUR, JMIN
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID, vecP2mapP, vecP2mapR
 USE YOS_CMF_MAP,        ONLY: REGIONTHIS
+USE CMF_CTRL_MPI_MOD,   ONLY: CMF_MPI_AllReduce_P2MAP, CMF_MPI_AllReduce_R2MAP
 IMPLICIT NONE
 !* local variable
 INTEGER(KIND=JPIM)         :: IREST
@@ -808,7 +809,7 @@ USE CMF_UTILS_MOD,      ONLY: vecD2mapR
 USE YOS_CMF_MAP,        ONLY: REGIONTHIS
 USE YOS_CMF_TIME,       ONLY: JYYYYMMDD, JHHMM, JHOUR, JMIN
 #ifdef UseMPI_CMF
-USE CMF_CTRL_MPI_MOD,   ONLY: CMF_MPI_AllReduce_R2MAP
+USE CMF_CTRL_MPI_MOD,   ONLY: CMF_MPI_AllReduce_P2MAP, CMF_MPI_AllReduce_R2MAP
 #endif
 
 IMPLICIT NONE
@@ -835,7 +836,7 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
     D2COPY(:,1)=REAL(P2TRCSTO(:,ITRACE),KIND=JPRB) !! convert Double to Single precision when using SinglePrecisionMode 
 
     IF( LOUTVEC )THEN
-      R2COPY(:,1)=D2COPY(:,1)
+      R2COPY(:,1)=REAL(D2COPY(:,1),KIND=JPRM)
       WRITE(VAROUT(JF)%BINID,REC=IRECOUT) R2COPY         !! 1D vector (optional)
     ELSE
       !! convert 1Dvector to 2Dmap
@@ -849,7 +850,7 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
     !! flux =======
     JF=JF+1
     IF( LOUTVEC )THEN
-      R2COPY(:,1)=D2TRCOUT_oAVG(:,ITRACE)
+      R2COPY(:,1)=REAL(D2TRCOUT_oAVG(:,ITRACE),KIND=JPRM)
       WRITE(VAROUT(JF)%BINID,REC=IRECOUT) R2COPY         !! 1D vector (optional)
     ELSE
       !! convert 1Dvector to 2Dmap
@@ -863,7 +864,7 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
     !! flux =======
     JF=JF+1
     IF( LOUTVEC )THEN
-      R2COPY(:,1)=D2TRCDNS_oAVG(:,ITRACE)
+      R2COPY(:,1)=REAL(D2TRCDNS_oAVG(:,ITRACE),KIND=JPRM)
       WRITE(VAROUT(JF)%BINID,REC=IRECOUT) R2COPY         !! 1D vector (optional)
     ELSE
       !! convert 1Dvector to 2Dmap
@@ -878,7 +879,7 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
     IF( LTRCBIF )THEN 
       JF=JF+1
       IF( LOUTVEC )THEN
-        R2COPY(:,1)=D2TRCPOUT_oAVG(:,ITRACE)
+        R2COPY(:,1)=REAL(D2TRCPOUT_oAVG(:,ITRACE),KIND=JPRM)
         WRITE(VAROUT(JF)%BINID,REC=IRECOUT) R2COPY         !! 1D vector (optional)
       ELSE
         !! convert 1Dvector to 2Dmap
