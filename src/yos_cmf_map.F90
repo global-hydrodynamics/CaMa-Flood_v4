@@ -64,8 +64,8 @@ INTEGER(KIND=JPIM),ALLOCATABLE           ::  I2MASK(:,:)        !! Mask
 
 !================================================
 !*** Floodplain Topography (diagnosed)
-REAL(KIND=JPRD),ALLOCATABLE              ::  P2RIVSTOMAX(:,:)   !! maximum river storage [m3]
-REAL(KIND=JPRD),ALLOCATABLE              ::  P2FLDSTOMAX(:,:,:) !! MAXIMUM FLOODPLAIN STORAGE [M3]
+REAL(KIND=JPRB),ALLOCATABLE              ::  D2RIVSTOMAX(:,:)   !! maximum river storage [m3]
+REAL(KIND=JPRB),ALLOCATABLE              ::  D2FLDSTOMAX(:,:,:) !! MAXIMUM FLOODPLAIN STORAGE [M3]
 
 REAL(KIND=JPRB),ALLOCATABLE              ::  D2RIVELV(:,:)      !! elevation of river bed [m3]
 REAL(KIND=JPRB),ALLOCATABLE              ::  D2FLDGRD(:,:,:)    !! FLOODPLAIN GRADIENT

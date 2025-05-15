@@ -536,8 +536,8 @@ REAL(KIND=JPRD)            :: P2TRCINF(NSEQMAX)                      !!
 REAL(KIND=JPRB)            :: D2RATE(NSEQMAX)                        !! outflow correction
 
 ! SAVE for OpenMP
-INTEGER(KIND=JPIM),SAVE    :: ISEQ, JSEQ, IPTH
-REAL(KIND=JPRB),SAVE       :: OUT_R1, OUT_R2, DIUP, DIDW, ISEQP, JSEQP
+INTEGER(KIND=JPIM),SAVE    :: ISEQ, JSEQ, IPTH, ISEQP, JSEQP
+REAL(KIND=JPRB),SAVE       :: OUT_R1, OUT_R2, DIUP, DIDW
 !$OMP THREADPRIVATE     (JSEQ,OUT_R1, OUT_R2, DIUP, DIDW, ISEQP, JSEQP)
 !============================
 
@@ -832,7 +832,7 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
   DO ITRACE=1, NTRACE
     !! storage ======  
     JF=JF+1
-    D2COPY(:,1)=P2TRCSTO(:,ITRACE) !! convert Double to Single precision when using SinglePrecisionMode 
+    D2COPY(:,1)=REAL(P2TRCSTO(:,ITRACE),KIND=JPRB) !! convert Double to Single precision when using SinglePrecisionMode 
 
     IF( LOUTVEC )THEN
       R2COPY(:,1)=D2COPY(:,1)
@@ -958,9 +958,9 @@ END SUBROUTINE CMF_TRACER_DIAG_AVEADD
 SUBROUTINE CMF_TRACER_DIAG_GETAVE
 IMPLICIT NONE
 !====================
-D2TRCOUT_oAVG(:,:)  = D2TRCOUT_oAVG(:,:)  / DBLE(NADD_out)
-D2TRCDNS_oAVG(:,:)  = D2TRCDNS_oAVG(:,:)  / DBLE(NADD_out)
-D2TRCPOUT_oAVG(:,:) = D2TRCPOUT_oAVG(:,:) / DBLE(NADD_out)
+D2TRCOUT_oAVG(:,:)  = D2TRCOUT_oAVG(:,:)  / REAL(NADD_out,KIND=JPRB)
+D2TRCDNS_oAVG(:,:)  = D2TRCDNS_oAVG(:,:)  / REAL(NADD_out,KIND=JPRB)
+D2TRCPOUT_oAVG(:,:) = D2TRCPOUT_oAVG(:,:) / REAL(NADD_out,KIND=JPRB)
 END SUBROUTINE CMF_TRACER_DIAG_GETAVE
 !####################################################################
 

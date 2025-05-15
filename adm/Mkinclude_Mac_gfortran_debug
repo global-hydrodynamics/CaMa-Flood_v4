@@ -42,4 +42,4 @@ LFLAGS =
 # note: underflow is unavoidable
 # FFLAGS = -O3 -Wall -cpp -ffree-line-length-none -fimplicit-none 
 # FFLAGS = -O3 -Wall -g -ffpe-trap=invalid,zero,overflow,underflow -fbounds-check -fbacktrace -fdump-core
-FFLAGS = -O3 -Wall -g -ffpe-trap=invalid,zero,overflow -fbounds-check -fbacktrace -fdump-core
+FFLAGS = -O3 -Wall -g -ffpe-trap=invalid,zero,overflow -fbounds-check -fbacktrace -fdump-core -fopt-info-vec-optimized

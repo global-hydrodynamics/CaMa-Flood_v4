@@ -342,8 +342,8 @@ DO IDAM=1, NDAM
 
   !! *** 2a update dam volume and inflow -----------------------------------
   ISEQD=DamSeq(IDAM)
-  DamVol    = P2DAMSTO(ISEQD,1)    
-  DamInflow = P2DAMINF(ISEQD,1)
+  DamVol    = REAL(P2DAMSTO(ISEQD,1),KIND=JPRB)    
+  DamInflow = REAL(P2DAMINF(ISEQD,1),KIND=JPRB)
 
   !! *** 2b Reservoir Operation          ------------------------------
   !===========================
@@ -480,11 +480,11 @@ DO ISEQ=1, NSEQRIV
     !=== floodplain flow
     DSLOPE_F = min( 0.005_JPRB,DSLOPE )    !! set min [instead of using weirequation for efficiency]
     DVEL_F   = PMANFLD**(-1.) * DSLOPE_F**0.5 * D2FLDDPH(ISEQ,1)**(2./3.)
-    DARE_F   = P2FLDSTO(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
+    DARE_F   = REAL(P2FLDSTO(ISEQ,1),KIND=JPRB) * D2RIVLEN(ISEQ,1)**(-1.)
     DARE_F   = MAX( DARE_F - D2FLDDPH(ISEQ,1)*D2RIVWTH(ISEQ,1), 0._JPRB )   !!remove above river channel     area
 
     D2FLDOUT(ISEQ,1) = DARE_F * DVEL_F
-    D2FLDOUT(ISEQ,1) = MIN(  D2FLDOUT(ISEQ,1)*1._JPRD, P2FLDSTO(ISEQ,1)/DT )
+    D2FLDOUT(ISEQ,1) = MIN(  D2FLDOUT(ISEQ,1), REAL(P2FLDSTO(ISEQ,1),KIND=JPRB)/DT )
   ENDIF
 END DO
 !$OMP END PARALLEL DO SIMD
@@ -592,7 +592,7 @@ IF( LDAMTXT )THEN
     IF( DamStat(IDAM)==IMIS ) CYCLE
     JDAM=JDAM+1
     ISEQD=DamSeq(IDAM)
-    DDamInf=P2DAMINF(ISEQD,1)
+    DDamInf=REAL( P2DAMINF(ISEQD,1),KIND=JPRB)
     DDamOut=D2RIVOUT(ISEQD,1) + D2FLDOUT(ISEQD,1)
     WRITE(WriteTxt(JDAM), '(3f12.2)') P2DAMSTO(ISEQD,1)*1.E-9, DDamInf, DDamOut
   END DO

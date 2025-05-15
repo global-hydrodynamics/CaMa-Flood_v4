@@ -80,7 +80,7 @@ DO ISEQ=1, NSEQRIV                                                    !! for nor
 !=== Floodplain Flow ===
   IF( LFLDOUT )THEN
     DFLW_F   = MAX( DSFCMAX-D2ELEVTN(ISEQ,1), 0._JPRB )
-    DARE_F   = P2FLDSTO(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
+    DARE_F   = REAL( P2FLDSTO(ISEQ,1),KIND=JPRB) * D2RIVLEN(ISEQ,1)**(-1.)
     DARE_F   = MAX( DARE_F - D2FLDDPH(ISEQ,1)*D2RIVWTH(ISEQ,1), 0._JPRB )   !! remove above river channel area
   
     DFLW_PRE_F = DSFCMAX_PRE - D2ELEVTN(ISEQ,1)
@@ -142,7 +142,7 @@ DO ISEQ=NSEQRIV+1, NSEQALL
   IF( LFLDOUT )THEN
     DFLW_F   = D2SFCELV(ISEQ,1)-D2ELEVTN(ISEQ,1)
   
-    DARE_F   = P2FLDSTO(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
+    DARE_F   = REAL( P2FLDSTO(ISEQ,1),KIND=JPRB) * D2RIVLEN(ISEQ,1)**(-1.)
     DARE_F   = MAX( DARE_F - D2FLDDPH(ISEQ,1)*D2RIVWTH(ISEQ,1), 0._JPRB )   !! remove above river channel area
   
     DFLW_PRE_F = D2SFCELV_PRE(ISEQ,1)-D2ELEVTN(ISEQ,1)
@@ -186,8 +186,8 @@ REAL(KIND=JPRD)            :: P2PTHOUT(NSEQMAX,1)                  !! for water 
 
 REAL(KIND=JPRB)            :: D2RATE(NSEQMAX,1)                        !! outflow correction
 ! SAVE for OpenMP
-INTEGER(KIND=JPIM),SAVE    :: ISEQ, JSEQ, IPTH, ILEV
-REAL(KIND=JPRB),SAVE       :: OUT_R1, OUT_R2, OUT_F1, OUT_F2, DIUP, DIDW, ISEQP, JSEQP
+INTEGER(KIND=JPIM),SAVE    :: ISEQ, JSEQ, IPTH, ILEV, ISEQP, JSEQP
+REAL(KIND=JPRB),SAVE       :: OUT_R1, OUT_R2, OUT_F1, OUT_F2, DIUP, DIDW
 !$OMP THREADPRIVATE     (JSEQ,OUT_R1, OUT_R2, OUT_F1, OUT_F2, DIUP, DIDW, ISEQP, JSEQP,ILEV)
 !================================================
   
@@ -273,7 +273,7 @@ ENDIF
 !$OMP PARALLEL DO SIMD
 DO ISEQ=1, NSEQALL
   IF ( P2STOOUT(ISEQ,1) > 1.E-8 ) THEN
-    D2RATE(ISEQ,1) = min( (P2RIVSTO(ISEQ,1)+P2FLDSTO(ISEQ,1)) * P2STOOUT(ISEQ,1)**(-1.), 1._JPRD )
+    D2RATE(ISEQ,1) = REAL( min( (P2RIVSTO(ISEQ,1)+P2FLDSTO(ISEQ,1)) * P2STOOUT(ISEQ,1)**(-1.), 1._JPRD ), KIND=JPRB)
   ENDIF
 END DO
 !$OMP END PARALLEL DO SIMD
@@ -353,9 +353,9 @@ IF( LPTHOUT )THEN
 #endif
 ENDIF
 
-D2RIVINF(:,:)=P2RIVINF(:,:)  !! needed for SinglePrecisionMode
-D2FLDINF(:,:)=P2FLDINF(:,:)
-D2PTHOUT(:,:)=P2PTHOUT(:,:)
+D2RIVINF(:,:)=REAL(P2RIVINF(:,:), KIND=JPRB)  !! needed for SinglePrecisionMode
+D2FLDINF(:,:)=REAL(P2FLDINF(:,:), KIND=JPRB)
+D2PTHOUT(:,:)=REAL(P2PTHOUT(:,:), KIND=JPRB)
 
 END SUBROUTINE CMF_CALC_INFLOW
 !####################################################################
@@ -378,9 +378,8 @@ REAL(KIND=JPRD)            :: P2PTHOUT(NSEQMAX,1)                  !! for water 
 
 REAL(KIND=JPRB)            :: D2RATE(NSEQMAX,1)                        !! outflow correction
 ! SAVE for OpenMP
-INTEGER(KIND=JPIM),SAVE    :: ISEQ, JSEQ, IPTH, ILEV, INUM, JPTH
-REAL(KIND=JPRB),SAVE       :: OUT_R1, OUT_R2, OUT_F1, OUT_F2, DIUP, DIDW, ISEQP, JSEQP
-!$OMP THREADPRIVATE     (JSEQ,OUT_R1, OUT_R2, OUT_F1, OUT_F2, DIUP, DIDW, ISEQP, JSEQP, ILEV, INUM, JPTH)
+INTEGER(KIND=JPIM),SAVE    :: ISEQ, JSEQ, IPTH, ILEV, INUM, JPTH, ISEQP, JSEQP
+!$OMP THREADPRIVATE          (JSEQ,ISEQP, JSEQP, ILEV, INUM, JPTH)
 !================================================
   
 !*** 1. initialize & calculate P2STOOUT for normal cells
@@ -436,7 +435,7 @@ ENDIF
 !$OMP PARALLEL DO SIMD
 DO ISEQ=1, NSEQALL
   IF ( P2STOOUT(ISEQ,1) > 1.E-8 ) THEN
-    D2RATE(ISEQ,1) = min( (P2RIVSTO(ISEQ,1)+P2FLDSTO(ISEQ,1)) * P2STOOUT(ISEQ,1)**(-1.), 1._JPRD )
+    D2RATE(ISEQ,1) = REAL( min( (P2RIVSTO(ISEQ,1)+P2FLDSTO(ISEQ,1)) * P2STOOUT(ISEQ,1)**(-1.), 1._JPRD ), KIND=JPRB)
   ENDIF
 END DO
 !$OMP END PARALLEL DO SIMD
@@ -522,9 +521,9 @@ IF( LPTHOUT )THEN
 !$OMP END PARALLEL DO SIMD  
 ENDIF
 
-D2RIVINF(:,:)=P2RIVINF(:,:)  !! needed for SinglePrecisionMode
-D2FLDINF(:,:)=P2FLDINF(:,:)
-D2PTHOUT(:,:)=P2PTHOUT(:,:)
+D2RIVINF(:,:)=REAL( P2RIVINF(:,:), KIND=JPRB)  !! needed for SinglePrecisionMode
+D2FLDINF(:,:)=REAL( P2FLDINF(:,:), KIND=JPRB)
+D2PTHOUT(:,:)=REAL( P2PTHOUT(:,:), KIND=JPRB)
 
 END SUBROUTINE CMF_CALC_INFLOW_LSMAPAT
 !####################################################################
