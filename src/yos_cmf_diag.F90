@@ -28,7 +28,7 @@ REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2FLDDPH(:,:)           !! floodpl
 REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2FLDFRC(:,:)           !! flooded    fractipn [m2/m2]
 REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2FLDARE(:,:)           !! flooded    area     [m2]
 
-REAL(KIND=JPRB),ALLOCATABLE                :: D1PTHFLWSUM(:)          !! bifurcation channel flow (1D, not 2D variable), all layer sum
+REAL(KIND=JPRB),ALLOCATABLE                :: D1PTHFLWSUM(:)          !! bifurcation flow (1D, not 2D variable), all layer sum
 REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2PTHOUT(:,:)           !! flood path outflow   [m3/s]
 REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2PTHINF(:,:)           !! flood path inflow   [m3/s]
 
@@ -44,7 +44,7 @@ REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2WEVAPEX(:,:)          !! Evapora
 REAL(KIND=JPRB)                            :: NADD_adp                    !! sum DT to calculate average
 
 REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2RIVOUT_aAVG(:,:)       !! average river       discharge
-REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2OUTFLW_aAVG(:,:)       !! average total outflow       [m3/s] (rivout + fldout)  !! bugfix v362
+REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2OUTFLW_aAVG(:,:)       !! average total outflow [m3/s] (rivout + fldout)
 REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2FLDOUT_aAVG(:,:)       !! average floodplain  discharge
 REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2RIVVEL_aAVG(:,:)       !! average flow velocity
 REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2PTHOUT_aAVG(:,:)       !! flood pathway net outflow (2D)
@@ -57,8 +57,8 @@ REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2WEVAPEX_aAVG(:,:)      !! averag
 REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2DAMINF_aAVG(:,:)       !! average reservoir inflow [m3/s]  !!!added
 
 !*** Average diagnostics (1D) for output
-REAL(KIND=JPRB),ALLOCATABLE                :: D1PTHFLW_aAVG(:,:)       !! bifurcation channel flow (1D, not 2D variable)
-REAL(KIND=JPRB),ALLOCATABLE                :: D1PTHFLWSUM_aAVG(:)      !! bifurcation channel flow (1D, not 2D variable), all layer sum
+REAL(KIND=JPRB),ALLOCATABLE                :: D1PTHFLW_aAVG(:,:)       !! bifurcation flow (1D, not 2D variable)
+REAL(KIND=JPRB),ALLOCATABLE                :: D1PTHFLWSUM_aAVG(:)      !! bifurcation flow (1D, not 2D variable), all layer sum
 
 !*** Daily max diagnostics for output
 REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2OUTFLW_aMAX(:,:)       !! max total outflow       [m3/s] (rivout + fldout)
@@ -70,7 +70,7 @@ REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2RIVDPH_aMAX(:,:)       !! max to
 REAL(KIND=JPRB)                            :: NADD_out                    !! sum DT to calculate average
 
 REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2RIVOUT_oAVG(:,:)       !! average river       discharge
-REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2OUTFLW_oAVG(:,:)       !! average total outflow       [m3/s] (rivout + fldout)  !! bugfix v362
+REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2OUTFLW_oAVG(:,:)       !! average total outflow [m3/s] (rivout+fldout) 
 REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2FLDOUT_oAVG(:,:)       !! average floodplain  discharge
 REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2RIVVEL_oAVG(:,:)       !! average flow velocity
 REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2PTHOUT_oAVG(:,:)       !! flood pathway net outflow (2D)
@@ -110,7 +110,7 @@ REAL(KIND=JPRD)                 :: P0GLBFLDARE              !! global flooded ar
 
 !================================================
 !!!*** levee variables
-REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2LEVDPH(:,:)           !! flood depth in protected side (water depth betwen river & levee)
+REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2LEVDPH(:,:)  !! flood depth in protected side (water depth betwen river & levee)
 
 
 

@@ -104,7 +104,7 @@ CONTAINS
 !+ 
 !==========================================================
 SUBROUTINE CALC_GDWDLY
-USE YOS_CMF_MAP,        ONLY: NSEQALL,D2GDWDLY
+USE YOS_CMF_MAP,        ONLY: D2GDWDLY
 IMPLICIT NONE
 !*** LOCAL
 REAL(KIND=JPRB)            ::  ZDTI

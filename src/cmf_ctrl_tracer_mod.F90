@@ -21,7 +21,7 @@ USE PARKIND1,                ONLY: JPIM, JPRB, JPRM, JPRD
 USE CMF_UTILS_MOD,           ONLY: INQUIRE_FID, CMF_CheckNanB
 USE YOS_CMF_INPUT,           ONLY: LOGNAM,   LTRACE,  TMPNAM, NX, NY, NXIN, NYIN, INPN, RMIS
 USE YOS_CMF_INPUT,           ONLY: IFRQ_OUT, CSUFBIN, CSUFVEC, LSPAMAT
-USE YOS_CMF_MAP,             ONLY: NSEQALL, NSEQRIV, NSEQALL, NPTHOUT
+USE YOS_CMF_MAP,             ONLY: NSEQALL, NSEQRIV, NPTHOUT
 USE YOS_CMF_MAP,             ONLY: I1NEXT,  PTH_UPST,PTH_DOWN, I2MASK
 USE YOS_CMF_MAP,             ONLY: I1UPST,   I1UPN,    I1P_OUT,  I1P_OUTN, I1P_INF, I1P_INFN
 USE YOS_CMF_MAP,             ONLY: INPX, INPY, INPA
@@ -37,16 +37,16 @@ CHARACTER(LEN=256)              :: CTRCPRE     !! tracer file prefix
 CHARACTER(LEN=256)              :: CTRCSUF     !! tracer file suffix
 
 INTEGER(KIND=JPIM)              :: IFRQ_TRIN   !! tracer input frequency (hour)
-REAL(KIND=JPRM)                 :: DTRCUNIT    !! tracer input unit conversion (DTRCUNIT=1 when tracer input file unit is [(MASS)/m2/s]. )
+REAL(KIND=JPRM)                 :: DTRCUNIT    !! tracer input unit conversion (DTRCUNIT=1 when input file is [(MASS)/m2/s]. )
 LOGICAL                         :: LINPEND     !! true  for input    endian conversion
 
 LOGICAL                         :: LTRCBIF     !! true  for consider bifurcation in tracer scheme
 
-CHARACTER(LEN=256)              :: CRESTTRC               ! input restart file name
-CHARACTER(LEN=256)              :: CRESTDIR               ! output restart file directory
-CHARACTER(LEN=256)              :: CVNRSTTRC              ! output restart prefix
-LOGICAL                         :: LRESTDBL               ! true: binary restart in double precision
-INTEGER(KIND=JPIM)              :: IFRQ_RST               ! 0: only at last time, (1,2,3,...,24) hourly restart, 30: monthly restart
+CHARACTER(LEN=256)              :: CRESTTRC         ! input restart file name
+CHARACTER(LEN=256)              :: CRESTDIR         ! output restart file directory
+CHARACTER(LEN=256)              :: CVNRSTTRC        ! output restart prefix
+LOGICAL                         :: LRESTDBL         ! true: binary restart in double precision
+INTEGER(KIND=JPIM)              :: IFRQ_RST         ! 0: only at last time, (1,2,3,...,24) hourly restart, 30: monthly restart
 
 ! output
 CHARACTER(LEN=256)              :: COUTDIR           ! OUTPUT DIRECTORY
@@ -707,7 +707,7 @@ DO ITRACE=1, NTRACE
     P2TRCSTO(ISEQ,ITRACE) = P2TRCSTO(ISEQ,ITRACE) + P2TRCINF(ISEQ)*DT - D2TRCOUT(ISEQ,ITRACE)*DT
     P2TRCSTO(ISEQ,ITRACE) = P2TRCSTO(ISEQ,ITRACE) - D2TRCPOUT(ISEQ,ITRACE)*DT
     P2TRCSTO(ISEQ,ITRACE) = P2TRCSTO(ISEQ,ITRACE) + D2TRCINP(ISEQ,ITRACE) *DT
-    P2TRCSTO(ISEQ,ITRACE) = max ( P2TRCSTO(ISEQ,ITRACE), 0._JPRB )
+    P2TRCSTO(ISEQ,ITRACE) = max ( P2TRCSTO(ISEQ,ITRACE), 0._JPRD )
   END DO
   !$OMP END PARALLEL DO SIMD
 

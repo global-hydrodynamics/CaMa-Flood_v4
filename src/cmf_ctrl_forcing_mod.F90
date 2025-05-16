@@ -203,7 +203,7 @@ WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "!---------------------!"
 
 WRITE(LOGNAM,*) "CMF::FORCING_INIT: Initialize runoff forcing file (only for netCDF)" 
-WRITE(LOGNAM,*) " ECMWF Lake Module LECMF2LAKEC",  LECMF2LAKEC
+IF(PRESENT(LECMF2LAKEC)) WRITE(LOGNAM,*) "CMF::FORCING_INIT: LECMF2LAKEC"
 
 IF( LINPCDF ) THEN
 #ifdef UseCDF_CMF
@@ -793,7 +793,7 @@ END SUBROUTINE ROFF_INTERP
 !==========================================================
 SUBROUTINE CONV_RESOL(PBUFFIN,PBUFFOUT)
 !! use runoff data without any interporlation. map resolution & runoff resolution should be same
-USE YOS_CMF_MAP,             ONLY: NSEQALL, NSEQALL, D2GRAREA
+USE YOS_CMF_MAP,             ONLY: NSEQALL, D2GRAREA
 USE YOS_CMF_INPUT,           ONLY: RMIS
 USE CMF_UTILS_MOD,           ONLY: mapD2vecD
 IMPLICIT NONE
