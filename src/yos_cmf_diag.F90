@@ -38,6 +38,18 @@ REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2STORGE(:,:)           !! total s
 
 REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2OUTINS(:,:)           !! instantaneous discharge [m3/s] (unrouted runoff)
 REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2WEVAPEX(:,:)          !! Evaporation water extracted
+!================================================
+
+!** local temporal variables in subroutine
+REAL(KIND=JPRB),ALLOCATABLE                :: D2SFCELV_PRE(:,:)       
+REAL(KIND=JPRB),ALLOCATABLE                :: D2DWNELV_PRE(:,:)   
+REAL(KIND=JPRB),ALLOCATABLE                :: D2FLDDPH_PRE(:,:)   
+
+REAL(KIND=JPRD),ALLOCATABLE                :: P2STOOUT(:,:)
+REAL(KIND=JPRD),ALLOCATABLE                :: P2RIVINF(:,:)
+REAL(KIND=JPRD),ALLOCATABLE                :: P2FLDINF(:,:)
+REAL(KIND=JPRD),ALLOCATABLE                :: P2PTHOUT(:,:)
+REAL(KIND=JPRB),ALLOCATABLE                :: D2RATE(:,:)
 
 !================================================
 !*** Average diagnostics for adaptive time step

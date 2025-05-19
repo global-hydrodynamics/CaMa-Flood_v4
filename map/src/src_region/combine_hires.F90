@@ -157,7 +157,7 @@
           endif
 
           allocate(catmXX0(nx0,ny0),catmYY0(nx0,ny0),catmZZ0(nx0,ny0),flddif0(nx0,ny0),grdare0(nx0,ny0))
-          allocate(flwdir(nx0,ny0),hand0(nx0,ny0),elevtn0(nx0,ny0),uparea0(nx0,ny0),rivwth0(nx0,ny0),visual0(nx0,ny0))
+          allocate(flwdir0(nx0,ny0),hand0(nx0,ny0),elevtn0(nx0,ny0),uparea0(nx0,ny0),rivwth0(nx0,ny0),visual0(nx0,ny0))
           allocate(downx0(nx0,ny0),downy0(nx0,ny0))
           allocate(lon0(nx0),lat0(ny0))
 

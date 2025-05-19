@@ -13,30 +13,26 @@ CP = /bin/cp
 #======================================
 
 #DCDF=-DUseCDF_CMF
-DMPI=-DUseMPI_CMF
+#DMPI=-DUseMPI_CMF
 DSINGLE=-DSinglePrec_CMF
 #DATM=-DNoAtom_CMF
 
 CFLAGS=$(DMPI) $(DCDF) $(DATM) $(DSINGLE)
 
 #======================================
-# gfortran Mac OSX 
+# gfortran Linux
+#======================================
 
-# without netCDF
-INC = -I/opt/homebrew/include 
-LIB = -L/opt/homebrew/lib 
-
-# with netCDF
-#INC = -I/opt/homebrew/include 
-#LIB = -L/opt/homebrew/lib -lnetcdff
+#INC = -I/usr/local/include 
+#LIB = -L/usr/local/lib -lnetcdff
 
 #==============================
 # FCMP: main program (src/), FC: pre/post process (map/ etc/)
-#FCMP = gfortran -fopenmp
-FCMP = mpifort -fopenmp
-#FCMP = mpifort
+FCMP = gfortran -fopenmp
 FC = gfortran
 
 LFLAGS =
-FFLAGS = -O3 -Wall -cpp -ffree-line-length-none -fimplicit-none 
+FFLAGS = -O3 -Wall -cpp -ffree-line-length-none -fimplicit-none -ftree-vectorize 
 
+# debug mode
+#FFLAGS = -O3 -Wall -cpp -ffree-line-length-none -fimplicit-none -ftree-vectorize -fopt-info-vec
