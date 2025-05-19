@@ -53,13 +53,13 @@ INTEGER(KIND=JPIM),SAVE         ::  IX,IY,ISEQ
 !$OMP THREADPRIVATE                (IX,IY)
 !================================================
 R2MAP(:,:) = RMIS
-!$OMP PARALLEL DO SIMD
+!$OMP PARALLEL DO
 DO ISEQ=1,NSEQALL
   IX=I1SEQX(ISEQ)
   IY=I1SEQY(ISEQ)
   R2MAP(IX,IY) = REAL(D2VEC(ISEQ,1),KIND=JPRM)
 ENDDO
-!$OMP END PARALLEL DO SIMD
+!$OMP END PARALLEL DO
 
 END SUBROUTINE vecD2mapR
 !==========================================================
@@ -78,13 +78,13 @@ INTEGER(KIND=JPIM),SAVE         ::  IX,IY,ISEQ
 !$OMP THREADPRIVATE                (IX,IY)
 !================================================
 D2MAP(:,:) = DMIS
-!$OMP PARALLEL DO SIMD
+!$OMP PARALLEL DO
 DO ISEQ=1,NSEQALL
   IX=I1SEQX(ISEQ)
   IY=I1SEQY(ISEQ)
   D2MAP(IX,IY) = D2VEC(ISEQ,1)
 ENDDO
-!$OMP END PARALLEL DO SIMD
+!$OMP END PARALLEL DO
 END SUBROUTINE vecD2mapD
 !==========================================================
 !+
@@ -102,13 +102,13 @@ INTEGER(KIND=JPIM),SAVE         ::  IX,IY,ISEQ
 !$OMP THREADPRIVATE                (IX,IY)
 !================================================
 P2MAP(:,:) = DMIS
-!$OMP PARALLEL DO SIMD
+!$OMP PARALLEL DO
 DO ISEQ=1,NSEQALL
   IX=I1SEQX(ISEQ)
   IY=I1SEQY(ISEQ)
   P2MAP(IX,IY) = P2VEC(ISEQ,1)
 ENDDO
-!$OMP END PARALLEL DO SIMD
+!$OMP END PARALLEL DO
 END SUBROUTINE vecP2mapP
 !==========================================================
 !+
@@ -126,14 +126,14 @@ INTEGER(KIND=JPIM),SAVE         ::  IX,IY,ISEQ
 !$OMP THREADPRIVATE                (IX,IY)
 !================================================
 R2MAP(:,:) = RMIS
-!$OMP PARALLEL DO SIMD
+!$OMP PARALLEL DO
 DO ISEQ=1,NSEQALL
   IX=I1SEQX(ISEQ)
   IY=I1SEQY(ISEQ)
   R2MAP(IX,IY) = REAL(P2VEC(ISEQ,1),KIND=JPRM)
 
 ENDDO
-!$OMP END PARALLEL DO SIMD
+!$OMP END PARALLEL DO
 END SUBROUTINE vecP2mapR
 !==========================================================
 !+
@@ -150,13 +150,13 @@ REAL(KIND=JPRB),INTENT(OUT)     :: D2VAR(NSEQALL,1)
 INTEGER(KIND=JPIM),SAVE         :: IX,IY, ISEQ
 !$OMP THREADPRIVATE               (IX,IY)
 !================================================
-!$OMP PARALLEL DO SIMD
+!$OMP PARALLEL DO
 DO ISEQ=1,NSEQALL
   IX=I1SEQX(ISEQ)
   IY=I1SEQY(ISEQ)
   D2VAR(ISEQ,1) = REAL(R2TEMP(IX,IY),KIND=JPRB)
 ENDDO
-!$OMP END PARALLEL DO SIMD
+!$OMP END PARALLEL DO
 END SUBROUTINE mapR2vecD
 !==========================================================
 !+
@@ -173,13 +173,13 @@ REAL(KIND=JPRB),INTENT(OUT)     :: D2VAR(NSEQALL,1)
 INTEGER(KIND=JPIM),SAVE         :: IX,IY, ISEQ
 !$OMP THREADPRIVATE               (IX,IY)
 !================================================
-!$OMP PARALLEL DO SIMD
+!$OMP PARALLEL DO
 DO ISEQ=1,NSEQALL
   IX=I1SEQX(ISEQ)
   IY=I1SEQY(ISEQ)
   D2VAR(ISEQ,1) = D2TEMP(IX,IY)
 ENDDO
-!$OMP END PARALLEL DO SIMD
+!$OMP END PARALLEL DO
 END SUBROUTINE mapD2vecD
 !==========================================================
 !+
@@ -196,13 +196,13 @@ REAL(KIND=JPRD),INTENT(OUT)     :: P2VAR(NSEQALL,1)
 INTEGER(KIND=JPIM),SAVE         :: IX,IY, ISEQ
 !$OMP THREADPRIVATE               (IX,IY)
 !================================================
-!$OMP PARALLEL DO SIMD
+!$OMP PARALLEL DO
 DO ISEQ=1,NSEQALL
   IX=I1SEQX(ISEQ)
   IY=I1SEQY(ISEQ)
   P2VAR(ISEQ,1) = P2TEMP(IX,IY)
 ENDDO
-!$OMP END PARALLEL DO SIMD
+!$OMP END PARALLEL DO
 END SUBROUTINE mapP2vecP
 !==========================================================
 !+
@@ -219,14 +219,14 @@ REAL(KIND=JPRB),INTENT(OUT)     :: D2VAR(NSEQALL,1)
 INTEGER(KIND=JPIM),SAVE         :: IX,IY, ISEQ
 !$OMP THREADPRIVATE               (IX,IY)
 !================================================
-!$OMP PARALLEL DO SIMD
+!$OMP PARALLEL DO
 DO ISEQ=1,NSEQALL
   IX=I1SEQX(ISEQ)
   IY=I1SEQY(ISEQ)
   D2VAR(ISEQ,1) = REAL(P2TEMP(IX,IY),KIND=JPRB)
 
 ENDDO
-!$OMP END PARALLEL DO SIMD
+!$OMP END PARALLEL DO
 END SUBROUTINE mapP2vecD
 !==========================================================
 !+
@@ -243,13 +243,13 @@ INTEGER(KIND=JPIM),INTENT(OUT)  :: I2VAR(NSEQALL,1)
 INTEGER(KIND=JPIM),SAVE         :: IX,IY,ISEQ
 !$OMP THREADPRIVATE               (IX,IY)
 !================================================
-!$OMP PARALLEL DO SIMD
+!$OMP PARALLEL DO
 DO ISEQ=1,NSEQALL
   IX=I1SEQX(ISEQ)
   IY=I1SEQY(ISEQ)
   I2VAR(ISEQ,1) = I2TEMP(IX,IY)
 ENDDO
-!$OMP END PARALLEL DO SIMD
+!$OMP END PARALLEL DO
 END SUBROUTINE mapI2vecI
 !####################################################################
 

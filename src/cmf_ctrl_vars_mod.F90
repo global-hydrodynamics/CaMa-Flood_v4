@@ -17,7 +17,7 @@ MODULE CMF_CTRL_VARS_MOD
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
 USE PARKIND1,                ONLY: JPIM, JPRM, JPRB, JPRD
-USE YOS_CMF_INPUT,           ONLY: LOGNAM, LPTHOUT, LDAMOUT, LLEVEE, LWEVAP, LOUTINS, LGDWDLY
+USE YOS_CMF_INPUT,           ONLY: LOGNAM, LPTHOUT, LDAMOUT, LLEVEE, LWEVAP, LOUTINS
 IMPLICIT NONE
 CONTAINS 
 !####################################################################
@@ -70,18 +70,20 @@ D2FLDOUT_PRE(:,:)=0._JPRB
 D2RIVDPH_PRE(:,:)=0._JPRB
 D2FLDSTO_PRE(:,:)=0._JPRB
 
-IF( LPTHOUT ) THEN  !! additional prognostics for bifurcation scheme
-  ALLOCATE( D1PTHFLW(NPTHOUT,NPTHLEV)     )
-  ALLOCATE( D1PTHFLW_PRE(NPTHOUT,NPTHLEV) )
-  D1PTHFLW(:,:)=0._JPRB
-  D1PTHFLW_PRE(:,:)=0._JPRB
-ENDIF
-IF( LDAMOUT ) THEN  !! additional prognostics for reservoir operation
+!! prognostics for bifurcation (if no bifurcation, NPTHOUT=1, NPTHLEV=1)
+ALLOCATE( D1PTHFLW(NPTHOUT,NPTHLEV)     )
+ALLOCATE( D1PTHFLW_PRE(NPTHOUT,NPTHLEV) )
+D1PTHFLW(:,:)=0._JPRB
+D1PTHFLW_PRE(:,:)=0._JPRB
+
+! reservoir operation
+IF( LDAMOUT )THEN
   ALLOCATE( P2DAMSTO(NSEQALL,1)     )
   ALLOCATE( P2DAMINF(NSEQALL,1)     )
   P2DAMSTO(:,:)=0._JPRD
   P2DAMINF(:,:)=0._JPRD
 ENDIF
+
 IF( LLEVEE ) THEN  !! additional prognostics for LLEVEE
   ALLOCATE( P2LEVSTO(NSEQALL,1)     )
   P2LEVSTO(:,:)=0._JPRD
@@ -93,7 +95,7 @@ IF( LWEVAP ) THEN  !! additional prognostics for LLEVEE
   D2WEVAP(:,:)=0._JPRB
 ENDIF
 
-!! keep these variables even when LGDWDLY is not used.
+!! keep these variables even when LGDWDLY is not used. (for simplifying runoff calculation)
 ALLOCATE( P2GDWSTO(NSEQALL,1)     )
 ALLOCATE( D2GDWRTN(NSEQALL,1)     )
 P2GDWSTO(:,:)=0._JPRD
@@ -191,7 +193,9 @@ SUBROUTINE CMF_DIAG_INIT
 USE YOS_CMF_MAP,        ONLY: NSEQALL,NPTHOUT,NPTHLEV
 USE YOS_CMF_DIAG,       ONLY: D2RIVINF, D2RIVDPH, D2RIVVEL, D2FLDINF, D2FLDDPH, D2FLDFRC, D2FLDARE, &
                             & D2PTHOUT, D2PTHINF, D2SFCELV, D2OUTFLW, D2STORGE, D2OUTINS, D2LEVDPH, &
-                            & D1PTHFLWSUM,   D2WEVAPEX
+                            & D1PTHFLWSUM,   D2WEVAPEX, P2STOOUT, P2RIVINF, P2FLDINF, P2PTHOUT, D2RATE,  &
+                            & D2SFCELV_PRE,  D2DWNELV_PRE,  D2FLDDPH_PRE
+
 USE YOS_CMF_DIAG,       ONLY: D2RIVOUT_oAVG, D2FLDOUT_oAVG, D2OUTFLW_oAVG, D2RIVVEL_oAVG, D2PTHOUT_oAVG, &
                             & D2GDWRTN_oAVG, D2RUNOFF_oAVG, D2ROFSUB_oAVG, D1PTHFLW_oAVG, D2WEVAPEX_oAVG,&
                             & D2DAMINF_oAVG, D2STORGE_oMAX, D2OUTFLW_oMAX, D2RIVDPH_oMAX, NADD_out
@@ -247,6 +251,27 @@ IF ( LOUTINS  )THEN
   ALLOCATE(D2OUTINS (NSEQALL,1))
   D2OUTINS (:,:)=0._JPRB
 ENDIF
+
+
+!! temporally variables in subroutines
+ALLOCATE(D2SFCELV_PRE(NSEQALL,1))
+ALLOCATE(D2DWNELV_PRE(NSEQALL,1))
+ALLOCATE(D2FLDDPH_PRE(NSEQALL,1))
+D2SFCELV_PRE(:,:)=0._JPRB
+D2DWNELV_PRE(:,:)=0._JPRB
+D2FLDDPH_PRE(:,:)=0._JPRB
+
+ALLOCATE(P2STOOUT(NSEQALL,1))
+ALLOCATE(P2RIVINF(NSEQALL,1))
+ALLOCATE(P2FLDINF(NSEQALL,1))
+ALLOCATE(P2PTHOUT(NSEQALL,1))
+ALLOCATE(D2RATE(NSEQALL,1))
+P2STOOUT(:,:)=0._JPRD
+P2RIVINF(:,:)=0._JPRD
+P2FLDINF(:,:)=0._JPRD
+P2PTHOUT(:,:)=0._JPRD
+D2RATE(:,:)  =1._JPRB
+
 
 !============================
 !*** 2a. time-average 2D diagnostics for adaptive time step

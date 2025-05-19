@@ -38,5 +38,6 @@ FCMP = gfortran -fopenmp
 FC = gfortran
 
 LFLAGS =
-FFLAGS = -O3 -Wall -cpp -ffree-line-length-none -fimplicit-none 
+FFLAGS = -O3 -Wall -cpp -ffree-line-length-none -fimplicit-none -ftree-vectorize 
+#FFLAGS = -O3 -Wall -cpp -ffree-line-length-none -fimplicit-none -ftree-vectorize -fopt-info-vec
 

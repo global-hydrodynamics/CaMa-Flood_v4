@@ -336,7 +336,7 @@ CALL UPDATE_INFLOW
 !* (2) Reservoir Operation
 !====================================
 !     -- compare DamVol against storage level (NorVol, ConVol, EmeVol) & DamInflow against Qf
-!$OMP PARALLEL DO SIMD
+!$OMP PARALLEL DO
 DO IDAM=1, NDAM
   IF( DamStat(IDAM)<=0 ) CYCLE  !! no calculation for dams not activated
 
@@ -413,7 +413,7 @@ DO IDAM=1, NDAM
   D2RIVOUT(ISEQD,1) = DamOutflw
   D2FLDOUT(ISEQD,1) = 0._JPRB
 END DO
-!$OMP END PARALLEL DO SIMD
+!$OMP END PARALLEL DO
 !====================================
 
 CONTAINS
@@ -447,7 +447,7 @@ END DO
 
 !*** 1b. calculate dam inflow, using previous tstep discharge
 #ifndef NoAtom_CMF
-!$OMP PARALLEL DO SIMD  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
+!$OMP PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
 #endif
 DO ISEQ=1, NSEQALL
   IF( I1DAM(ISEQ)==10 .or. I1DAM(ISEQ)==11 )THEN  !! if dam grid or upstream of dam
@@ -459,11 +459,11 @@ DO ISEQ=1, NSEQALL
   ENDIF
 END DO
 #ifndef NoAtom_CMF
-!$OMP END PARALLEL DO SIMD
+!$OMP END PARALLEL DO
 #endif
 
 !*** 1c. discharge for upstream grids of dams
-!$OMP PARALLEL DO SIMD  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
+!$OMP PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
 DO ISEQ=1, NSEQRIV
   IF( I1DAM(ISEQ)==10 )THEN  !! if downstream is DAM
     JSEQ   = I1NEXT(ISEQ)
@@ -487,7 +487,7 @@ DO ISEQ=1, NSEQRIV
     D2FLDOUT(ISEQ,1) = MIN(  D2FLDOUT(ISEQ,1), REAL(P2FLDSTO(ISEQ,1),KIND=JPRB)/DT )
   ENDIF
 END DO
-!$OMP END PARALLEL DO SIMD
+!$OMP END PARALLEL DO
 
 END SUBROUTINE UPDATE_INFLOW
 !==========================================================
@@ -513,7 +513,7 @@ GlbDAMSTONXT = 0._JPRB
 GlbDAMINF    = 0._JPRB
 GlbDAMOUT    = 0._JPRB
 
-!$OMP PARALLEL DO SIMD REDUCTION(+:GlbDAMSTO, GlbDAMSTONXT, GlbDAMINF, GlbDAMOUT)
+!$OMP PARALLEL DO REDUCTION(+:GlbDAMSTO, GlbDAMSTONXT, GlbDAMINF, GlbDAMOUT)
 DO IDAM=1, NDAM
   IF( DamStat(IDAM)==IMIS ) CYCLE  !! do not calculate for dams outside of calculation domain
   ISEQD = DamSeq(IDAM)
@@ -530,7 +530,7 @@ DO IDAM=1, NDAM
 
   GlbDAMSTONXT = GlbDAMSTONXT + P2DAMSTO(ISEQD,1)
 END DO
-!$OMP END PARALLEL DO SIMD
+!$OMP END PARALLEL DO
 
 DamMiss = GlbDAMSTO-GlbDAMSTONXT+GlbDAMINF-GlbDAMOUT
 WRITE(LOGNAM,*) "CMF::DAM_CALC: DamMiss at all dams:", DamMiss*1.D-9

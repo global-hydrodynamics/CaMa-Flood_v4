@@ -32,5 +32,7 @@ FCMP = gfortran -fopenmp
 FC = gfortran
 
 LFLAGS =
-FFLAGS = -O3 -Wall -cpp -ffree-line-length-none -fimplicit-none -fbounds-check -fbacktrace
+FFLAGS = -O3 -Wall -cpp -ffree-line-length-none -fimplicit-none -ftree-vectorize 
 
+# debug mode
+#FFLAGS = -O3 -Wall -cpp -ffree-line-length-none -fimplicit-none -ftree-vectorize -fopt-info-vec

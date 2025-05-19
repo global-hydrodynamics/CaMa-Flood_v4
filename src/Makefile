@@ -69,7 +69,7 @@ $(TARGET): $(OBJECTS) src $(TARGET).o
 #*** general rule
 all: $(TARGET)
 clean:
-	${RM} -rf *.o core *~ *trace temp* *.mod *.a *.s *.dSYM
+	${RM} -rf *.o core *~ *trace temp* *.mod *.a *.s *.optrpt *.dSYM
 cleanall:
-	${RM} -rf *.o core *~ *trace temp* *.mod *.a *.s *.dSYM $(TARGET)
+	${RM} -rf *.o core *~ *trace temp* *.mod *.a *.s *.optrpt *.dSYM $(TARGET)
 

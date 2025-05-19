@@ -14,13 +14,14 @@ MODULE CMF_CALC_OUTFLW_MOD
 !==========================================================
 USE PARKIND1,           ONLY: JPIM, JPRB, JPRD
 USE YOS_CMF_INPUT,      ONLY: DT,       PDSTMTH,  PMANFLD,  PGRV,     LFLDOUT, LPTHOUT, LSLOPEMOUTH
-USE YOS_CMF_MAP,        ONLY: I1NEXT,   NSEQALL,  NSEQRIV,  NSEQALL
+USE YOS_CMF_MAP,        ONLY: I1NEXT,   NSEQALL,  NSEQRIV
 USE YOS_CMF_MAP,        ONLY: D2RIVELV, D2ELEVTN, D2NXTDST, D2RIVWTH, D2RIVHGT
 USE YOS_CMF_MAP,        ONLY: D2RIVLEN, D2RIVMAN, D2DWNELV, D2ELEVSLOPE
 USE YOS_CMF_MAP,        ONLY: I1UPST,   I1UPN,    I1P_OUT,  I1P_OUTN, I1P_INF, I1P_INFN
 USE YOS_CMF_PROG,       ONLY: P2RIVSTO, D2RIVOUT, P2FLDSTO, D2FLDOUT
 USE YOS_CMF_PROG,       ONLY: D2RIVOUT_PRE, D2RIVDPH_PRE, D2FLDOUT_PRE, D2FLDSTO_PRE
 USE YOS_CMF_DIAG,       ONLY: D2RIVDPH, D2RIVVEL, D2RIVINF, D2FLDDPH, D2FLDINF, D2SFCELV, D2STORGE
+USE YOS_CMF_DIAG,       ONLY: D2SFCELV_PRE, D2DWNELV_PRE, D2FLDDPH_PRE
 !
 CONTAINS
 !####################################################################
@@ -30,20 +31,15 @@ CONTAINS
 !####################################################################
 SUBROUTINE CMF_CALC_OUTFLW
 IMPLICIT NONE
-!*** Local
-REAL(KIND=JPRB)            :: D2SFCELV_PRE(NSEQALL,1)                  !! water surface elevation (t-1) [m]
-REAL(KIND=JPRB)            :: D2FLDDPH_PRE(NSEQALL,1)                      !! floodplain depth (t-1)        [m]
 ! save for OpenMP
 INTEGER(KIND=JPIM),SAVE    :: ISEQ, JSEQ
-REAL(KIND=JPRB),SAVE       :: DSLOPE,   DOUT_PRE,   DFLW,   DFLW_PRE,   DFLW_IMP,   DAREA 
-REAL(KIND=JPRB),SAVE       :: DSLOPE_F, DOUT_PRE_F, DFLW_F, DFLW_PRE_F, DFLW_IMP_F, DARE_F, DARE_PRE_F, DARE_IMP_F
-REAL(KIND=JPRB),SAVE       :: DDWNSFC,  DDWNSFC_PRE
-REAL(KIND=JPRB),SAVE       :: DSFCMAX,  DSFCMAX_PRE, RATE
-!$OMP THREADPRIVATE    (JSEQ, DSLOPE,   DOUT_PRE,   DFLW,   DFLW_PRE,   DFLW_IMP,   DAREA  )
-!$OMP THREADPRIVATE    (      DSLOPE_F, DOUT_PRE_F, DFLW_F, DFLW_PRE_F, DFLW_IMP_F, DARE_F, DARE_PRE_F, DARE_IMP_F  )
-!$OMP THREADPRIVATE    (      DDWNSFC,  DDWNSFC_PRE, DSFCMAX,  DSFCMAX_PRE, RATE )
+REAL(KIND=JPRB),SAVE       :: DFSTO,DSFC,DSFC_pr,DSLP,DFLW,DFLW_pr,DFLW_im,DARE,DARE_pr,DARE_im,DOUT_pr,DOUT,DVEL
+LOGICAL,SAVE               :: Mask
+REAL(KIND=JPRB),SAVE       :: RATE
+!$OMP THREADPRIVATE          (JSEQ)
 !================================================
 
+! calculate water surface elevation
 !$OMP PARALLEL DO SIMD
 DO ISEQ=1, NSEQALL
   D2SFCELV(ISEQ,1)     = D2RIVELV(ISEQ,1) + D2RIVDPH(ISEQ,1)
@@ -52,119 +48,137 @@ DO ISEQ=1, NSEQALL
 END DO
 !$OMP END PARALLEL DO SIMD
 
-!$OMP PARALLEL DO SIMD
-DO ISEQ=1, NSEQRIV                                                    !! for normal cells
+!Update downstream elevation
+!$OMP PARALLEL DO
+DO ISEQ=1, NSEQRIV
   JSEQ=I1NEXT(ISEQ) ! next cell's pixel
-  DDWNSFC=D2SFCELV(JSEQ,1)
-  DDWNSFC_PRE=D2SFCELV_PRE(JSEQ,1)
+  D2DWNELV(ISEQ,1)     = D2SFCELV(JSEQ,1)
+  D2DWNELV_PRE(ISEQ,1) = D2SFCELV_PRE(JSEQ,1)
+END DO
+!$OMP END PARALLEL DO
 
-  DSFCMAX    =MAX( D2SFCELV(ISEQ,1),    DDWNSFC )
-  DSFCMAX_PRE=MAX( D2SFCELV_PRE(ISEQ,1),DDWNSFC_PRE )
-  DSLOPE = ( D2SFCELV(ISEQ,1)-DDWNSFC ) * D2NXTDST(ISEQ,1)**(-1.)
-  DSLOPE_F = MAX( -0.005_JPRB, min( 0.005_JPRB,DSLOPE ))    !! set max&min [instead of using weir equation for efficiency]
-
+!$OMP PARALLEL DO SIMD PRIVATE(DSFC,DSFC_pr,DSLP,DFLW,DFLW_pr,DFLW_im,DARE,DARE_pr,DARE_im,DOUT_pr,DOUT,DVEL,Mask)
+DO ISEQ=1, NSEQRIV                                                !! for normal cells
+  DSFC = MAX( D2SFCELV(ISEQ,1),    D2DWNELV(ISEQ,1) )
+  DSLP = ( D2SFCELV(ISEQ,1)-D2DWNELV(ISEQ,1) ) * D2NXTDST(ISEQ,1)**(-1.)
 !=== River Flow ===
-  DFLW   = DSFCMAX - D2RIVELV(ISEQ,1)        !!  flow cross-section depth
-  DAREA  = D2RIVWTH(ISEQ,1) * DFLW                                            !!  flow cross-section area
+  DFLW = DSFC - D2RIVELV(ISEQ,1)                             !!  flow cross-section depth
+  DARE = MAX( D2RIVWTH(ISEQ,1)*DFLW, 1.E-10_JPRB )           !!  flow cross-section area
 
-  DFLW_PRE=DSFCMAX_PRE - D2RIVELV(ISEQ,1)
-  DFLW_IMP=MAX( (DFLW*DFLW_PRE)**0.5 ,1.E-6_JPRB )                                            !! semi implicit flow depth
+  DSFC_pr=MAX( D2SFCELV_PRE(ISEQ,1),D2DWNELV_PRE(ISEQ,1) )
+  DFLW_pr=DSFC_pr - D2RIVELV(ISEQ,1)
+  DFLW_im=MAX( (DFLW*DFLW_pr)**0.5 ,1.E-6_JPRB )             !! semi implicit flow depth
 
-  IF( DFLW_IMP>1.E-5 .and. DAREA>1.E-5 )THEN 
-    DOUT_PRE= D2RIVOUT_PRE(ISEQ,1) * D2RIVWTH(ISEQ,1)**(-1.)                         !! outflow (t-1) [m2/s] (unit width)
-    D2RIVOUT(ISEQ,1) = D2RIVWTH(ISEQ,1) * ( DOUT_PRE + PGRV*DT*DFLW_IMP*DSLOPE ) &
-                             * ( 1. + PGRV*DT*D2RIVMAN(ISEQ,1)**2.*abs(DOUT_PRE)*DFLW_IMP**(-7./3.) )**(-1.)
-    D2RIVVEL(ISEQ,1) = D2RIVOUT(ISEQ,1) * DAREA**(-1.)
-  ELSE
-    D2RIVOUT(ISEQ,1) = 0._JPRB
-    D2RIVVEL(ISEQ,1) = 0._JPRB
-  ENDIF
+  DOUT_pr= D2RIVOUT_PRE(ISEQ,1) * D2RIVWTH(ISEQ,1)**(-1.)    !! outflow (t-1) [m2/s] (unit width)
+  DOUT=D2RIVWTH(ISEQ,1) * ( DOUT_pr + PGRV*DT*DFLW_im*DSLP ) &
+                           * ( 1. + PGRV*DT*D2RIVMAN(ISEQ,1)**2.*abs(DOUT_pr)*DFLW_im**(-7./3.) )**(-1.)
+  DVEL= D2RIVOUT(ISEQ,1) * DARE**(-1.)
 
-!=== Floodplain Flow ===
-  IF( LFLDOUT )THEN
-    DFLW_F   = MAX( DSFCMAX-D2ELEVTN(ISEQ,1), 0._JPRB )
-    DARE_F   = REAL( P2FLDSTO(ISEQ,1),KIND=JPRB) * D2RIVLEN(ISEQ,1)**(-1.)
-    DARE_F   = MAX( DARE_F - D2FLDDPH(ISEQ,1)*D2RIVWTH(ISEQ,1), 0._JPRB )   !! remove above river channel area
-  
-    DFLW_PRE_F = DSFCMAX_PRE - D2ELEVTN(ISEQ,1)
-    DFLW_IMP_F = MAX( (MAX(DFLW_F*DFLW_PRE_F,0._JPRB))**0.5, 1.E-6_JPRB )
-  
-    DARE_PRE_F = D2FLDSTO_PRE(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
-    DARE_PRE_F = MAX( DARE_PRE_F - D2FLDDPH_PRE(ISEQ,1)*D2RIVWTH(ISEQ,1), 1.E-6_JPRB )   !! remove above river channel area
-    DARE_IMP_F = max( (DARE_F*DARE_PRE_F)**0.5, 1.E-6_JPRB )
-  
-    IF( DFLW_IMP_F>1.E-5 .and. DARE_IMP_F>1.E-5 )THEN 
-      DOUT_PRE_F = D2FLDOUT_PRE(ISEQ,1)
-      D2FLDOUT(ISEQ,1) = ( DOUT_PRE_F + PGRV*DT*DARE_IMP_F*DSLOPE_F ) &
-                        * (1. + PGRV*DT*PMANFLD**2. * abs(DOUT_PRE_F)*DFLW_IMP_F**(-4./3.)*DARE_IMP_F**(-1.) )**(-1._JPRB)
-    ELSE
-      D2FLDOUT(ISEQ,1) = 0._JPRB
-    ENDIF
-  
-    IF( D2FLDOUT(ISEQ,1)*D2RIVOUT(ISEQ,1)<0._JPRB ) D2FLDOUT(ISEQ,1)=0._JPRB  !! stabilization
-  ENDIF
-
-!! Storage change limitter to prevent sudden increase of "upstream" water level when backwardd flow (v423)
-  IF( D2RIVOUT(ISEQ,1)<0._JPRB )THEN
-    RATE = 0.05 * D2STORGE(ISEQ,1) / ( (-D2RIVOUT(ISEQ,1)-D2FLDOUT(ISEQ,1))*DT )
-    RATE= min(RATE, 1.0_JPRB )
-    D2RIVOUT(ISEQ,1)=D2RIVOUT(ISEQ,1)*RATE
-    D2FLDOUT(ISEQ,1)=D2FLDOUT(ISEQ,1)*RATE
-  ENDIF
+  Mask=(DFLW_im>1.E-5 .and. DARE>1.E-5)   !! replace small depth location with zero
+  D2RIVOUT(ISEQ,1) = merge( DOUT, 0._JPRB, Mask)
+  D2RIVVEL(ISEQ,1) = merge( DVEL, 0._JPRB, Mask)
 END DO
 !$OMP END PARALLEL DO SIMD
 
-!$OMP PARALLEL DO SIMD                                                     !! for river mouth grids
-DO ISEQ=NSEQRIV+1, NSEQALL
-  IF ( LSLOPEMOUTH ) THEN
-    ! prescribed slope 
-    DSLOPE = D2ELEVSLOPE(ISEQ,1)
-  ELSE
-    DSLOPE = ( D2SFCELV(ISEQ,1) - D2DWNELV(ISEQ,1) ) * PDSTMTH ** (-1.)
-  ENDIF
-  DSLOPE_F = max( -0.005_JPRB, min( 0.005_JPRB,DSLOPE ))    !! set max&min [instead of using weir equation for efficiency]
+!=== Floodplain Flow ===
+IF( LFLDOUT )THEN
+  !$OMP PARALLEL DO SIMD PRIVATE(DFSTO,DSFC,DSFC_pr,DSLP,DFLW,DFLW_pr,DFLW_im,DARE,DARE_pr,DARE_im,DOUT_pr,DOUT,Mask)
+  DO ISEQ=1, NSEQRIV      
+    DFSTO=REAL( P2FLDSTO(ISEQ,1),KIND=JPRB)
+    DSFC   = MAX( D2SFCELV(ISEQ,1),    D2DWNELV(ISEQ,1) )
+    DSLP   = ( D2SFCELV(ISEQ,1)-D2DWNELV(ISEQ,1) ) * D2NXTDST(ISEQ,1)**(-1.)
+    DSLP   = MAX( -0.005_JPRB, min( 0.005_JPRB, DSLP ))    !! set max&min [instead of using weir equation for efficiency]
+
+    DFLW   = MAX( DSFC-D2ELEVTN(ISEQ,1), 0._JPRB )
+    DARE   = DFSTO * D2RIVLEN(ISEQ,1)**(-1.)
+    DARE   = MAX( DARE - D2FLDDPH(ISEQ,1)*D2RIVWTH(ISEQ,1), 0._JPRB )   !! remove above river channel area
+  
+    DSFC_pr = MAX( D2SFCELV_PRE(ISEQ,1),D2DWNELV_PRE(ISEQ,1) )
+    DFLW_pr = DSFC_pr - D2ELEVTN(ISEQ,1)
+    DFLW_im = MAX( (MAX(DFLW*DFLW_pr,0._JPRB))**0.5, 1.E-6_JPRB )
+  
+    DARE_pr = D2FLDSTO_PRE(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
+    DARE_pr = MAX( DARE_pr - D2FLDDPH_PRE(ISEQ,1)*D2RIVWTH(ISEQ,1), 1.E-6_JPRB )   !! remove above river channel area
+    DARE_im = MAX( (DARE*DARE_pr)**0.5, 1.E-6_JPRB )
+
+    DOUT_pr = D2FLDOUT_PRE(ISEQ,1)
+    DOUT    = ( DOUT_pr + PGRV*DT*DARE_im*DSLP ) &
+                      * (1. + PGRV*DT*PMANFLD**2. * abs(DOUT_pr)*DFLW_im**(-4./3.)*DARE_im**(-1.) )**(-1._JPRB)
+
+    Mask=(DFLW_im>1.E-5 .and. DARE>1.E-5)  !! replace small depth location with zero
+    D2FLDOUT(ISEQ,1) = merge( DOUT, 0._JPRB, Mask)
+
+    DOUT=D2FLDOUT(ISEQ,1)
+    Mask=( D2FLDOUT(ISEQ,1)*D2RIVOUT(ISEQ,1)>0._JPRB ) !! river and floodplain different direction
+    D2FLDOUT(ISEQ,1) = merge( DOUT, 0._JPRB, Mask)
+  END DO
+  !$OMP END PARALLEL DO SIMD
+ENDIF
+
 !=== river mouth flow ===
+!$OMP PARALLEL DO SIMD PRIVATE(DSFC,DSFC_pr,DSLP,DFLW,DFLW_pr,DFLW_im,DARE,DARE_pr,DARE_im,DOUT_pr,DOUT,DVEL,Mask)
+DO ISEQ=NSEQRIV+1, NSEQALL
+  DSLP = ( D2SFCELV(ISEQ,1) - D2DWNELV(ISEQ,1) ) * PDSTMTH ** (-1.)
+  IF( LSLOPEMOUTH) DSLP = D2ELEVSLOPE(ISEQ,1)
 
-  DFLW   = D2RIVDPH(ISEQ,1)
-  DAREA  = D2RIVWTH(ISEQ,1) * DFLW
+  DFLW = D2RIVDPH(ISEQ,1)
+  DARE = D2RIVWTH(ISEQ,1) * DFLW
+  DARE = MAX( DARE, 1.E-10_JPRB )             !!  flow cross-section area (min value for stability)
 
-  DFLW_PRE=D2RIVDPH_PRE(ISEQ,1)
-  DFLW_IMP=MAX( (DFLW*DFLW_PRE)**0.5, 1.E-6_JPRB )                                    !! semi implicit flow depth
+  DFLW_pr=D2RIVDPH_PRE(ISEQ,1)
+  DFLW_im=MAX( (DFLW*DFLW_pr)**0.5, 1.E-6_JPRB )                                    !! semi implicit flow depth
 
-  IF( DFLW_IMP>1.E-5 .and. DAREA>1.E-5 )THEN 
-    DOUT_PRE = D2RIVOUT_PRE(ISEQ,1) * D2RIVWTH(ISEQ,1)**(-1.)
-    D2RIVOUT(ISEQ,1) = D2RIVWTH(ISEQ,1) * ( DOUT_PRE + PGRV*DT*DFLW_IMP*DSLOPE ) &
-                             * ( 1. + PGRV*DT*D2RIVMAN(ISEQ,1)**2. * abs(DOUT_PRE)*DFLW_IMP**(-7./3.) )**(-1.)
-    D2RIVVEL(ISEQ,1) = D2RIVOUT(ISEQ,1) * DAREA**(-1._JPRB)
-  ELSE
-    D2RIVOUT(ISEQ,1) = 0._JPRB
-    D2RIVVEL(ISEQ,1) = 0._JPRB
-  ENDIF
+  DOUT_pr = D2RIVOUT_PRE(ISEQ,1) * D2RIVWTH(ISEQ,1)**(-1.)
+  DOUT = D2RIVWTH(ISEQ,1) * ( DOUT_pr + PGRV*DT*DFLW_im*DSLP ) &
+           * ( 1. + PGRV*DT*D2RIVMAN(ISEQ,1)**2. * abs(DOUT_pr)*DFLW_im**(-7./3.) )**(-1.)
+  DVEL = D2RIVOUT(ISEQ,1) * DARE**(-1._JPRB)
+
+  Mask=(DFLW_im>1.E-5 .and. DARE>1.E-5)   !! replace small depth location with zero
+  D2RIVOUT(ISEQ,1) = merge( DOUT, 0._JPRB, Mask)
+  D2RIVVEL(ISEQ,1) = merge( DVEL, 0._JPRB, Mask)
+END DO
+!$OMP END PARALLEL DO SIMD
 
 !=== floodplain mouth flow ===
-  IF( LFLDOUT )THEN
-    DFLW_F   = D2SFCELV(ISEQ,1)-D2ELEVTN(ISEQ,1)
+IF( LFLDOUT )THEN
+  !$OMP PARALLEL DO SIMD PRIVATE(DFSTO,DSFC,DSFC_pr,DSLP,DFLW,DFLW_pr,DFLW_im,DARE,DARE_pr,DARE_im,DOUT_pr,DOUT,Mask)
+  DO ISEQ=NSEQRIV+1, NSEQALL
+    DFSTO =REAL( P2FLDSTO(ISEQ,1),KIND=JPRB)
+    DSLP = ( D2SFCELV(ISEQ,1) - D2DWNELV(ISEQ,1) ) * PDSTMTH ** (-1.)
+    DSLP = max( -0.005_JPRB, min( 0.005_JPRB,DSLP ))    !! set max&min [instead of using weir equation for efficiency]
+    IF( LSLOPEMOUTH) DSLP = D2ELEVSLOPE(ISEQ,1)
+
+    DFLW = D2SFCELV(ISEQ,1)-D2ELEVTN(ISEQ,1)
+    DARE = MAX( DFSTO * D2RIVLEN(ISEQ,1)**(-1.) - D2FLDDPH(ISEQ,1)*D2RIVWTH(ISEQ,1), 0._JPRB ) !! remove above river channel area
   
-    DARE_F   = REAL( P2FLDSTO(ISEQ,1),KIND=JPRB) * D2RIVLEN(ISEQ,1)**(-1.)
-    DARE_F   = MAX( DARE_F - D2FLDDPH(ISEQ,1)*D2RIVWTH(ISEQ,1), 0._JPRB )   !! remove above river channel area
+    DFLW_pr = D2SFCELV_PRE(ISEQ,1)-D2ELEVTN(ISEQ,1)
+    DFLW_im = MAX( (MAX(DFLW*DFLW_pr,0._JPRB))**0.5, 1.E-6_JPRB )
   
-    DFLW_PRE_F = D2SFCELV_PRE(ISEQ,1)-D2ELEVTN(ISEQ,1)
-    DFLW_IMP_F = MAX( (MAX(DFLW_F*DFLW_PRE_F,0._JPRB))**0.5, 1.E-6_JPRB )
+    DARE_pr = MAX( D2FLDSTO_PRE(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.) - D2FLDDPH_PRE(ISEQ,1)*D2RIVWTH(ISEQ,1), 1.E-6_JPRB )   
+    DARE_im = MAX( (DARE*DARE_pr)**0.5, 1.E-6_JPRB )
   
-    DARE_PRE_F = D2FLDSTO_PRE(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
-    DARE_PRE_F = MAX( DARE_PRE_F - D2FLDDPH_PRE(ISEQ,1)*D2RIVWTH(ISEQ,1), 1.E-6_JPRB )   !! remove above river channel area
-    DARE_IMP_F = max( (DARE_F*DARE_PRE_F)**0.5, 1.E-6_JPRB )
-  
-    IF( DFLW_IMP_F>1.E-5 .and. DARE_IMP_F>1.E-5 )THEN 
-      DOUT_PRE_F = D2FLDOUT_PRE(ISEQ,1)
-      D2FLDOUT(ISEQ,1) = ( DOUT_PRE_F + PGRV*DT*DARE_IMP_F*DSLOPE_F ) &
-                        * (1. + PGRV*DT*PMANFLD**2. * abs(DOUT_PRE_F)*DFLW_IMP_F**(-4./3.)*DARE_IMP_F**(-1.) )**(-1.)
-    ELSE
-      D2FLDOUT(ISEQ,1) = 0._JPRB
-    ENDIF
-  
-    IF( D2FLDOUT(ISEQ,1)*D2RIVOUT(ISEQ,1)<0._JPRB ) D2FLDOUT(ISEQ,1)=0._JPRB  !! stabilization
-  ENDIF
+    DOUT_pr = D2FLDOUT_PRE(ISEQ,1)
+    DOUT    = ( DOUT_pr + PGRV*DT*DARE_im*DSLP ) &
+                        * (1. + PGRV*DT*PMANFLD**2. * abs(DOUT_pr)*DFLW_im**(-4./3.)*DARE_im**(-1.) )**(-1.)
+
+    Mask=(DFLW_im>1.E-5 .and. DARE>1.E-5)   !! replace small depth location with zero
+    D2FLDOUT(ISEQ,1) = merge( DOUT, 0._JPRB, Mask)
+
+    DOUT=D2FLDOUT(ISEQ,1)
+    Mask=( D2FLDOUT(ISEQ,1)*D2RIVOUT(ISEQ,1)>0._JPRB ) !! river and floodplain different direction
+    D2FLDOUT(ISEQ,1) = merge( DOUT, 0._JPRB, Mask)
+  END DO
+  !$OMP END PARALLEL DO SIMD
+ENDIF
+
+
+!$OMP PARALLEL DO SIMD PRIVATE(RATE,DOUT)
+DO ISEQ=1, NSEQRIV
+  !! Storage change limitter to prevent sudden increase of "upstream" water level when backwardd flow (v423)
+  DOUT = max( (-D2RIVOUT(ISEQ,1)-D2FLDOUT(ISEQ,1))*DT, 1.E-10 )
+  RATE = min( 0.05*D2STORGE(ISEQ,1)/DOUT, 1._JPRB)
+  D2RIVOUT(ISEQ,1)=D2RIVOUT(ISEQ,1)*RATE
+  D2FLDOUT(ISEQ,1)=D2FLDOUT(ISEQ,1)*RATE
 END DO
 !$OMP END PARALLEL DO SIMD
 
@@ -175,7 +189,6 @@ END SUBROUTINE CMF_CALC_OUTFLW
 !+
 !####################################################################
 SUBROUTINE CMF_CALC_INFLOW
-USE PARKIND1,           ONLY: JPIM, JPRB, JPRD
 USE YOS_CMF_MAP,        ONLY: NSEQALL,  NPTHOUT, NPTHLEV, I2MASK, PTH_UPST, PTH_DOWN
 USE YOS_CMF_PROG,       ONLY: D1PTHFLW
 USE YOS_CMF_DIAG,       ONLY: D2PTHOUT, D1PTHFLWSUM
@@ -185,7 +198,7 @@ REAL(KIND=JPRD)            :: P2STOOUT(NSEQALL,1)                      !! total 
 REAL(KIND=JPRD)            :: P2RIVINF(NSEQALL,1)                      !! 
 REAL(KIND=JPRD)            :: P2FLDINF(NSEQALL,1)                      !! 
 
-REAL(KIND=JPRD)            :: P2PTHOUT(NSEQALL,1)                  !! for water conservation
+REAL(KIND=JPRD)            :: P2PTHOUT(NSEQALL,1)                      !! for water conservation
 
 REAL(KIND=JPRB)            :: D2RATE(NSEQALL,1)                        !! outflow correction
 ! SAVE for OpenMP
@@ -196,7 +209,7 @@ REAL(KIND=JPRB),SAVE       :: OUT_R1, OUT_R2, OUT_F1, OUT_F2, DIUP, DIDW
   
 !*** 1. initialize & calculate P2STOOUT for normal cells
 
-!$OMP PARALLEL DO SIMD
+!$OMP PARALLEL DO
 DO ISEQ=1, NSEQALL
   P2RIVINF(ISEQ,1) = 0._JPRD
   P2FLDINF(ISEQ,1) = 0._JPRD
@@ -204,11 +217,11 @@ DO ISEQ=1, NSEQALL
   P2STOOUT(ISEQ,1) = 0._JPRD
   D2RATE(ISEQ,1) = 1._JPRB
 END DO
-!$OMP END PARALLEL DO SIMD
+!$OMP END PARALLEL DO
 
 !! for normal cells ---------
 #ifndef NoAtom_CMF
-!$OMP PARALLEL DO SIMD
+!$OMP PARALLEL DO
 #endif
 DO ISEQ=1, NSEQRIV                                                    !! for normalcells
   JSEQ=I1NEXT(ISEQ) ! next cell's pixel
@@ -228,22 +241,22 @@ DO ISEQ=1, NSEQRIV                                                    !! for nor
   P2STOOUT(JSEQ,1) = P2STOOUT(JSEQ,1) + DIDW 
 END DO
 #ifndef NoAtom_CMF
-!$OMP END PARALLEL DO SIMD
+!$OMP END PARALLEL DO
 #endif
 
 !! for river mouth grids ------------
-!$OMP PARALLEL DO SIMD
+!$OMP PARALLEL DO
 DO ISEQ=NSEQRIV+1, NSEQALL
   OUT_R1 = max( D2RIVOUT(ISEQ,1), 0._JPRB )
   OUT_F1 = max( D2FLDOUT(ISEQ,1), 0._JPRB )
   P2STOOUT(ISEQ,1) = P2STOOUT(ISEQ,1) + OUT_R1*DT + OUT_F1*DT
 END DO
-!$OMP END PARALLEL DO SIMD
+!$OMP END PARALLEL DO
 
 !! for bifurcation channels ------------
 IF( LPTHOUT )THEN
 #ifndef NoAtom_CMF
-!$OMP PARALLEL DO SIMD  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
+!$OMP PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
 #endif
   DO IPTH=1, NPTHOUT  
     ISEQP=PTH_UPST(IPTH)
@@ -266,24 +279,24 @@ IF( LPTHOUT )THEN
     P2STOOUT(JSEQP,1) = P2STOOUT(JSEQP,1) + DIDW
   END DO
 #ifndef NoAtom_CMF
-!$OMP END PARALLEL DO SIMD  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
+!$OMP END PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
 #endif
 ENDIF
 
 !============================
 !*** 2. modify outflow
 
-!$OMP PARALLEL DO SIMD
+!$OMP PARALLEL DO
 DO ISEQ=1, NSEQALL
   IF ( P2STOOUT(ISEQ,1) > 1.E-8 ) THEN
     D2RATE(ISEQ,1) = REAL( min( (P2RIVSTO(ISEQ,1)+P2FLDSTO(ISEQ,1)) * P2STOOUT(ISEQ,1)**(-1.), 1._JPRD ), KIND=JPRB)
   ENDIF
 END DO
-!$OMP END PARALLEL DO SIMD
+!$OMP END PARALLEL DO
 
 !! normal pixels------
 #ifndef NoAtom_CMF
-!$OMP PARALLEL DO SIMD  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
+!$OMP PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
 #endif
 DO ISEQ=1, NSEQRIV ! for normal pixels
   JSEQ=I1NEXT(ISEQ)
@@ -304,21 +317,21 @@ DO ISEQ=1, NSEQRIV ! for normal pixels
   P2FLDINF(JSEQ,1) = P2FLDINF(JSEQ,1) + D2FLDOUT(ISEQ,1)
 END DO
 #ifndef NoAtom_CMF
-!$OMP END PARALLEL DO SIMD
+!$OMP END PARALLEL DO
 #endif
 
 !! river mouth-----------------
-!$OMP PARALLEL DO SIMD
+!$OMP PARALLEL DO
 DO ISEQ=NSEQRIV+1, NSEQALL
   D2RIVOUT(ISEQ,1) = D2RIVOUT(ISEQ,1)*D2RATE(ISEQ,1)
   D2FLDOUT(ISEQ,1) = D2FLDOUT(ISEQ,1)*D2RATE(ISEQ,1)
 END DO
-!$OMP END PARALLEL DO SIMD
+!$OMP END PARALLEL DO
 
 !! bifurcation channels --------
 IF( LPTHOUT )THEN
 #ifndef NoAtom_CMF
-!$OMP PARALLEL DO SIMD  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
+!$OMP PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
 #endif
   DO IPTH=1, NPTHOUT  
     ISEQP=PTH_UPST(IPTH)
@@ -352,13 +365,17 @@ IF( LPTHOUT )THEN
 
   END DO
 #ifndef NoAtom_CMF
-!$OMP END PARALLEL DO SIMD  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
+!$OMP END PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
 #endif
 ENDIF
 
-D2RIVINF(:,:)=REAL(P2RIVINF(:,:), KIND=JPRB)  !! needed for SinglePrecisionMode
-D2FLDINF(:,:)=REAL(P2FLDINF(:,:), KIND=JPRB)
-D2PTHOUT(:,:)=REAL(P2PTHOUT(:,:), KIND=JPRB)
+!$OMP PARALLEL DO SIMD
+DO ISEQ=1, NSEQALL
+  D2RIVINF(ISEQ,1)=REAL( P2RIVINF(ISEQ,1), KIND=JPRB)  !! needed for SinglePrecisionMode
+  D2FLDINF(ISEQ,1)=REAL( P2FLDINF(ISEQ,1), KIND=JPRB)
+  D2PTHOUT(ISEQ,1)=REAL( P2PTHOUT(ISEQ,1), KIND=JPRB)
+END DO
+!$OMP END PARALLEL DO SIMD
 
 END SUBROUTINE CMF_CALC_INFLOW
 !####################################################################
@@ -366,23 +383,15 @@ END SUBROUTINE CMF_CALC_INFLOW
 !+
 !+
 !####################################################################
-SUBROUTINE CMF_CALC_INFLOW_LSMAPAT
-USE PARKIND1,           ONLY: JPIM, JPRB, JPRD
+SUBROUTINE CMF_CALC_INFLOW_LSPAMAT
 USE YOS_CMF_MAP,        ONLY: NSEQALL,  NPTHOUT, NPTHLEV, I2MASK, PTH_UPST, PTH_DOWN
 USE YOS_CMF_PROG,       ONLY: D1PTHFLW
-USE YOS_CMF_DIAG,       ONLY: D2PTHOUT, D1PTHFLWSUM
+USE YOS_CMF_DIAG,       ONLY: D2PTHOUT, D1PTHFLWSUM, P2STOOUT, P2RIVINF, P2FLDINF, P2PTHOUT, D2RATE
 IMPLICIT NONE
-!*** Local
-REAL(KIND=JPRD)            :: P2STOOUT(NSEQALL,1)                      !! total outflow from a grid     [m3]
-REAL(KIND=JPRD)            :: P2RIVINF(NSEQALL,1)                      !! 
-REAL(KIND=JPRD)            :: P2FLDINF(NSEQALL,1)                      !! 
-
-REAL(KIND=JPRD)            :: P2PTHOUT(NSEQALL,1)                  !! for water conservation
-
-REAL(KIND=JPRB)            :: D2RATE(NSEQALL,1)                        !! outflow correction
 ! SAVE for OpenMP
-INTEGER(KIND=JPIM),SAVE    :: ISEQ, JSEQ, IPTH, ILEV, INUM, JPTH, ISEQP, JSEQP
-!$OMP THREADPRIVATE          (JSEQ,ISEQP, JSEQP, ILEV, INUM, JPTH)
+REAL(KIND=JPRB),SAVE       :: DOUT, DSTO
+INTEGER(KIND=JPIM),SAVE    :: ISEQ, IPTH, JSEQ, ILEV, INUM, JPTH, ISEQP, JSEQP
+!$OMP THREADPRIVATE                      (JSEQ, ILEV, INUM, JPTH, ISEQP, JSEQP)
 !================================================
   
 !*** 1. initialize & calculate P2STOOUT for normal cells
@@ -393,12 +402,11 @@ DO ISEQ=1, NSEQALL
   P2FLDINF(ISEQ,1) = 0._JPRD
   P2PTHOUT(ISEQ,1) = 0._JPRD
   P2STOOUT(ISEQ,1) = 0._JPRD
-  D2RATE(ISEQ,1) = 1._JPRB
 END DO
 !$OMP END PARALLEL DO SIMD
 
 !! for normal cells ---------
-!$OMP PARALLEL DO SIMD
+!$OMP PARALLEL DO
 DO ISEQ=1, NSEQALL
   P2STOOUT(ISEQ,1) = max( D2RIVOUT(ISEQ,1),0._JPRB ) + max( D2FLDOUT(ISEQ,1),0._JPRB )
   IF( I1UPN(ISEQ)>0 )THEN
@@ -409,11 +417,11 @@ DO ISEQ=1, NSEQALL
   ENDIF
   P2STOOUT(ISEQ,1) = P2STOOUT(ISEQ,1) *DT
 END DO
-!$OMP END PARALLEL DO SIMD
+!$OMP END PARALLEL DO
 
 !! for bifurcation channels ------------
 IF( LPTHOUT )THEN
-!$OMP PARALLEL DO SIMD  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
+!$OMP PARALLEL DO  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
   DO ISEQ=1, NSEQALL
     IF( I1P_OUTN(ISEQ)>0 )THEN
       DO INUM=1, I1P_OUTN(ISEQ)
@@ -429,25 +437,25 @@ IF( LPTHOUT )THEN
       END DO
     ENDIF
   END DO
-!$OMP END PARALLEL DO SIMD
+!$OMP END PARALLEL DO
 ENDIF
 
 !============================
 !*** 2. modify outflow
 
-!$OMP PARALLEL DO SIMD
+!$OMP PARALLEL DO SIMD PRIVATE(DOUT,DSTO)
 DO ISEQ=1, NSEQALL
-  IF ( P2STOOUT(ISEQ,1) > 1.E-8 ) THEN
-    D2RATE(ISEQ,1) = REAL( min( (P2RIVSTO(ISEQ,1)+P2FLDSTO(ISEQ,1)) * P2STOOUT(ISEQ,1)**(-1.), 1._JPRD ), KIND=JPRB)
-  ENDIF
+  DOUT=max( REAL(P2STOOUT(ISEQ,1),KIND=JPRB),1.E-10_JPRB)
+  DSTO=REAL( (P2RIVSTO(ISEQ,1)+P2FLDSTO(ISEQ,1)),KIND=JPRB )
+  D2RATE(ISEQ,1) = min( DSTO/DOUT, 1._JPRB )
 END DO
 !$OMP END PARALLEL DO SIMD
 
 !! normal pixels------
-!$OMP PARALLEL DO SIMD  !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
+!$OMP PARALLEL DO !! No OMP Atomic for bit-identical simulation (set in Mkinclude)
 DO ISEQ=1, NSEQRIV ! for normal pixels
   JSEQ=I1NEXT(ISEQ)
-  IF( D2RIVOUT(ISEQ,1) >= 0._JPRB )THEN
+  IF( D2RIVOUT(ISEQ,1) > 0._JPRB )THEN
     D2RIVOUT(ISEQ,1) = D2RIVOUT(ISEQ,1)*D2RATE(ISEQ,1)
     D2FLDOUT(ISEQ,1) = D2FLDOUT(ISEQ,1)*D2RATE(ISEQ,1)
   ELSE
@@ -455,7 +463,7 @@ DO ISEQ=1, NSEQRIV ! for normal pixels
     D2FLDOUT(ISEQ,1) = D2FLDOUT(ISEQ,1)*D2RATE(JSEQ,1)
   ENDIF
 END DO
-!$OMP END PARALLEL DO SIMD
+!$OMP END PARALLEL DO
 
 !! river mouth-----------------
 !$OMP PARALLEL DO SIMD
@@ -465,8 +473,11 @@ DO ISEQ=NSEQRIV+1, NSEQALL
 END DO
 !$OMP END PARALLEL DO SIMD
 
+!============================
+!*** 3. Inflow calculation
 
-!$OMP PARALLEL DO SIMD 
+
+!$OMP PARALLEL DO
 DO ISEQ=1, NSEQALL ! for normal pixels
   IF( I1UPN(ISEQ)>0 )THEN
     DO INUM=1, I1UPN(ISEQ)
@@ -476,12 +487,12 @@ DO ISEQ=1, NSEQALL ! for normal pixels
     END DO
   ENDIF
 END DO
-!$OMP END PARALLEL DO SIMD
+!$OMP END PARALLEL DO
 
 
 !! bifurcation channels --------
 IF( LPTHOUT )THEN
-!$OMP PARALLEL DO SIMD  
+!$OMP PARALLEL DO
   DO IPTH=1, NPTHOUT  
     ISEQP=PTH_UPST(IPTH)
     JSEQP=PTH_DOWN(IPTH)
@@ -503,9 +514,9 @@ IF( LPTHOUT )THEN
       D1PTHFLWSUM(IPTH) = D1PTHFLWSUM(IPTH)*D2RATE(JSEQP,1)
     ENDIF    
   END DO
-!$OMP END PARALLEL DO SIMD  
+!$OMP END PARALLEL DO
 
-!$OMP PARALLEL DO SIMD  
+!$OMP PARALLEL DO
   DO ISEQ=1, NSEQALL
     IF( I1P_OUTN(ISEQ)>0 )THEN
       DO INUM=1, I1P_OUTN(ISEQ)
@@ -521,13 +532,17 @@ IF( LPTHOUT )THEN
       END DO
     ENDIF
   END DO
-!$OMP END PARALLEL DO SIMD  
+!$OMP END PARALLEL DO
 ENDIF
 
-D2RIVINF(:,:)=REAL( P2RIVINF(:,:), KIND=JPRB)  !! needed for SinglePrecisionMode
-D2FLDINF(:,:)=REAL( P2FLDINF(:,:), KIND=JPRB)
-D2PTHOUT(:,:)=REAL( P2PTHOUT(:,:), KIND=JPRB)
+!$OMP PARALLEL DO SIMD
+DO ISEQ=1, NSEQALL
+  D2RIVINF(ISEQ,1)=REAL( P2RIVINF(ISEQ,1), KIND=JPRB)  !! needed for SinglePrecisionMode
+  D2FLDINF(ISEQ,1)=REAL( P2FLDINF(ISEQ,1), KIND=JPRB)
+  D2PTHOUT(ISEQ,1)=REAL( P2PTHOUT(ISEQ,1), KIND=JPRB)
+END DO
+!$OMP END PARALLEL DO SIMD
 
-END SUBROUTINE CMF_CALC_INFLOW_LSMAPAT
+END SUBROUTINE CMF_CALC_INFLOW_LSPAMAT
 !####################################################################
 END MODULE CMF_CALC_OUTFLW_MOD
