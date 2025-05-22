@@ -55,7 +55,7 @@ LOGOUT="./log_CaMa.txt"                     # standard log output
 
 #============================
 #*** 1b. Model physics option
-DT=86400                                    # base DT (modified in physics loop by LADPSTP)
+DT=3600                                     # base DT (modified in physics loop by LADPSTP)
 LADPSTP=".TRUE."                            # .TRUE. for adaptive time step
 LPTHOUT=".TRUE."                            # .TRUE. to activate bifurcation flow, mainly for delta simulation
 LDAMOUT=".FALSE."                           # .TRUE. to activate reservoir operation (under development)

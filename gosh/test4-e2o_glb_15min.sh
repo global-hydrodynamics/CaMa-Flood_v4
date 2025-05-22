@@ -29,13 +29,13 @@
 
 #*** 0a. Set CaMa-Flood base directory
 BASE=`pwd`/..
-# BASE="/home/yamadai/work/CaMa_v420/cmf_v420_pkg"  # setting for PBS in cluster
+# BASE="/home/yamadai/work/CaMa_v424_simd/cmf_v424_pkg"  # setting for PBS in cluster
 
 echo $BASE
 
 #*** 0b. Set dynamic library if needed
 export IFORTLIB="/opt/intel/lib:/opt/intel/mkl/lib"
-export HDF5LIB="/opt/local/hdf5-1.10.5/lib"
+export HDF5LIB="/opt/local/hdf5/lib"
 export DYLD_LIBRARY_PATH="${HDF5LIB}:${IFORTLIB}:${DYLD_LIBRARY_PATH}"
 
 #*** 0c. OpenMP thread number
@@ -59,7 +59,7 @@ LOGOUT="./log_CaMa.txt"                     # standard log output
 
 #============================
 #*** 1b. Model physics option
-DT=86400                                    # base DT (modified in physics loop by LADPSTP)
+DT=3600                                     # base DT (modified in physics loop by LADPSTP)
 LADPSTP=".TRUE."                            # .TRUE. for adaptive time step
 LPTHOUT=".TRUE."                            # .TRUE. to activate bifurcation flow, mainly for delta simulation
 
