@@ -227,7 +227,11 @@ DO IDAM = 1, NDAM
 END DO
 CLOSE(NDAMFILE)
 
-WRITE(LOGNAM,*) "CMF::DAMOUT_INIT: allocated dams:", NDAMX 
+WRITE(LOGNAM,*) "CMF::DAMOUT_INIT: allocated dams:", NDAMX
+IF (NDAMX == 0) THEN
+  WRITE(LOGNAM, *) "CMF::DAMOUT_INIT: None of the given dams allocated."
+  STOP 9
+ENDIF
 !==========
 
 !! mark upstream of dam grid, for applying kinematic wave routine to suppress storage buffer effect.
