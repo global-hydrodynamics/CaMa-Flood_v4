@@ -320,7 +320,7 @@ D2RIVDPH_aMAX(:,:)=0._JPRB
 
 !============
 !*** 3a. time-average 2D diagnostics for output
-NADD_out=0
+NADD_out = 0._JPRB
 
 ALLOCATE(D2RIVOUT_oAVG(NSEQALL,1))
 ALLOCATE(D2FLDOUT_oAVG(NSEQALL,1))

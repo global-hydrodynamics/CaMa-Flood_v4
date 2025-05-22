@@ -60,19 +60,19 @@ END DO
 !$OMP PARALLEL DO SIMD PRIVATE(DSFC,DSFC_pr,DSLP,DFLW,DFLW_pr,DFLW_im,DARE,DARE_pr,DARE_im,DOUT_pr,DOUT,DVEL,Mask)
 DO ISEQ=1, NSEQRIV                                                !! for normal cells
   DSFC = MAX( D2SFCELV(ISEQ,1),    D2DWNELV(ISEQ,1) )
-  DSLP = ( D2SFCELV(ISEQ,1)-D2DWNELV(ISEQ,1) ) * D2NXTDST(ISEQ,1)**(-1.)
+  DSLP = ( D2SFCELV(ISEQ,1)-D2DWNELV(ISEQ,1) ) * D2NXTDST(ISEQ,1)**(-1._JPRB)
 !=== River Flow ===
   DFLW = DSFC - D2RIVELV(ISEQ,1)                             !!  flow cross-section depth
-  DARE = MAX( D2RIVWTH(ISEQ,1)*DFLW, 1.E-10_JPRB )           !!  flow cross-section area
+  DARE = MAX( D2RIVWTH(ISEQ,1)*DFLW, 10._JPRB**-10 )           !!  flow cross-section area
 
   DSFC_pr=MAX( D2SFCELV_PRE(ISEQ,1),D2DWNELV_PRE(ISEQ,1) )
   DFLW_pr=DSFC_pr - D2RIVELV(ISEQ,1)
-  DFLW_im=MAX( (DFLW*DFLW_pr)**0.5 ,1.E-6_JPRB )             !! semi implicit flow depth
+  DFLW_im=MAX( (DFLW*DFLW_pr)**0.5_JPRB ,1.E-6_JPRB )             !! semi implicit flow depth
 
-  DOUT_pr= D2RIVOUT_PRE(ISEQ,1) * D2RIVWTH(ISEQ,1)**(-1.)    !! outflow (t-1) [m2/s] (unit width)
+  DOUT_pr= D2RIVOUT_PRE(ISEQ,1) * D2RIVWTH(ISEQ,1)**(-1._JPRB)    !! outflow (t-1) [m2/s] (unit width)
   DOUT=D2RIVWTH(ISEQ,1) * ( DOUT_pr + PGRV*DT*DFLW_im*DSLP ) &
-                           * ( 1. + PGRV*DT*D2RIVMAN(ISEQ,1)**2.*abs(DOUT_pr)*DFLW_im**(-7./3.) )**(-1.)
-  DVEL= D2RIVOUT(ISEQ,1) * DARE**(-1.)
+                           * ( 1._JPRB + PGRV*DT*D2RIVMAN(ISEQ,1)**2._JPRB*abs(DOUT_pr)*DFLW_im**(-7._JPRB/3._JPRB) )**(-1._JPRB)
+  DVEL= D2RIVOUT(ISEQ,1) * DARE**(-1._JPRB)
 
   Mask=(DFLW_im>1.E-5 .and. DARE>1.E-5)   !! replace small depth location with zero
   D2RIVOUT(ISEQ,1) = merge( DOUT, 0._JPRB, Mask)
@@ -86,26 +86,26 @@ IF( LFLDOUT )THEN
   DO ISEQ=1, NSEQRIV      
     DFSTO=REAL( P2FLDSTO(ISEQ,1),KIND=JPRB)
     DSFC   = MAX( D2SFCELV(ISEQ,1),    D2DWNELV(ISEQ,1) )
-    DSLP   = ( D2SFCELV(ISEQ,1)-D2DWNELV(ISEQ,1) ) * D2NXTDST(ISEQ,1)**(-1.)
+    DSLP   = ( D2SFCELV(ISEQ,1)-D2DWNELV(ISEQ,1) ) * D2NXTDST(ISEQ,1)**(-1._JPRB)
     DSLP   = MAX( -0.005_JPRB, min( 0.005_JPRB, DSLP ))    !! set max&min [instead of using weir equation for efficiency]
 
     DFLW   = MAX( DSFC-D2ELEVTN(ISEQ,1), 0._JPRB )
-    DARE   = DFSTO * D2RIVLEN(ISEQ,1)**(-1.)
+    DARE   = DFSTO * D2RIVLEN(ISEQ,1)**(-1._JPRB)
     DARE   = MAX( DARE - D2FLDDPH(ISEQ,1)*D2RIVWTH(ISEQ,1), 0._JPRB )   !! remove above river channel area
   
     DSFC_pr = MAX( D2SFCELV_PRE(ISEQ,1),D2DWNELV_PRE(ISEQ,1) )
     DFLW_pr = DSFC_pr - D2ELEVTN(ISEQ,1)
-    DFLW_im = MAX( (MAX(DFLW*DFLW_pr,0._JPRB))**0.5, 1.E-6_JPRB )
+    DFLW_im = MAX( (MAX(DFLW*DFLW_pr,0._JPRB))**0.5_JPRB, 1.E-6_JPRB )
   
-    DARE_pr = D2FLDSTO_PRE(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.)
+    DARE_pr = D2FLDSTO_PRE(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1._JPRB)
     DARE_pr = MAX( DARE_pr - D2FLDDPH_PRE(ISEQ,1)*D2RIVWTH(ISEQ,1), 1.E-6_JPRB )   !! remove above river channel area
-    DARE_im = MAX( (DARE*DARE_pr)**0.5, 1.E-6_JPRB )
+    DARE_im = MAX( (DARE*DARE_pr)**0.5_JPRB, 1.E-6_JPRB )
 
     DOUT_pr = D2FLDOUT_PRE(ISEQ,1)
     DOUT    = ( DOUT_pr + PGRV*DT*DARE_im*DSLP ) &
-                      * (1. + PGRV*DT*PMANFLD**2. * abs(DOUT_pr)*DFLW_im**(-4./3.)*DARE_im**(-1.) )**(-1._JPRB)
+                      * (1._JPRB + PGRV*DT*PMANFLD**2._JPRB * abs(DOUT_pr)*DFLW_im**(-4._JPRB/3._JPRB)*DARE_im**(-1._JPRB) )**(-1._JPRB)
 
-    Mask=(DFLW_im>1.E-5 .and. DARE>1.E-5)  !! replace small depth location with zero
+    Mask=(DFLW_im>1.E-5_JPRB .and. DARE>1.E-5_JPRB)  !! replace small depth location with zero
     D2FLDOUT(ISEQ,1) = merge( DOUT, 0._JPRB, Mask)
 
     DOUT=D2FLDOUT(ISEQ,1)
@@ -118,7 +118,7 @@ ENDIF
 !=== river mouth flow ===
 !$OMP PARALLEL DO SIMD PRIVATE(DSFC,DSFC_pr,DSLP,DFLW,DFLW_pr,DFLW_im,DARE,DARE_pr,DARE_im,DOUT_pr,DOUT,DVEL,Mask)
 DO ISEQ=NSEQRIV+1, NSEQALL
-  DSLP = ( D2SFCELV(ISEQ,1) - D2DWNELV(ISEQ,1) ) * PDSTMTH ** (-1.)
+  DSLP = ( D2SFCELV(ISEQ,1) - D2DWNELV(ISEQ,1) ) * PDSTMTH ** (-1._JPRB)
   IF( LSLOPEMOUTH) DSLP = D2ELEVSLOPE(ISEQ,1)
 
   DFLW = D2RIVDPH(ISEQ,1)
@@ -126,11 +126,11 @@ DO ISEQ=NSEQRIV+1, NSEQALL
   DARE = MAX( DARE, 1.E-10_JPRB )             !!  flow cross-section area (min value for stability)
 
   DFLW_pr=D2RIVDPH_PRE(ISEQ,1)
-  DFLW_im=MAX( (DFLW*DFLW_pr)**0.5, 1.E-6_JPRB )                                    !! semi implicit flow depth
+  DFLW_im=MAX( (DFLW*DFLW_pr)**0.5_JPRB, 1.E-6_JPRB )                                    !! semi implicit flow depth
 
-  DOUT_pr = D2RIVOUT_PRE(ISEQ,1) * D2RIVWTH(ISEQ,1)**(-1.)
+  DOUT_pr = D2RIVOUT_PRE(ISEQ,1) * D2RIVWTH(ISEQ,1)**(-1._JPRB)
   DOUT = D2RIVWTH(ISEQ,1) * ( DOUT_pr + PGRV*DT*DFLW_im*DSLP ) &
-           * ( 1. + PGRV*DT*D2RIVMAN(ISEQ,1)**2. * abs(DOUT_pr)*DFLW_im**(-7./3.) )**(-1.)
+           * ( 1._JPRB + PGRV*DT*D2RIVMAN(ISEQ,1)**2._JPRB * abs(DOUT_pr)*DFLW_im**(-7._JPRB/3._JPRB) )**(-1._JPRB)
   DVEL = D2RIVOUT(ISEQ,1) * DARE**(-1._JPRB)
 
   Mask=(DFLW_im>1.E-5 .and. DARE>1.E-5)   !! replace small depth location with zero
@@ -144,22 +144,22 @@ IF( LFLDOUT )THEN
   !$OMP PARALLEL DO SIMD PRIVATE(DFSTO,DSFC,DSFC_pr,DSLP,DFLW,DFLW_pr,DFLW_im,DARE,DARE_pr,DARE_im,DOUT_pr,DOUT,Mask)
   DO ISEQ=NSEQRIV+1, NSEQALL
     DFSTO =REAL( P2FLDSTO(ISEQ,1),KIND=JPRB)
-    DSLP = ( D2SFCELV(ISEQ,1) - D2DWNELV(ISEQ,1) ) * PDSTMTH ** (-1.)
+    DSLP = ( D2SFCELV(ISEQ,1) - D2DWNELV(ISEQ,1) ) * PDSTMTH ** (-1._JPRB)
     DSLP = max( -0.005_JPRB, min( 0.005_JPRB,DSLP ))    !! set max&min [instead of using weir equation for efficiency]
     IF( LSLOPEMOUTH) DSLP = D2ELEVSLOPE(ISEQ,1)
 
     DFLW = D2SFCELV(ISEQ,1)-D2ELEVTN(ISEQ,1)
-    DARE = MAX( DFSTO * D2RIVLEN(ISEQ,1)**(-1.) - D2FLDDPH(ISEQ,1)*D2RIVWTH(ISEQ,1), 0._JPRB ) !! remove above river channel area
+    DARE = MAX( DFSTO * D2RIVLEN(ISEQ,1)**(-1._JPRB) - D2FLDDPH(ISEQ,1)*D2RIVWTH(ISEQ,1), 0._JPRB ) !! remove above river channel area
   
     DFLW_pr = D2SFCELV_PRE(ISEQ,1)-D2ELEVTN(ISEQ,1)
-    DFLW_im = MAX( (MAX(DFLW*DFLW_pr,0._JPRB))**0.5, 1.E-6_JPRB )
+    DFLW_im = MAX( (MAX(DFLW*DFLW_pr,0._JPRB))**0.5_JPRB, 1.E-6_JPRB )
   
-    DARE_pr = MAX( D2FLDSTO_PRE(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1.) - D2FLDDPH_PRE(ISEQ,1)*D2RIVWTH(ISEQ,1), 1.E-6_JPRB )   
-    DARE_im = MAX( (DARE*DARE_pr)**0.5, 1.E-6_JPRB )
+    DARE_pr = MAX( D2FLDSTO_PRE(ISEQ,1) * D2RIVLEN(ISEQ,1)**(-1._JPRB) - D2FLDDPH_PRE(ISEQ,1)*D2RIVWTH(ISEQ,1), 1.E-6_JPRB )   
+    DARE_im = MAX( (DARE*DARE_pr)**0.5_JPRB, 1.E-6_JPRB )
   
     DOUT_pr = D2FLDOUT_PRE(ISEQ,1)
     DOUT    = ( DOUT_pr + PGRV*DT*DARE_im*DSLP ) &
-                        * (1. + PGRV*DT*PMANFLD**2. * abs(DOUT_pr)*DFLW_im**(-4./3.)*DARE_im**(-1.) )**(-1.)
+                        * (1._JPRB + PGRV*DT*PMANFLD**2._JPRB * abs(DOUT_pr)*DFLW_im**(-4._JPRB/3._JPRB)*DARE_im**(-1._JPRB) )**(-1._JPRB)
 
     Mask=(DFLW_im>1.E-5 .and. DARE>1.E-5)   !! replace small depth location with zero
     D2FLDOUT(ISEQ,1) = merge( DOUT, 0._JPRB, Mask)
@@ -176,7 +176,7 @@ ENDIF
 DO ISEQ=1, NSEQRIV
   !! Storage change limitter to prevent sudden increase of "upstream" water level when backwardd flow (v423)
   DOUT = max( (-D2RIVOUT(ISEQ,1)-D2FLDOUT(ISEQ,1))*DT, 1.E-10 )
-  RATE = min( 0.05*D2STORGE(ISEQ,1)/DOUT, 1._JPRB)
+  RATE = min( 0.05_JPRB*D2STORGE(ISEQ,1)/DOUT, 1._JPRB)
   D2RIVOUT(ISEQ,1)=D2RIVOUT(ISEQ,1)*RATE
   D2FLDOUT(ISEQ,1)=D2FLDOUT(ISEQ,1)*RATE
 END DO
@@ -289,7 +289,7 @@ ENDIF
 !$OMP PARALLEL DO
 DO ISEQ=1, NSEQALL
   IF ( P2STOOUT(ISEQ,1) > 1.E-8 ) THEN
-    D2RATE(ISEQ,1) = REAL( min( (P2RIVSTO(ISEQ,1)+P2FLDSTO(ISEQ,1)) * P2STOOUT(ISEQ,1)**(-1.), 1._JPRD ), KIND=JPRB)
+    D2RATE(ISEQ,1) = REAL( min( (P2RIVSTO(ISEQ,1)+P2FLDSTO(ISEQ,1)) * P2STOOUT(ISEQ,1)**(-1._JPRB), 1._JPRD ), KIND=JPRB)
   ENDIF
 END DO
 !$OMP END PARALLEL DO
