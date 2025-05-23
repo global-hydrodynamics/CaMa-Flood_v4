@@ -41,8 +41,7 @@ CHARACTER(LEN=256)              ::  CGAUTXT           ! List of Gauges (ID, IX, 
 NAMELIST/NOUTPUT/ COUTDIR,CVARSOUT,COUTTAG,LOUTCDF,NDLEVEL,LOUTVEC,IFRQ_OUT,LOUTTXT,CGAUTXT
 !
 !*** local variables
-INTEGER(KIND=JPIM)              :: NVARS              ! temporal output var number
-PARAMETER                         (NVARS=100)          ! actual   output var number
+INTEGER(KIND=JPIM), PARAMETER   :: NVARS=100          ! temporal output var number
 INTEGER(KIND=JPIM)              :: NVARSOUT
 INTEGER(KIND=JPIM)              :: IRECOUT            ! Output file irec
 

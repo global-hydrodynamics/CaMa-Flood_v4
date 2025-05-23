@@ -47,7 +47,7 @@ DO IPTH=1, NPTHOUT
   IF (ISEQP<=0 .OR. JSEQP<=0 ) CYCLE
   IF (I2MASK(ISEQP,1)>0 .OR. I2MASK(JSEQP,1)>0 ) CYCLE  !! I2MASK is for 1: kinemacit 2: dam  no bifurcation
   
-  DSLP  = (D2SFCELV(ISEQP,1)-D2SFCELV(JSEQP,1)) * PTH_DST(IPTH)**(-1.)
+  DSLP  = (D2SFCELV(ISEQP,1)-D2SFCELV(JSEQP,1)) * PTH_DST(IPTH)**(-1._JPRB)
   DSLP = max(-0.005_JPRB,min(0.005_JPRB,DSLP))                                    !! v390 stabilization
 
   DO ILEV=1, NPTHLEV
@@ -58,13 +58,13 @@ DO IPTH=1, NPTHOUT
     DFLW_pr = MAX(D2SFCELV_PRE(ISEQP,1),D2SFCELV_PRE(JSEQP,1)) - PTH_ELV(IPTH,ILEV)
     DFLW_pr = MAX(DFLW_pr,0._JPRB)
 
-    DFLW_im = (DFLW*DFLW_pr)**0.5                                       !! semi implicit flow depth
-    DFLW_im = MAX( DFLW_im,(DFLW*0.01)**0.5 )
+    DFLW_im = (DFLW*DFLW_pr)**0.5_JPRB                                       !! semi implicit flow depth
+    DFLW_im = MAX( DFLW_im,(DFLW*0.01_JPRB)**0.5_JPRB )
 
     IF( DFLW_im>1.E-5 )THEN                         !! local inertial equation, see [Bates et al., 2010, J.Hydrol.]
-      DOUT_pr = D1PTHFLW_PRE(IPTH,ILEV) * PTH_WTH(IPTH,ILEV)**(-1.)                         !! outflow (t-1) [m2/s] (unit width)
+      DOUT_pr = D1PTHFLW_PRE(IPTH,ILEV) * PTH_WTH(IPTH,ILEV)**(-1._JPRB)                         !! outflow (t-1) [m2/s] (unit width)
       D1PTHFLW(IPTH,ILEV) = PTH_WTH(IPTH,ILEV) * ( DOUT_pr + PGRV*DT*DFLW_im*DSLP ) &
-                         * ( 1. + PGRV*DT*PTH_MAN(ILEV)**2. * abs(DOUT_pr)*DFLW_im**(-7./3.) )**(-1.)
+                         * ( 1._JPRB + PGRV*DT*PTH_MAN(ILEV)**2._JPRB * abs(DOUT_pr)*DFLW_im**(-7._JPRB/3._JPRB) )**(-1._JPRB)
     ELSE
       D1PTHFLW(IPTH,ILEV) = 0._JPRB
     ENDIF
@@ -83,7 +83,7 @@ DO IPTH=1, NPTHOUT
   ISEQP=PTH_UPST(IPTH)
   JSEQP=PTH_DOWN(IPTH)
   IF( D1PTHFLWSUM(IPTH)/=0._JPRB )THEN
-    RATE= 0.05*min(D2STORGE(ISEQP,1),D2STORGE(JSEQP,1)) / abs(D1PTHFLWSUM(IPTH)*DT)  !! flow limit: 5% storage for stability
+    RATE= 0.05_JPRB*min(D2STORGE(ISEQP,1),D2STORGE(JSEQP,1)) / abs(D1PTHFLWSUM(IPTH)*DT)  !! flow limit: 5% storage for stability
     RATE= min(RATE, 1.0_JPRB )
     D1PTHFLW(IPTH,:) =D1PTHFLW(IPTH,:) *RATE
     D1PTHFLWSUM(IPTH)=D1PTHFLWSUM(IPTH)*RATE

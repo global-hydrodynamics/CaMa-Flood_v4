@@ -179,10 +179,10 @@ DO IDAM = 1, NDAM
   ENDIF
 
   !! storage parameter --- from Million Cubic Meter to m3
-  FldVol(IDAM) = FldVol_mcm * 1.E6                  ! Flood control storage capacity: exclusive for flood control
-  ConVol(IDAM) = ConVol_mcm * 1.E6
+  FldVol(IDAM) = FldVol_mcm * 1.E6_JPRB  ! Flood control storage capacity: exclusive for flood control
+  ConVol(IDAM) = ConVol_mcm * 1.E6_JPRB
 
-  EmeVol(IDAM) = ConVol(IDAM) + FldVol(IDAM) * 0.95     ! storage to start emergency operation
+  EmeVol(IDAM) = ConVol(IDAM) + FldVol(IDAM) * 0.95_JPRB  ! storage to start emergency operation
 
   IX=DamIX(IDAM)
   IY=DamIY(IDAM)
@@ -200,7 +200,7 @@ DO IDAM = 1, NDAM
   I2MASK(ISEQ,1)=2   !! reservoir grid. skipped for adaptive time step
 
   IF( LDAMH22 )THEN    !! Hanazaki 2022 scheme 
-    NorVol(IDAM)   = ConVol(IDAM) * 0.5    ! normal storage
+    NorVol(IDAM)   = ConVol(IDAM) * 0.5_JPRB    ! normal storage
     R_VolUpa(NDAM) = FldVol(IDAM) * 1.E-6 / upreal(IDAM)
 
   ELSE  !! Yamazaki&Funato scheme (paper in prep)
@@ -227,7 +227,11 @@ DO IDAM = 1, NDAM
 END DO
 CLOSE(NDAMFILE)
 
-WRITE(LOGNAM,*) "CMF::DAMOUT_INIT: allocated dams:", NDAMX 
+WRITE(LOGNAM,*) "CMF::DAMOUT_INIT: allocated dams:", NDAMX
+IF (NDAMX == 0) THEN
+  WRITE(LOGNAM, *) "CMF::DAMOUT_INIT: None of the given dams allocated."
+  STOP 9
+ENDIF
 !==========
 
 !! mark upstream of dam grid, for applying kinematic wave routine to suppress storage buffer effect.

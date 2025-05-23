@@ -91,8 +91,7 @@ TYPE(TTRACE),ALLOCATABLE        :: VTRACE(:)          ! tracer variable TYPE set
 
 !================
 !*** local variables for output
-INTEGER(KIND=JPIM)              :: NVARS              ! temporal output var number
-PARAMETER                         (NVARS=100)          ! actual   output var number
+INTEGER(KIND=JPIM), PARAMETER   :: NVARS = 100
 INTEGER(KIND=JPIM)              :: NVARSOUT
 INTEGER(KIND=JPIM)              :: IRECOUT            ! Output file irec
 !*** TYPE for output file    
@@ -623,8 +622,8 @@ DO ITRACE=1, NTRACE
   !! calculate modification rate
   !$OMP PARALLEL DO SIMD
   DO ISEQ=1, NSEQALL
-    IF ( P2STOOUT(ISEQ) > 1.E-8 ) THEN
-      D2RATE(ISEQ) = min( REAL(P2TRCSTO(ISEQ,ITRACE)*P2STOOUT(ISEQ)**(-1.),KIND=JPRB), 1._JPRB )
+    IF ( P2STOOUT(ISEQ) > 1.E-8_JPRB ) THEN
+      D2RATE(ISEQ) = min( REAL(P2TRCSTO(ISEQ,ITRACE) * P2STOOUT(ISEQ)**(-1.), KIND=JPRB), 1._JPRB )
     ENDIF
   END DO
   !$OMP END PARALLEL DO SIMD
