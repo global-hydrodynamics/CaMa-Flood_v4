@@ -47,7 +47,7 @@ DO IPTH=1, NPTHOUT
   IF (ISEQP<=0 .OR. JSEQP<=0 ) CYCLE
   IF (I2MASK(ISEQP,1)>0 .OR. I2MASK(JSEQP,1)>0 ) CYCLE  !! I2MASK is for 1: kinemacit 2: dam  no bifurcation
   
-  DSLP  = (D2SFCELV(ISEQP,1)-D2SFCELV(JSEQP,1)) * PTH_DST(IPTH)**(-1._JPRB)
+  DSLP  = (D2SFCELV(ISEQP,1)-D2SFCELV(JSEQP,1)) / PTH_DST(IPTH)
   DSLP = max(-0.005_JPRB,min(0.005_JPRB,DSLP))                                    !! v390 stabilization
 
   DO ILEV=1, NPTHLEV
@@ -61,20 +61,25 @@ DO IPTH=1, NPTHOUT
     DFLW_im = (DFLW*DFLW_pr)**0.5_JPRB                                       !! semi implicit flow depth
     DFLW_im = MAX( DFLW_im,(DFLW*0.01_JPRB)**0.5_JPRB )
 
-    IF( DFLW_im>1.E-5 )THEN                         !! local inertial equation, see [Bates et al., 2010, J.Hydrol.]
-      DOUT_pr = D1PTHFLW_PRE(IPTH,ILEV) * PTH_WTH(IPTH,ILEV)**(-1._JPRB)                         !! outflow (t-1) [m2/s] (unit width)
+    IF( DFLW_im>1.E-5_JPRB )THEN                         !! local inertial equation, see [Bates et al., 2010, J.Hydrol.]
+      DOUT_pr = D1PTHFLW_PRE(IPTH,ILEV) / PTH_WTH(IPTH,ILEV)              !! outflow (t-1) [m2/s] (unit width)
       D1PTHFLW(IPTH,ILEV) = PTH_WTH(IPTH,ILEV) * ( DOUT_pr + PGRV*DT*DFLW_im*DSLP ) &
-                         * ( 1._JPRB + PGRV*DT*PTH_MAN(ILEV)**2._JPRB * abs(DOUT_pr)*DFLW_im**(-7._JPRB/3._JPRB) )**(-1._JPRB)
+             / ( 1._JPRB + PGRV*DT*PTH_MAN(ILEV)**2._JPRB * abs(DOUT_pr)*DFLW_im**(-7._JPRB/3._JPRB) )
     ELSE
       D1PTHFLW(IPTH,ILEV) = 0._JPRB
     ENDIF
   END DO
+
+  D1PTHFLWSUM(IPTH)=0._JPRB
 END DO
 !$OMP END PARALLEL DO
 
-D1PTHFLWSUM(:)=0._JPRB
 DO ILEV=1, NPTHLEV
-  D1PTHFLWSUM(:)=D1PTHFLWSUM(:)+D1PTHFLW(:,ILEV)  !! bifurcation height layer summation
+  !$OMP PARALLEL DO SIMD
+  DO IPTH=1, NPTHOUT
+    D1PTHFLWSUM(IPTH)=D1PTHFLWSUM(IPTH)+D1PTHFLW(IPTH,ILEV)  !! bifurcation height layer summation
+  END DO
+  !$OMP END PARALLEL DO SIMD
 END DO
 
 !! Storage change limitter (to prevent sudden increase of upstream water level) (v423)
