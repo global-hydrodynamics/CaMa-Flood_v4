@@ -1,17 +1,16 @@
 #==========================================================
-# CaMa-Flood Mkinclude (for Mac, Intel CPU ifort)
+# CaMa-Flood Mkinclude (for MaxOSX, gfortran)
 #==========================================================
 RM = /bin/rm -f
 CP = /bin/cp
 
 #======================================
 # Pre-Prosessing options
-# DCDF: activate when using netCDF, comment out when not needed
+# DMPI=-DUseMPI_CMF        : activate MPI parallelization
+# DCDF=-DUseCDF_CMF        : activate netCDF, comment out when not needed
+# DSINGLE=-DSinglePrec_CMF : activate Single Precision Mode
+# DATM=-DNoAtom_CMF        : avoid OMP ATOMIC calculation (bit identical simulation)
 #======================================
-
-# UseCDF: use netCDF, UseMPI: Use MPI
-# SinglePrec: SinglePrecisionMode
-# NoAtom: Bit-identical simulation (deactivate OpenMP loop with OMP_Atomic)
 
 #DCDF=-DUseCDF_CMF
 #DMPI=-DUseMPI_CMF
@@ -21,28 +20,19 @@ DSINGLE=-DSinglePrec_CMF
 CFLAGS=$(DMPI) $(DCDF) $(DATM) $(DSINGLE)
 
 #======================================
-# Intel Fortran: Mac OSX 
+# gfortran Linux
 #======================================
 
-## without netCDF
-#INC  = -I/opt/intel/include
-#LIB  = -L/opt/intel/lib/intel64 -L/opt/intel/mkl/lib
-
-# with netCDF
-#INC  = -I/opt/intel/include -I/opt/local/include -I/opt/local/netcdf-fortran/include
-#LIB  = -L/opt/intel/lib/intel64 -L/opt/intel/mkl/lib/intel64 -L/opt/local/lib -L/opt/local/netcdf-fortran/lib -lnetcdff 
+#INC = -I/usr/local/include 
+#LIB = -L/usr/local/lib -lnetcdff
 
 #==============================
 # FCMP: main program (src/), FC: pre/post process (map/ etc/)
-FCMP = ifort -qopenmp
-#FCMP = mpif90 -qopenmp
-#FCMP = mpif90
-FC = ifort
+FCMP = gfortran -fopenmp
+FC = gfortran
 
-#LFLAGS =
-#FFLAGS = -O3 -warn all -fpp -free -assume byterecl -heap-arrays -nogen-interface -lpthread -static-intel -align array64byte
-#FFLAGS = -O3 -warn all -fpp -free -assume byterecl -heap-arrays -nogen-interface -lpthread -static-intel -align array64byte -qopt-report=5 -qopt-report-phase=vec
+LFLAGS =
+FFLAGS = -O3 -Wall -cpp -ffree-line-length-none -fimplicit-none -ftree-vectorize 
 
-
-# Debug Mode
-FFLAGS = -check all  -warn all -fpp -free -assume byterecl -heap-arrays -std -nogen-interface -lpthread -fpe0 -ftrapuv -traceback  -static-intel
+# debug mode
+#FFLAGS = -O3 -Wall -cpp -ffree-line-length-none -fimplicit-none -ftree-vectorize -fopt-info-vec
