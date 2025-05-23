@@ -63,7 +63,7 @@ DO ISEQ=1, NSEQRIV                                                !! for normal 
   DSLP = ( D2SFCELV(ISEQ,1)-D2DWNELV(ISEQ,1) ) * D2NXTDST(ISEQ,1)**(-1._JPRB)
 !=== River Flow ===
   DFLW = DSFC - D2RIVELV(ISEQ,1)                             !!  flow cross-section depth
-  DARE = MAX( D2RIVWTH(ISEQ,1)*DFLW, 10._JPRB**-10 )           !!  flow cross-section area
+  DARE = MAX( D2RIVWTH(ISEQ,1)*DFLW, 1.E-10_JPRB )           !!  flow cross-section area
 
   DSFC_pr=MAX( D2SFCELV_PRE(ISEQ,1),D2DWNELV_PRE(ISEQ,1) )
   DFLW_pr=DSFC_pr - D2RIVELV(ISEQ,1)
@@ -189,18 +189,18 @@ END SUBROUTINE CMF_CALC_OUTFLW
 !+
 !####################################################################
 SUBROUTINE CMF_CALC_INFLOW
-USE YOS_CMF_MAP,        ONLY: NSEQALL,  NPTHOUT, NPTHLEV, I2MASK, PTH_UPST, PTH_DOWN
+USE YOS_CMF_MAP,        ONLY: NSEQMAX, NSEQALL,  NPTHOUT, NPTHLEV, I2MASK, PTH_UPST, PTH_DOWN
 USE YOS_CMF_PROG,       ONLY: D1PTHFLW
 USE YOS_CMF_DIAG,       ONLY: D2PTHOUT, D1PTHFLWSUM
 IMPLICIT NONE
 !*** Local
-REAL(KIND=JPRD)            :: P2STOOUT(NSEQALL,1)                      !! total outflow from a grid     [m3]
-REAL(KIND=JPRD)            :: P2RIVINF(NSEQALL,1)                      !! 
-REAL(KIND=JPRD)            :: P2FLDINF(NSEQALL,1)                      !! 
+REAL(KIND=JPRD)            :: P2STOOUT(NSEQMAX,1)                      !! total outflow from a grid     [m3]
+REAL(KIND=JPRD)            :: P2RIVINF(NSEQMAX,1)                      !! 
+REAL(KIND=JPRD)            :: P2FLDINF(NSEQMAX,1)                      !! 
 
-REAL(KIND=JPRD)            :: P2PTHOUT(NSEQALL,1)                      !! for water conservation
+REAL(KIND=JPRD)            :: P2PTHOUT(NSEQMAX,1)                      !! for water conservation
 
-REAL(KIND=JPRB)            :: D2RATE(NSEQALL,1)                        !! outflow correction
+REAL(KIND=JPRB)            :: D2RATE(NSEQMAX,1)                        !! outflow correction
 ! SAVE for OpenMP
 INTEGER(KIND=JPIM),SAVE    :: ISEQ, JSEQ, IPTH, ILEV, ISEQP, JSEQP
 REAL(KIND=JPRB),SAVE       :: OUT_R1, OUT_R2, OUT_F1, OUT_F2, DIUP, DIDW

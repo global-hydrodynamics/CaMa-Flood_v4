@@ -92,7 +92,7 @@ END SUBROUTINE CMF_LEVEE_NMLIST
 !####################################################################
 SUBROUTINE CMF_LEVEE_INIT
 USE YOS_CMF_INPUT,      ONLY: TMPNAM, NX, NY, NLFP
-USE YOS_CMF_MAP,        ONLY: NSEQALL
+USE YOS_CMF_MAP,        ONLY: NSEQMAX, NSEQALL
 USE YOS_CMF_MAP,        ONLY: D2GRAREA, D2RIVLEN, D2RIVWTH, D2FLDHGT, &
                              & D2FLDGRD, D2RIVSTOMAX, D2FLDSTOMAX, DFRCINC
 USE CMF_UTILS_MOD,      ONLY: mapR2vecD, INQUIRE_FID
@@ -113,8 +113,8 @@ WRITE(LOGNAM,*) "CMF::LEVEE_INIT: initialize levee"
 ! [1] Read Levee Parameter Map
 WRITE(LOGNAM,*) "CMF::LEVEE_INIT: read levee parameter files"
 
-ALLOCATE( D2LEVHGT(NSEQALL,1) )
-ALLOCATE( D2LEVFRC(NSEQALL,1) )
+ALLOCATE( D2LEVHGT(NSEQMAX,1) )
+ALLOCATE( D2LEVFRC(NSEQMAX,1) )
 D2LEVHGT(:,:)   =0._JPRB
 D2LEVFRC(:,:)   =0._JPRB
 
@@ -136,12 +136,12 @@ CLOSE(TMPNAM)
 ! [2] Calculate Levee Stage Parameter
 WRITE(LOGNAM,*) "CMF::LEVEE_INIT: flood stage parameters considering levee"
 
-ALLOCATE( D2BASHGT(NSEQALL,1) )
-ALLOCATE( D2LEVDST(NSEQALL,1) )
+ALLOCATE( D2BASHGT(NSEQMAX,1) )
+ALLOCATE( D2LEVDST(NSEQMAX,1) )
 
-ALLOCATE( D2LEVBASSTO(NSEQALL,1) )
-ALLOCATE( D2LEVTOPSTO(NSEQALL,1) )
-ALLOCATE( D2LEVFILSTO(NSEQALL,1) )
+ALLOCATE( D2LEVBASSTO(NSEQMAX,1) )
+ALLOCATE( D2LEVTOPSTO(NSEQMAX,1) )
+ALLOCATE( D2LEVFILSTO(NSEQMAX,1) )
 
 D2FLDSTOMAX(:,:,:) = 0._JPRD   !! max floodplain  storage  at each layer
 D2FLDGRD(:,:,:)    = 0._JPRB   !! floodplain topo gradient of each layer
@@ -488,15 +488,15 @@ SUBROUTINE CMF_LEVEE_OPT_PTHOUT
 ! realistic bifurcation considering levee
 USE PARKIND1,           ONLY: JPIM, JPRB, JPRD
 USE YOS_CMF_INPUT,      ONLY: DT, PGRV, DMIS
-USE YOS_CMF_MAP,        ONLY: NSEQALL, NPTHOUT, NPTHLEV, PTH_UPST, PTH_DOWN, PTH_DST, &
+USE YOS_CMF_MAP,        ONLY: NSEQMAX, NSEQALL, NPTHOUT, NPTHLEV, PTH_UPST, PTH_DOWN, PTH_DST, &
                             & PTH_ELV, PTH_WTH, PTH_MAN, I2MASK
 USE YOS_CMF_MAP,        ONLY: D2ELEVTN, D2RIVELV
 USE YOS_CMF_PROG,       ONLY: D1PTHFLW, D1PTHFLW_PRE, D2RIVDPH_PRE
 USE YOS_CMF_DIAG,       ONLY: D2LEVDPH, D2SFCELV
 IMPLICIT NONE
 !*** Local
-REAL(KIND=JPRB)    ::  D2SFCELV_LEV(NSEQALL,1)                  !! water surface elev protected [m]
-REAL(KIND=JPRB)    ::  D2SFCELV_PRE(NSEQALL,1)                  !! water surface elev (t-1) [m] (for stable calculation)
+REAL(KIND=JPRB)    ::  D2SFCELV_LEV(NSEQMAX,1)                  !! water surface elev protected [m]
+REAL(KIND=JPRB)    ::  D2SFCELV_PRE(NSEQMAX,1)                  !! water surface elev (t-1) [m] (for stable calculation)
 
 ! SAVE for OpenMP
 INTEGER(KIND=JPIM),SAVE ::  IPTH, ILEV, ISEQ, ISEQP, JSEQP

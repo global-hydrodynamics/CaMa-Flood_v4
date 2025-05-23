@@ -139,12 +139,12 @@ CONTAINS
 !==========================================================
 SUBROUTINE READ_REST_BIN
 USE YOS_CMF_INPUT,           ONLY: TMPNAM,  NX,NY
-USE YOS_CMF_MAP,             ONLY: NSEQALL,NPTHOUT, NPTHLEV
+USE YOS_CMF_MAP,             ONLY: NSEQMAX,NPTHOUT, NPTHLEV
 USE CMF_UTILS_MOD,           ONLY: INQUIRE_FID, mapR2vecD
 IMPLICIT NONE
 !*** LOCAL
 INTEGER(KIND=JPIM)              :: RIREC
-REAL(KIND=JPRD)                 :: P2VEC(NSEQALL,1)
+REAL(KIND=JPRD)                 :: P2VEC(NSEQMAX,1)
 REAL(KIND=JPRM)                 :: R1PTH(NPTHOUT,NPTHLEV)
 REAL(KIND=JPRD)                 :: P1PTH(NPTHOUT,NPTHLEV)
 CHARACTER(LEN=256)              :: CFILE
@@ -217,9 +217,9 @@ END SUBROUTINE READ_REST_BIN
 SUBROUTINE READ_BIN_MAP(P2VAR,TNAM,IREC)
 USE CMF_UTILS_MOD,      ONLY: mapP2vecP
 USE YOS_CMF_INPUT,      ONLY: NX, NY
-USE YOS_CMF_MAP,        ONLY: NSEQALL
+USE YOS_CMF_MAP,        ONLY: NSEQMAX
 IMPLICIT NONE
-REAL(KIND=JPRD)            :: P2VAR(NSEQALL,1)
+REAL(KIND=JPRD)            :: P2VAR(NSEQMAX,1)
 INTEGER(KIND=JPIM)         :: TNAM, IREC
 !* local
 REAL(KIND=JPRM)            :: R2TEMP(NX,NY)
@@ -388,7 +388,7 @@ CONTAINS
 !==========================================================
 SUBROUTINE WRTE_REST_BIN
 USE YOS_CMF_TIME,       ONLY: JYYYYMMDD, JHOUR
-USE YOS_CMF_MAP,        ONLY: REGIONTHIS, NSEQALL
+USE YOS_CMF_MAP,        ONLY: REGIONTHIS, NSEQMAX
 #ifdef UseMPI_CMF
 USE CMF_CTRL_MPI_MOD,   ONLY: CMF_MPI_AllReduce_R1PTH, CMF_MPI_AllReduce_P1PTH
 #endif
@@ -396,7 +396,7 @@ IMPLICIT NONE
 ! local variable 
 INTEGER(KIND=JPIM)         :: RIREC
 CHARACTER(LEN=256)         :: CFILE,CDATE
-REAL(KIND=JPRD)            :: P2TMP(NSEQALL,1)        !! use Real*8 for code simplicity
+REAL(KIND=JPRD)            :: P2TMP(NSEQMAX,1)        !! use Real*8 for code simplicity
 REAL(KIND=JPRD)            :: P1PTH(NPTHOUT,NPTHLEV) 
 REAL(KIND=JPRM)            :: R1PTH(NPTHOUT,NPTHLEV) 
 !================================================
@@ -483,12 +483,12 @@ END SUBROUTINE WRTE_REST_BIN
 !=================
 SUBROUTINE WRTE_BIN_MAP(P2VAR,TNAM,IREC)
 USE CMF_UTILS_MOD,      ONLY: vecP2mapP,  vecP2mapR
-USE YOS_CMF_MAP,        ONLY: REGIONTHIS, NSEQALL
+USE YOS_CMF_MAP,        ONLY: REGIONTHIS, NSEQMAX
 #ifdef UseMPI_CMF
 USE CMF_CTRL_MPI_MOD,   ONLY: CMF_MPI_AllReduce_R2MAP, CMF_MPI_AllReduce_P2MAP
 #endif
 IMPLICIT NONE
-REAL(KIND=JPRD)            :: P2VAR(NSEQALL,1)  !! use Real*8 for code simplicity
+REAL(KIND=JPRD)            :: P2VAR(NSEQMAX,1)  !! use Real*8 for code simplicity
 INTEGER(KIND=JPIM)         :: TNAM,IREC
 !* local
 REAL(KIND=JPRM)            :: R2TEMP(NX,NY)
@@ -526,7 +526,7 @@ USE NETCDF
 USE YOS_CMF_INPUT,      ONLY: DMIS
 USE YOS_CMF_TIME,       ONLY: KMINNEXT, KMINSTART, ISYYYY,ISMM,ISDD, ISHOUR, ISMIN
 USE YOS_CMF_TIME,       ONLY: JYYYYMMDD,JHOUR
-USE YOS_CMF_MAP,        ONLY: D1LON,    D1LAT,     REGIONTHIS, NSEQALL
+USE YOS_CMF_MAP,        ONLY: D1LON,    D1LAT,     REGIONTHIS, NSEQMAX
 USE CMF_UTILS_MOD,      ONLY: NCERROR,  vecP2mapP
 #ifdef UseMPI_CMF
 USE CMF_CTRL_MPI_MOD,   ONLY: CMF_MPI_AllReduce_P2MAP, CMF_MPI_AllReduce_P1PTH
@@ -537,7 +537,7 @@ CHARACTER(LEN=256)         :: CFILE, CDATE, CTIME, CVAR
 INTEGER(KIND=JPIM)         :: NCID,  VARID, LATID, LONID, TIMEID, JF, &
                               NPTHOUTID,    NPTHLEVID,    STATUS, IOUT
 REAL(KIND=JPRB)            :: XTIME ! seconds since start of the run ! 
-REAL(KIND=JPRD)            :: P2VEC(NSEQALL,1), P2TEMP(NX,NY), P1PTH(NPTHOUT,NPTHLEV)
+REAL(KIND=JPRD)            :: P2VEC(NSEQMAX,1), P2TEMP(NX,NY), P1PTH(NPTHOUT,NPTHLEV)
 !================================================
 !*** 1. set file name & tim
 XTIME=REAL( (KMINNEXT-KMINSTART),JPRB) *60._JPRB

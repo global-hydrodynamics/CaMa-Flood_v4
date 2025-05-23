@@ -21,7 +21,7 @@ USE PARKIND1,                ONLY: JPIM, JPRB, JPRM, JPRD
 USE CMF_UTILS_MOD,           ONLY: INQUIRE_FID, CMF_CheckNanB
 USE YOS_CMF_INPUT,           ONLY: LOGNAM,   LTRACE,  TMPNAM, NX, NY, NXIN, NYIN, INPN, RMIS
 USE YOS_CMF_INPUT,           ONLY: IFRQ_OUT, CSUFBIN, CSUFVEC, LSPAMAT
-USE YOS_CMF_MAP,             ONLY: NSEQALL, NSEQRIV, NPTHOUT
+USE YOS_CMF_MAP,             ONLY: NSEQMAX, NSEQALL, NSEQRIV, NPTHOUT
 USE YOS_CMF_MAP,             ONLY: I1NEXT,  PTH_UPST,PTH_DOWN, I2MASK
 USE YOS_CMF_MAP,             ONLY: I1UPST,   I1UPN,    I1P_OUT,  I1P_OUTN, I1P_INF, I1P_INFN
 USE YOS_CMF_MAP,             ONLY: INPX, INPY, INPA
@@ -72,13 +72,13 @@ REAL(KIND=JPRB),ALLOCATABLE     :: D2TRCOUT(:,:)       ! Tracer Flux  (main chan
 REAL(KIND=JPRB),ALLOCATABLE     :: D2TRCINP(:,:)       ! Tracer input (interporlated to catchments)
 
 REAL(KIND=JPRB),ALLOCATABLE     :: D1TRCPFLW(:,:)      ! Tracer Bifurcation Path Flux     (1D: NPTHALL)
-REAL(KIND=JPRB),ALLOCATABLE     :: D2TRCPOUT(:,:)      ! Tracer Bifurcation Path Net Flux (2D: NSEQALL)
+REAL(KIND=JPRB),ALLOCATABLE     :: D2TRCPOUT(:,:)      ! Tracer Bifurcation Path Net Flux (2D: NSEQMAX)
 
 !*** Average diagnostics for output
 REAL(KIND=JPRB)                 :: NADD_out                    !! sum DT to calculate average
 REAL(KIND=JPRB),ALLOCATABLE     :: D2TRCOUT_oAVG(:,:)   ! Tracer Flux (main channel)
 REAL(KIND=JPRB),ALLOCATABLE     :: D2TRCDNS_oAVG(:,:)   ! Tracer Density
-REAL(KIND=JPRB),ALLOCATABLE     :: D2TRCPOUT_oAVG(:,:)  ! Tracer Bifurcation Path Net Flux (2D: NSEQALL)
+REAL(KIND=JPRB),ALLOCATABLE     :: D2TRCPOUT_oAVG(:,:)  ! Tracer Bifurcation Path Net Flux (2D: NSEQMAX)
 
 !*** TYPE for tracer data (each tracer should have one data)
 TYPE TTRACE
@@ -272,24 +272,24 @@ ENDIF
 
 !==========
 WRITE(LOGNAM,*) "  Allocate Tracer Variables"
-ALLOCATE( P2TRCSTO(NSEQALL,NTRACE) )
-ALLOCATE( D2TRCDNS(NSEQALL,NTRACE) )
-ALLOCATE( D2TRCOUT(NSEQALL,NTRACE) )
-ALLOCATE( D2TRCINP(NSEQALL,NTRACE) )
+ALLOCATE( P2TRCSTO(NSEQMAX,NTRACE) )
+ALLOCATE( D2TRCDNS(NSEQMAX,NTRACE) )
+ALLOCATE( D2TRCOUT(NSEQMAX,NTRACE) )
+ALLOCATE( D2TRCINP(NSEQMAX,NTRACE) )
 P2TRCSTO(:,:)=0._JPRB
 D2TRCDNS(:,:)=0._JPRB
 D2TRCOUT(:,:)=0._JPRB
 D2TRCINP(:,:)=0._JPRB
 
 ALLOCATE( D1TRCPFLW(NPTHOUT,NTRACE) )
-ALLOCATE( D2TRCPOUT(NSEQALL,NTRACE) )
+ALLOCATE( D2TRCPOUT(NSEQMAX,NTRACE) )
 D1TRCPFLW(:,:)=0._JPRB
 D2TRCPOUT(:,:)=0._JPRB
 
 Nadd_out=0._JPRB
-ALLOCATE( D2TRCDNS_oAVG(NSEQALL,NTRACE) )
-ALLOCATE( D2TRCOUT_oAVG(NSEQALL,NTRACE) )
-ALLOCATE( D2TRCPOUT_oAVG(NSEQALL,NTRACE) )
+ALLOCATE( D2TRCDNS_oAVG(NSEQMAX,NTRACE) )
+ALLOCATE( D2TRCOUT_oAVG(NSEQMAX,NTRACE) )
+ALLOCATE( D2TRCPOUT_oAVG(NSEQMAX,NTRACE) )
 D2TRCDNS_oAVG(:,:)=0._JPRB
 D2TRCOUT_oAVG(:,:)=0._JPRB
 D2TRCPOUT_oAVG(:,:)=0._JPRB
@@ -308,7 +308,7 @@ IMPLICIT NONE
 !*** LOCAL
 REAL(KIND=JPRM)                 :: R2TEMP(NX,NY)
 REAL(KIND=JPRD)                 :: P2TEMP(NX,NY)
-REAL(KIND=JPRD)                 :: P2VEC(NSEQALL,1)
+REAL(KIND=JPRD)                 :: P2VEC(NSEQMAX,1)
 CHARACTER(LEN=256)              :: CFILE
 !================================================
 CFILE=TRIM(CRESTTRC)
@@ -351,7 +351,7 @@ IMPLICIT NONE
 !* local variable
 INTEGER(KIND=JPIM)         :: IREST
 CHARACTER(LEN=256)         :: CFILE,CDATE
-REAL(KIND=JPRD)            :: P2VAR(NSEQALL,1)  !! use Real*8 for code simplicity
+REAL(KIND=JPRD)            :: P2VAR(NSEQMAX,1)  !! use Real*8 for code simplicity
 REAL(KIND=JPRM)            :: R2TEMP(NX,NY)
 REAL(KIND=JPRD)            :: P2TEMP(NX,NY)
 !================================================
@@ -476,7 +476,7 @@ INTEGER(KIND=JPIM),SAVE  ::  IXIN, IYIN, INPI  !! FOR OUTPUT
 DO ITRACE=1, NTRACE
 
   !$OMP PARALLEL DO
-    DO ISEQ=1, NSEQALL
+    DO ISEQ=1, NSEQMAX
       D2TRCINP(ISEQ,ITRACE)=0._JPRB
       DO INPI=1, INPN
         IXIN=INPX(ISEQ,INPI)
@@ -533,9 +533,9 @@ USE YOS_CMF_INPUT,      ONLY: DT
 USE YOS_CMF_DIAG,       ONLY: D2OUTFLW_aAVG, D1PTHFLWSUM_aAVG
 
 IMPLICIT NONE
-REAL(KIND=JPRD)            :: P2STOOUT(NSEQALL)                      !! total outflow from a grid     [m3]
-REAL(KIND=JPRD)            :: P2TRCINF(NSEQALL)                      !! 
-REAL(KIND=JPRB)            :: D2RATE(NSEQALL)                        !! outflow correction
+REAL(KIND=JPRD)            :: P2STOOUT(NSEQMAX)                      !! total outflow from a grid     [m3]
+REAL(KIND=JPRD)            :: P2TRCINF(NSEQMAX)                      !! 
+REAL(KIND=JPRB)            :: D2RATE(NSEQMAX)                        !! outflow correction
 
 ! SAVE for OpenMP
 INTEGER(KIND=JPIM),SAVE    :: ISEQ, IPTH, JSEQ, INUM, JPTH, ISEQP, JSEQP
@@ -767,7 +767,7 @@ DO JF=1,NVARSOUT
 
   IF( LOUTVEC )THEN   !!  1D land only output
     VAROUT(JF)%CFILE=TRIM(COUTDIR)//TRIM(VAROUT(JF)%CVNAME)//TRIM(COUTTAG)//TRIM(CSUFVEC)
-    OPEN(VAROUT(JF)%BINID,FILE=VAROUT(JF)%CFILE,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NSEQALL)
+    OPEN(VAROUT(JF)%BINID,FILE=VAROUT(JF)%CFILE,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NSEQMAX)
     WRITE(LOGNAM,*) "output file opened in unit: ", TRIM(VAROUT(JF)%CFILE), VAROUT(JF)%BINID
   ELSE                   !!  2D default map output
     IF( REGIONTHIS==1 )THEN
@@ -802,8 +802,8 @@ IMPLICIT NONE
 INTEGER(KIND=JPIM)          :: JF
 !*** LOCAL
 REAL(KIND=JPRM)             :: R2OUT(NX,NY)
-REAL(KIND=JPRM)             :: R2COPY(NSEQALL,1)
-REAL(KIND=JPRB)             :: D2COPY(NSEQALL,1)        !! Dammy Array for Float64/32 switch
+REAL(KIND=JPRM)             :: R2COPY(NSEQMAX,1)
+REAL(KIND=JPRB)             :: D2COPY(NSEQMAX,1)        !! Dammy Array for Float64/32 switch
 !================================================
 !*** 0. check date:hour with output frequency
 IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of time step , NFPPH: output frequency (hour)
