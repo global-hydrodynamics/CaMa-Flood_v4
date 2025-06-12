@@ -248,6 +248,7 @@ DO JF=1,NVARSOUT
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='bifurcation channel discharge'
       VAROUT(JF)%CVUNITS='m3/s'
+      VAROUT(JF)%AGGREGATE=2
     CASE ('pthout')
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='net bifurcation discharge'
@@ -289,6 +290,7 @@ DO JF=1,NVARSOUT
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='reservoir inflow'
       VAROUT(JF)%CVUNITS='m3/s' 
+      VAROUT(JF)%AGGREGATE=2
 
     CASE ('levsto')   !!! added
       VAROUT(JF)%CVNAME=CVNAMES(JF)
@@ -303,19 +305,26 @@ DO JF=1,NVARSOUT
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='ground water storage'
       VAROUT(JF)%CVUNITS='m3'
-    CASE ('gwsto')
+    CASE ('gwsto') !  ! old name. same as gdwsto
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='ground water storage'
       VAROUT(JF)%CVUNITS='m3'
-    CASE ('gwout')
+    CASE ('gdwrtn') 
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='ground water discharge'
       VAROUT(JF)%CVUNITS='m3/s'  
+      VAROUT(JF)%AGGREGATE=2
+    CASE ('gwout')  !! old name. same as gdwrtn
+      VAROUT(JF)%CVNAME=CVNAMES(JF)
+      VAROUT(JF)%CVLNAME='ground water discharge'
+      VAROUT(JF)%CVUNITS='m3/s'  
+      VAROUT(JF)%AGGREGATE=2
 
     CASE ('wevap')
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='water evaporation'
       VAROUT(JF)%CVUNITS='m3/s'
+      VAROUT(JF)%AGGREGATE=2
     CASE ('outins')
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='instantaneous discharge'
