@@ -44,18 +44,20 @@ NAMELIST/NOUTPUT/ COUTDIR,CVARSOUT,COUTTAG,LOUTCDF,NDLEVEL,LOUTVEC,IFRQ_OUT,LOUT
 INTEGER(KIND=JPIM), PARAMETER   :: NVARS=100          ! temporal output var number
 INTEGER(KIND=JPIM)              :: NVARSOUT
 INTEGER(KIND=JPIM)              :: IRECOUT            ! Output file irec
-
+! Temporal aggregation according to CF conventions 1.7, Table E.1
+CHARACTER(LEN=7), PARAMETER :: AGGREGATION_METHOD(3) = ["point  ", "mean   ", "maximum"]
 !*** TYPE for output file    
 TYPE TVAROUT
 CHARACTER(LEN=256)              :: CVNAME             ! output variable name
 CHARACTER(LEN=256)              :: CVLNAME            ! output variable long name
 CHARACTER(LEN=256)              :: CVUNITS            ! output units
 CHARACTER(LEN=256)              :: CFILE              ! output full path file name 
+INTEGER(KIND=JPIM)              :: AGGREGATE = 1      ! index of AGGREGATION_METHODS, default is instantaneous/point
 INTEGER(KIND=JPIM)              :: BINID              ! output binary output file ID
 INTEGER(KIND=JPIM)              :: NCID               ! output netCDF output file ID
 INTEGER(KIND=JPIM)              :: VARID              ! output netCDF output variable ID
 INTEGER(KIND=JPIM)              :: TIMID              ! output netCDF time   variable ID 
-INTEGER(KIND=JPIM)              :: IRECNC               ! Current time record for writting 
+INTEGER(KIND=JPIM)              :: IRECNC             ! Current time record for writting
 END TYPE TVAROUT 
 TYPE(TVAROUT),ALLOCATABLE       :: VAROUT(:)          ! output variable TYPE set
 
@@ -183,6 +185,7 @@ DO JF=1,NVARSOUT
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='river discharge'
       VAROUT(JF)%CVUNITS='m3/s'
+      VAROUT(JF)%AGGREGATE=2
     CASE ('rivsto')
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='river storage'
@@ -195,11 +198,12 @@ DO JF=1,NVARSOUT
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='river velocity'
       VAROUT(JF)%CVUNITS='m/s'
-
+      VAROUT(JF)%AGGREGATE=2
     CASE ('fldout')
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='floodplain discharge'
       VAROUT(JF)%CVUNITS='m3/s'
+      VAROUT(JF)%AGGREGATE=2
     CASE ('fldsto')
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='floodplain storage'
@@ -225,10 +229,12 @@ DO JF=1,NVARSOUT
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='discharge (river+floodplain)'
       VAROUT(JF)%CVUNITS='m3/s'
+      VAROUT(JF)%AGGREGATE=2
     CASE ('outflw')                   !! comparability for previous output name
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='discharge (river+floodplain)'
       VAROUT(JF)%CVUNITS='m3/s'
+      VAROUT(JF)%AGGREGATE=2
     CASE ('totsto')
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='total storage (river+floodplain)'
@@ -246,28 +252,34 @@ DO JF=1,NVARSOUT
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='net bifurcation discharge'
       VAROUT(JF)%CVUNITS='m3/s'
+      VAROUT(JF)%AGGREGATE=2
 
     CASE ('maxsto')
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='daily maximum storage'
-      VAROUT(JF)%CVUNITS='m3'  
+      VAROUT(JF)%CVUNITS='m3'
+      VAROUT(JF)%AGGREGATE=3
     CASE ('maxflw')
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='daily maximum discharge'
-      VAROUT(JF)%CVUNITS='m3/s' 
+      VAROUT(JF)%CVUNITS='m3/s'
+      VAROUT(JF)%AGGREGATE=3
     CASE ('maxdph')
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='daily maximum river depth'
       VAROUT(JF)%CVUNITS='m' 
+      VAROUT(JF)%AGGREGATE=3
 
     CASE ('runoff')
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='Surface runoff'
-      VAROUT(JF)%CVUNITS='m3/s' 
+      VAROUT(JF)%CVUNITS='m3/s'
+      VAROUT(JF)%AGGREGATE=2
     CASE ('runoffsub')
       VAROUT(JF)%CVNAME=CVNAMES(JF)
       VAROUT(JF)%CVLNAME='sub-surface runoff'
       VAROUT(JF)%CVUNITS='m3/s' 
+      VAROUT(JF)%AGGREGATE=2
 
     CASE ('damsto')   !!! added
       VAROUT(JF)%CVNAME=CVNAMES(JF)
@@ -367,6 +379,7 @@ USE CMF_UTILS_MOD,           ONLY: NCERROR
 USE NETCDF
 IMPLICIT NONE
 INTEGER(KIND=JPIM)  :: TIMEID,VARID,LATID,LONID
+CHARACTER(LEN=32)   :: CMETH
 !============
 VAROUT(JF)%IRECNC=1 ! initialize record current writting record to 1 
 
@@ -401,6 +414,9 @@ CALL NCERROR( NF90_DEF_VAR(VAROUT(JF)%NCID, VAROUT(JF)%CVNAME, NF90_FLOAT, &
 CALL NCERROR( NF90_PUT_ATT(VAROUT(JF)%NCID, VAROUT(JF)%VARID, 'long_name', TRIM(VAROUT(JF)%CVLNAME)) )
 CALL NCERROR( NF90_PUT_ATT(VAROUT(JF)%NCID, VAROUT(JF)%VARID, 'units',     TRIM(VAROUT(JF)%CVUNITS)) )
 CALL NCERROR( NF90_PUT_ATT(VAROUT(JF)%NCID, VAROUT(JF)%VARID, '_FillValue',RMIS) )
+CMETH = 'time: ' // AGGREGATION_METHOD(VAROUT(JF)%AGGREGATE)
+CALL NCERROR( NF90_PUT_ATT(VAROUT(JF)%NCID, VAROUT(JF)%VARID, 'cell_method', TRIM(CMETH)) )
+
 
 CALL NCERROR( NF90_ENDDEF(VAROUT(JF)%NCID) )
 
