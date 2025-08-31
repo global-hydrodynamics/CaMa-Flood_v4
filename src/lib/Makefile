@@ -3,14 +3,16 @@ include ../../adm/Mkinclude
 libname = liblib.a
 
 LIBOBJS = \
-text_lib.o \
-funit_lib.o \
-bin_lib.o \
-nc_lib.o \
-mapframe_lib.o \
-util_lib.o \
-LU.o \
-layer_lib.o
+	text_lib.o \
+	funit_lib.o \
+	array_lib.o \
+	time_recorder_class.o \
+	bin_lib.o \
+	nc_lib.o \
+	mapframe_lib.o \
+	util_lib.o \
+	LU.o \
+	layer_lib.o
 
 .SUFFIXES: .o .F90 .f90
 %.o: %.F90
