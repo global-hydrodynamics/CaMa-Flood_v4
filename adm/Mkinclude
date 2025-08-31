@@ -11,7 +11,6 @@ CP = /bin/cp
 # DSINGLE=-DSinglePrec_CMF : activate Single Precision Mode
 # DATM=-DNoAtom_CMF        : avoid OMP ATOMIC calculation (bit identical simulation)
 #======================================
-
 DCDF=-DUseCDF_CMF
 #DMPI=-DUseMPI_CMF
 #DSINGLE=-DSinglePrec_CMF
@@ -21,8 +20,9 @@ CFLAGS=$(DMPI) $(DCDF) $(DATM) $(DSINGLE)
 
 #======================================
 # extensions
-EXT_LIBS = 
-#EXT_LIBS = lib
+#EXT_LIBS = 
+EXT_LIBS = lib mod
+EXT_LIB_TARGETS := $(foreach d,$(EXT_LIBS),$(d)/lib$(notdir $(d)).a)
 
 #======================================
 # gfortran Mac OSX 
@@ -35,17 +35,55 @@ EXT_LIBS =
 #INC = -I/opt/homebrew/include 
 #LIB = -L/opt/homebrew/lib -lnetcdff
 NETCDFDIR = /Users/dtokuda/miniconda3/envs/ils
-INC = -I$(NETCDFDIR)/include
-LIB = -L$(NETCDFDIR)/lib -lnetcdff
 
 #==============================
 # FCMP: main program (src/), FC: pre/post process (map/ etc/)
-FCMP = gfortran -fopenmp
-#FCMP = mpif90 -fopenmp
+FCMP = gfortran
 #FCMP = mpif90
 FC = gfortran
 
-LFLAGS =
-FFLAGS = -O3 -Wall -cpp -ffree-line-length-none -fimplicit-none -ftree-vectorize 
-#FFLAGS = -O3 -Wall -cpp -ffree-line-length-none -fimplicit-none -ftree-vectorize -fopt-info-vec
+LFLAGS :=
+FFLAGS := -O3 -Wall -ffree-line-length-none -fimplicit-none -ftree-vectorize
+#FFLAGS = -O3 -Wall -ffree-line-length-none -fimplicit-none -ftree-vectorize -fopt-info-vec
+LIBS   :=
 
+OPENMP := -fopenmp
+FFLAGS += $(OPENMP)
+LFLAGS += $(OPENMP)
+
+ifeq ($(findstring gfortran,$(FC)),gfortran)
+  FPPFLAG   ?= -cpp
+  FCMODFLAG  = -J
+else ifneq (,$(filter ifort ifx,$(FC)))
+  FPPFLAG   ?= -fpp
+  FCMODFLAG  = -module
+else
+  FPPFLAG   ?=
+  FCMODFLAG  =
+endif
+
+#==============================
+PROJ_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/..)
+SRC_ROOT  := $(PROJ_ROOT)/src
+
+#==============================
+inc = $(if $(wildcard $1),-I$1)
+NETCDFINC_DIR := $(if $(NETCDFDIR),$(NETCDFDIR)/include)
+NETCDFLIB     := $(if $(NETCDFDIR),-L$(NETCDFDIR)/lib -lnetcdff -lnetcdf)
+
+INCDIRS := \
+  $(call inc,$(SRC_ROOT)) \
+  $(foreach d,$(EXT_LIBS),$(call inc,$(SRC_ROOT)/$(d))) \
+  $(call inc,$(NETCDFINC_DIR))
+LIBS += $(NETCDFLIB)
+
+%.o %.mod: %.f90
+	$(FC) $(FFLAGS) $(FPPFLAG) $(FCMODFLAG) $(@D) -c $(INCDIRS) $(CFLAGS) $< -o $*.o
+
+%.o %.mod: %.F90
+	$(FC) $(FFLAGS) $(FPPFLAG) $(FCMODFLAG) $(@D) -c $(INCDIRS) $(CFLAGS) $< -o $*.o
+
+define MAKE_IN_DIR
+	@echo "==> make -C $(1) $(2)"
+	@$(MAKE) -C $(1) $(2)
+endef

@@ -1,8 +1,8 @@
 include ../../adm/Mkinclude
 
-libname = liblib.a
+LIBNAME = liblib.a
 
-LIBOBJS = \
+OBJS = \
 	text_lib.o \
 	funit_lib.o \
 	array_lib.o \
@@ -14,17 +14,13 @@ LIBOBJS = \
 	LU.o \
 	layer_lib.o
 
-.SUFFIXES: .o .F90 .f90
-%.o: %.F90
-	$(FCMP) -c ${FFLAGS} ${INC} $(MODS) $*.F90 -o $*.o
-%.o: %.f90
-	$(FCMP) -c ${FFLAGS} ${INC} $(MODS) $*.f90 -o $*.o
-
-$(libname): $(LIBOBJS)
-	ar rcs $@ $^
-
 .PHONY: all clean
-all: $(libname)
+all: $(LIBNAME)
+$(LIBNAME): $(OBJS)
+	@rm -f $@
+	ar -rv $@ $(OBJS)
 
 clean:
-	${RM} -f *.o *.mod *.a *~ *.s *.optrpt *.dSYM
+	@find . -maxdepth 1 -name "*.o" -delete
+	@find . -maxdepth 1 -name "*.mod" -delete
+	@rm -f liblib.a

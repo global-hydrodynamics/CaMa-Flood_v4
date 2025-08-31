@@ -11,6 +11,8 @@
 #  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
 # See the License for the specific language governing permissions and limitations under the License.
 #==========================================================
+TOP := $(abspath ..)
+
 include   ../adm/Mkinclude
 
 #=============================
@@ -52,45 +54,29 @@ DRV_OBJS = \
 	cmf_drv_advance_mod.o 
 
 OBJECTS = $(YOS_OBJS) $(CALC_OBJS) $(CTRL_OBJS) $(DRV_OBJS)
-
-INC += -Ilib
-
-#=============================
-#*** suffix rule
-.SUFFIXES : .o .F90
-.F90.o:
-	$(FCMP) ${FFLAGS} -c ${INC} $(MODS) ${CFLAGS} -c $<
-.f90.o:
-	$(FCMP) ${FFLAGS} -c ${INC} $(MODS) ${CFLAGS} -c $<
-
-#=============================
-EXT_LIBS := $(strip $(EXT_LIBS))
-EXT_LIB_TARGETS := $(foreach d,$(EXT_LIBS),$(d)/lib$(d).a)
-EXT_LIB_AR      := $(EXT_LIB_TARGETS)
-$(EXT_LIB_TARGETS): $(YOS_OBJS)
-	@d=$(@D); \
-	$(MAKE) -C $$d all
+SUBLIBS := $(foreach d,$(EXT_LIBS),$(abspath $(d))/lib$(notdir $(d)).a)
 
 #=============================
 #*** build steps
-$(EXT_LIB_TARGETS):
-	@d=$(@D); \
-	f=$(@F); \
-	$(MAKE) -C $$d all
-
+.PHONY: all ext-libs clean
 yos: $(YOS_OBJS)
-ext-libs: yos $(EXT_LIB_TARGETS)
-calc: ext-libs $(CALC_OBJS)
+calc: $(CALC_OBJS)
 ctrl: calc $(CTRL_OBJS)
-drv: ctrl $(DRV_OBJS)
+ext-libs: ctrl
+	@set -e; \
+	for d in $(EXT_LIBS); do \
+		echo "==> make -C $$d clean all"; \
+		$(MAKE) -C $$d clean all; \
+	done
+drv: ctrl ext-libs $(DRV_OBJS)
 src: drv
 	ar -rv libcama.a $(OBJECTS)
 
 #*** for main program
+SRC_SUBLIBS := $(wildcard $(SRC_ROOT)/*/lib*.a)
 TARGET = MAIN_cmf
-$(TARGET): $(OBJECTS) src $(TARGET).o $(EXT_LIB_AR)
-	$(FCMP) $(FFLAGS) $(LFLAGS) $@.o $(OBJECTS) $(EXT_LIB_AR) -o $@ $(LIB)
-
+$(TARGET): $(OBJECTS) src $(TARGET).o
+	$(FC) $(LFLAGS) $@.o $(OBJECTS) $(SUBLIBS) -o $@ $(LIBS)
 # bug in MacOSX libcama.a does not work
 #	$(FCMP) $(FFLAGS) $(LFLAGS) $@.o libcama.a -o $@ $(LIB)
 
@@ -100,7 +86,5 @@ all: $(TARGET)
 clean:
 	${RM} -rf *.o core *~ *trace temp* *.mod *.a *.s *.optrpt *.dSYM $(TARGET)
 	@for d in $(EXT_LIBS); do \
-		if [ -d $$d ]; then \
-			$(MAKE) -C $$d clean; \
-		fi; \
+		if [ -d $$d ]; then $(MAKE) -C $$d clean; fi; \
 	done

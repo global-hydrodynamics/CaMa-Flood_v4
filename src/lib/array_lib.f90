@@ -1,59 +1,63 @@
 module array_lib
-implicit none
-private
-public :: &
-&   append, trim_array, allocate_array, find_index, arange, &
-&   sum_dif_with_rest, heapsort, bisect_left
+    implicit none
+    private
+    public :: &
+    &   append, trim_array, allocate_array, find_index, arange, &
+    &   sum_dif_with_rest, heapsort, bisect_left
 
-interface append
-!    module procedure append_c32
-    module procedure :: append_c
-    module procedure :: append_integer
-    module procedure :: append_double
-end interface append
+    interface append
+    !    module procedure append_c32
+        module procedure :: append_c
+        module procedure :: append_integer
+        module procedure :: append_double
+    end interface append
 
-interface trim_array
-    module procedure :: trim_array_i4
-    module procedure :: trim_array_r8
-end interface trim_array
+    interface trim_array
+        module procedure :: trim_array_i4
+        module procedure :: trim_array_r8
+    end interface trim_array
 
-interface allocate_array
-    module procedure :: allocate_array_1d_dble
-end interface allocate_array
-! if not found, return 0
-interface find_index
-    module procedure :: find_index_c
-!    module procedure find_index_i
-    module procedure :: find_index_i_alloc
-    module procedure :: find_index_d_alloc
-end interface find_index
+    interface allocate_array
+        module procedure :: allocate_array_1d_dble
+    end interface allocate_array
+    ! if not found, return 0
+    interface find_index
+        module procedure :: find_index_c
+    !    module procedure find_index_i
+        module procedure :: find_index_i_alloc
+        module procedure :: find_index_d_alloc
+    end interface find_index
 
-interface arange
-    module procedure :: arange_dble
-end interface arange
+    interface arange
+        module procedure :: arange_dble
+    end interface arange
 
 contains
 
 ! ===================================================================================================
 ! append
 subroutine append_c(a, val)
-    character(len=*), allocatable, intent(inout) :: a(:)
-    character(len=*), intent(in)  :: val
+    character(len=*),  allocatable, intent(inout) :: a(:)
+    character(len=*),               intent(in)    :: val
     character(len=:), allocatable :: tmp(:)
-    integer n
-    if (.not. allocated(a)) then
-        allocate(a(1)); a(1) = val
-        return
-    endif
-    n = size(a)
-    allocate(character(len(a(1))) :: tmp(n))
-    tmp(:) = a(:)
-    deallocate(a); allocate(a(n+1))
-    a(1:n) = tmp(:)
-    a(n+1) = val
-    deallocate(tmp)
-end subroutine append_c
+    integer :: n, L, Lnew
 
+    if (.not. allocated(a)) then
+    allocate(character(len(val)) :: a(1))
+    a(1) = val
+    return
+    end if
+
+    n    = size(a)
+    L    = len(a(1))
+    Lnew = max(L, len(val))
+
+    allocate(character(Lnew) :: tmp(n+1))
+    tmp(1:n) = a
+    tmp(n+1) = val
+
+    call move_alloc(tmp, a)
+end subroutine append_c
 
 !subroutine append_c32(a, val)
 !    character(len=*) , allocatable, intent(inout) :: a(:)
@@ -75,39 +79,41 @@ end subroutine append_c
 
 
 subroutine append_integer(a, val)
+    implicit none
     integer, allocatable, intent(inout) :: a(:)
-    integer, intent(in)  :: val
+    integer,               intent(in)   :: val
     integer, allocatable :: tmp(:)
-    integer n
+    integer :: n
+
     if (.not. allocated(a)) then
-        allocate(a(1)); a(1) = val
-        return
-    endif
+    allocate(a(1)); a(1) = val
+    return
+    end if
+
     n = size(a)
-    allocate(tmp, source=a)
-    if (allocated(a)) deallocate(a)
-    allocate(a(n+1))
-    a(1:n) = tmp(:)
-    a(n+1) = val
-    deallocate(tmp)
+    allocate(tmp(n+1), source=0)
+    tmp(1:n)   = a
+    tmp(n+1)   = val
+    call move_alloc(tmp, a)
 end subroutine append_integer
+
 
 subroutine append_double(a, val)
     double precision, allocatable, intent(inout) :: a(:)
-    double precision, intent(in)  :: val
+    double precision,               intent(in)   :: val
     double precision, allocatable :: tmp(:)
-    integer n
+    integer :: n
+
     if (.not. allocated(a)) then
-        allocate(a(1)); a(1) = val
-        return
-    endif
+    allocate(a(1)); a(1) = val
+    return
+    end if
+
     n = size(a)
-    allocate(tmp, source=a)
-    if (allocated(a)) deallocate(a)
-    allocate(a(n+1))
-    a(1:n) = tmp(:)
-    a(n+1) = val
-    deallocate(tmp)
+    allocate(tmp(n+1), source=0.d0)
+    tmp(1:n) = a
+    tmp(n+1) = val
+    call move_alloc(tmp, a)
 end subroutine append_double
 
 ! ===================================================================================================
