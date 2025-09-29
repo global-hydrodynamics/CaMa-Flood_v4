@@ -19,6 +19,7 @@ USE CMF_DRV_CONTROL_MOD,     ONLY: CMF_DRV_INPUT,   CMF_DRV_INIT,    CMF_DRV_END
 USE CMF_DRV_ADVANCE_MOD,     ONLY: CMF_DRV_ADVANCE
 USE CMF_CTRL_FORCING_MOD,    ONLY: CMF_FORCING_GET, CMF_FORCING_PUT
 USE CMF_CTRL_TRACER_MOD,     ONLY: CMF_TRACER_FORC_GET, CMF_TRACER_FORC_INTERP
+USE CMF_CTRL_NMLIST_MOD,     ONLY: PRINT_NAMELISTS
 !** parallelization options**
 !$ USE OMP_LIB
 #ifdef UseMPI_CMF
@@ -38,6 +39,8 @@ INTEGER(KIND=JPIM)              :: ISTEP              ! total time step
 INTEGER(KIND=JPIM)              :: ISTEPADV           ! time step to be advanced within DRV_ADVANCE
 REAL(KIND=JPRB),ALLOCATABLE     :: ZBUFF(:,:,:)       ! Buffer to store forcing runoff
 !================================================
+CALL PRINT_NAMELISTS
+STOP
 !*** 0. MPI Initialization
 #ifdef UseMPI_CMF
 CALL CMF_MPI_INIT
