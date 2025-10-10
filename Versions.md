@@ -88,3 +88,7 @@ Reservoir operation recommended as default scheme
 ### Update in v4.23 (2024.11.25)
 #### Improved stability
 - New storage change limitter for stability improvement
+
+### Update in v4.23 (2025.Sep)
+#### Improved stability
+- Speed up by SIMD, Quasi-Sparse-Matrix
