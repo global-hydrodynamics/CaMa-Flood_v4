@@ -299,7 +299,7 @@ print *, 'calc outlet pixel location of each unit catchment'
               err=(upa1m(jx,jy)-area0)/area0      !! relative uparea error
 
               err2=err                            !! error considering location difference
-              dd=(  (jy-iy)**2.+(jy-iy)**2. )**0.5
+              dd=(  (jx-ix)**2.+(jy-iy)**2. )**0.5
               if( err>0 ) err2=err+0.02*dd
               if( err<0 ) err2=err-0.02*dd
 
@@ -350,8 +350,8 @@ print *, 'calc outlet pixel location of each unit catchment'
 
       !! when dam is very small and cannot be allocated on river network (treat as subgrid dam, receive runoff)
       if( area0<ctmare(iXX0,iYY0)*0.3 )then
-        staX(1)=iXX
-        staY(1)=iYY
+        staX(1)=iXX0
+        staY(1)=iYY0
         staA(1)=-888
         area_cmf=-888
         diff=-888
@@ -436,8 +436,8 @@ print *, 'calc outlet pixel location of each unit catchment'
 
       !! when dam is very small and cannot be allocated on river network
       if( err1>1 )then
-        staX(1)=iXX
-        staY(1)=iYY
+        staX(1)=iXX0
+        staY(1)=iYY0
         staA(1)=-888
         area_cmf=-888
         diff=-888
