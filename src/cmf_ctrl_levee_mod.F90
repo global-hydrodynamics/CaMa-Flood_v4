@@ -176,7 +176,7 @@ DO ISEQ=1, NSEQALL
   END DO
 
 ! Levee parameters calculation
-  IF( D2LEVHGT(ISEQ,1) == 0._JPRB )THEN ! Grid without levee, treat everything as unprotected
+  IF( D2LEVHGT(ISEQ,1) <= 0._JPRB )THEN ! Grid without levee, treat everything as unprotected
     D2BASHGT(ISEQ,1) = 1.E18_JPRB
     D2LEVDST(ISEQ,1) = 1.E18_JPRB
     D2LEVBASSTO(ISEQ,1) = 1.E18_JPRB
@@ -187,21 +187,21 @@ DO ISEQ=1, NSEQALL
     !! [1] levee base storage & levee top storage (water only in river side)
 
     DSTO_fil = D2RIVSTOMAX(ISEQ,1)
-    DHGTPRE = 0._JPRB
+    DHGTPRE  = 0._JPRB
     DWTH_fil = 0._JPRB
     D2LEVDST(ISEQ,1) = D2LEVFRC(ISEQ,1) * DWTH_inc*NLFP !! distance from channel to levee [m]
 
     ILEV=INT( D2LEVFRC(ISEQ,1)*NLFP )+1 !! which layer levee exist
     IF( ILEV>=2 )THEN
       DSTO_fil = D2FLDSTOMAX(ISEQ,1,ILEV-1)
-      DHGTPRE = D2FLDHGT(ISEQ,1,ILEV-1)
+      DHGTPRE  = D2FLDHGT(ISEQ,1,ILEV-1)
       DWTH_fil = DWTH_inc * (ILEV-1)
     ENDIF
 
     IF( ILEV<=NLFP )THEN
       !! levee in floodplain layer ILEV
       DWTH_add = D2LEVDST(ISEQ,1) - DWTH_fil
-      DHGTNOW = DWTH_add * D2FLDGRD(ISEQ,1,ILEV) !! levee height above lower floodplain profile point
+      DHGTNOW  = DWTH_add * D2FLDGRD(ISEQ,1,ILEV) !! levee height above lower floodplain profile point
       D2BASHGT(ISEQ,1) = DHGTNOW + DHGTPRE
       D2LEVHGT(ISEQ,1) = max( D2LEVHGT(ISEQ,1), D2BASHGT(ISEQ,1) ) !! levee height >= base height
 
