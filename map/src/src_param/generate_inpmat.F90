@@ -354,7 +354,7 @@ CONTAINS
       rlat1=min(rlat1, 90.0)
       rlat2=min(rlat2, 90.0)
       rlat1=max(rlat1,-90.0)
-      rlat1=max(rlat1,-90.0)
+      rlat2=max(rlat2,-90.0)
 
 
       if ((rlat1.gt.90.).or.(rlat1.lt.-90.).or.&
@@ -363,7 +363,7 @@ CONTAINS
         write(*,*) 'rlon1(east) : ',rlon1
         write(*,*) 'rlon2(west) : ',rlon2
         write(*,*) 'rlat1(north): ',rlat1
-        write(*,*) 'rlat1(south): ',rlat2
+        write(*,*) 'rlat2(south): ',rlat2
         rgetarea = 0.0
       else
         dsin1 = dble(sin(rlat1 * rpi/180.D0))

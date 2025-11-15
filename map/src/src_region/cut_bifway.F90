@@ -47,9 +47,9 @@
       read(11,*    ) north
       close(11)
 
-      allocate(nextx(nXX,nYY))
+      allocate(nextx(mXX,mYY))
       rfile1='../nextxy_noedge.bin'
-      open(11,file=rfile1,form='unformatted',access='direct',recl=4*nXX*nYY)
+      open(11,file=rfile1,form='unformatted',access='direct',recl=4*mXX*mYY)
       read(11,rec=1) nextx
       close(11)
       
