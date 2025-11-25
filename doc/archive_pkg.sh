@@ -4,7 +4,7 @@
 # Make sure only required files are included in Git Repo.
 
 TAG=`date '+%Y%m%d'`
-VER="v423"
+VER="v430"
 BASE=`pwd`
 PKG="cmf_${VER}_pkg"
 
