@@ -28,7 +28,7 @@
 
 #*** 0a. Set CaMa-Flood base directory
 BASE=`pwd`/..
-# BASE="/home/yamadai/work/CaMa_v420/cmf_v420_pkg"  # setting for PBS in cluster
+# BASE="/home/yamadai/work/CaMa_v430/cmf_v430_pkg"  # setting for PBS in cluster
 
 echo $BASE
 

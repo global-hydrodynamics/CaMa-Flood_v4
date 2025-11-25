@@ -200,8 +200,8 @@ def main():
         height=ny,
         transform=dst_transform,
         compress="lzw",
-#        dtype="float32",
-        dtype="<f4",
+        dtype="float32",
+#        dtype="<f4",
         nodata=-9999.0,
     )
 
