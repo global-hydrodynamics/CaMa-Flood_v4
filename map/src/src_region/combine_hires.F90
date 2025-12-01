@@ -35,14 +35,14 @@
 
 ! regional hires map
       integer*2,allocatable  ::  catmXX(:,:), catmYY(:,:), downx(:,:), downy(:,:)
-      integer*1,allocatable  ::  catmZZ(:,:), flwdir(:,:)
+      integer*1,allocatable  ::  catmZZ(:,:), catmZ100(:,:), flwdir(:,:)
       real,allocatable       ::  flddif(:,:), grdare(:,:)
       real,allocatable       ::  elevtn(:,:), uparea(:,:), rivwth(:,:), hand(:,:) 
       integer*1,allocatable  ::  visual(:,:)
 
 ! input hires map
       integer*2,allocatable  ::  catmXX0(:,:), catmYY0(:,:), downx0(:,:), downy0(:,:)
-      integer*1,allocatable  ::  catmZZ0(:,:), flwdir0(:,:)
+      integer*1,allocatable  ::  catmZZ0(:,:), catmZ100_0(:,:), flwdir0(:,:)
       real,allocatable       ::  flddif0(:,:), grdare0(:,:)
       real,allocatable       ::  elevtn0(:,:), uparea0(:,:), rivwth0(:,:), hand0(:,:)
       integer*1,allocatable  ::  visual0(:,:) 
@@ -126,12 +126,13 @@
 
         CCname=trim(tag)
 
-        allocate(catmXX(nx,ny),catmYY(nx,ny),catmZZ(nx,ny),flddif(nx,ny),grdare(nx,ny))
+        allocate(catmXX(nx,ny),catmYY(nx,ny),catmZZ(nx,ny),flddif(nx,ny),grdare(nx,ny),catmZ100(nx,ny))
         allocate(flwdir(nx,ny),hand(nx,ny),elevtn(nx,ny),uparea(nx,ny),rivwth(nx,ny),visual(nx,ny),downx(nx,ny),downy(nx,ny))
 
         catmXX(:,:)=-9999
         catmYY(:,:)=-9999
         catmZZ(:,:)=-9
+        catmZ100(:,:)=-9
         flwdir(:,:)=-9
         flddif(:,:)=-9999
         grdare(:,:)=-9999
@@ -156,7 +157,7 @@
             goto 2000
           endif
 
-          allocate(catmXX0(nx0,ny0),catmYY0(nx0,ny0),catmZZ0(nx0,ny0),flddif0(nx0,ny0),grdare0(nx0,ny0))
+          allocate(catmXX0(nx0,ny0),catmYY0(nx0,ny0),catmZZ0(nx0,ny0),flddif0(nx0,ny0),grdare0(nx0,ny0),catmZ100_0(nx0,ny0))
           allocate(flwdir0(nx0,ny0),hand0(nx0,ny0),elevtn0(nx0,ny0),uparea0(nx0,ny0),rivwth0(nx0,ny0),visual0(nx0,ny0))
           allocate(downx0(nx0,ny0),downy0(nx0,ny0))
           allocate(lon0(nx0),lat0(ny0))
@@ -203,6 +204,13 @@
           open(21,file=rfile1,form='unformatted',access='direct',recl=1*nx0*ny0,status='old',iostat=ios)
           if( ios==0 )then
             read(21,rec=1) catmZZ0
+            close(21)
+          endif
+
+          rfile1=trim(hires)//trim(area)//'.catmz100.bin'
+          open(21,file=rfile1,form='unformatted',access='direct',recl=1*nx0*ny0,status='old',iostat=ios)
+          if( ios==0 )then
+            read(21,rec=1) catmZ100_0
             close(21)
           endif
 
@@ -279,10 +287,12 @@
                       catmYY(ix,iy)=-999
                     endif
                     catmZZ(ix,iy)=catmZZ0(ix0,iy0)
+                    catmZ100(ix,iy)=catmZ100_0(ix0,iy0)
                   else
                     catmXX(ix,iy)=catmXX0(ix0,iy0)
                     catmYY(ix,iy)=catmYY0(ix0,iy0)
                     catmZZ(ix,iy)=catmZZ0(ix0,iy0)
+                    catmZ100(ix,iy)=catmZ100_0(ix0,iy0)
                   endif
                 endif
 
@@ -305,7 +315,7 @@
             end do
           end do
  1000     continue
-          deallocate(catmXX0,catmYY0,catmZZ0,flddif0,grdare0,downx0,downy0)
+          deallocate(catmXX0,catmYY0,catmZZ0,flddif0,grdare0,downx0,downy0,catmZ100_0)
           deallocate(flwdir0,hand0,elevtn0,uparea0,rivwth0,visual0,lon0,lat0)
  2000     continue
         end do
@@ -319,6 +329,11 @@
         wfile1=trim(out_hdir)//'/'//trim(CCname)//'.catmzz.bin'
         open(21,file=wfile1,form='unformatted',access='direct',recl=1*nx*ny)
         write(21,rec=1) catmZZ
+        close(21)
+
+        wfile1=trim(out_hdir)//'/'//trim(CCname)//'.catmz100.bin'
+        open(21,file=wfile1,form='unformatted',access='direct',recl=1*nx*ny)
+        write(21,rec=1) catmZ100
         close(21)
 
         wfile1=trim(out_hdir)//'/'//trim(CCname)//'.flddif.bin'
@@ -416,7 +431,7 @@
 
 print *, nx, ny
 
-        allocate(catmXX(nx,ny),catmYY(nx,ny),catmZZ(nx,ny),flddif(nx,ny),downx(nx,ny),downy(nx,ny))
+        allocate(catmXX(nx,ny),catmYY(nx,ny),catmZZ(nx,ny),flddif(nx,ny),downx(nx,ny),downy(nx,ny),catmZ100(nx,ny))
         allocate(flwdir(nx,ny),hand(nx,ny),elevtn(nx,ny),uparea(nx,ny),rivwth(nx,ny),visual(nx,ny))
 
 print *, nlon, nlat
@@ -449,6 +464,13 @@ print *, nlon, nlat
             open(21,file=rfile1,form='unformatted',access='direct',recl=1*nx*ny,status='old',iostat=ios)
             if( ios==0 )then
               read(21,rec=1) catmZZ
+              close(21)
+            endif
+
+            rfile1=trim(hires)//trim(CCname)//'.catmz100.bin'
+            open(21,file=rfile1,form='unformatted',access='direct',recl=1*nx*ny,status='old',iostat=ios)
+            if( ios==0 )then
+              read(21,rec=1) catmZ100
               close(21)
             endif
 
@@ -541,6 +563,11 @@ print *, nlon, nlat
             wfile1=trim(out_hdir)//'/'//trim(CCname)//'.catmzz.bin'
             open(21,file=wfile1,form='unformatted',access='direct',recl=1*nx*ny)
             write(21,rec=1) catmZZ
+            close(21)
+
+            wfile1=trim(out_hdir)//'/'//trim(CCname)//'.catmz100.bin'
+            open(21,file=wfile1,form='unformatted',access='direct',recl=1*nx*ny)
+            write(21,rec=1) catmZ100
             close(21)
 
             wfile1=trim(out_hdir)//'/'//trim(CCname)//'.flddif.bin'

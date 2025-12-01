@@ -510,10 +510,10 @@ REAL(KIND=JPRB),SAVE    ::  DSLP, DFLW, DOUT_pr, DFLW_pr, DFLW_im, RATE
 !================================================
 !$OMP PARALLEL DO SIMD
 DO ISEQ=1, NSEQALL
-  IF( D2LEVFRC(ISEQ,1)<1.0_JPRB )THEN
-    D2SFCELV_LEV(ISEQ,1) = D2ELEVTN(ISEQ,1)+D2LEVDPH(ISEQ,1)  !! levee exist, calculate pthout based on levee protected depth
+  D2SFCELV_LEV(ISEQ,1) = D2SFCELV(ISEQ,1)
+  IF( D2LEVFRC(ISEQ,1)<1.0_JPRB )THEN !! levee exist, calculate pthout based on levee protected depth
+    D2SFCELV_LEV(ISEQ,1) = min( D2ELEVTN(ISEQ,1)+D2LEVDPH(ISEQ,1), D2SFCELV(ISEQ,1) ) 
   ELSE
-    D2SFCELV_LEV(ISEQ,1) = D2SFCELV(ISEQ,1)
   ENDIF
   D2SFCELV_PRE(ISEQ,1) = D2RIVELV(ISEQ,1)+D2RIVDPH_PRE(ISEQ,1)
 END DO
@@ -553,7 +553,8 @@ DO IPTH=1, NPTHOUT
 !! [1] for overland bifurcation, use protected-side water surface elevation
   IF( NPTHLEV<=1 ) CYCLE
 
-  DSLP  = (D2SFCELV_LEV(ISEQP,1)-D2SFCELV_LEV(JSEQP,1)) / PTH_DST(IPTH)
+!  DSLP  = (D2SFCELV_LEV(ISEQP,1)-D2SFCELV_LEV(JSEQP,1)) / PTH_DST(IPTH)
+  DSLP  = (D2SFCELV(ISEQP,1)-D2SFCELV(JSEQP,1)) / PTH_DST(IPTH)   !! slope should be based on river water level, for stability.
   DSLP = max(-0.005_JPRB,min(0.005_JPRB,DSLP))      
 
   DO ILEV=2, NPTHLEV
@@ -590,6 +591,7 @@ DO IPTH=1, NPTHOUT
   IF( D1PTHFLWSUM(IPTH)/=0._JPRB )THEN
     RATE= 0.05_JPRB*min(D2STORGE(ISEQP,1),D2STORGE(JSEQP,1)) / abs(D1PTHFLWSUM(IPTH)*DT)  !! flow limit: 5% storage for stability
     RATE= min(RATE, 1.0_JPRB )
+
     D1PTHFLW(IPTH,:) =D1PTHFLW(IPTH,:) *RATE
     D1PTHFLWSUM(IPTH)=D1PTHFLWSUM(IPTH)*RATE
   ENDIF

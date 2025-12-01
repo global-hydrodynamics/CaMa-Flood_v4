@@ -9,3 +9,5 @@ NEXT="sim02"
 ./t02-calc_levee_height.sh $CYCLE
 
 cp ${CYCLE}_calc/levhgt.bin ./map/levhgt_${NEXT}.bin
+
+cp ${CYCLE}_calc/levhgt.bin ./map/levhgt.bin
