@@ -300,7 +300,7 @@ print *, 'calc outlet pixel location of each unit catchment'
               err=(upa1m(jx,jy)-area0)/area0     !! relative uparea error
 
               err2=err                           !! error considering location difference
-              dd=(  (jy-iy)**2.+(jy-iy)**2. )**0.5
+              dd=(  (jx-ix)**2.+(jy-iy)**2. )**0.5
               if( err>0 ) err2=err+0.02*dd
               if( err<0 ) err2=err-0.02*dd
 
@@ -393,7 +393,7 @@ print *, 'calc outlet pixel location of each unit catchment'
             goto 3200         !! already decided. 
           else
             call nextxy(jx,jy,kx,ky)
-            dst=dst+rgetlen(lon1m(ix),lat1m(iy),lon1m(jx),lat1m(jy))
+            dst=dst+rgetlen(lon1m(jx),lat1m(jy),lon1m(kx),lat1m(ky))
             jx=kx
             jy=ky
           endif

@@ -293,7 +293,7 @@ print *, 'calc outlet pixel location of each unit catchment'
               err=(upa1m(jx,jy)-area0)/area0     !! relative uparea error
 
               err2=err                           !! error considering location difference
-              dd=(  (jy-iy)**2.+(jy-iy)**2. )**0.5
+              dd=(  (jx-ix)**2.+(jy-iy)**2. )**0.5
               if( err>0 ) err2=err+0.02*dd
               if( err<0 ) err2=err-0.02*dd
 
