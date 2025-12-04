@@ -369,7 +369,7 @@
         close(21)
 
         wfile1=trim(out_hdir)//'/'//trim(CCname)//'.visual.bin'
-        open(21,file=wfile1,form='unformatted',access='direct',recl=4*nx*ny)
+        open(21,file=wfile1,form='unformatted',access='direct',recl=1*nx*ny)
         write(21,rec=1) visual
         close(21)
 
