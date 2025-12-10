@@ -402,7 +402,7 @@ DO ISEQ=1, NSEQALL
 
       IF( I<=NLFP )THEN
         DSTO_add = DSTOALL - DSTO_fil
-        DWTH_add = -DWTH_fil + ( DWTH_fil**2._JPRB + 2._JPRB / DSTO_add*D2RIVLEN(ISEQ,1) / D2FLDGRD(ISEQ,1,I) )**0.5_JPRB
+        DWTH_add = -DWTH_fil + ( DWTH_fil**2._JPRB + 2._JPRB * DSTO_add / D2RIVLEN(ISEQ,1) / D2FLDGRD(ISEQ,1,I) )**0.5_JPRB
         DDPH_add = DWTH_add * D2FLDGRD(ISEQ,1,I)
         D2LEVDPH(ISEQ,1) = D2BASHGT(ISEQ,1) + DDPH_fil + DDPH_add
 
