@@ -4,8 +4,8 @@
 CYCLE=$1
 
 ## CaMa-Flood: simulation map directory & simulation output dorectory
-START_YEAR=1980
-END_YEAR=2010
+START_YEAR=1990
+END_YEAR=2020
 MAP_DIR="./map"              ## CaMa map dir
 CMF_DIR="./${CYCLE}_out"     ## CaMa output dir
 CMF_FMT="bin"                ## CaMa output file format (bin or nc)
