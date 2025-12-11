@@ -42,8 +42,8 @@ FCMP = ifort -qopenmp
 FC = ifort
 
 LFLAGS =
-FFLAGS = -O3 -warn all -fpp -free -assume byterecl -heap-arrays -nogen-interface -lpthread -static-intel -align array64byte 
-#FFLAGS = -O3 -warn all -fpp -free -assume byterecl -heap-arrays -nogen-interface -lpthread -static-intel -align array64byte -qopt-report=5 -qopt-report-phase=vec
+FFLAGS = -O3 -xHost -warn all -fpp -free -assume byterecl -heap-arrays -nogen-interface -lpthread -align array64byte 
+#FFLAGS = -O3 -xHost -warn all -fpp -free -assume byterecl -heap-arrays -nogen-interface -lpthread -align array64byte -qopt-report=5 -qopt-report-phase=vec
 
 
 # Debug Mode
