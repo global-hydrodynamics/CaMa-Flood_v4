@@ -27,7 +27,7 @@
 #####################################
 
 #*** 0a. Set CaMa-Flood base directory
-PWD=`pwd`
+PWDD=`pwd`
 BASE=`pwd`/../../
 # BASE="/home/yamadai/work/CaMa_v425/cmf_v425_pkg"  # setting for PBS in cluster
 
@@ -49,7 +49,7 @@ export OMP_NUM_THREADS=16                # OpenMP cpu num
 #*** 1a. Experiment directory setting
 
 EXE="MAIN_cmf"                              # Execute file name
-RDIR=${PWD}/levee_out                    # directory to run CaMa-Flood
+RDIR=${PWDD}/levee_out                    # directory to run CaMa-Flood
 PROG=${BASE}/src/${EXE}                     # location of Fortran main program
 NMLIST="./input_cmf.nam"                    # standard namelist
 LOGOUT="./log_CaMa.txt"                     # standard log output
@@ -69,10 +69,10 @@ LLEVEE=".TRUE."                             # .TRUE. to activate levee scheme
 
 #============================
 #*** 1c. simulation time
-YSTA=2000                                   # start year ( from YSTA / Jan  1st _ 00:00)
-YEND=2001                                   # end   year (until YEND / Dec 31st _ 24:00)
+YSTA=1990                                   # start year ( from YSTA / Jan  1st _ 00:00)
+YEND=2020                                   # end   year (until YEND / Dec 31st _ 24:00)
 SPINUP=0                                    # [0]: zero-storage start, [1]: from restart file
-NSP=1   
+NSP=1                                      # spinup repeat time
 
 #============================
 #*** 1d. spinup setting
@@ -93,22 +93,15 @@ IFRQ_RST="0"                                # output restat frequency.
 #============================
 #*** 1e. forcing setting
 IFRQ_INP="24"                               # input forcing frequency: [1,2,3,...,24] hour
-DROFUNIT="86400000"   # [mm/day->m/s]       # runoff unit conversion
+DROFUNIT="86400"   # [m/day->m/s]       # runoff unit conversion
 
 #----- for plain binary runoff forcing
 LINPCDF=".FALSE."                           # true for netCDF runoff
 LINTERP=".TRUE."                            # .TRUE. to interporlate with input matrix
-CROFDIR="${BASE}/inp/test_1deg/runoff/"     # runoff directory
+LINTERPCDF=".FALSE."                        # .TRUE. to use netCDF input matrix
+CROFDIR="${BASE}/inp/ERA5_sixmin/"     # runoff directory
 CROFPRE="Roff____"                          # runoff prefix/suffix  
-CROFSUF=".one"                              #   $(CROFPRE)YYYYMMDD$(CROFSUF)
-
-#----- for plain binary runoff forcing
-#LINPCDF=".FALSE."                           # true for netCDF runoff
-#LINTERP=".TRUE."                            # .TRUE. to interporlate with input matrix
-#LINTERPCDF=".FALSE."                        # .TRUE. to use netCDF input matrix
-#CROFDIR="${BASE}/inp/ERA5_sixmin/"     # runoff directory
-#CROFPRE="Roff____"                          # runoff prefix/suffix  
-#CROFSUF=".sixmin"                              #   $(CROFPRE)YYYYMMDD$(CROFSUF)
+CROFSUF=".sixmin"                              #   $(CROFPRE)YYYYMMDD$(CROFSUF)
 
 ###** sub-surface runoff scheme (not available with plain binary runoff)
 LROSPLIT=".FALSE."                          # .TRUE. for sub-surface runoff
@@ -133,12 +126,10 @@ LROSPLIT=".FALSE."                          # .TRUE. for sub-surface runoff
 
 #============================
 #*** 1f. river map & topography
-FMAP="${PWD}/map"                             # map directory
+FMAP="${PWDD}/map"                             # map directory
 
-CDIMINFO="${FMAP}/diminfo_test-1deg.txt"    # dimention information file
-CINPMAT=${FMAP}/inpmat_test-1deg.bin        # runoff input matrix for interporlation
-#CDIMINFO="${FMAP}/diminfo_ERA5_sixmin.txt"    # dimention information file
-#CINPMAT=${FMAP}/inpmat_ERA5_sixmin.bin        # runoff input matrix for interporlation
+CDIMINFO="${FMAP}/diminfo_ERA5_sixmin.txt"    # dimention information file
+CINPMAT=${FMAP}/inpmat_ERA5_sixmin.bin        # runoff input matrix for interporlation
 #CDIMINFO="${FMAP}/diminfo_test-15min_nc.txt" # dimention information file
 #CINPMAT=${FMAP}/inpmat_test-15min_nc.bin     # runoff input matrix for interporlation
 
