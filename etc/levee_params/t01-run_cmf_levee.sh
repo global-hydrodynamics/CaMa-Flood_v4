@@ -30,16 +30,18 @@
 ## then, the post analysis is doene in ${CYCLE}_calc
 CYCLE=$1   ## sim00, sim01, sim02
 
-RDIR=${PWD}/${CYCLE}_out                    # directory to run CaMa-Flood
-LEVHGT_CYCLE="levhgt_${CYCLE}.bin"          # Levee height map in this cycle
 #####################################
 
 #*** 0a. Set CaMa-Flood base directory
-PWD=`pwd`
+PWDD=`pwd`
 BASE=`pwd`/../../
 # BASE="/home/yamadai/work/CaMa_v425/cmf_v425_pkg"  # setting for PBS in cluster
 
 echo $BASE
+
+RDIR=${PWDD}/${CYCLE}_out                    # directory to run CaMa-Flood
+LEVHGT_CYCLE="levhgt_${CYCLE}.bin"          # Levee height map in this cycle
+
 
 #*** 0b. Set dynamic library if needed
 export IFORTLIB="/opt/intel/lib:/opt/intel/mkl/lib"
@@ -133,7 +135,7 @@ LROSPLIT=".FALSE."                          # .TRUE. for sub-surface runoff
 
 #============================
 #*** 1f. river map & topography
-FMAP="${PWD}/map"                             # map directory
+FMAP="${PWDD}/map"                             # map directory
 CDIMINFO="${FMAP}/diminfo_ERA5_sixmin.txt"    # dimention information file
 CINPMAT=${FMAP}/inpmat_ERA5_sixmin.bin        # runoff input matrix for interporlation
 #CDIMINFO="${FMAP}/diminfo_test-15min_nc.txt" # dimention information file
