@@ -4,7 +4,10 @@ include $(TOP)/adm/Mkinclude
 LIBNAME = libmod.a
 
 OBJS = \
-	glob_mod.o
+	glob_mod.o \
+	camaframe_mod.o \
+	inpmat_mod.o \
+	dim_converter.o
 
 .PHONY: all clean
 all: $(LIBNAME)

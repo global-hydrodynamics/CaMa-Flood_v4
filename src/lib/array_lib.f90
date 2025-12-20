@@ -151,50 +151,48 @@ end subroutine trim_array_r8 ! ***
 ! find_index
 ! If array is not allocated, idx = 0
 ! ===================================================================================================
-function find_index_c(array, target) result(idx)
-    character(len=*), allocatable, intent(in) :: array(:)
-    character(len=*),              intent(in) :: target
-    integer           idx
-    logical(kind=4) isFound
-    isFound = .FALSE.
-    do idx = 1, size(array)
-        if (trim(array(idx)) == trim(target)) then
-            isFound = .TRUE.
-            exit
-        endif
-    enddo
-    if (.not. isFound) then
-        idx = 0
-    endif
+integer function find_index_c(array, target) result(idx)
+    character(len=*), intent(in) :: array(:)
+    character(len=*), intent(in) :: target
+    integer :: i
+
+    idx = 0
+    do i = 1, size(array)
+        if (trim(array(i)) == trim(target)) then
+            idx = i
+            return
+        end if
+    end do
 end function find_index_c
 
-function find_index_i_alloc(array, target) result(idx)
+integer function find_index_i_alloc(array, target) result(idx)
     integer, allocatable, intent(in) :: array(:)
     ! without "allocatable", error when array is not allocated
     integer,              intent(in) :: target
-    integer                idx
-    logical(kind=4)      isFound
-    isFound = .FALSE.
-    do idx = 1, size(array)
-        if (array(idx) == target) then
-            isFound = .TRUE.
-            exit
+    integer :: i
+
+    idx = 0
+    do i = 1, size(array)
+        if (array(i) == target) then
+            idx = i
+            return
         endif
     enddo
-    if (.not. isFound) then
-        idx = 0
-    endif
 end function find_index_i_alloc
 
-function find_index_d_alloc(array, target) result(idx)
+integer function find_index_d_alloc(array, target) result(idx)
     real(8), allocatable, intent(in) :: array(:)
     ! without "allocatable", error when array is not allocated
     real(8),              intent(in) :: target
-    integer                idx
-    do idx = 1, size(array)
-        if (array(idx) == target) return
-    enddo
+    integer :: i
+
     idx = 0
+    do i = 1, size(array)
+        if (array(i) == target) then
+            idx = i
+            return
+        endif
+    enddo
 end function find_index_d_alloc
 !function find_index_i(array, target) result(idx)
 !    integer, intent(in) :: array(:)
