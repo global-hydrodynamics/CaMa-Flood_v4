@@ -1,102 +1,72 @@
 program test_key_table
-    use glob_mod, only: CLEN_SHORT
     use key_table_class, only: KeyTable
     implicit none
 
     type(KeyTable) :: kt
-    integer :: idx1, idx2, idx3, idx4
-    integer :: nmax0
 
-    call banner('KeyTable test start')
+    call test_append_and_has_key(kt)
 
-    !------------------------------------------------------------
-    ! 1) init / empty
-    !------------------------------------------------------------
-    call kt%init(2)
-    call assert_i('init: n==0', kt%n, 0)
-    call assert_i('init: nmax==2', kt%nmax, 2)
-    call assert_i('init: key_len==CLEN_SHORT', kt%key_len, CLEN_SHORT)
-
-    call assert_l('empty: has_key("Tair")==F', kt%has_key('Tair'), .false.)
-    call assert_i('empty: find("Tair")==0', kt%find('Tair'), 0)
-
-    nmax0 = kt%nmax
-
-    !------------------------------------------------------------
-    ! 2) ensure: new keys
-    !------------------------------------------------------------
-    idx1 = kt%ensure('Tair')
-    call assert_i('ensure Tair: idx==1', idx1, 1)
-    call assert_i('ensure Tair: n==1', kt%n, 1)
-    call assert_l('has_key Tair', kt%has_key('Tair'), .true.)
-    call assert_i('find Tair', kt%find('Tair'), 1)
-
-    idx2 = kt%ensure('Qair')
-    call assert_i('ensure Qair: idx==2', idx2, 2)
-    call assert_i('ensure Qair: n==2', kt%n, 2)
-    call assert_l('has_key Qair', kt%has_key('Qair'), .true.)
-    call assert_i('find Qair', kt%find('Qair'), 2)
-
-    call assert_i('capacity unchanged (still 2)', kt%nmax, nmax0)
-
-    !------------------------------------------------------------
-    ! 3) ensure: existing key must return same idx, n not increase
-    !------------------------------------------------------------
-    idx3 = kt%ensure('Tair')
-    call assert_i('ensure existing Tair: idx==1', idx3, 1)
-    call assert_i('ensure existing Tair: n still 2', kt%n, 2)
-
-    !------------------------------------------------------------
-    ! 4) ensure: trigger growth
-    !------------------------------------------------------------
-    idx4 = kt%ensure('Wind_E')
-    call assert_i('ensure Wind_E: idx==3', idx4, 3)
-    call assert_i('ensure Wind_E: n==3', kt%n, 3)
-    call assert_l('has_key Wind_E', kt%has_key('Wind_E'), .true.)
-    call assert_i('find Wind_E', kt%find('Wind_E'), 3)
-
-    call assert_l('capacity grew', kt%nmax > nmax0, .true.)
-
-    !------------------------------------------------------------
-    ! 5) clear
-    !------------------------------------------------------------
-    call kt%clear()
-    call assert_i('clear: n==0', kt%n, 0)
-    call assert_i('clear: nmax==0', kt%nmax, 0)
-    call assert_l('clear: has_key("Tair")==F', kt%has_key('Tair'), .false.)
-
-    call banner('KeyTable test PASSED')
+    write(*, *) '[TEST PASSED] test_key_table'
 contains
 
-    subroutine banner(msg)
+    subroutine test_append_and_has_key(kt)
+        type(KeyTable), intent(inout) :: kt
+
+        call kt%clear()
+
+        call assert_int_equal(0, count_keys(kt), 'initial count is 0')
+
+        call kt%append('Tair')
+        call assert_int_equal(1, count_keys(kt), 'count after 1 append')
+        call assert_true(kt%has_key('Tair'), 'has_key(Tair) after append')
+        call assert_false(kt%has_key('Qair'), 'has_key(Qair) before append')
+
+        call kt%append('Qair')
+        call assert_int_equal(2, count_keys(kt), 'count after 2 appends')
+        call assert_true(kt%has_key('Qair'), 'has_key(Qair) after append')
+
+        call kt%append('Wind')
+        call assert_int_equal(3, count_keys(kt), 'count after 3 appends')
+        call assert_true(kt%has_key('Wind'), 'has_key(Wind) after append')
+    end subroutine test_append_and_has_key
+
+
+    ! keys(:) のサイズ取得（「n/nmax は不要で size(keys)」方針に対応）
+    integer function count_keys(kt) result(n)
+        type(KeyTable), intent(in) :: kt
+        if (.not. allocated(kt%keys)) then
+            n = 0
+        else
+            n = size(kt%keys)
+        end if
+    end function count_keys
+
+
+    subroutine assert_true(cond, msg)
+        logical, intent(in) :: cond
         character(len=*), intent(in) :: msg
-        write(*,'(a)') '============================================================'
-        write(*,'(a)') trim(msg)
-        write(*,'(a)') '============================================================'
-    end subroutine banner
-
-
-    subroutine assert_i(label, got, expect)
-        character(len=*), intent(in) :: label
-        integer, intent(in)          :: got, expect
-        if (got /= expect) then
-            write(*,*) '[TEST FAILED] ', trim(label)
-            write(*,*) '  got   = ', got
-            write(*,*) '  expect= ', expect
+        if (.not. cond) then
+            write(*, *) '[TEST FAILED] ', trim(msg)
             stop 1
         end if
-    end subroutine assert_i
+    end subroutine assert_true
 
-
-    subroutine assert_l(label, got, expect)
-        character(len=*), intent(in) :: label
-        logical, intent(in)          :: got, expect
-        if (got .neqv. expect) then
-            write(*,*) '[TEST FAILED] ', trim(label)
-            write(*,*) '  got   = ', got
-            write(*,*) '  expect= ', expect
+    subroutine assert_false(cond, msg)
+        logical, intent(in) :: cond
+        character(len=*), intent(in) :: msg
+        if (cond) then
+            write(*, *) '[TEST FAILED] ', trim(msg)
             stop 1
         end if
-    end subroutine assert_l
+    end subroutine assert_false
+
+    subroutine assert_int_equal(a, b, msg)
+        integer, intent(in) :: a, b
+        character(len=*), intent(in) :: msg
+        if (a /= b) then
+            write(*, *) '[TEST FAILED] ', trim(msg), ' a=', a, ' b=', b
+            stop 1
+        end if
+    end subroutine assert_int_equal
 
 end program test_key_table
