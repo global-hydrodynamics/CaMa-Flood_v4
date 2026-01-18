@@ -201,7 +201,7 @@ end subroutine append_ranked_array_1d
 subroutine append_ranked_array_2d(arrs, new_arr)
     implicit none
     type(RankedArray), allocatable, intent(inout) :: arrs(:)
-    real(kind=JPRB),              intent(in)    :: new_arr(:,:)
+    real(kind=JPRB),                intent(in)    :: new_arr(:,:)
 
     type(RankedArray), allocatable :: tmp(:)
     type(RankedArray) :: new_item

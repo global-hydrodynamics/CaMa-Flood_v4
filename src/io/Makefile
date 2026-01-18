@@ -18,6 +18,8 @@ endif
 LIBOBJS = \
 	key_table_class.o \
     ranked_array_class.o \
+	accumulated_array_class.o \
+	output_writer_class.o \
     input_namelist_mod.o \
 	input_conf_class.o \
 	input_mod.o

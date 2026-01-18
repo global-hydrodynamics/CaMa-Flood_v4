@@ -3,6 +3,7 @@ module input_conf_class
     ! see input_namelist_mod > read_nml_input_item
     use PARKIND1, only: &
     &   JPIM, JPRB, JPRM
+
     use glob_mod, only: &
     &   NML_PATH, CLEN_ITEM, CLEN_PATH, CLEN_SHORT
     use funit_lib, only: &
