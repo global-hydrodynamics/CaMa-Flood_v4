@@ -28,7 +28,7 @@ module input_conf_class
     !&   LINTRP_TIME
     use dim_converter, only: &
     &   map2vec, find_inpmat
-    use input_namelist_mod, only: &
+    use io_namelist_mod, only: &
     &   read_nml_input_item, read_nml_input_domain, read_nml_input_shape, read_nml_input_tres, read_nml_input_nc, &
     &   raise_item_not_found_error
     implicit none

@@ -1,6 +1,8 @@
-module input_namelist_mod
+module io_namelist_mod
     use PARKIND1, only: &
     &   JPIM, JPRB, JPRM
+    use YOS_CMF_INPUT, only: &
+    &   TMPNAM
     use glob_mod, only: &
     &   NML_PATH, CLEN_ITEM, CLEN_PATH, CLEN_SHORT
     use funit_lib, only: &
@@ -235,4 +237,45 @@ subroutine read_nml_input_scale( &
     enddo
 end subroutine read_nml_input_scale
 
-end module input_namelist_mod
+! ===================================================================================================
+subroutine read_nml_output(out_item, is_found, path, mapfmt, is_mean)
+    character(len=*), intent(in) :: &
+    &   out_item
+    logical, intent(out) :: &
+    &   is_found
+    character(len=CLEN_PATH),intent(out) :: &
+    &   path
+    logical, intent(out) :: &
+    &   mapfmt, is_mean
+
+    character(len=CLEN_ITEM) :: &
+    &   item
+    integer(kind=JPIM) :: &
+    &   ios
+
+    ! NOTE:
+    ! - 'path' is the base path in namelist; suffix is appended later.
+    ! - keep defaults consistent with existing behavior
+    namelist /nml_out/ item, path, mapfmt, is_mean
+
+    is_found = .FALSE.
+
+    call open_namelist(TMPNAM)
+    do
+        item   = ''
+        path   = ''
+        mapfmt = .TRUE.
+        is_mean = .TRUE.
+
+        read(TMPNAM, nml=nml_out, iostat=ios)
+        if (ios < 0) exit
+
+        if (trim(item) == trim(out_item)) then
+            is_found = .TRUE.
+            exit
+        endif
+    enddo
+    close(TMPNAM)
+end subroutine read_nml_output
+
+end module io_namelist_mod

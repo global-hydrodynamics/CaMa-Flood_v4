@@ -19,7 +19,7 @@ module input_mod
     &   write_string_with_indent
     !use correct_mod, only: &
     !&   fill_map, scale_map, minimum, div
-    use input_namelist_mod, only: &
+    use io_namelist_mod, only: &
     &   open_namelist
     !use output_mod, only: &
     !&   update_output
