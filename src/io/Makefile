@@ -17,8 +17,9 @@ endif
 
 LIBOBJS = \
 	key_table_class.o \
-    array_dict_class.o \
-    input_namelist_mod.o
+    ranked_array_class.o \
+    input_namelist_mod.o \
+	input_conf_class.o
 
 .SUFFIXES: .o .F90 .f90
 %.o: %.F90
@@ -33,8 +34,9 @@ $(libname): $(LIBOBJS)
 # tests
 #------------------------------------------------------------
 TESTS = \
-	test_array_dict \
-	test_key_table
+	test_key_table \
+	test_ranked_array
+	
 TEST_SRCS = $(addprefix test/,$(addsuffix .f90,$(TESTS)))
 TEST_EXES = $(TESTS)
 

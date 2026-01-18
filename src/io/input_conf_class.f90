@@ -1,6 +1,10 @@
 module input_conf_class
     ! many items are input by namelist
     ! see input_namelist_mod > read_nml_input_item
+    use PARKIND1, only: &
+    &   JPIM, JPRB, JPRM
+    use glob_mod, only: &
+    &   NML_PATH, CLEN_ITEM, CLEN_PATH, CLEN_SHORT
     use funit_lib, only: &
     &   TMP_UNIT, LOG_UNIT, INQUIRE_FID
     use bin_lib, only: &
@@ -13,15 +17,8 @@ module input_conf_class
     &   init_ncconfig, get_nc_dt, get_nc_scale_offset, &
     &   read_nc, get_nc_domain
 #endif
-    !use gt_lib, only: &
-    !&   open_gt, read_gt, read_headers, header2domain, header2shape, header2dt
-    use array_lib, only: &
-    &   find_index
-
-    use glob_mod, only: &
-    &   NML_PATH, CLEN_ITEM, CLEN_SHORT
-    use YOS_CMF_MAP, only: &
-    &   NSEQMAX
+    use time_mod, only: &
+    &   dt2sec
     use camaframe_mod, only: &
     &   CaMaFrame, init_CaMaFrame
     !use datetime_ext_mod, only: &
@@ -38,22 +35,21 @@ module input_conf_class
     public :: &
     &   InputConf, append_InputConf, init_InputConf
 
-    ! TODO: z_in(:) -> allocate(data(NSEQMAX,size(z_in),1or2))
     type InputConf
-        real(8), allocatable, public :: now_data(:,:), nxt_data(:,:)
         private
         character(len=CLEN_ITEM) :: item ! variable identifier for matching namelist e.g. 'Tair, 'Roff'
         character(len=CLEN_SHORT) :: fmt ! 'bin', 'nc' ('gt' is deprecated)
-        character(len=256) :: path ! file path
+        character(len=CLEN_PATH) :: path ! file path
         type(CaMaFrame)    :: map
-        integer            :: inpmat_idx ! for interpolation
-        integer            :: unit
-        integer            :: rec
-        integer            :: nz, z_in
-        integer            :: now_t, nxt_t ! [sec]
-        integer            :: dt ! [sec]
-        real(8)            :: scale, offset
-        character(len=CLEN_SHORT) :: div_item
+        integer(kind=JPIM) :: &
+        &   inpmat_idx, &   ! for interpolation
+        &   unit, &         ! file unit
+        &   rec, &          ! record number (time step) to be read next
+        &   nz, z_in, &     ! vertical index in file
+        &   now_t, nxt_t, & ! current time, next time, counted from calculation start [sec]
+        &   dt              ! temporal resolution [sec]
+        real(kind=JPRM) :: scale, offset
+        character(len=CLEN_ITEM) :: div_item
 #ifdef OPT_NETCDF
         type(NCConfig) :: &
         &   ncconf
@@ -74,7 +70,6 @@ module input_conf_class
         procedure :: get_offset     => get_offset
         procedure :: get_div_item   => get_div_item
         procedure :: get_file_shape => get_file_shape
-        procedure :: get_new_data   => get_new_data
         procedure :: update_needed  => update_needed
         procedure :: update_input   => update_input
         procedure :: set_next       => set_next
@@ -88,20 +83,24 @@ contains
 function init_InputConf(item_name, nml_unit, t) result(obj)
     type(InputConf) obj
     character(len=*), intent(in) :: item_name
-    integer, intent(in) :: nml_unit
-    type(DateTime),   intent(in) :: t
+    integer(kind=JPIM), intent(in) :: nml_unit
+    integer(kind=JPIM), intent(in) :: t ! [sec] time
     character(len=CLEN_SHORT) :: &
-    &   fmt, dt_unit, header1(64), header2(64), div_item
-    !character(len=CLEN_SHORT) :: & ! for gtool
-    !&   header1(64), header2(64)
-    character(len=256) path
-    integer :: z_in, nx, ny, nz, unit, rec, dt_val
+    &   fmt, dt_unit
+    character(len=CLEN_ITEM) :: &
+    &   div_item
+    character(len=CLEN_PATH) :: &
+    &   path
+    integer(kind=JPIM) :: &
+    &   z_in, nx, ny, nz, unit, rec, dt_val
 #ifdef OPT_NETCDF
     character(len=CLEN_ITEM) :: &
     &   var_name
 #endif
-    real(8) :: &
-    &   left, right, top, bottom, scale, offset
+    real(kind=JPRB) :: &
+    &   left, right, top, bottom
+    real(kind=JPRM) :: &
+    &   scale, offset
     logical :: &
     &   is_catm, is_fldstg, is_found
     write(LOG_UNIT, '(a)') trim(item_name)
@@ -166,22 +165,6 @@ function init_InputConf(item_name, nml_unit, t) result(obj)
                 nz = 1
             endif
 #endif
-!        case ('gtool', 'gt')
-!            unit = INQUIRE_FID()
-!            obj%unit = unit
-!            call read_headers( &
-!            &   path, unit, &
-!            &   header1(:), header2(:))
-!            call header2domain( &
-!            &   header1(:), &
-!            &   left, right, top, bottom)
-!            call header2shape( &
-!            &   header1(:), &
-!            &   nx, ny, nz)
-!            call header2dt( &
-!            &   header1(:), header2(:), &
-!            &   dt_val, dt_unit)
-!            call open_gt(path, unit)
         case default
             write(LOG_UNIT, '(a)') '[input_conf_class/init_InputConf InValidValueError]'
             write(LOG_UNIT, '(2a)') 'fmt = ', trim(fmt)
@@ -196,7 +179,7 @@ function init_InputConf(item_name, nml_unit, t) result(obj)
 !write(LOG_UNIT, *) west, east, south, north
 !write(LOG_UNIT, *) nx, ny, is_n2s, catm, fldstg
     obj%inpmat_idx = find_inpmat(obj%map)
-    obj%dt = init_RelativeDelta(dt_val, dt_unit)
+    obj%dt = dt2sec(dt_val, dt_unit)
     obj%now_t = t
     obj%nxt_t = t
 
@@ -206,95 +189,78 @@ function init_InputConf(item_name, nml_unit, t) result(obj)
     write(LOG_UNIT, '(a,i0)')        '    nz = ', nz
 !    write(LOG_UNIT, '(2a)')      '    input datetime : ', t%strftime('%Y/%m/%d/%H:%M')
     write(LOG_UNIT, '(2(a,e10.2))')  '    scale/offset = ', obj%scale, ' ', obj%offset
-
-    allocate(obj%now_data(NSEQMAX,1), source=0.d0)
-    if (LINTRP_TIME) allocate(obj%nxt_data(NSEQMAX,1), source=0.d0)
 end function init_InputConf
 
 ! ===================================================================================================
 ! Getter/ Setter
 ! ===================================================================================================
-function get_item(self) result(item)
+character(len=CLEN_ITEM) function get_item(self) result(item)
     class(InputConf), intent(in) :: self
-    character(len=16) item
     item = self%item
 end function get_item
 
-function get_fmt(self) result(fmt)
+character(len=CLEN_SHORT) function get_fmt(self) result(fmt)
     class(InputConf), intent(in) :: self
-    character(len=16) fmt
     fmt = self%fmt
 end function get_fmt
 
-function get_path(self) result(path)
+character(len=CLEN_PATH) function get_path(self) result(path)
     class(InputConf), intent(in) :: self
-    character(len=256) path
     path = self%path
 end function get_path
 
-function get_unit(self) result(unit)
+integer(kind=JPIM) function get_unit(self) result(unit)
     class(InputConf), intent(in) :: self
-    integer unit
     unit = self%unit
 end function get_unit
 
-function get_nz(self) result(nz)
+integer(kind=JPIM) function get_nz(self) result(nz)
     class(InputConf), intent(in) :: self
-    integer nz
     nz = self%nz
 end function get_nz
 
-function get_z_in(self) result(z_in)
+integer(kind=JPIM) function get_z_in(self) result(z_in)
     class(InputConf), intent(in) :: self
-    integer z_in
     z_in = self%z_in
 end function get_z_in
 
-function get_rec(self) result(rec)
+integer(kind=JPIM) function get_rec(self) result(rec)
     class(InputConf), intent(in) :: self
-    integer rec
     rec = self%rec
 end function get_rec
 
-function get_map(self) result(map)
+type(CaMaFrame) function get_map(self) result(map)
     class(InputConf), intent(in) :: self
-    type(CaMaFrame) map
     map = self%map
 end function get_map
 
-function get_inpmat_idx(self) result(inpmat_idx)
+integer(kind=JPIM) function get_inpmat_idx(self) result(inpmat_idx)
     class(InputConf), intent(in) :: self
-    integer inpmat_idx
     inpmat_idx = self%inpmat_idx
 end function get_inpmat_idx
 
-function get_dt(self) result(dt)
+integer(kind=JPIM) function get_dt(self) result(dt)
     class(InputConf), intent(in) :: self
-    integer :: dt
     dt = self%dt
 end function get_dt
 
-function get_next_t(self) result(nxt_t)
+integer(kind=JPIM) function get_next_t(self) result(nxt_t)
     class(InputConf), intent(in) :: self
-    integer :: nxt_t
     nxt_t = self%nxt_t
 end function get_next_t
 
-function get_scale(self) result(scale)
+real(kind=JPRM) function get_scale(self) result(scale)
     class(InputConf), intent(in) :: self
-    real(8)                   :: scale
     scale = self%scale
 end function get_scale
 
-function get_offset(self) result(offset)
+real(kind=JPRM) function get_offset(self) result(offset)
     class(InputConf), intent(in) :: self
-    real(8)                   :: offset
     offset = self%offset
 end function get_offset
 
-function get_div_item(self) result(res)
+character(len=CLEN_ITEM) function get_div_item(self) result(res)
     class(InputConf), intent(in) :: self
-    character(len=CLEN_SHORT) :: res
     res = self%div_item
 end function get_div_item
 
@@ -303,21 +269,11 @@ subroutine get_file_shape( &
 &   nx, ny, nz)
     class(InputConf), intent(in) :: &
     &   self
-    integer, intent(out) :: &
+    integer(kind=JPIM), intent(out) :: &
     &   nx, ny, nz
     call self%map%shape(nx, ny)
     nz = self%get_nz()
 end subroutine get_file_shape
-
-function get_new_data(self) result(data)
-    class(InputConf), intent(in) :: self
-    real(8), allocatable      :: data(:,:)
-    if (LINTRP_TIME) then
-        allocate(data, source=self%nxt_data)
-    else
-        allocate(data, source=self%now_data)
-    endif
-end function get_new_data
 
 subroutine set_next(self)
     class(InputConf), intent(inout) :: self
@@ -327,20 +283,23 @@ subroutine set_next(self)
 end subroutine set_next
 
 ! ===================================================================================================
-function update_needed(self, now_t) result(is_needed)
+logical function update_needed(self, now_t) result(is_needed)
     class(InputConf),  intent(in) :: self
-    integer, intent(in) :: now_t
-    logical is_needed
+    integer(kind=JPIM), intent(in) :: now_t
     is_needed = .FALSE.
     if (self%get_next_t() <= now_t) is_needed = .TRUE.
 end function update_needed
 
 
-subroutine update_input(self)
+subroutine update_input(self, arr)
     class(InputConf), intent(inout) :: self
-    integer nx, ny, nz
-    logical is_end
-    real(4), allocatable :: &
+    real(kind=JPRB), intent(out) :: &
+    &   arr(:)
+    integer(kind=JPIM) :: &
+    &   nx, ny, nz
+    logical :: &
+    &   is_end
+    real(kind=JPRM), allocatable :: &
     &   arr_r4(:,:,:)
     select case (trim(to_lowercase(self%get_fmt())))
         case ('binary', 'bin')
@@ -360,11 +319,12 @@ subroutine update_input(self)
                 &   arr_r4(:,:,:), is_end, self%ncconf, self%get_rec())
             endif
 #endif
-        case ('gtool', 'gt')
-            call read_gt(arr_r4, is_end, self%get_unit())
+        case default
+            write(LOG_UNIT, '(a)') '[input_conf_class/update_input InValidValueError]'
+            write(LOG_UNIT, '(2a)') 'fmt = ', trim(self%get_fmt())
+            stop
     end select
-    call calc_scale_offset(arr_r4(:,:,:), self%get_scale(), self%get_offset())
-!write(LOG_UNIT, *) 'update_input', trim(self%get_item())
+    call apply_scale_offset(arr_r4(:,:,:), self%get_scale(), self%get_offset())
 
     if (is_end) then
         write(LOG_UNIT, *) trim(self%get_item()), ': read last step again'
@@ -372,24 +332,19 @@ subroutine update_input(self)
         return
     endif
     write(LOG_UNIT, '(a10,i5)') trim(self%get_item()), self%get_rec()
-    if (LINTRP_TIME) then
-        self%now_data(:,:) = self%nxt_data(:,:)
-        call map2vec(arr_r4(:,:,self%get_z_in()), self%nxt_data(:,1), self%get_map(), self%get_inpmat_idx())
-    else
-        call map2vec(arr_r4(:,:,self%get_z_in()), self%now_data(:,1), self%get_map(), self%get_inpmat_idx())
-    endif
-!write(LOG_UNIT, *) file(127,161,1), file(126,161,1), maxval(file(:,:,1) )
+
+    call map2vec(arr_r4(:,:,self%get_z_in()), arr(:), self%get_map(), self%get_inpmat_idx())
     deallocate(arr_r4)
     call self%set_next()
 end subroutine update_input
 
 
-subroutine calc_scale_offset(data, scale, offset)
-    real, intent(inout) :: data(:,:,:)
-    real(8), intent(in) :: scale, offset
+subroutine apply_scale_offset(data, scale, offset)
+    real(kind=JPRM), intent(inout) :: data(:,:,:)
+    real(kind=JPRM), intent(in) :: scale, offset
     if (scale  /= 1.d0) data(:,:,:) = data(:,:,:) * scale
     if (offset /= 0.d0) data(:,:,:) = data(:,:,:) + offset
-end subroutine calc_scale_offset
+end subroutine apply_scale_offset
 
 ! ===================================================================================================
 ! Array of InputConf
@@ -398,7 +353,7 @@ subroutine append_InputConf(array, obj)
     type(InputConf), allocatable, intent(inout) :: array(:)
     type(InputConf),              intent(in)    :: obj
     type(InputConf), allocatable :: tmp(:)
-    integer :: n
+    integer(kind=JPIM) :: n
     if (.not. allocated(array)) then
         allocate(array(1)); array(1) = obj
         return

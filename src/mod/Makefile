@@ -5,6 +5,7 @@ LIBNAME = libmod.a
 
 OBJS = \
 	glob_mod.o \
+	time_mod.o \
 	camaframe_mod.o \
 	inpmat_mod.o \
 	dim_converter.o
