@@ -8,7 +8,7 @@ module ranked_array_class
     integer, parameter, public :: RK_2D    = 2
 
     public :: RankedArray
-    public :: append_ranked_arrays
+    public :: append_ranked_array
 
     type :: RankedArray
         integer :: rank = RK_UNDEF
@@ -30,9 +30,9 @@ module ranked_array_class
         procedure :: get_shape
     end type RankedArray
 
-    interface append_ranked_arrays
-        module procedure append_ranked_arrays_1d
-        module procedure append_ranked_arrays_2d
+    interface append_ranked_array
+        module procedure append_ranked_array_1d
+        module procedure append_ranked_array_2d
     end interface
 
 contains
@@ -173,10 +173,10 @@ contains
     end subroutine get_shape
 
 ! ===================================================================================================
-subroutine append_ranked_arrays_1d(arrs, new_arr)
+subroutine append_ranked_array_1d(arrs, new_arr)
     implicit none
     type(RankedArray), allocatable, intent(inout) :: arrs(:)
-    real(kind=JPRB),              intent(in)    :: new_arr(:)
+    real(kind=JPRB),                intent(in)    :: new_arr(:)
 
     type(RankedArray), allocatable :: tmp(:)
     type(RankedArray) :: new_item
@@ -195,10 +195,10 @@ subroutine append_ranked_arrays_1d(arrs, new_arr)
     tmp(1:n_old)     = arrs(1:n_old)
     tmp(n_old + 1)   = new_item
     call move_alloc(tmp, arrs)
-end subroutine append_ranked_arrays_1d
+end subroutine append_ranked_array_1d
 
 
-subroutine append_ranked_arrays_2d(arrs, new_arr)
+subroutine append_ranked_array_2d(arrs, new_arr)
     implicit none
     type(RankedArray), allocatable, intent(inout) :: arrs(:)
     real(kind=JPRB),              intent(in)    :: new_arr(:,:)
@@ -220,6 +220,6 @@ subroutine append_ranked_arrays_2d(arrs, new_arr)
     tmp(1:n_old)     = arrs(1:n_old)
     tmp(n_old + 1)   = new_item
     call move_alloc(tmp, arrs)
-end subroutine append_ranked_arrays_2d
+end subroutine append_ranked_array_2d
 
 end module ranked_array_class

@@ -19,7 +19,8 @@ LIBOBJS = \
 	key_table_class.o \
     ranked_array_class.o \
     input_namelist_mod.o \
-	input_conf_class.o
+	input_conf_class.o \
+	input_mod.o
 
 .SUFFIXES: .o .F90 .f90
 %.o: %.F90
