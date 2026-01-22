@@ -11,7 +11,7 @@ module key_table_class
         procedure :: init
         procedure :: clear
         procedure :: has_key
-        procedure :: get_index
+        procedure :: find
         procedure :: append
     end type KeyTable
 
@@ -69,7 +69,7 @@ contains
         found = (idx > 0)
     end function has_key
 
-    integer function get_index(self, key) result(idx)
+    integer function find(self, key) result(idx)
         class(KeyTable), intent(in) :: self
         character(len=*), intent(in) :: key
         call check_key_length(key, self%key_len)
@@ -80,7 +80,7 @@ contains
         if (idx <= 0) then
             call raise_not_found_error(key)
         end if
-    end function get_index
+    end function find
 
     subroutine append(self, key)
         class(KeyTable), intent(inout) :: self

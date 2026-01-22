@@ -22,6 +22,7 @@ LIBOBJS = \
     io_namelist_mod.o \
 	output_conf_class.o \
 	output_writer_class.o \
+	output_mod.o \
 	input_conf_class.o \
 	input_mod.o
 

@@ -1,6 +1,6 @@
 module output_writer_class
     use PARKIND1, only: &
-    &   JPIM, JPRB
+    &   JPIM, JPRM
     use YOS_CMF_INPUT, only: &
     &   LOGNAM
     use CMF_UTILS_MOD, only: &
@@ -12,8 +12,8 @@ module output_writer_class
     implicit none
     private
 
-    public :: OutputWriter
-    public :: BYTE_RECL
+    public :: &
+    &   OutputWriter, BYTE_RECL, append_OutputWriter
 
     integer, parameter :: &
     &   BYTE_RECL = 4 ! 4-byte binary (real(4))
@@ -121,7 +121,7 @@ contains
 
     subroutine write_1d(self, vec_r4)
         class(OutputWriter), intent(inout) :: self
-        real(4),             intent(in)    :: vec_r4(:)
+        real(kind=JPRM), intent(in)    :: vec_r4(:)
 
         if (.not. self%is_open) call raise_not_open_error(self%path)
 
@@ -131,7 +131,7 @@ contains
 
     subroutine write_2d(self, map_r4)
         class(OutputWriter), intent(inout) :: self
-        real(4),             intent(in)    :: map_r4(:,:)
+        real(kind=JPRM), intent(in)    :: map_r4(:,:)
 
         if (.not. self%is_open) call raise_not_open_error(self%path)
 
@@ -168,5 +168,22 @@ contains
         class(OutputWriter), intent(in) :: self
         res = self%is_open
     end function is_opened
+
+    ! ==============================================================================================
+    subroutine append_OutputWriter(array)
+        type(OutputWriter), allocatable, intent(inout) :: array(:)
+        type(OutputWriter), allocatable :: tmp(:)
+        integer :: n
+
+        if (.not. allocated(array)) then
+            allocate(array(1))
+            return
+        endif
+
+        n = size(array)
+        allocate(tmp(n + 1))
+        tmp(1:n) = array(1:n)
+        call move_alloc(tmp, array)
+    end subroutine append_OutputWriter
 
 end module output_writer_class

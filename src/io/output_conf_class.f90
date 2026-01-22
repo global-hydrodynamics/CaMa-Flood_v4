@@ -18,14 +18,12 @@ module output_conf_class
         private
         character(len=CLEN_ITEM) :: item = ''          ! variable identifier in model (e.g., 'Tair', 'Roff')
         character(len=CLEN_PATH) :: path = ''          ! resolved output path with suffix
-        logical(kind=4)          :: is_found = .FALSE. ! found in namelist
-        logical(kind=4)          :: mapfmt   = .TRUE. ! .TRUE.: 2D map output, .FALSE.: 1D vector output
+        logical(kind=4)          :: is_mapfmt   = .TRUE. ! .TRUE.: 2D map output, .FALSE.: 1D vector output
         logical                  :: is_mean  = .TRUE.   ! .TRUE.: time averaged, .FALSE.: instantaneous
     contains
         procedure :: get_item
         procedure :: get_path
-        procedure :: get_is_found
-        procedure :: get_mapfmt
+        procedure :: get_is_mapfmt
         procedure :: get_is_mean
     end type OutputConf
 
@@ -35,36 +33,30 @@ contains
     ! =============================================================================================
     ! Constructor
     ! =============================================================================================
-    subroutine init_OutputConf(out_item, obj)
+    subroutine init_OutputConf(out_item, is_found, obj)
         character(len=*), intent(in)  :: out_item
+        logical, intent(out)          :: is_found
         type(OutputConf), intent(out) :: obj
 
-        logical(kind=4)          :: is_found, mapfmt
+        logical(kind=4)          :: is_mapfmt
         logical                 :: is_mean
         character(len=CLEN_PATH) :: path
 
-        call read_nml_output(out_item, is_found, path, mapfmt, is_mean)
+        call read_nml_output(out_item, is_found, path, is_mapfmt, is_mean)
+        if (.not. is_found) return
 
         obj%item     = out_item
-        obj%is_found = is_found
 
-        if (.not. is_found) then
-            obj%path   = ''
-            obj%mapfmt = .FALSE.
-            obj%is_mean = .TRUE.
-            return
-        endif
-
-        obj%mapfmt  = mapfmt
+        obj%is_mapfmt  = is_mapfmt
         obj%is_mean = is_mean
 
-        if (obj%mapfmt) then
+        if (obj%is_mapfmt) then
             obj%path = trim(path)//trim(BINMAP_SUF)
         else
             obj%path = trim(path)//trim(BINVEC_SUF)
         endif
 
-        write(LOGNAM, '(a,1x,a,1x,a,1x,L1,1x,L1)') '  [OutputConf]', trim(obj%item), trim(obj%path), obj%mapfmt, obj%is_mean
+        write(LOGNAM, '(a,1x,a,1x,a,1x,L1,1x,L1)') '  [OutputConf]', trim(obj%item), trim(obj%path), obj%is_mapfmt, obj%is_mean
     end subroutine init_OutputConf
 
     ! =============================================================================================
@@ -82,17 +74,11 @@ contains
         path = self%path
     end function get_path
 
-    function get_is_found(self) result(res)
+    function get_is_mapfmt(self) result(res)
         class(OutputConf), intent(in) :: self
         logical :: res
-        res = self%is_found
-    end function get_is_found
-
-    function get_mapfmt(self) result(res)
-        class(OutputConf), intent(in) :: self
-        logical :: res
-        res = self%mapfmt
-    end function get_mapfmt
+        res = self%is_mapfmt
+    end function get_is_mapfmt
 
     function get_is_mean(self) result(res)
         class(OutputConf), intent(in) :: self
