@@ -20,21 +20,24 @@ end subroutine open_namelist
 
 
 subroutine raise_item_not_found_error( &
-&   procedure_name, item_name)
+&   procedure_name, namelist_name, item_name)
     character(len=*), intent(in) :: &
-    &   procedure_name, item_name
-    write(LOG_UNIT, '(4a)') '[', trim(procedure_name), ' ERROR] item not found: ', trim(item_name)
+    &   procedure_name, namelist_name, item_name
+    write(LOG_UNIT, '(4a)') '[', trim(procedure_name), ' ERROR] item not found in ', trim(namelist_name), ': ', trim(item_name)
     stop
 end subroutine raise_item_not_found_error
 
 ! ===================================================================================================
 subroutine read_nml_input_item( &
 &   nml_unit, item_name, &
+&   is_found, &
 &   fmt, path, z_in, is_catm, is_fldstg, scale, offset, div_item)
     integer(kind=JPIM), intent(in) :: &
     &   nml_unit
     character(len=*), intent(in) :: &
     &   item_name
+    logical, intent(out) :: &
+    &   is_found
     character(len=CLEN_SHORT), intent(out) :: &
     &   fmt
     character(len=CLEN_ITEM), intent(out) :: &
@@ -55,6 +58,7 @@ subroutine read_nml_input_item( &
     &   ios
 
     rewind(nml_unit)
+    is_found = .FALSE.
     do
         ! default
         fmt = ''
@@ -66,8 +70,11 @@ subroutine read_nml_input_item( &
         offset = 0.d0
         div_item = ''
         read(nml_unit, nml=input_item, iostat=ios)
-        if (ios < 0) call raise_item_not_found_error('read_nml_input_item', item_name)
-        if (trim(item) == trim(item_name)) exit
+        if (ios < 0) return
+        if (trim(item) == trim(item_name)) then
+            is_found = .TRUE.
+            exit
+        endif
     enddo
     if (trim(fmt) == '') stop 'init_indata ERROR: fmt not specified'
     if (trim(path) == '') stop 'init_indata ERROR: path not specified'

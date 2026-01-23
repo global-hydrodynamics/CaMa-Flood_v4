@@ -106,7 +106,8 @@ function init_InputConf(item_name, nml_unit, t) result(obj)
     &   is_catm, is_fldstg, is_found
     write(LOG_UNIT, '(a)') trim(item_name)
     call read_nml_input_item(nml_unit, item_name, &
-    &   fmt, path, z_in, is_catm, is_fldstg, scale, offset, div_item)
+    &   is_found, fmt, path, z_in, is_catm, is_fldstg, scale, offset, div_item)
+    if (.not. is_found) call raise_item_not_found_error('read_nml_input_item', 'input_item', item_name)
     obj%fmt    = fmt
     obj%path   = path
     obj%z_in   = z_in
@@ -120,15 +121,15 @@ function init_InputConf(item_name, nml_unit, t) result(obj)
             call read_nml_input_domain( &
             &   nml_unit, item_name, &
             &   is_found, left, right, top, bottom)
-            if (.not. is_found) call raise_item_not_found_error('read_nml_input_shape', item_name)
+            if (.not. is_found) call raise_item_not_found_error('read_nml_input_domain', 'input_domain', item_name)
             call read_nml_input_shape( &
             &   nml_unit, item_name, &
             &   is_found, nx, ny, nz)
-            if (.not. is_found) call raise_item_not_found_error('read_nml_input_shape', item_name)
+            if (.not. is_found) call raise_item_not_found_error('read_nml_input_shape', 'input_shape', item_name)
             call read_nml_input_tres( &
             &   nml_unit, item_name, &
             &   is_found, dt_val, dt_unit)
-            if (.not. is_found) call raise_item_not_found_error('read_nml_input_tres', item_name)
+            if (.not. is_found) call raise_item_not_found_error('read_nml_input_tres', 'input_tres', item_name)
  
             unit = INQUIRE_FID()
             obj%unit = unit
@@ -138,7 +139,7 @@ function init_InputConf(item_name, nml_unit, t) result(obj)
             call read_nml_input_nc( &
             &   nml_unit, item_name, &
             &   is_found, var_name)
-            if (.not. is_found) call raise_item_not_found_error('read_nml_input_nc', item_name)
+            if (.not. is_found) call raise_item_not_found_error('read_nml_input_nc', 'input_nc', item_name)
             obj%ncconf = init_ncconfig( &
             &   path, var_name)
             call get_nc_domain( &
