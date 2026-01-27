@@ -77,6 +77,7 @@ SRC_SUBLIBS := $(wildcard $(SRC_ROOT)/*/lib*.a)
 TARGET = MAIN_cmf
 $(TARGET): $(OBJECTS) src $(TARGET).o
 	$(FC) $(LFLAGS) $@.o $(OBJECTS) $(SUBLIBS) -o $@ $(LIBS)
+	@install_name_tool -delete_rpath $(NETCDFDIR)/lib $@ 2>/dev/null || true
 # bug in MacOSX libcama.a does not work
 #	$(FCMP) $(FFLAGS) $(LFLAGS) $@.o libcama.a -o $@ $(LIB)
 

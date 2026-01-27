@@ -13,7 +13,8 @@ PROGRAM MAIN_cmf
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
 USE PARKIND1,                ONLY: JPRB, JPRM, JPIM
-USE YOS_CMF_INPUT,           ONLY: NXIN, NYIN, DT,DTIN, LTRACE
+USE YOS_CMF_INPUT,           ONLY: NXIN, NYIN, DT,DTIN, LTRACE, &
+&   LHEATLINK
 USE YOS_CMF_TIME,            ONLY: NSTEPS
 USE CMF_DRV_CONTROL_MOD,     ONLY: CMF_DRV_INPUT,   CMF_DRV_INIT,    CMF_DRV_END
 USE CMF_DRV_ADVANCE_MOD,     ONLY: CMF_DRV_ADVANCE
@@ -30,6 +31,10 @@ USE YOS_CMF_INPUT,           ONLY: LSEDOUT
 USE cmf_ctrl_sedinp_mod,     ONLY: cmf_sed_forcing
 #endif
 !** tracer options**
+#ifdef heatlink
+USE heatlink_river_mod,      ONLY: init_heatlink_river_mod, fin_heatlink_river_mod
+#endif
+!==========================================================
 !****************************
 IMPLICIT NONE
 
@@ -52,6 +57,11 @@ CALL CMF_DRV_INIT
 !*** 1c. allocate data buffer for input forcing
 ALLOCATE(ZBUFF(NXIN,NYIN,2))
 
+#ifdef heatlink
+if (LHEATLINK) then
+  call init_heatlink_river_mod()
+endif
+#endif
 !============================
 !*** 2. MAIN TEMPORAL LOOP / TIME-STEP (NSTEPS calculated by DRV_INIT)
 
@@ -84,8 +94,12 @@ ENDDO
 
 !*** 3a. finalize CaMa-Flood 
 DEALLOCATE(ZBUFF)
+#ifdef heatlink
+if (LHEATLINK) then
+  call fin_heatlink_river_mod()
+endif
+#endif
 CALL CMF_DRV_END
-
 !*** 3b. MPI specific finalization
 #ifdef UseMPI_CMF
 CALL CMF_MPI_END
