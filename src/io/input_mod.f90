@@ -1,12 +1,15 @@
 module input_mod
     use PARKIND1, only: &
     &   JPIM, JPRB, JPRM
+    use YOS_CMF_INPUT, only: &
+    &   LOGNAM
+
     use glob_mod, only: &
     &   CLEN_ITEM
-    use array_lib, only: &
-    &   find_index, append
+    use key_table_class, only: &
+    &   KeyTable
     use funit_lib, only: &
-    &   TMP_UNIT, LOG_UNIT
+    &   TMP_UNIT
     use YOS_CMF_MAP, only: &
     &   NSEQMAX
     use glob_mod, only: &
@@ -28,8 +31,7 @@ module input_mod
     public :: &
     &   init_input_mod, update_input, is_input, log_input, get_shortest_input_dt, get_input
 
-    character(len=CLEN_ITEM), allocatable :: &
-    &   items(:)
+    type(KeyTable) :: items
     integer(kind=JPIM) :: &
     &   IN_ITEM_NUM = 0! number of input item
     type(InputConf), allocatable :: &
@@ -47,27 +49,28 @@ contains
 subroutine init_input_mod(t)
     integer(kind=JPIM), intent(in) :: t
 
-    write(LOG_UNIT, '(a)') '[init_input_mod]'
+    write(LOGNAM, '(a)') '[init_input_mod]'
+    call items%init()
     call open_namelist(TMP_UNIT)
 
-    call add_input_conf('ROFF', TMP_UNIT, t)
+    !call add_input_conf('ROFF', TMP_UNIT, t)
     !if (LROFSCL) call add_input_conf('ROFSCL', TMP_UNIT, t)
-    if ( LLAKE ) then
-        call add_input_conf('RAIN', TMP_UNIT, t)
-        call add_input_conf('SNOW', TMP_UNIT, t)
-    endif
-    if (LHEATLINK) then
-        call add_input_conf('LWDN', TMP_UNIT, t)
-        call add_input_conf('PSRF', TMP_UNIT, t)
-        call add_input_conf('QAIR', TMP_UNIT, t)
-        call add_input_conf('SWDN', TMP_UNIT, t)
+    !if ( LLAKE ) then
+    !    call add_input_conf('RAIN', TMP_UNIT, t)
+    !    call add_input_conf('SNOW', TMP_UNIT, t)
+    !endif
+    !if (LHEATLINK) then
+    !    call add_input_conf('LWDN', TMP_UNIT, t)
+    !    call add_input_conf('PSRF', TMP_UNIT, t)
+    !    call add_input_conf('QAIR', TMP_UNIT, t)
+    !    call add_input_conf('SWDN', TMP_UNIT, t)
         call add_input_conf('TAIR', TMP_UNIT, t)
-        call add_input_conf('WIND', TMP_UNIT, t)
-        call add_input_conf('TROF', TMP_UNIT, t)
-    endif
+    !    call add_input_conf('WIND', TMP_UNIT, t)
+    !    call add_input_conf('TROF', TMP_UNIT, t)
+    !endif
     allocate(IS_UPDATED(IN_ITEM_NUM)); IS_UPDATED(:) = .TRUE.
     close(TMP_UNIT)
-    write(LOG_UNIT, *)
+    write(LOGNAM, *)
 end subroutine init_input_mod
 
 
@@ -78,13 +81,11 @@ subroutine add_input_conf(item, nml_unit, t)
     &   t ! [sec] current time
     real(kind=JPRB) :: &
     &   arr(NSEQMAX)
-    integer(kind=JPIM) :: &
-    &   idx
 
-    idx = find_index(items, item)
-    if (idx < 1) then
+    if (.not. items%has_key(item)) then
+        write(LOGNAM, '(2a)') '- add input: ', trim(item)
+        call items%append(item)
         call append_InputConf(confs, init_InputConf(item, nml_unit, t))
-        call append(items, item)
         IN_ITEM_NUM = IN_ITEM_NUM + 1
         arr(:) = 0.0_JPRB
         call append_ranked_array(arrs, arr)
@@ -94,8 +95,7 @@ end subroutine add_input_conf
 ! ===================================================================================================
 logical function is_input(item) result(isin)
     character(len=*), intent(in) :: item
-    isin = .FALSE.
-    if (find_index(items, item) > 0) isin = .TRUE.
+    isin = items%has_key(item)
 end function is_input
 
 ! ===================================================================================================
@@ -109,7 +109,7 @@ subroutine update_input(now_t)
     integer(kind=JPIM) :: i
 
     IS_UPDATED(:) = .FALSE.
-!    write(LOG_UNIT, '(2a)'), '  update input for ', now_t%strftime('%Y/%m/%d/%H:%M')
+!    write(LOGNAM, '(2a)'), '  update input for ', now_t%strftime('%Y/%m/%d/%H:%M')
 
     do i = 1, IN_ITEM_NUM
         if (confs(i)%update_needed(now_t)) then
@@ -117,7 +117,7 @@ subroutine update_input(now_t)
             call arrs(i)%set(arr)
             IS_UPDATED(i) = .TRUE.
         else
-            write(LOG_UNIT, '(a10,a)') trim(confs(i)%get_item()), ': not updated'
+            write(LOGNAM, '(a10,a)') trim(confs(i)%get_item()), ': not updated'
         endif
     enddo
     ! omp has to wait for other variables
@@ -143,7 +143,7 @@ subroutine log_input
     call write_string_with_indent(2, 'Input value range:')
     do i = 1, IN_ITEM_NUM
         call arrs(i)%get(arr)
-        write(LOG_UNIT, *) trim(confs(i)%get_item()), minval(arr), maxval(arr)
+        write(LOGNAM, *) trim(confs(i)%get_item()), minval(arr), maxval(arr)
     enddo
 end subroutine log_input
 
@@ -161,7 +161,7 @@ subroutine get_input(item, arr)
     character(len=*), intent(in) :: item
     real(kind=JPRB), intent(out) :: arr(:)
     integer(kind=JPIM) :: idx
-    idx = find_index(items, item)
+    idx = items%find(item)
     call arrs(idx)%get(arr)
 end subroutine get_input
 

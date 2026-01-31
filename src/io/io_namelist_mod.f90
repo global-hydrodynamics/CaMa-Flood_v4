@@ -2,11 +2,10 @@ module io_namelist_mod
     use PARKIND1, only: &
     &   JPIM, JPRB, JPRM
     use YOS_CMF_INPUT, only: &
-    &   TMPNAM
+    &   TMPNAM, LOGNAM
+
     use glob_mod, only: &
     &   NML_PATH, CLEN_ITEM, CLEN_PATH, CLEN_SHORT
-    use funit_lib, only: &
-    &   LOG_UNIT
     implicit none
 
 contains
@@ -23,7 +22,7 @@ subroutine raise_item_not_found_error( &
 &   procedure_name, namelist_name, item_name)
     character(len=*), intent(in) :: &
     &   procedure_name, namelist_name, item_name
-    write(LOG_UNIT, '(4a)') '[', trim(procedure_name), ' ERROR] item not found in ', trim(namelist_name), ': ', trim(item_name)
+    write(LOGNAM, '(6a)') '[', trim(procedure_name), ' ERROR] item not found in ', trim(namelist_name), ': ', trim(item_name)
     stop
 end subroutine raise_item_not_found_error
 
@@ -78,12 +77,12 @@ subroutine read_nml_input_item( &
     enddo
     if (trim(fmt) == '') stop 'init_indata ERROR: fmt not specified'
     if (trim(path) == '') stop 'init_indata ERROR: path not specified'
-    write(LOG_UNIT, '(2a)')   '    fmt       = ', trim(fmt)
-    write(LOG_UNIT, '(2a)')   '    path      = ', trim(path)
-    write(LOG_UNIT, '(a,i0)') '    z_in      = ', z_in
-    write(LOG_UNIT, '(a,L)')  '    is_catm   =', is_catm
-    write(LOG_UNIT, '(a,L)')  '    is_fldstg =', is_fldstg
-    write(LOG_UNIT, '(2a)')   '    div_item  = ', trim(div_item)
+    write(LOGNAM, '(2a)')   '    fmt       = ', trim(fmt)
+    write(LOGNAM, '(2a)')   '    path      = ', trim(path)
+    write(LOGNAM, '(a,i0)') '    z_in      = ', z_in
+    write(LOGNAM, '(a,L)')  '    is_catm   =', is_catm
+    write(LOGNAM, '(a,L)')  '    is_fldstg =', is_fldstg
+    write(LOGNAM, '(2a)')   '    div_item  = ', trim(div_item)
 end subroutine read_nml_input_item
 
 
@@ -210,7 +209,7 @@ subroutine read_nml_input_nc( &
             exit
         endif
     enddo
-    write(LOG_UNIT, '(2a)') '    var_name = ', trim(var_name)
+    write(LOGNAM, '(2a)') '    var_name = ', trim(var_name)
 end subroutine read_nml_input_nc
 
 

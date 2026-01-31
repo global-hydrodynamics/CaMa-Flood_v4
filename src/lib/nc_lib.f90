@@ -1,5 +1,5 @@
 module nc_lib
-#ifdef OPT_NETCDF
+#ifdef UseCDF_CMF
     use funit_lib, only: &
     &   LOG_UNIT
     use netcdf

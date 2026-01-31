@@ -90,15 +90,17 @@ end function to_uppercase
 
 
 function to_lowercase(text) result(ret)
-    ! https://www.mk-mode.com/blog/2017/06/03/fortran-convert-chars-to-uppercase/
     character(len=*), intent(in) :: text
     character(len=:), allocatable :: ret
-    integer :: i
-    do i = 1, len(text)
-        if (text(i:i) >= 'A' .and. text(i:i) <= 'Z') then
-            ret(i:i) = char(ichar(text(i:i)) + 32)
-        else
-            ret(i:i) = text(i:i)
+    integer :: i, n
+
+    n = len(text)
+    allocate(character(n) :: ret)
+    ret = text
+
+    do i = 1, n
+        if (ret(i:i) >= 'A' .and. ret(i:i) <= 'Z') then
+            ret(i:i) = char(ichar(ret(i:i)) + 32)
         end if
     end do
 end function to_lowercase

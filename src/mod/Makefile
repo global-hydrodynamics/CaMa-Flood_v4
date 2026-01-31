@@ -4,6 +4,7 @@ include $(TOP)/adm/Mkinclude
 LIBNAME = libmod.a
 
 OBJS = \
+	numeric_utils_mod.o \
 	glob_mod.o \
 	time_mod.o \
 	camaframe_mod.o \

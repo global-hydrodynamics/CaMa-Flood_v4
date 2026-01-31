@@ -15,7 +15,10 @@ module heatlink_river_mod
 contains
 
 subroutine init_heatlink_river_mod()
+    use input_mod, only: &
+    &   init_input_mod
     write(LOGNAM, '(a)') '[init_heatlink_river_mod]'
+    call init_input_mod(0)
     allocate(wattmp(NSEQMAX), source=0.0_JPRB)
 end subroutine init_heatlink_river_mod
 

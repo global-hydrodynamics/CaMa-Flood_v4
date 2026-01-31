@@ -152,11 +152,13 @@ end subroutine trim_array_r8 ! ***
 ! If array is not allocated, idx = 0
 ! ===================================================================================================
 integer function find_index_c(array, target) result(idx)
-    character(len=*), intent(in) :: array(:)
+    character(len=*), allocatable, intent(in) :: array(:)
     character(len=*), intent(in) :: target
     integer :: i
 
     idx = 0
+    if (.not. allocated(array)) return
+
     do i = 1, size(array)
         if (trim(array(i)) == trim(target)) then
             idx = i
@@ -172,6 +174,8 @@ integer function find_index_i_alloc(array, target) result(idx)
     integer :: i
 
     idx = 0
+    if (.not. allocated(array)) return
+
     do i = 1, size(array)
         if (array(i) == target) then
             idx = i
@@ -187,6 +191,8 @@ integer function find_index_d_alloc(array, target) result(idx)
     integer :: i
 
     idx = 0
+    if (.not. allocated(array)) return
+
     do i = 1, size(array)
         if (array(i) == target) then
             idx = i

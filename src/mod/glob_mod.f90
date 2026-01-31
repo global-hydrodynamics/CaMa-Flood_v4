@@ -39,7 +39,7 @@ module glob_mod
     &   STO_IGNORE = 1.d-9
 
     character(len=CLEN_PATH), parameter :: &
-    &   NML_PATH = 'tchoir.nml'
+    &   NML_PATH = 'input_cmf.nam'
 
     character(len=CLEN_SHORT) :: &
     &   BINMAP_SUF = '.bin', &

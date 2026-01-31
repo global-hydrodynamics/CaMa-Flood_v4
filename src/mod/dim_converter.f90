@@ -1,6 +1,4 @@
 module dim_converter
-    use array_lib, only: &
-    &   find_index, append
     use PARKIND1, only: &
     &   JPRM, JPRD
     use YOS_CMF_INPUT, only: &
@@ -13,6 +11,11 @@ module dim_converter
     &   INQUIRE_FID
     use CMF_UTILS_MOD, only: &
     &   map2vec_catm, vec2map => vec2map_catm
+
+    use array_lib, only: &
+    &   find_index, append
+    use numeric_utils_mod, only: &
+    &   nearly_equal
     use inpmat_mod, only: &
     &   Inpmat, append_inpmat
     use mapframe_lib
@@ -173,17 +176,15 @@ function find_inpmat(cmf, inpmat_name) result(idx)
 
     contains
 
-    logical function eqmap( &
-    &   amap, bmap)
-        class(MapFrame), intent(in) :: &
-        &   amap, bmap
-        eqmap = amap%left == bmap%left &
-        &   .and. amap%right == bmap%right &
-        &   .and. amap%top == bmap%top &
-        &   .and. amap%bottom == bmap%bottom &
-        &   .and. amap%nx == bmap%nx &
-        &   .and. amap%ny == bmap%ny
+    logical function eqmap(amap, bmap) result(eq)
+        class(MapFrame), intent(in) :: amap, bmap
+        eq = nearly_equal(amap%left,   bmap%left)   .and. &
+            nearly_equal(amap%right,  bmap%right)  .and. &
+            nearly_equal(amap%top,    bmap%top)    .and. &
+            nearly_equal(amap%bottom, bmap%bottom) .and. &
+            (amap%nx == bmap%nx) .and. (amap%ny == bmap%ny)
     end function eqmap
+
 end function find_inpmat
 
 end module dim_converter

@@ -12,7 +12,7 @@ PROGRAM MAIN_cmf
 !  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
-USE PARKIND1,                ONLY: JPRB, JPRM, JPIM
+USE PARKIND1,                ONLY: JPRB, JPIM
 USE YOS_CMF_INPUT,           ONLY: NXIN, NYIN, DT,DTIN, LTRACE, &
 &   LHEATLINK
 USE YOS_CMF_TIME,            ONLY: NSTEPS

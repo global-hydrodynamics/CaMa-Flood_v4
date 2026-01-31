@@ -39,6 +39,7 @@ $(libname): $(LIBOBJS)
 # tests
 #------------------------------------------------------------
 TESTS = \
+	test_numeric_utils \
 	test_key_table \
 	test_ranked_array
 	
@@ -56,6 +57,7 @@ test: $(TEST_EXES)
 	    -L$(TOPDIR)/lib -llib \
 	    -L$(TOPDIR)/mod -lmod \
 	    $(LDFLAGS) $(LIBS) -o $@
+	@install_name_tool -delete_rpath $(NETCDFDIR)/lib $@ 2>/dev/null || true
 
 clean:
-	$(RM) -f *.o *.mod *.a *~ *.s *.optrpt *.dSYM $(TEST_EXES)
+	$(RM) -rf *.o *.mod *.a *~ *.s *.optrpt *.dSYM $(TEST_EXES)

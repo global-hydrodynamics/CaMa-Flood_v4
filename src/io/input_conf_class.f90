@@ -3,16 +3,20 @@ module input_conf_class
     ! see input_namelist_mod > read_nml_input_item
     use PARKIND1, only: &
     &   JPIM, JPRB, JPRM
+    use YOS_CMF_INPUT, only: &
+    &   LOGNAM
 
     use glob_mod, only: &
     &   NML_PATH, CLEN_ITEM, CLEN_PATH, CLEN_SHORT
     use funit_lib, only: &
-    &   TMP_UNIT, LOG_UNIT, INQUIRE_FID
+    &   INQUIRE_FID
     use bin_lib, only: &
     &   open_bin, read_bin
     use text_lib, only: &
     &   to_lowercase
-#ifdef OPT_NETCDF
+    use numeric_utils_mod, only: &
+    &   nearly_equal
+#ifdef UseCDF_CMF
     use nc_lib, only: &
     &   NCConfig, &
     &   init_ncconfig, get_nc_dt, get_nc_scale_offset, &
@@ -38,6 +42,7 @@ module input_conf_class
 
     type InputConf
         private
+        ! fixed after initialization
         character(len=CLEN_ITEM) :: item ! variable identifier for matching namelist e.g. 'Tair, 'Roff'
         character(len=CLEN_SHORT) :: fmt ! 'bin', 'nc' ('gt' is deprecated)
         character(len=CLEN_PATH) :: path ! file path
@@ -45,16 +50,21 @@ module input_conf_class
         integer(kind=JPIM) :: &
         &   inpmat_idx, &   ! for interpolation
         &   unit, &         ! file unit
-        &   rec, &          ! record number (time step) to be read next
         &   nz, z_in, &     ! vertical index in file
-        &   now_t, nxt_t, & ! current time, next time, counted from calculation start [sec]
         &   dt              ! temporal resolution [sec]
-        real(kind=JPRM) :: scale, offset
         character(len=CLEN_ITEM) :: div_item
-#ifdef OPT_NETCDF
+        logical :: apply_scale, apply_offset
+        real(kind=JPRM) :: scale, offset
+
+#ifdef UseCDF_CMF
         type(NCConfig) :: &
         &   ncconf
 #endif
+        ! dynamically changed
+        integer(kind=JPIM) :: &
+        &   rec, &          ! record number (time step) to be read next
+        &   now_t, nxt_t    ! current time, next time, counted from calculation start [sec]
+
         contains
         procedure :: get_item       => get_item
         procedure :: get_fmt        => get_fmt
@@ -74,6 +84,7 @@ module input_conf_class
         procedure :: update_needed  => update_needed
         procedure :: update_input   => update_input
         procedure :: set_next       => set_next
+        procedure :: apply_scale_offset => apply_scale_offset
     end type InputConf
 
 contains
@@ -94,7 +105,7 @@ function init_InputConf(item_name, nml_unit, t) result(obj)
     &   path
     integer(kind=JPIM) :: &
     &   z_in, nx, ny, nz, unit, rec, dt_val
-#ifdef OPT_NETCDF
+#ifdef UseCDF_CMF
     character(len=CLEN_ITEM) :: &
     &   var_name
 #endif
@@ -104,16 +115,18 @@ function init_InputConf(item_name, nml_unit, t) result(obj)
     &   scale, offset
     logical :: &
     &   is_catm, is_fldstg, is_found
-    write(LOG_UNIT, '(a)') trim(item_name)
+
     call read_nml_input_item(nml_unit, item_name, &
     &   is_found, fmt, path, z_in, is_catm, is_fldstg, scale, offset, div_item)
     if (.not. is_found) call raise_item_not_found_error('read_nml_input_item', 'input_item', item_name)
     obj%fmt    = fmt
     obj%path   = path
     obj%z_in   = z_in
+    obj%div_item = div_item
+    obj%apply_scale  = .not. nearly_equal(scale,  1.0_JPRM)
+    obj%apply_offset = .not. nearly_equal(offset, 0.0_JPRM)
     obj%scale  = scale
     obj%offset = offset
-    obj%div_item = div_item
     rec = 1
 
     select case (trim(to_lowercase(fmt)))
@@ -134,7 +147,7 @@ function init_InputConf(item_name, nml_unit, t) result(obj)
             unit = INQUIRE_FID()
             obj%unit = unit
             call open_bin(unit, path, 4 * nx * ny * nz)
-#ifdef OPT_NETCDF
+#ifdef UseCDF_CMF
         case ('netcdf', 'nc')
             call read_nml_input_nc( &
             &   nml_unit, item_name, &
@@ -149,7 +162,7 @@ function init_InputConf(item_name, nml_unit, t) result(obj)
             &   nml_unit, item_name, &
             &   is_found, dt_val, dt_unit)
             if (is_found) then
-                write(LOG_UNIT, '(a)') '    CAUTION: temporal resolution is identified with namelist'
+                write(LOGNAM, '(a)') '    CAUTION: temporal resolution is identified with namelist'
             else
                 dt_val  = get_nc_dt( &
                 &   obj%ncconf)
@@ -168,8 +181,8 @@ function init_InputConf(item_name, nml_unit, t) result(obj)
             endif
 #endif
         case default
-            write(LOG_UNIT, '(a)') '[input_conf_class/init_InputConf InValidValueError]'
-            write(LOG_UNIT, '(2a)') 'fmt = ', trim(fmt)
+            write(LOGNAM, '(a)') '[input_conf_class/init_InputConf InValidValueError]'
+            write(LOGNAM, '(2a)') 'fmt = ', trim(fmt)
             stop
     end select
     !call read_area(west, east, south, north)
@@ -178,19 +191,20 @@ function init_InputConf(item_name, nml_unit, t) result(obj)
     obj%nz = nz
     obj%map = init_CaMaFrame( &
     &   left, right, top, bottom, nx, ny, is_catm, is_fldstg)
-!write(LOG_UNIT, *) west, east, south, north
-!write(LOG_UNIT, *) nx, ny, is_n2s, catm, fldstg
+!write(LOGNAM, *) west, east, south, north
+!write(LOGNAM, *) nx, ny, is_n2s, catm, fldstg
     obj%inpmat_idx = find_inpmat(obj%map)
     obj%dt = dt2sec(dt_val, dt_unit)
     obj%now_t = t
     obj%nxt_t = t
 
-    write(LOG_UNIT, '(3a,i2,2a,i0)') '    shape: ', trim(obj%map%str())
-    write(LOG_UNIT, '(a,i0,a)')      '    temporal resolution: ', dt_val, dt_unit
-    write(LOG_UNIT, '(a,i0)')        '    inpmat_idx: ', obj%inpmat_idx
-    write(LOG_UNIT, '(a,i0)')        '    nz = ', nz
-!    write(LOG_UNIT, '(2a)')      '    input datetime : ', t%strftime('%Y/%m/%d/%H:%M')
-    write(LOG_UNIT, '(2(a,e10.2))')  '    scale/offset = ', obj%scale, ' ', obj%offset
+    write(LOGNAM, '(3a,i2,2a,i0)') '    shape: ', trim(obj%map%str())
+    write(LOGNAM, '(a,i0,a)')      '    temporal resolution: ', dt_val, dt_unit
+    write(LOGNAM, '(a,i0)')        '    inpmat_idx: ', obj%inpmat_idx
+    write(LOGNAM, '(a,i0)')        '    nz = ', nz
+!    write(LOGNAM, '(2a)')      '    input datetime : ', t%strftime('%Y/%m/%d/%H:%M')
+    write(LOGNAM, '(2(a,L,a,e10.2))')  '    scale  = ', obj%apply_scale, ' ', obj%scale
+    write(LOGNAM, '(2(a,L,a,e10.2))')  '    offset = ', obj%apply_offset, ' ', obj%offset
 end function init_InputConf
 
 ! ===================================================================================================
@@ -284,6 +298,14 @@ subroutine set_next(self)
     self%rec   = self%rec + 1
 end subroutine set_next
 
+subroutine apply_scale_offset(self, data)
+    class(InputConf), intent(in) :: self
+    real(kind=JPRM), intent(inout) :: data(:,:,:)
+
+    if (self%apply_scale) data(:,:,:) = data(:,:,:) * self%scale
+    if (self%apply_offset) data(:,:,:) = data(:,:,:) + self%offset
+end subroutine apply_scale_offset
+
 ! ===================================================================================================
 logical function update_needed(self, now_t) result(is_needed)
     class(InputConf),  intent(in) :: self
@@ -309,7 +331,7 @@ subroutine update_input(self, arr)
             allocate(arr_r4(nx,ny,nz), source=0.0)
             call read_bin(arr_r4(:,:,:), self%get_path(), self%get_rec())
             is_end = .FALSE.
-#ifdef OPT_NETCDF
+#ifdef UseCDF_CMF
         case ('netcdf', 'nc')
             call self%get_file_shape(nx, ny, nz)
             allocate(arr_r4(nx,ny,nz), source=0.0)
@@ -322,31 +344,23 @@ subroutine update_input(self, arr)
             endif
 #endif
         case default
-            write(LOG_UNIT, '(a)') '[input_conf_class/update_input InValidValueError]'
-            write(LOG_UNIT, '(2a)') 'fmt = ', trim(self%get_fmt())
+            write(LOGNAM, '(a)') '[input_conf_class/update_input InValidValueError]'
+            write(LOGNAM, '(2a)') 'fmt = ', trim(self%get_fmt())
             stop
     end select
-    call apply_scale_offset(arr_r4(:,:,:), self%get_scale(), self%get_offset())
+    call self%apply_scale_offset(arr_r4(:,:,:))
 
     if (is_end) then
-        write(LOG_UNIT, *) trim(self%get_item()), ': read last step again'
+        write(LOGNAM, *) trim(self%get_item()), ': read last step again'
         if (allocated(arr_r4)) deallocate(arr_r4)
         return
     endif
-    write(LOG_UNIT, '(a10,i5)') trim(self%get_item()), self%get_rec()
+    write(LOGNAM, '(a10,i5)') trim(self%get_item()), self%get_rec()
 
     call map2vec(arr_r4(:,:,self%get_z_in()), arr(:), self%get_map(), self%get_inpmat_idx())
     deallocate(arr_r4)
     call self%set_next()
 end subroutine update_input
-
-
-subroutine apply_scale_offset(data, scale, offset)
-    real(kind=JPRM), intent(inout) :: data(:,:,:)
-    real(kind=JPRM), intent(in) :: scale, offset
-    if (scale  /= 1.d0) data(:,:,:) = data(:,:,:) * scale
-    if (offset /= 0.d0) data(:,:,:) = data(:,:,:) + offset
-end subroutine apply_scale_offset
 
 ! ===================================================================================================
 ! Array of InputConf
