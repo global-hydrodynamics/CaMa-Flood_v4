@@ -1,4 +1,4 @@
-module array_lib
+module array_mod
     implicit none
     private
     public :: &
@@ -25,7 +25,6 @@ module array_lib
         module procedure :: find_index_c
     !    module procedure find_index_i
         module procedure :: find_index_i_alloc
-        module procedure :: find_index_d_alloc
     end interface find_index
 
     interface arange
@@ -39,24 +38,23 @@ contains
 subroutine append_c(a, val)
     character(len=*),  allocatable, intent(inout) :: a(:)
     character(len=*),               intent(in)    :: val
-    character(len=:), allocatable :: tmp(:)
-    integer :: n, L, Lnew
+    character(len=:), allocatable :: tmp_c(:)
+    integer :: n, Lnew
 
     if (.not. allocated(a)) then
-    allocate(character(len(val)) :: a(1))
-    a(1) = val
-    return
+        allocate(character(len(val)) :: a(1))
+        a(1) = val
+        return
     end if
 
     n    = size(a)
-    L    = len(a(1))
-    Lnew = max(L, len(val))
+    Lnew = max(len(a(1)), len(val))
 
-    allocate(character(Lnew) :: tmp(n+1))
-    tmp(1:n) = a
-    tmp(n+1) = val
-
-    call move_alloc(tmp, a)
+    allocate(character(Lnew) :: tmp_c(n+1))
+    tmp_c = ''
+    tmp_c(1:n) = a
+    tmp_c(n+1) = val
+    call move_alloc(tmp_c, a)
 end subroutine append_c
 
 !subroutine append_c32(a, val)
@@ -184,39 +182,6 @@ integer function find_index_i_alloc(array, target) result(idx)
     enddo
 end function find_index_i_alloc
 
-integer function find_index_d_alloc(array, target) result(idx)
-    real(8), allocatable, intent(in) :: array(:)
-    ! without "allocatable", error when array is not allocated
-    real(8),              intent(in) :: target
-    integer :: i
-
-    idx = 0
-    if (.not. allocated(array)) return
-
-    do i = 1, size(array)
-        if (array(i) == target) then
-            idx = i
-            return
-        endif
-    enddo
-end function find_index_d_alloc
-!function find_index_i(array, target) result(idx)
-!    integer, intent(in) :: array(:)
-!    integer, intent(in) :: target
-!    integer                idx
-!    logical(kind=4)      isFound
-!    isFound = .FALSE.
-!    do idx = 1, size(array)
-!        if (array(idx) == target) then
-!            isFound = .TRUE.
-!            exit
-!        endif
-!    enddo
-!    if (.not. isFound) then
-!        idx = 0
-!    endif
-!end function find_index_i
-
 ! ===================================================================================================
 subroutine allocate_array_1d_dble(out_array, nsize)
     double precision, allocatable, intent(out) :: out_array(:)
@@ -340,5 +305,4 @@ function bisect_left(arr, target) result(i)
     enddo
 end function bisect_left
 
-end module array_lib
-
+end module array_mod

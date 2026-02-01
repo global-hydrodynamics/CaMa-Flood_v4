@@ -1,7 +1,7 @@
 module array_dict_class
-    use array_lib, only: find_index
     use PARKIND1, only: JPRB
-    use glob_mod, only: CLEN_SHORT
+    use const_mod, only: CLEN_SHORT
+    use array_mod, only: find_index
     implicit none
     private
 

@@ -1,19 +1,17 @@
 module glob_mod
-    use time_recorder_class, only: &
-    &   TimeRecorder
     use PARKIND1,  only: &
     &   JPIM, JPRB, JPRM
     use YOS_CMF_INPUT, only: &
     &   TMPNAM, LOGNAM
     use CMF_UTILS_MOD, only: &
     &   INQUIRE_FID
+
+    use const_mod, only: &
+    &   CLEN_PATH, CLEN_SHORT
+    use time_recorder_class, only: &
+    &   TimeRecorder
     implicit none
     save
-    integer, parameter :: &
-    &   CLEN_LONG = 256, &
-    &   CLEN_SHORT = 16, &
-    &   CLEN_PATH = 256, &
-    &   CLEN_ITEM = 32
 
     logical :: LLAKE = .FALSE.
     logical :: LHEATLINK = .FALSE.
@@ -28,15 +26,6 @@ module glob_mod
 
     type(TimeRecorder) :: &
     &   TIME_RECORDER
-
-    integer(kind=JPIM), parameter :: &
-    &   IMIS = -9999_JPIM
-    real   (kind=JPRM), parameter :: &
-    &   RMIS = 1.E20_JPRM
-    real   (kind=JPRB), parameter :: &
-    &   DMIS = 1.E20_JPRB
-    double precision  , parameter :: &
-    &   STO_IGNORE = 1.d-9
 
     character(len=CLEN_PATH), parameter :: &
     &   NML_PATH = 'input_cmf.nam'

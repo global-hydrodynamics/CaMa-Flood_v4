@@ -1,4 +1,4 @@
-module funit_lib
+module funit_mod
     implicit none
 
     integer, parameter :: &
@@ -22,4 +22,4 @@ DO FID = 10, 999
 ENDDO
 END FUNCTION INQUIRE_FID
 
-end module funit_lib
+end module funit_mod

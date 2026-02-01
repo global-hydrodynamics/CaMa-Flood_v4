@@ -6,20 +6,22 @@ module input_conf_class
     use YOS_CMF_INPUT, only: &
     &   LOGNAM
 
+    use const_mod, only: &
+    &   CLEN_ITEM, CLEN_PATH, CLEN_SHORT
     use glob_mod, only: &
-    &   NML_PATH, CLEN_ITEM, CLEN_PATH, CLEN_SHORT
-    use funit_lib, only: &
+    &   NML_PATH
+    use funit_mod, only: &
     &   INQUIRE_FID
-    use bin_lib, only: &
+    use bin_mod, only: &
     &   open_bin, read_bin
-    use text_lib, only: &
+    use text_mod, only: &
     &   to_lowercase
     use numeric_utils_mod, only: &
     &   nearly_equal
 #ifdef UseCDF_CMF
-    use nc_lib, only: &
+    use nc_mod, only: &
     &   NCConfig, &
-    &   init_ncconfig, get_nc_dt, get_nc_scale_offset, &
+    &   init_ncconfig, get_nc_dt, & !get_nc_scale_offset, &
     &   read_nc, get_nc_domain
 #endif
     use time_mod, only: &

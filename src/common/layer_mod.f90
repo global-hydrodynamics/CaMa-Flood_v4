@@ -1,7 +1,7 @@
-module layer_lib
+module layer_mod
     use LU, &
     &   only: solve_matrix
-    use funit_lib, only: &
+    use funit_mod, only: &
     &   LOG_UNIT
     implicit none
     ! Updating from N to M layers, the maximum number of the "packets" is N - M + 1
@@ -554,4 +554,4 @@ subroutine eddmix_settle__(lyrx, lyrthk, veredd, setvel, dt)
 
 end subroutine eddmix_settle__
 
-end module layer_lib
+end module layer_mod

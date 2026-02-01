@@ -1,5 +1,5 @@
 module time_recorder_class
-    use array_lib, only : append, find_index
+    use array_mod, only : append, find_index
     implicit none
     private
     public :: TimeRecorder

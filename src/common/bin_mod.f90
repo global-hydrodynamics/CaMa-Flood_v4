@@ -1,5 +1,5 @@
-module bin_lib
-    use funit_lib, only: TMP_UNIT
+module bin_mod
+    use funit_mod, only: TMP_UNIT
     implicit none
 
     interface read_bin
@@ -121,4 +121,4 @@ subroutine read_bin_3d_d(array, inpath, recnum)
     deallocate(rarray)
 end subroutine read_bin_3d_d
 
-end module bin_lib
+end module bin_mod

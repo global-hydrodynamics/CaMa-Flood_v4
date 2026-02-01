@@ -12,13 +12,13 @@ module dim_converter
     use CMF_UTILS_MOD, only: &
     &   map2vec_catm, vec2map => vec2map_catm
 
-    use array_lib, only: &
+    use array_mod, only: &
     &   find_index, append
     use numeric_utils_mod, only: &
     &   nearly_equal
     use inpmat_mod, only: &
     &   Inpmat, append_inpmat
-    use mapframe_lib
+    use mapframe_mod
     use camaframe_mod
     implicit none
     private

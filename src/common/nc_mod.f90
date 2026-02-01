@@ -1,6 +1,6 @@
-module nc_lib
+module nc_mod
 #ifdef UseCDF_CMF
-    use funit_lib, only: &
+    use funit_mod, only: &
     &   LOG_UNIT
     use netcdf
     implicit none
@@ -140,13 +140,13 @@ integer function get_nc_dt(ncconf)
 end function get_nc_dt
 
 
-subroutine get_nc_scale_offset(unit, var_id, scale, offset)
-    integer, intent(in)  :: unit, var_id
-    double precision, intent(out) :: scale, offset
-    call handle_error(nf90_get_att(unit, var_id, 'scale_factor', scale ))
-    call handle_error(nf90_get_att(unit, var_id, 'add_offset'  , offset))
-    if (scale == 0.d0) scale = 1.d0
-end subroutine get_nc_scale_offset
+!subroutine get_nc_scale_offset(unit, var_id, scale, offset)
+!    integer, intent(in)  :: unit, var_id
+!    double precision, intent(out) :: scale, offset
+!    call handle_error(nf90_get_att(unit, var_id, 'scale_factor', scale ))
+!    call handle_error(nf90_get_att(unit, var_id, 'add_offset'  , offset))
+!    if (scale == 0.d0) scale = 1.d0
+!end subroutine get_nc_scale_offset
 
 ! ===================================================================================================
 subroutine check_get_var_error( &
@@ -209,4 +209,4 @@ subroutine read_nc_r4_3d( &
     &   file_is_end)
 end subroutine read_nc_r4_3d
 #endif
-end module nc_lib
+end module nc_mod

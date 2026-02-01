@@ -6,7 +6,7 @@ module output_mod
     use YOS_CMF_INPUT, only: &
     &   NX, NY
 
-    use glob_mod, only: &
+    use const_mod, only: &
     &   CLEN_ITEM
     use dim_converter, only: &
     &   vec2map

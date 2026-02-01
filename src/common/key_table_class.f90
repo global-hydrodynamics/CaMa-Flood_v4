@@ -1,6 +1,6 @@
 module key_table_class
-    use glob_mod, only: CLEN_SHORT
-    use array_lib, only: find_index
+    use const_mod, only: CLEN_SHORT
+    use array_mod, only: find_index
     implicit none
     private
     public :: KeyTable

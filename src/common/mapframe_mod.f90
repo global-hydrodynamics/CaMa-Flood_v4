@@ -1,4 +1,4 @@
-module mapframe_lib
+module mapframe_mod
     implicit none
     private
     public :: &
@@ -173,4 +173,4 @@ logical function eq(a, b)
     eq = (al == bl .and. ar == br .and. at == bt .and. ab == bb .and. ax == bx .and. ay == by)
 end function eq
 
-end module mapframe_lib
+end module mapframe_mod

@@ -1,9 +1,9 @@
 module time_mod
     use PARKIND1, only: &
     &   JPIM
-    use glob_mod, only: &
+    use const_mod, only: &
     &   CLEN_SHORT
-    use text_lib, only: &
+    use text_mod, only: &
     &   to_lowercase
     implicit none
 contains

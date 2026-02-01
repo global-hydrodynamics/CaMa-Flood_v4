@@ -1,6 +1,6 @@
-module util_lib
-    use funit_lib, only: &
-    &   LOG_UNIT
+module util_mod
+    use YOS_CMF_INPUT, only: &
+    &   LOGNAM
     implicit none
 contains
 
@@ -10,8 +10,7 @@ subroutine write_string_with_indent(indent, string)
     character(len=256)          wrtFmt
 
     write(wrtFmt, '("(a" i1 ", a" i3 ")")') indent, len_trim(string)
-    write(LOG_UNIT, wrtFmt) '', string
+    write(LOGNAM, wrtFmt) '', string
 end subroutine write_string_with_indent
 
-end module util_lib
-
+end module util_mod

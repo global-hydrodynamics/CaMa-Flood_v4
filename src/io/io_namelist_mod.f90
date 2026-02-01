@@ -4,8 +4,10 @@ module io_namelist_mod
     use YOS_CMF_INPUT, only: &
     &   TMPNAM, LOGNAM
 
+    use const_mod, only: &
+    &   CLEN_ITEM, CLEN_PATH, CLEN_SHORT
     use glob_mod, only: &
-    &   NML_PATH, CLEN_ITEM, CLEN_PATH, CLEN_SHORT
+    &   NML_PATH
     implicit none
 
 contains

@@ -1,6 +1,6 @@
 program test_ranked_array
     use PARKIND1,         only: JPRB
-    use ranked_array_class, only: RankedArray, append_ranked_arrays, RK_1D, RK_2D
+    use ranked_array_class, only: RankedArray, append_ranked_array, RK_1D, RK_2D
     implicit none
 
     call test_set_get_1d()
@@ -110,10 +110,8 @@ contains
             7.0_JPRB,  8.0_JPRB,  9.0_JPRB, &
             10.0_JPRB, 11.0_JPRB, 12.0_JPRB  /), (/3,4/))
 
-        if (allocated(arrs)) deallocate(arrs)
-
-        call append_ranked_arrays(arrs, a1)
-        call append_ranked_arrays(arrs, a2)
+        call append_ranked_array(arrs, a1)
+        call append_ranked_array(arrs, a2)
 
         call assert_i_eq(size(arrs), 2, 'append count')
 
@@ -142,13 +140,11 @@ contains
         real(kind=JPRB) :: a1(3), out1(3)
         real(kind=JPRB) :: a2(2,2), out2(2,2)
 
-        if (allocated(arrs)) deallocate(arrs)
-
         a1 = (/ -1.0_JPRB, -2.0_JPRB, -3.0_JPRB /)
         a2 = reshape((/ 1.0_JPRB, 2.0_JPRB, 3.0_JPRB, 4.0_JPRB /), (/2,2/))
 
-        call append_ranked_arrays(arrs, a1)
-        call append_ranked_arrays(arrs, a2)
+        call append_ranked_array(arrs, a1)
+        call append_ranked_array(arrs, a2)
 
         ! arrs(1) を更新しても arrs(2) が変わらない
         a1 = (/ 10.0_JPRB, 20.0_JPRB, 30.0_JPRB /)

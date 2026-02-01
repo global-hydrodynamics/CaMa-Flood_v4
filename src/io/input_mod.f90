@@ -4,11 +4,11 @@ module input_mod
     use YOS_CMF_INPUT, only: &
     &   LOGNAM
 
-    use glob_mod, only: &
+    use const_mod, only: &
     &   CLEN_ITEM
     use key_table_class, only: &
     &   KeyTable
-    use funit_lib, only: &
+    use funit_mod, only: &
     &   TMP_UNIT
     use YOS_CMF_MAP, only: &
     &   NSEQMAX
@@ -18,7 +18,7 @@ module input_mod
     &   RankedArray, append_ranked_array
     use input_conf_class, only: &
     &   InputConf, init_InputConf, append_InputConf
-    use util_lib, only: &
+    use util_mod, only: &
     &   write_string_with_indent
     !use correct_mod, only: &
     !&   fill_map, scale_map, minimum, div

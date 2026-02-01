@@ -5,14 +5,15 @@ module inpmat_mod
     &   CSETFILE
     use CMF_UTILS_MOD, only: &
     &   INQUIRE_FID
-    use mapframe_lib, only: &
-    &   MapFrame
-    use glob_mod, only: &
-    &   MNTSEQ
     use YOS_CMF_INPUT, only: &
     &   NX, NY
     use YOS_CMF_MAP, only: &
     &   NSEQMAX, I1SEQX, I1SEQY
+
+    use mapframe_mod, only: &
+    &   MapFrame
+    use glob_mod, only: &
+    &   MNTSEQ
     implicit none
     private
     public :: Inpmat, append_inpmat

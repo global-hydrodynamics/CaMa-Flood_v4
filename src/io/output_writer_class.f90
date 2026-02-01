@@ -7,7 +7,7 @@ module output_writer_class
     &   INQUIRE_FID
     use YOS_CMF_INPUT, only: &
     &   NX, NY
-    use glob_mod, only: &
+    use const_mod, only: &
     &   CLEN_PATH
     implicit none
     private

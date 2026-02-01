@@ -1,7 +1,7 @@
-module gt_lib
+module gt_mod
     use datetime_ext_mod, only: &
     &   RelativeDelta, strptime
-    use funit_lib, only: &
+    use funit_mod, only: &
     &   LOG_UNIT
     implicit none
 
@@ -177,4 +177,4 @@ subroutine read_gt( &
     endif
 end subroutine read_gt
 
-end module gt_lib
+end module gt_mod

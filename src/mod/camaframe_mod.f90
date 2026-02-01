@@ -1,5 +1,5 @@
 module camaframe_mod
-    use mapframe_lib, only: &
+    use mapframe_mod, only: &
     &   MapFrame, operator(==), init_MapFrame
     implicit none
     private

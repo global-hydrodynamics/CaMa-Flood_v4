@@ -3,8 +3,11 @@ module output_conf_class
     &   JPIM
     use YOS_CMF_INPUT, only: &
     &   TMPNAM, LOGNAM
+
+    use const_mod, only: &
+    &   CLEN_ITEM, CLEN_PATH, CLEN_SHORT
     use glob_mod, only: &
-    &   NML_PATH, BINMAP_SUF, BINVEC_SUF, CLEN_PATH, CLEN_ITEM, CLEN_SHORT
+    &   NML_PATH, BINMAP_SUF, BINVEC_SUF
     use io_namelist_mod, only: &
     &   read_nml_output
     implicit none

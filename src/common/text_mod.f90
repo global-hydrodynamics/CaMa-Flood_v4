@@ -1,4 +1,4 @@
-module text_lib
+module text_mod
     implicit none
 contains
 
@@ -105,4 +105,4 @@ function to_lowercase(text) result(ret)
     end do
 end function to_lowercase
 
-end module text_lib
+end module text_mod
