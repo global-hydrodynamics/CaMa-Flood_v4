@@ -69,14 +69,16 @@ contains
 
         if (self%is_open) call raise_already_open_error(self%path)
 
-        unit = INQUIRE_FID()
+        !unit = INQUIRE_FID()
         if (mapfmt) then
             recl_local = BYTE_RECL * NX * NY
         else
             recl_local = BYTE_RECL * n1
         endif
 
-        open(unit, file=trim(path), status='replace', form='unformatted', &
+        !open(unit, file=trim(path), status='replace', form='unformatted', &
+        !&    access='direct', recl=recl_local, iostat=ios)
+        open(newunit=unit, file=trim(path), status='replace', form='unformatted', &
         &    access='direct', recl=recl_local, iostat=ios)
         if (ios /= 0) call raise_open_error(path)
 

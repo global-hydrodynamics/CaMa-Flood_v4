@@ -1,7 +1,7 @@
 module nc_mod
 #ifdef UseCDF_CMF
-    use funit_mod, only: &
-    &   LOG_UNIT
+    use YOS_CMF_INPUT, only: &
+    &   LOGNAM
     use netcdf
     implicit none
 
@@ -25,7 +25,7 @@ subroutine handle_error(status)
     integer, intent(in) :: status
     if (status /= nf90_noerr .and. status /= -43) then
         ! status = -43: no attribute
-        write(LOG_UNIT, *) status, trim(nf90_strerror(status))
+        write(LOGNAM, *) status, trim(nf90_strerror(status))
         stop
     endif
 end subroutine handle_error
@@ -54,6 +54,7 @@ type(NCConfig) function init_ncconfig(path, varname)
 
     call handle_error( &
     &   nf90_open(path, nf90_nowrite, init_ncconfig%ncid))
+    write(LOGNAM, '(a,i0)') '    init_ncconfig, open file: ', init_ncconfig%ncid
     call handle_error( &
     &   nf90_inq_varid(init_ncconfig%ncid, trim(varname), init_ncconfig%varid))
 

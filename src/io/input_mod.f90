@@ -2,14 +2,12 @@ module input_mod
     use PARKIND1, only: &
     &   JPIM, JPRB, JPRM
     use YOS_CMF_INPUT, only: &
-    &   LOGNAM
+    &   LOGNAM, TMPNAM
 
     use const_mod, only: &
     &   CLEN_ITEM
     use key_table_class, only: &
     &   KeyTable
-    use funit_mod, only: &
-    &   TMP_UNIT
     use YOS_CMF_MAP, only: &
     &   NSEQMAX
     use glob_mod, only: &
@@ -49,27 +47,27 @@ contains
 subroutine init_input_mod(t)
     integer(kind=JPIM), intent(in) :: t
 
-    write(LOGNAM, '(a)') '[init_input_mod]'
+    write(LOGNAM, '(a)') '[input_mod/init_input_mod]'
     call items%init()
-    call open_namelist(TMP_UNIT)
+    call open_namelist(TMPNAM)
 
-    !call add_input_conf('ROFF', TMP_UNIT, t)
-    !if (LROFSCL) call add_input_conf('ROFSCL', TMP_UNIT, t)
+    !call add_input_conf('ROFF', TMPNAM, t)
+    !if (LROFSCL) call add_input_conf('ROFSCL', TMPNAM, t)
     !if ( LLAKE ) then
-    !    call add_input_conf('RAIN', TMP_UNIT, t)
-    !    call add_input_conf('SNOW', TMP_UNIT, t)
+    !    call add_input_conf('RAIN', TMPNAM, t)
+    !    call add_input_conf('SNOW', TMPNAM, t)
     !endif
     !if (LHEATLINK) then
-    !    call add_input_conf('LWDN', TMP_UNIT, t)
-    !    call add_input_conf('PSRF', TMP_UNIT, t)
-    !    call add_input_conf('QAIR', TMP_UNIT, t)
-    !    call add_input_conf('SWDN', TMP_UNIT, t)
-        call add_input_conf('TAIR', TMP_UNIT, t)
-    !    call add_input_conf('WIND', TMP_UNIT, t)
-    !    call add_input_conf('TROF', TMP_UNIT, t)
+        call add_input_conf('LWDN', TMPNAM, t) ! [W m-2]
+        call add_input_conf('PSRF', TMPNAM, t) ! [hPa]
+        call add_input_conf('QAIR', TMPNAM, t) ! [kg kg-1]
+        call add_input_conf('SWDN', TMPNAM, t) ! [W m-2]
+        call add_input_conf('TAIR', TMPNAM, t) ! [K]
+        call add_input_conf('TROF', TMPNAM, t) ! [K]
+        call add_input_conf('WIND', TMPNAM, t) ! [m s-1]
     !endif
     allocate(IS_UPDATED(IN_ITEM_NUM)); IS_UPDATED(:) = .TRUE.
-    close(TMP_UNIT)
+    close(TMPNAM)
     write(LOGNAM, *)
 end subroutine init_input_mod
 
@@ -123,11 +121,11 @@ subroutine update_input(now_t)
     ! omp has to wait for other variables
     ! because the following correction refers to other variables
 
-    do i = 1, IN_ITEM_NUM
-        if (.not. IS_UPDATED(i)) cycle
-        call arrs(i)%get(arr)
-        !call correct_input(confs(i), arr)
-    enddo
+    !do i = 1, IN_ITEM_NUM
+    !    if (.not. IS_UPDATED(i)) cycle
+    !    call arrs(i)%get(arr)
+    !    !call correct_input(confs(i), arr)
+    !enddo
 
     !do i = 1, IN_ITEM_NUM
     !    call update_output(trim(items(i)), confs(i)%now_data(:,1))

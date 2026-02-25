@@ -160,7 +160,7 @@ function find_inpmat(cmf, inpmat_name) result(idx)
             stop
         endif
     else
-        if (.not. all_diff) stop '[dim_converter/find_inpmat ERROR] not identigy inpmat due to same size'
+        if (.not. all_diff) stop '[dim_converter/find_inpmat ERROR] not identify inpmat due to same size'
         do idx_ = 1, size(inpmats)
             if (eqmap(inpmats(idx_)%map, cmf)) then
                 idx = idx_

@@ -23,7 +23,7 @@ module output_mod
     implicit none
     private
     public :: &
-    &   init_output_mod, update_output, write_output, close_output
+    &   init_output_mod, update_output, write_output, fin_output_mod
 
     ! ==============================================================================================
     ! Active outputs (all arrays have the same length; index is managed by items_output)
@@ -57,6 +57,7 @@ contains
 
     ! ==============================================================================================
     subroutine init_output_mod()
+        write(LOGNAM, '(a)') '[output_mod/init_output_mod]'
         call items_output%clear()
         call items_checked%clear()
 
@@ -69,6 +70,17 @@ contains
         endif
         tmp_map(:,:) = 0.0
     end subroutine init_output_mod
+
+
+    subroutine fin_output_mod()
+        write(LOGNAM, '(a)') '[output_mod/fin_output_mod]'
+        call close_output()
+
+        if (allocated(confs))   deallocate(confs)
+        if (allocated(arrs))    deallocate(arrs)
+        if (allocated(writers)) deallocate(writers)
+        if (allocated(tmp_map)) deallocate(tmp_map)
+    end subroutine fin_output_mod
 
     ! ==============================================================================================
     subroutine update_output_1d(item, arr)

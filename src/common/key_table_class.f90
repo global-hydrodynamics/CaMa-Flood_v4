@@ -1,4 +1,6 @@
 module key_table_class
+    use YOS_CMF_INPUT, only: &
+    &   LOGNAM
     use const_mod, only: CLEN_SHORT
     use array_mod, only: find_index
     implicit none
@@ -19,14 +21,14 @@ contains
 
     subroutine raise_not_found_error(key)
         character(len=*), intent(in) :: key
-        write(*, *) '[KeyTable ERROR] key not found: ', trim(key)
+        write(LOGNAM, '(2a)') '[KeyTable ERROR] key not found: ', trim(key)
         stop 1
     end subroutine raise_not_found_error
 
     subroutine raise_key_length_error(key, key_len)
         character(len=*), intent(in) :: key
         integer,          intent(in) :: key_len
-        write(*, *) '[KeyTable ERROR] key too long (len_trim(key)=', len_trim(key), &
+        write(LOGNAM, '(6a)') '[KeyTable ERROR] key too long (len_trim(key)=', len_trim(key), &
                     ', allowed<=', key_len, '): ', trim(key)
         stop 1
     end subroutine raise_key_length_error
@@ -41,7 +43,7 @@ contains
 
     subroutine raise_duplicate_key_error(key)
         character(len=*), intent(in) :: key
-        write(*, *) '[KeyTable ERROR] duplicate key: ', trim(key)
+        write(LOGNAM, '(2a)') '[KeyTable ERROR] duplicate key: ', trim(key)
         stop 1
     end subroutine raise_duplicate_key_error
 
@@ -73,13 +75,13 @@ contains
         class(KeyTable), intent(in) :: self
         character(len=*), intent(in) :: key
         call check_key_length(key, self%key_len)
-        if (.not. allocated(self%keys)) then
-            call raise_not_found_error(key)
-        end if
+        !if (.not. allocated(self%keys)) then
+        !    call raise_not_found_error(key)
+        !end if
         idx = find_index(self%keys, key)
-        if (idx <= 0) then
-            call raise_not_found_error(key)
-        end if
+        !if (idx <= 0) then
+        !    call raise_not_found_error(key)
+        !end if
     end function find
 
     subroutine append(self, key)

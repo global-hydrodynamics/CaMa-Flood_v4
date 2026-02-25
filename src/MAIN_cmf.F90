@@ -32,8 +32,11 @@ USE cmf_ctrl_sedinp_mod,     ONLY: cmf_sed_forcing
 #endif
 !** tracer options**
 #ifdef heatlink
-USE heatlink_river_mod,      ONLY: init_heatlink_river_mod, fin_heatlink_river_mod
+USE heatlink_river_mod,      ONLY: &
+&   init_heatlink_river_mod, calc_heatlink, output_heatlink, fin_heatlink_river_mod
 #endif
+use YOS_CMF_INPUT, only: &
+&   LOGNAM
 !==========================================================
 !****************************
 IMPLICIT NONE
@@ -66,20 +69,21 @@ endif
 !*** 2. MAIN TEMPORAL LOOP / TIME-STEP (NSTEPS calculated by DRV_INIT)
 
 ISTEPADV=INT(DTIN/DT,JPIM)
-DO ISTEP=1,NSTEPS,ISTEPADV
-
-  !*  2a Read forcing from file, This is only relevant in Stand-alone mode 
-  CALL CMF_FORCING_GET(ZBUFF(:,:,:))
-  !*  2b Interporlate runoff & send to CaMa-Flood 
-  CALL CMF_FORCING_PUT(ZBUFF(:,:,:))
-
-  IF( LTRACE )THEN
-    CALL CMF_TRACER_FORC_GET
-    CALL CMF_TRACER_FORC_INTERP
-  ENDIF
+DO ISTEP=1,NSTEPS
+  write(LOGNAM, '(a,i6)') '[MAIN_cmf] Time step: ', ISTEP
+  if (mod(ISTEP-1, ISTEPADV) == 0) then
+    !*  2a Read forcing from file, This is only relevant in Stand-alone mode 
+    CALL CMF_FORCING_GET(ZBUFF(:,:,:))
+    !*  2b Interporlate runoff & send to CaMa-Flood 
+    CALL CMF_FORCING_PUT(ZBUFF(:,:,:))
+    IF( LTRACE )THEN
+      CALL CMF_TRACER_FORC_GET
+      CALL CMF_TRACER_FORC_INTERP
+    ENDIF
+  endif
  
   !*  2c  Advance CaMa-Flood model for ISTEPADV
-  CALL CMF_DRV_ADVANCE(ISTEPADV)
+  CALL CMF_DRV_ADVANCE(1)
 
 
 #ifdef sediment
@@ -87,6 +91,12 @@ DO ISTEP=1,NSTEPS,ISTEPADV
   IF ( LSEDOUT ) THEN
     CALL cmf_sed_forcing
   ENDIF
+#endif
+#ifdef heatlink
+if (LHEATLINK) then
+  call calc_heatlink(int(DT) * (ISTEP - 1), DT)
+  call output_heatlink
+endif
 #endif
 
 ENDDO

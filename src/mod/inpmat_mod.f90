@@ -202,11 +202,11 @@ subroutine append_inpmat(inpmats, ainpmat)
     type(Inpmat), allocatable                :: tmp(:)
     integer :: old_size
 
-    old_size = size(inpmats)
-    if (old_size < 1) then
+    if (.not. allocated(inpmats)) then
         allocate(inpmats(1)); inpmats(1) = ainpmat
         return
     endif
+    old_size = size(inpmats)
     allocate(tmp, source=inpmats)
     deallocate(inpmats)
     allocate(inpmats(old_size + 1))
