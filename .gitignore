@@ -10,3 +10,4 @@
 *.o
 *.dSYM
 *.mod
+out/
