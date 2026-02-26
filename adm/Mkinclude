@@ -15,13 +15,15 @@ DCDF=-DUseCDF_CMF
 #DMPI=-DUseMPI_CMF
 #DSINGLE=-DSinglePrec_CMF
 #DATM=-DNoAtom_CMF
+#======================================
+DHEATLINK=-Dheatlink
 
-CFLAGS=$(DMPI) $(DCDF) $(DATM) $(DSINGLE)
+CFLAGS=$(DMPI) $(DCDF) $(DATM) $(DSINGLE) $(DHEATLINK)
 
 #======================================
 # extensions
 #EXT_LIBS = 
-EXT_LIBS = lib mod
+EXT_LIBS = common mod phys io heatlink
 EXT_LIB_TARGETS := $(foreach d,$(EXT_LIBS),$(d)/lib$(notdir $(d)).a)
 
 #======================================
@@ -32,8 +34,8 @@ EXT_LIB_TARGETS := $(foreach d,$(EXT_LIBS),$(d)/lib$(notdir $(d)).a)
 #LIB = -L/opt/homebrew/lib 
 
 # with netCDF
-#INC = -I/opt/homebrew/include 
-#LIB = -L/opt/homebrew/lib -lnetcdff
+INC = -I/opt/homebrew/include
+LIB = -L/opt/homebrew/lib -lnetcdff
 NETCDFDIR = /Users/dtokuda/miniconda3/envs/ils
 
 #==============================
@@ -41,10 +43,18 @@ NETCDFDIR = /Users/dtokuda/miniconda3/envs/ils
 FCMP = gfortran
 #FCMP = mpif90
 FC = gfortran
-
+DBGFLAGS   := -g -fbacktrace -fcheck=all -ffpe-trap=invalid,zero,overflow -finit-real=nan -finit-integer=-999999
+WARNFLAGS  := -Wextra -Wimplicit-interface -Wsurprising -Waliasing -Wampersand -Wunderflow -Wconversion -Wno-compare-reals
 LFLAGS :=
-FFLAGS := -O3 -Wall -ffree-line-length-none -fimplicit-none -ftree-vectorize
+# --- sanitize external env flags (conda etc.) ---
+# Do NOT inherit environment LDFLAGS to avoid duplicate LC_RPATH on macOS
+override LDFLAGS :=
+FFLAGS := -O0 $(WARNFLAGS) -Wall -ffree-line-length-none -fimplicit-none -ftree-vectorize
+#FFLAGS := -O3 $(WARNFLAGS) -Wall -ffree-line-length-none -fimplicit-none -ftree-vectorize
 #FFLAGS = -O3 -Wall -ffree-line-length-none -fimplicit-none -ftree-vectorize -fopt-info-vec
+
+FFLAGS += $(DBGFLAGS)
+LFLAGS += $(DBGFLAGS)
 LIBS   :=
 
 OPENMP := -fopenmp
@@ -69,13 +79,16 @@ SRC_ROOT  := $(PROJ_ROOT)/src
 #==============================
 inc = $(if $(wildcard $1),-I$1)
 NETCDFINC_DIR := $(if $(NETCDFDIR),$(NETCDFDIR)/include)
-NETCDFLIB     := $(if $(NETCDFDIR),-L$(NETCDFDIR)/lib -lnetcdff -lnetcdf)
+#NETCDFLIB     := $(if $(NETCDFDIR),-L$(NETCDFDIR)/lib -lnetcdff -lnetcdf)
+NETCDFLIB := $(if $(NETCDFDIR), \
+  $(NETCDFDIR)/lib/libnetcdff.dylib \
+  $(NETCDFDIR)/lib/libnetcdf.dylib)
+LIBS += $(NETCDFLIB)
 
 INCDIRS := \
   $(call inc,$(SRC_ROOT)) \
   $(foreach d,$(EXT_LIBS),$(call inc,$(SRC_ROOT)/$(d))) \
   $(call inc,$(NETCDFINC_DIR))
-LIBS += $(NETCDFLIB)
 
 %.o %.mod: %.f90
 	$(FC) $(FFLAGS) $(FPPFLAG) $(FCMODFLAG) $(@D) -c $(INCDIRS) $(CFLAGS) $< -o $*.o
