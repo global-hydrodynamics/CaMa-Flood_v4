@@ -93,6 +93,6 @@ Reservoir operation recommended as default scheme
 #### Improved stability
 - Speed up by SIMD, Quasi-Sparse-Matrix
 
-### Update in v4.30 (2025.Nov)
+### Update in v4.30 (2026.Mar)
 #### Levee parameter map
 - Sample data and script to estimate levee parameters are preapred.
