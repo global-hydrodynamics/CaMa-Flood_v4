@@ -76,7 +76,7 @@ REAL(KIND=JPRB)                 :: DT                      !! Time Step Length [
 
 INTEGER(KIND=JPIM)              :: IFRQ_OUT                !! [hour]: frequency to write output     e.g. (1,2,3,6,12,24) hour
 INTEGER(KIND=JPIM)              :: IFRQ_INP                !! [hour]: frequency to update runoff    e.g. (1,2,3,6,12,24) hour
-INTEGER(KIND=JPIM)              :: IFRQ_SL                 !! [min]:  frequency to update sea level e.g. (1,2,5,10,15,20,30,60) min
+INTEGER(KIND=JPIM)              :: IFRQ_SL= 9999           !! [min]:  frequency to update sea level e.g. (1,2,5,10,15,20,30,60) min
 
 !*** set by CDIMINFO
 INTEGER(KIND=JPIM)              :: NX                      !! NUMBER OF GRIDS IN HORIZONTAL
