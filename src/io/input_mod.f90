@@ -1,0 +1,150 @@
+module input_mod
+    use PARKIND1, only: &
+    &   JPIM, JPRB, JPRM
+    use YOS_CMF_INPUT, only: &
+    &   LOGNAM, TMPNAM
+
+    use const_mod, only: &
+    &   CLEN_ITEM
+    use key_table_class, only: &
+    &   KeyTable
+    use YOS_CMF_MAP, only: &
+    &   NSEQMAX
+    use glob_mod, only: &
+    &   LHEATLINK, LLAKE, CSHORT_DEF
+    use ranked_array_class, only: &
+    &   RankedArray, append_ranked_array
+    use input_conf_class, only: &
+    &   InputConf, init_InputConf, append_InputConf
+    use util_mod, only: &
+    &   write_string_with_indent
+    !use correct_mod, only: &
+    !&   fill_map, scale_map, minimum, div
+    use io_namelist_mod, only: &
+    &   open_namelist
+    !use output_mod, only: &
+    !&   update_output
+    implicit none
+    private
+    public :: &
+    &   init_input_mod, add_input, update_input, is_input, log_input, get_shortest_input_dt, get_input
+
+    type(KeyTable) :: items
+    integer(kind=JPIM) :: &
+    &   IN_ITEM_NUM = 0! number of input item
+    type(InputConf), allocatable :: &
+    &   confs(:)
+    type(RankedArray), allocatable :: &
+    &   arrs(:)
+
+contains
+
+! ===================================================================================================
+! Initialization
+! ===================================================================================================
+subroutine init_input_mod()
+    write(LOGNAM, '(a)') '[input_mod/init_input_mod]'
+    call items%init()
+
+    !call add_input_conf('ROFF', TMPNAM, t)
+    !if (LROFSCL) call add_input_conf('ROFSCL', TMPNAM, t)
+    !if ( LLAKE ) then
+    !    call add_input_conf('RAIN', TMPNAM, t)
+    !    call add_input_conf('SNOW', TMPNAM, t)
+    !endif
+end subroutine init_input_mod
+
+
+subroutine add_input(item, t)
+    character(len=*), intent(in) :: item
+    integer(kind=JPIM), intent(in) :: &
+    &   t ! [sec] current time
+    real(kind=JPRB) :: &
+    &   arr(NSEQMAX)
+
+    call open_namelist(TMPNAM)
+    if (.not. items%has_key(item)) then
+        write(LOGNAM, '(2a)') '- add input: ', trim(item)
+        call items%append(item)
+        call append_InputConf(confs, init_InputConf(item, TMPNAM, t))
+        IN_ITEM_NUM = IN_ITEM_NUM + 1
+        arr(:) = 0.0_JPRB
+        call append_ranked_array(arrs, arr)
+    endif
+    close(TMPNAM)
+end subroutine add_input
+
+! ===================================================================================================
+logical function is_input(item) result(isin)
+    character(len=*), intent(in) :: item
+    isin = items%has_key(item)
+end function is_input
+
+! ===================================================================================================
+! Update Input
+! ===================================================================================================
+subroutine update_input(now_t)
+    integer(kind=JPIM), intent(in) :: &
+    &   now_t ! [sec] current time
+    real(kind=JPRB) :: &
+    &   arr(NSEQMAX)
+    integer(kind=JPIM) :: i
+
+!    write(LOGNAM, '(2a)'), '  update input for ', now_t%strftime('%Y/%m/%d/%H:%M')
+
+    do i = 1, IN_ITEM_NUM
+        if (confs(i)%update_needed(now_t)) then
+            call confs(i)%update_input(arr)
+            call arrs(i)%set(arr)
+            call confs(i)%set_is_updated(.TRUE.)
+        else
+            write(LOGNAM, '(a10,a)') trim(confs(i)%get_item()), ': not updated'
+            call confs(i)%set_is_updated(.FALSE.)
+        endif
+    enddo
+    ! omp has to wait for other variables
+    ! because the following correction refers to other variables
+
+    !do i = 1, IN_ITEM_NUM
+    !    if (.not. confs(i)%is_updated) cycle
+    !    call arrs(i)%get(arr)
+    !    !call correct_input(confs(i), arr)
+    !enddo
+
+    !do i = 1, IN_ITEM_NUM
+    !    call update_output(trim(items(i)), confs(i)%now_data(:,1))
+    !enddo
+    !call log_input
+end subroutine update_input
+
+! ===================================================================================================
+subroutine log_input
+    integer(kind=JPIM) :: i
+    real(kind=JPRB) :: &
+    &   arr(NSEQMAX)
+    call write_string_with_indent(2, 'Input value range:')
+    do i = 1, IN_ITEM_NUM
+        call arrs(i)%get(arr)
+        write(LOGNAM, *) trim(confs(i)%get_item()), minval(arr), maxval(arr)
+    enddo
+end subroutine log_input
+
+
+integer(kind=JPIM) function get_shortest_input_dt() result(min_dt)
+    integer(kind=JPIM) :: i
+    min_dt = 3600 * 24 * 365 ! large value
+    do i = 1, IN_ITEM_NUM
+        min_dt = min(min_dt, confs(i)%get_dt())
+    enddo
+end function get_shortest_input_dt
+
+! ===================================================================================================
+subroutine get_input(item, arr)
+    character(len=*), intent(in) :: item
+    real(kind=JPRB), intent(out) :: arr(:)
+    integer(kind=JPIM) :: idx
+    idx = items%find(item)
+    call arrs(idx)%get(arr)
+end subroutine get_input
+
+end module input_mod

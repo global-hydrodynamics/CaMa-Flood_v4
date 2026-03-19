@@ -12,8 +12,9 @@ PROGRAM MAIN_cmf
 !  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
-USE PARKIND1,                ONLY: JPRB, JPRM, JPIM
-USE YOS_CMF_INPUT,           ONLY: NXIN, NYIN, DT,DTIN, LTRACE
+USE PARKIND1,                ONLY: JPRB, JPIM
+USE YOS_CMF_INPUT,           ONLY: NXIN, NYIN, DT,DTIN, LTRACE, &
+&   LHEATLINK
 USE YOS_CMF_TIME,            ONLY: NSTEPS
 USE CMF_DRV_CONTROL_MOD,     ONLY: CMF_DRV_INPUT,   CMF_DRV_INIT,    CMF_DRV_END
 USE CMF_DRV_ADVANCE_MOD,     ONLY: CMF_DRV_ADVANCE
@@ -30,6 +31,19 @@ USE YOS_CMF_INPUT,           ONLY: LSEDOUT
 USE cmf_ctrl_sedinp_mod,     ONLY: cmf_sed_forcing
 #endif
 !** tracer options**
+#ifdef heatlink
+USE dim_converter, only: &
+&   init_dim_converter
+USE input_mod, only: &
+&   init_input_mod, update_input
+USE output_mod, only: &
+&   init_output_mod, write_output, fin_output_mod
+USE heatlink_river_mod,      ONLY: &
+&   init_heatlink_river_mod, calc_heatlink, fin_heatlink_river_mod
+#endif
+use YOS_CMF_INPUT, only: &
+&   LOGNAM
+!==========================================================
 !****************************
 IMPLICIT NONE
 
@@ -52,24 +66,36 @@ CALL CMF_DRV_INIT
 !*** 1c. allocate data buffer for input forcing
 ALLOCATE(ZBUFF(NXIN,NYIN,2))
 
+#ifdef heatlink
+if (LHEATLINK) then
+  call init_dim_converter()
+  call init_input_mod()
+  call init_output_mod()
+  call init_heatlink_river_mod(0)
+endif
+#endif
 !============================
 !*** 2. MAIN TEMPORAL LOOP / TIME-STEP (NSTEPS calculated by DRV_INIT)
 
 ISTEPADV=INT(DTIN/DT,JPIM)
-DO ISTEP=1,NSTEPS,ISTEPADV
+DO ISTEP=1,NSTEPS
+  write(LOGNAM, '(a,i6)') '[MAIN_cmf] Time step: ', ISTEP
+  if (mod(ISTEP-1, ISTEPADV) == 0) then
+    !*  2a Read forcing from file, This is only relevant in Stand-alone mode 
+    CALL CMF_FORCING_GET(ZBUFF(:,:,:))
+    !*  2b Interporlate runoff & send to CaMa-Flood 
+    CALL CMF_FORCING_PUT(ZBUFF(:,:,:))
+    IF( LTRACE )THEN
+      CALL CMF_TRACER_FORC_GET
+      CALL CMF_TRACER_FORC_INTERP
+    ENDIF
+  endif
+#ifdef heatlink
+  CALL update_input(int(DT) * (ISTEP - 1))
+#endif
 
-  !*  2a Read forcing from file, This is only relevant in Stand-alone mode 
-  CALL CMF_FORCING_GET(ZBUFF(:,:,:))
-  !*  2b Interporlate runoff & send to CaMa-Flood 
-  CALL CMF_FORCING_PUT(ZBUFF(:,:,:))
-
-  IF( LTRACE )THEN
-    CALL CMF_TRACER_FORC_GET
-    CALL CMF_TRACER_FORC_INTERP
-  ENDIF
- 
   !*  2c  Advance CaMa-Flood model for ISTEPADV
-  CALL CMF_DRV_ADVANCE(ISTEPADV)
+  CALL CMF_DRV_ADVANCE(1)
 
 
 #ifdef sediment
@@ -78,14 +104,25 @@ DO ISTEP=1,NSTEPS,ISTEPADV
     CALL cmf_sed_forcing
   ENDIF
 #endif
+#ifdef heatlink
+if (LHEATLINK) then
+  call calc_heatlink(DT)
+  call write_output(int(DT) * ISTEP) ! tail time of the current step
+endif
+#endif
 
 ENDDO
 !============================
 
 !*** 3a. finalize CaMa-Flood 
 DEALLOCATE(ZBUFF)
+#ifdef heatlink
+if (LHEATLINK) then
+  call fin_output_mod()
+  call fin_heatlink_river_mod()
+endif
+#endif
 CALL CMF_DRV_END
-
 !*** 3b. MPI specific finalization
 #ifdef UseMPI_CMF
 CALL CMF_MPI_END

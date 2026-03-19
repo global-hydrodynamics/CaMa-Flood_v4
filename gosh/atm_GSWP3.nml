@@ -1,0 +1,15 @@
+&input_item item='LWDN', fmt='nc', path='/Users/dtokuda/work/data/ils/ILS_data_20241118/test/frc/GSWP3.BC.LWdown.3hrMap.ILS.2000.nc' /
+&input_item item='PSRF', fmt='nc', path='/Users/dtokuda/work/data/ils/ILS_data_20241118/test/frc/GSWP3.BC.PSurf.3hrMap.ILS.2000.nc', scale=1.0e-2 /
+&input_item item='QAIR', fmt='nc', path='/Users/dtokuda/work/data/ils/ILS_data_20241118/test/frc/GSWP3.BC.Qair.3hrMap.ILS.2000.nc' /
+&input_item item='SWDN', fmt='nc', path='/Users/dtokuda/work/data/ils/ILS_data_20241118/test/frc/GSWP3.BC.SWdown.3hrMap.ILS.2000.nc' /
+&input_item item='TAIR', fmt='nc', path='/Users/dtokuda/work/data/ils/ILS_data_20241118/test/frc/GSWP3.BC.Tair.3hrMap.ILS.2000.nc' /
+&input_item item='TROF', fmt='nc', path='/Users/dtokuda/work/data/ils/ILS_data_20241118/test/frc/GSWP3.BC.Tair.3hrMap.ILS.2000.nc' /
+&input_item item='WIND', fmt='nc', path='/Users/dtokuda/work/data/ils/ILS_data_20241118/test/frc/GSWP3.BC.Wind.3hrMap.ILS.2000.nc' /
+
+&input_nc item='LWDN', var_name='LWdown' /
+&input_nc item='PSRF', var_name='PSurf' /
+&input_nc item='QAIR', var_name='Qair' /
+&input_nc item='SWDN', var_name='SWdown' /
+&input_nc item='TAIR', var_name='Tair' /
+&input_nc item='TROF', var_name='Tair' /
+&input_nc item='WIND', var_name='Wind' /

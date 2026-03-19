@@ -9,3 +9,5 @@
 *.bin
 *.o
 *.dSYM
+*.mod
+out/

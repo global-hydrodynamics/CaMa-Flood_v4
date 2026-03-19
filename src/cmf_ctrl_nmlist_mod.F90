@@ -36,6 +36,7 @@ USE YOS_CMF_INPUT,      ONLY: LADPSTP,  LFPLAIN,  LKINE,    LFLDOUT,  LPTHOUT,  
                             & LROSPLIT, LGDWDLY,  LSLPMIX,  LMEANSL,  LSEALEV,  LOUTPUT,  &
                             & LRESTART, LSTOONLY, LGRIDMAP, LLEAPYR,  LMAPEND,  LBITSAFE, &
                             & LSTG_ES,  LLEVEE,   LOUTINS,  LOUTINI,  LSEDOUT,  LTRACE,   &
+                            & LHEATLINK,                                                  &
                             & LSLOPEMOUTH,LWEVAP, LWEVAPFIX,LWEXTRACTRIV,       LSPAMAT
 ! dimention & time
 USE YOS_CMF_INPUT,      ONLY: CDIMINFO, DT,       NX,NY,    NLFP,     NXIN,NYIN,    INPN, &
@@ -51,7 +52,7 @@ CHARACTER(LEN=8)              :: CREG                 !!
 NAMELIST/NRUNVER/  LADPSTP,  LFPLAIN,  LKINE,    LFLDOUT,  LPTHOUT,  LDAMOUT,      &
                    LROSPLIT, LGDWDLY,  LSLPMIX,  LMEANSL,  LSEALEV,  LOUTPUT,      &
                    LRESTART, LSTOONLY, LGRIDMAP, LLEAPYR,  LMAPEND,  LBITSAFE,     &
-                   LSTG_ES,  LLEVEE,   LSEDOUT,  LTRACE,   LOUTINS,  LSLOPEMOUTH,  &
+                   LSTG_ES,  LLEVEE,   LSEDOUT,  LTRACE,   LHEATLINK, LOUTINS,  LSLOPEMOUTH,  &
                    LWEVAP,   LWEVAPFIX,LWEXTRACTRIV,       LOUTINI,  LSPAMAT
 
 NAMELIST/NDIMTIME/ CDIMINFO, DT, IFRQ_INP
@@ -80,6 +81,7 @@ LDAMOUT  = .FALSE.           !! true: activate dam operation
 LLEVEE   = .FALSE.           !! true: activate levee scheme  (under development)
 LSEDOUT  = .FALSE.           !! true: activate sediment transport (under development)
 LTRACE   = .FALSE.           !! true: activate tracer             (under development)
+LHEATLINK = .FALSE.          !! true: activate heatlink           (under development)
 LOUTINS  = .FALSE.           !! true: diagnose instantaneous discharge
 LSPAMAT  = .TRUE.            !! true: use quasi sparse matrix (fast but additional memory req)
 
@@ -124,6 +126,7 @@ WRITE(LOGNAM,*) "LDAMOUT ",  LDAMOUT
 WRITE(LOGNAM,*) "LLEVEE  ",  LLEVEE
 WRITE(LOGNAM,*) "LSEDOUT ",  LSEDOUT
 WRITE(LOGNAM,*) "LTRACE  ",  LTRACE
+WRITE(LOGNAM,*) "LHEATLINK", LHEATLINK
 WRITE(LOGNAM,*) "LOUTINS ",  LOUTINS
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "LROSPLIT ", LROSPLIT
