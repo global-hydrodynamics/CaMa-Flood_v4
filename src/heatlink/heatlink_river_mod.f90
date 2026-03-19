@@ -7,7 +7,7 @@ module heatlink_river_mod
     &   NSEQMAX
 
     use input_mod, only: &
-    &   update_input, get_input
+    &   add_input, get_input
     use output_mod, only: &
     &   update_output, write_output
     implicit none
@@ -30,7 +30,7 @@ module heatlink_river_mod
 
 contains
 
-subroutine init_heatlink_river_mod()
+subroutine init_heatlink_river_mod(t)
     !use glob_mod, only: &
     !&   init_glob_mod
     use dim_converter, only: &
@@ -39,14 +39,23 @@ subroutine init_heatlink_river_mod()
     &   init_input_mod
     use output_mod, only: &
     &   init_output_mod
+    integer(kind=JPIM), intent(in) :: &
+    &   t ! [sec] current time
 
     write(LOGNAM, '(a)') '[heatlink_river_mod/init_heatlink_river_mod]'
     !call init_glob_mod
     call init_dim_converter
-    call init_input_mod(0)
+
     write(LOGNAM, '(a)') '  read the first-step input'
-    call update_input(0)
+    call add_input('LWDN', t) ! [W m-2]
+    call add_input('PSRF', t) ! [hPa]
+    call add_input('QAIR', t) ! [kg kg-1]
+    call add_input('SWDN', t) ! [W m-2]
+    call add_input('TAIR', t) ! [K]
+    call add_input('TROF', t) ! [K]
+    call add_input('WIND', t) ! [m s-1]
     call init_output_mod()
+
     allocate(wattmp(NSEQMAX), source=0.0_JPRB)
     allocate(lwdn(NSEQMAX), source=0.0_JPRB)
     allocate(psrf(NSEQMAX), source=0.0_JPRB)
@@ -55,11 +64,11 @@ subroutine init_heatlink_river_mod()
     allocate(tair(NSEQMAX), source=0.0_JPRB)
     allocate(trof(NSEQMAX), source=0.0_JPRB)
     allocate(wind(NSEQMAX), source=0.0_JPRB)
+    write(LOGNAM, *)
 end subroutine init_heatlink_river_mod
 
 
-subroutine calc_heatlink(t, dt)
-    integer(kind=JPIM), intent(in) :: t ! current time (seconds)
+subroutine calc_heatlink(dt)
     real(kind=JPRB), intent(in) :: dt ! time step (seconds)
 
     write(LOGNAM, '(a)') '[heatlink_river_mod/calc_heatlink]'

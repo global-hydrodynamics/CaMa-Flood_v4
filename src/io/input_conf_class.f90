@@ -89,6 +89,7 @@ module input_conf_class
         procedure :: update_input   => update_input
         procedure :: set_next       => set_next
         procedure :: apply_scale_offset => apply_scale_offset
+        procedure :: set_is_updated => set_is_updated
     end type InputConf
 
 contains
@@ -201,6 +202,7 @@ function init_InputConf(item_name, nml_unit, t) result(obj)
     obj%dt = dt2sec(dt_val, dt_unit)
     obj%now_t = t
     obj%nxt_t = t
+    obj%is_updated = .FALSE.
 
     write(LOGNAM, '(3a,i2,2a,i0)') '    shape: ', trim(obj%map%str())
     write(LOGNAM, '(a,i0,a)')      '    temporal resolution: ', dt_val, dt_unit
@@ -301,6 +303,12 @@ subroutine set_next(self)
     self%nxt_t = self%nxt_t + self%dt
     self%rec   = self%rec + 1
 end subroutine set_next
+
+subroutine set_is_updated(self, is_updated)
+    class(InputConf), intent(inout) :: self
+    logical, intent(in) :: is_updated
+    self%is_updated = is_updated
+end subroutine set_is_updated
 
 subroutine apply_scale_offset(self, data)
     class(InputConf), intent(in) :: self

@@ -27,7 +27,7 @@ module input_mod
     implicit none
     private
     public :: &
-    &   init_input_mod, update_input, is_input, log_input, get_shortest_input_dt, get_input
+    &   init_input_mod, add_input, update_input, is_input, log_input, get_shortest_input_dt, get_input
 
     type(KeyTable) :: items
     integer(kind=JPIM) :: &
@@ -36,20 +36,15 @@ module input_mod
     &   confs(:)
     type(RankedArray), allocatable :: &
     &   arrs(:)
-    logical, allocatable :: &
-    &   IS_UPDATED(:)
 
 contains
 
 ! ===================================================================================================
 ! Initialization
 ! ===================================================================================================
-subroutine init_input_mod(t)
-    integer(kind=JPIM), intent(in) :: t
-
+subroutine init_input_mod()
     write(LOGNAM, '(a)') '[input_mod/init_input_mod]'
     call items%init()
-    call open_namelist(TMPNAM)
 
     !call add_input_conf('ROFF', TMPNAM, t)
     !if (LROFSCL) call add_input_conf('ROFSCL', TMPNAM, t)
@@ -57,38 +52,27 @@ subroutine init_input_mod(t)
     !    call add_input_conf('RAIN', TMPNAM, t)
     !    call add_input_conf('SNOW', TMPNAM, t)
     !endif
-    !if (LHEATLINK) then
-        call add_input_conf('LWDN', TMPNAM, t) ! [W m-2]
-        call add_input_conf('PSRF', TMPNAM, t) ! [hPa]
-        call add_input_conf('QAIR', TMPNAM, t) ! [kg kg-1]
-        call add_input_conf('SWDN', TMPNAM, t) ! [W m-2]
-        call add_input_conf('TAIR', TMPNAM, t) ! [K]
-        call add_input_conf('TROF', TMPNAM, t) ! [K]
-        call add_input_conf('WIND', TMPNAM, t) ! [m s-1]
-    !endif
-    allocate(IS_UPDATED(IN_ITEM_NUM)); IS_UPDATED(:) = .TRUE.
-    close(TMPNAM)
-    write(LOGNAM, *)
 end subroutine init_input_mod
 
 
-subroutine add_input_conf(item, nml_unit, t)
+subroutine add_input(item, t)
     character(len=*), intent(in) :: item
     integer(kind=JPIM), intent(in) :: &
-    &   nml_unit, &
     &   t ! [sec] current time
     real(kind=JPRB) :: &
     &   arr(NSEQMAX)
 
+    call open_namelist(TMPNAM)
     if (.not. items%has_key(item)) then
         write(LOGNAM, '(2a)') '- add input: ', trim(item)
         call items%append(item)
-        call append_InputConf(confs, init_InputConf(item, nml_unit, t))
+        call append_InputConf(confs, init_InputConf(item, TMPNAM, t))
         IN_ITEM_NUM = IN_ITEM_NUM + 1
         arr(:) = 0.0_JPRB
         call append_ranked_array(arrs, arr)
     endif
-end subroutine add_input_conf
+    close(TMPNAM)
+end subroutine add_input
 
 ! ===================================================================================================
 logical function is_input(item) result(isin)
@@ -106,23 +90,23 @@ subroutine update_input(now_t)
     &   arr(NSEQMAX)
     integer(kind=JPIM) :: i
 
-    IS_UPDATED(:) = .FALSE.
 !    write(LOGNAM, '(2a)'), '  update input for ', now_t%strftime('%Y/%m/%d/%H:%M')
 
     do i = 1, IN_ITEM_NUM
         if (confs(i)%update_needed(now_t)) then
             call confs(i)%update_input(arr)
             call arrs(i)%set(arr)
-            IS_UPDATED(i) = .TRUE.
+            call confs(i)%set_is_updated(.TRUE.)
         else
             write(LOGNAM, '(a10,a)') trim(confs(i)%get_item()), ': not updated'
+            call confs(i)%set_is_updated(.FALSE.)
         endif
     enddo
     ! omp has to wait for other variables
     ! because the following correction refers to other variables
 
     !do i = 1, IN_ITEM_NUM
-    !    if (.not. IS_UPDATED(i)) cycle
+    !    if (.not. confs(i)%is_updated) cycle
     !    call arrs(i)%get(arr)
     !    !call correct_input(confs(i), arr)
     !enddo

@@ -33,7 +33,7 @@ USE cmf_ctrl_sedinp_mod,     ONLY: cmf_sed_forcing
 !** tracer options**
 #ifdef heatlink
 USE input_mod, only: &
-&   update_input
+&   init_input_mod, update_input
 USE heatlink_river_mod,      ONLY: &
 &   init_heatlink_river_mod, calc_heatlink, output_heatlink, fin_heatlink_river_mod
 #endif
@@ -64,7 +64,8 @@ ALLOCATE(ZBUFF(NXIN,NYIN,2))
 
 #ifdef heatlink
 if (LHEATLINK) then
-  call init_heatlink_river_mod()
+  call init_input_mod()
+  call init_heatlink_river_mod(0)
 endif
 #endif
 !============================
@@ -84,7 +85,7 @@ DO ISTEP=1,NSTEPS
     ENDIF
   endif
 #ifdef heatlink
-  CALL update_input
+  CALL update_input(int(DT) * (ISTEP - 1))
 #endif
 
   !*  2c  Advance CaMa-Flood model for ISTEPADV
@@ -99,7 +100,7 @@ DO ISTEP=1,NSTEPS
 #endif
 #ifdef heatlink
 if (LHEATLINK) then
-  call calc_heatlink(int(DT) * (ISTEP - 1), DT)
+  call calc_heatlink(DT)
   call output_heatlink
 endif
 #endif
