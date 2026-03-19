@@ -32,6 +32,8 @@ USE cmf_ctrl_sedinp_mod,     ONLY: cmf_sed_forcing
 #endif
 !** tracer options**
 #ifdef heatlink
+USE input_mod, only: &
+&   update_input
 USE heatlink_river_mod,      ONLY: &
 &   init_heatlink_river_mod, calc_heatlink, output_heatlink, fin_heatlink_river_mod
 #endif
@@ -81,7 +83,10 @@ DO ISTEP=1,NSTEPS
       CALL CMF_TRACER_FORC_INTERP
     ENDIF
   endif
- 
+#ifdef heatlink
+  CALL update_input
+#endif
+
   !*  2c  Advance CaMa-Flood model for ISTEPADV
   CALL CMF_DRV_ADVANCE(1)
 

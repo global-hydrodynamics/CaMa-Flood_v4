@@ -66,6 +66,8 @@ module input_conf_class
         integer(kind=JPIM) :: &
         &   rec, &          ! record number (time step) to be read next
         &   now_t, nxt_t    ! current time, next time, counted from calculation start [sec]
+        logical :: &
+        &   is_updated ! flag to indicate whether the input is updated at current time step
 
         contains
         procedure :: get_item       => get_item

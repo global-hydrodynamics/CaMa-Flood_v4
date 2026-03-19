@@ -40,7 +40,7 @@ subroutine init_heatlink_river_mod()
     use output_mod, only: &
     &   init_output_mod
 
-    write(LOGNAM, '(a)') '[init_heatlink_river_mod]'
+    write(LOGNAM, '(a)') '[heatlink_river_mod/init_heatlink_river_mod]'
     !call init_glob_mod
     call init_dim_converter
     call init_input_mod(0)
@@ -62,8 +62,7 @@ subroutine calc_heatlink(t, dt)
     integer(kind=JPIM), intent(in) :: t ! current time (seconds)
     real(kind=JPRB), intent(in) :: dt ! time step (seconds)
 
-    write(LOGNAM, '(a)') '[calc_heatlink]'
-    call update_input(t)
+    write(LOGNAM, '(a)') '[heatlink_river_mod/calc_heatlink]'
     call get_input('LWDN', lwdn)
     call get_input('PSRF', psrf)
     call get_input('QAIR', qair)
