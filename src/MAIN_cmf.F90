@@ -32,10 +32,14 @@ USE cmf_ctrl_sedinp_mod,     ONLY: cmf_sed_forcing
 #endif
 !** tracer options**
 #ifdef heatlink
+USE dim_converter, only: &
+&   init_dim_converter
 USE input_mod, only: &
 &   init_input_mod, update_input
+USE output_mod, only: &
+&   init_output_mod, write_output, fin_output_mod
 USE heatlink_river_mod,      ONLY: &
-&   init_heatlink_river_mod, calc_heatlink, output_heatlink, fin_heatlink_river_mod
+&   init_heatlink_river_mod, calc_heatlink, fin_heatlink_river_mod
 #endif
 use YOS_CMF_INPUT, only: &
 &   LOGNAM
@@ -64,7 +68,9 @@ ALLOCATE(ZBUFF(NXIN,NYIN,2))
 
 #ifdef heatlink
 if (LHEATLINK) then
+  call init_dim_converter()
   call init_input_mod()
+  call init_output_mod()
   call init_heatlink_river_mod(0)
 endif
 #endif
@@ -101,7 +107,7 @@ DO ISTEP=1,NSTEPS
 #ifdef heatlink
 if (LHEATLINK) then
   call calc_heatlink(DT)
-  call output_heatlink
+  call write_output(int(DT) * ISTEP) ! tail time of the current step
 endif
 #endif
 
@@ -112,6 +118,7 @@ ENDDO
 DEALLOCATE(ZBUFF)
 #ifdef heatlink
 if (LHEATLINK) then
+  call fin_output_mod()
   call fin_heatlink_river_mod()
 endif
 #endif

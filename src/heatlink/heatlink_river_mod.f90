@@ -9,11 +9,11 @@ module heatlink_river_mod
     use input_mod, only: &
     &   add_input, get_input
     use output_mod, only: &
-    &   update_output, write_output
+    &   update_output
     implicit none
     private
     public :: &
-    &   init_heatlink_river_mod, calc_heatlink, output_heatlink, fin_heatlink_river_mod
+    &   init_heatlink_river_mod, calc_heatlink, fin_heatlink_river_mod
 
     real(kind=JPRB), allocatable, save :: &
     &   wattmp(:) ! [K] river water temperature
@@ -31,20 +31,10 @@ module heatlink_river_mod
 contains
 
 subroutine init_heatlink_river_mod(t)
-    !use glob_mod, only: &
-    !&   init_glob_mod
-    use dim_converter, only: &
-    &   init_dim_converter
-    use input_mod, only: &
-    &   init_input_mod
-    use output_mod, only: &
-    &   init_output_mod
     integer(kind=JPIM), intent(in) :: &
     &   t ! [sec] current time
 
     write(LOGNAM, '(a)') '[heatlink_river_mod/init_heatlink_river_mod]'
-    !call init_glob_mod
-    call init_dim_converter
 
     write(LOGNAM, '(a)') '  read the first-step input'
     call add_input('LWDN', t) ! [W m-2]
@@ -54,7 +44,6 @@ subroutine init_heatlink_river_mod(t)
     call add_input('TAIR', t) ! [K]
     call add_input('TROF', t) ! [K]
     call add_input('WIND', t) ! [m s-1]
-    call init_output_mod()
 
     allocate(wattmp(NSEQMAX), source=0.0_JPRB)
     allocate(lwdn(NSEQMAX), source=0.0_JPRB)
@@ -93,17 +82,9 @@ subroutine calc_heatlink(dt)
     call update_output('RIVWAT_TMP', wattmp)
 end subroutine calc_heatlink
 
-subroutine output_heatlink
-    write(LOGNAM, '(a)') '[output_heatlink]'
-    call write_output()
-end subroutine output_heatlink
-
 subroutine fin_heatlink_river_mod()
-    use output_mod, only: &
-    &   fin_output_mod
     write(LOGNAM, '(a)') '[fin_heatlink_river_mod]'
     deallocate(wattmp)
-    call fin_output_mod()
 end subroutine fin_heatlink_river_mod
 
 end module heatlink_river_mod

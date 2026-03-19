@@ -246,6 +246,19 @@ subroutine read_nml_input_scale( &
 end subroutine read_nml_input_scale
 
 ! ===================================================================================================
+subroutine read_nml_output_default(dt_out)
+    integer(kind=JPIM), intent(out) :: dt_out
+
+    integer(kind=JPIM) :: dt
+    namelist /output_default/ dt
+
+    call open_namelist(TMPNAM)
+    read(TMPNAM, nml=output_default)
+    close(TMPNAM)
+    dt_out = dt
+end subroutine read_nml_output_default
+
+
 subroutine read_nml_output(out_item, is_found, path, mapfmt, is_mean)
     character(len=*), intent(in) :: &
     &   out_item

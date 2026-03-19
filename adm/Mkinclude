@@ -23,7 +23,8 @@ CFLAGS=$(DMPI) $(DCDF) $(DATM) $(DSINGLE) $(DHEATLINK)
 #======================================
 # extensions
 #EXT_LIBS = 
-EXT_LIBS = common mod phys io heatlink
+EXT_LIBS = common mod io heatlink
+#EXT_LIBS = common mod phys io heatlink
 EXT_LIB_TARGETS := $(foreach d,$(EXT_LIBS),$(d)/lib$(notdir $(d)).a)
 
 #======================================
