@@ -67,6 +67,7 @@ LOGICAL                         :: LSPAMAT                 !! true: quasi sparse
 
 LOGICAL                         :: LSEDOUT                 !! true: sediment scheme                 
 LOGICAL                         :: LTRACE                  !! true: tracer   scheme                 
+LOGICAL                         :: LUPSINF                 !! true: upstream inflow scheme
 
 !================================================
 !*** NAMELIST/NCONF/

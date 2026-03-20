@@ -2,24 +2,7 @@
 include   ../../../adm/Mkinclude
 ##################################################
 TARGETS=\
-generate_inpmat \
-calc_outclm \
-calc_rivwth \
-calc_prmwat \
-set_gwdlr \
-set_bifparam \
-wrte_ctl_map \
-get_rivinfo \
-get_vecmap \
-get_upbasin \
-get_subbasin \
-set_bif_basin \
-set_bif_basin_mpi \
-set_mpi_region \
-allocate_flow_gauge \
-allocate_level_gauge \
-allocate_dam
-
+get_mask_upbasin \
 
 all: $(TARGETS)
 

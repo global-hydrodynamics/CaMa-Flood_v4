@@ -100,3 +100,10 @@ echo ""
 echo "@@@ calc_prmwat $TAG"
 
 ./src_param/calc_prmwat $TAG
+
+
+
+########################################
+# Calculate basin mask with bifurcation connectivity
+cd src_param/
+./set_bif_basin

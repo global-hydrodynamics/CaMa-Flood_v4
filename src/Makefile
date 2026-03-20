@@ -37,6 +37,7 @@ cmf_ctrl_tracer_mod.o   \
 cmf_ctrl_levee_mod.o  \
 cmf_ctrl_forcing_mod.o  \
 cmf_ctrl_boundary_mod.o \
+cmf_ctrl_upsinf_mod.o \
 cmf_ctrl_output_mod.o   \
 cmf_ctrl_restart_mod.o  \
 cmf_ctrl_physics_mod.o  \

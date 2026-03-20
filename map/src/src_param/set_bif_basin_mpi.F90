@@ -9,6 +9,8 @@
       integer             ::  nx, ny                     !! river map grid number
       real                ::  west, east, north, south
       real                ::  gsize
+!
+      real                ::  rate                       !! max rate for basin integration (rate to global grid number)
 
 ! river netwrok map
       integer,allocatable ::  nextx(:,:)                 !! downstream x
@@ -21,6 +23,8 @@
 ! bifurcation
       integer             ::  ipth, npth                 !! bifurcation pathway ID
       integer             ::  ilev, nlev                 !! bifurcation layers
+
+      integer             ::  npth_mpi                   !! updated path ID
 
       integer,allocatable ::  bnew(:)                    !! new basin ID
       integer,allocatable ::  bmod(:)                    !! modification tag
@@ -37,15 +41,41 @@
       integer             ::  col_used(10), icol
 ! local
       integer             ::  nbsn, ibsn, jbsn, kbsn
-      integer             ::  allgrid, maxgrid
+      integer             ::  allgrid, maxgrid, grid_thrs, thrs2
 
       integer             ::  mark
       integer             ::  again
 ! files
-      character*256       ::  finp, fparam, fout, fbifori
+      character*256       ::  finp, fparam, fout, fbifori, fbifmpi
       integer             ::  ios
+      character*256       ::  cfmt, clen, buf
 ! ================================================
       print *, 'Update basin ID considering inter-basin bifurcation:'
+
+      mark=0
+      call getarg(1,buf)
+      if( trim(buf)=='MaxMPI' )then
+        rate=0.03
+      elseif( trim(buf)/='MaxMPI' )then
+        rate=0.06
+        print *, '######################################################'
+        print *, 'If you want to use more MPI nodes : please add argument MaxMPI'
+        print *, '% ./set_bif_basin MaxMPI '
+        print *, ' '
+
+        print *, 'When MaxMPI is specified:'
+        print *, ' - a few inter-basin channels neglected, such as Amazon-Orinoco connection' 
+        print *, ' - most inter-basin bifurcations in delta regions are still represented' 
+        print *, ''       
+        print *, 'Up to 16 MPI nodes available for usual case' 
+        print *, 'When MaxMPI is specified, up to 30 MPI nodes are available' 
+        print *, '######################################################'
+        print *, ''       
+        print *, ''       
+      endif
+print *, ' max rate: ', rate
+
+! read parameters from arguments
 
       fparam='../params.txt'
       open(11,file=fparam,form='formatted')
@@ -114,6 +144,8 @@
       do ibsn=1, nbsn
         maxgrid=max(maxgrid,bnum(ibsn))
       end do
+      print *, '-- max basin grid / all land grid, rate'
+      print *, maxgrid, '/', allgrid, maxgrid/real(allgrid)
 
       fbifori='../bifprm.txt'
       open(12,file=fbifori,form='formatted')
@@ -123,6 +155,9 @@
       allocate( wth(nlev) )
 print *, '******************'
 !=================================================================
+      grid_thrs = int( allgrid*rate  )
+      thrs2     = int( allgrid*0.001 )
+
  500 continue
 
 print *, 'STEP-1: merge basins with inter-basin channels'
@@ -145,10 +180,17 @@ print *, '-- analyse inter-basin channels'
             jbsn=basin(ix,iy)
           endif
 
-          if( bnew(jbsn)==-9999 )then
-            bnew(jbsn)=ibsn  !! jbsn should be integrated to ibsn
-          elseif( bnew(jbsn)>ibsn )then
-            bnew(jbsn)=ibsn  !! jbsn should be integrated to ibsn
+          !! check size
+          mark=0
+          if( bnum(ibsn)+bnum(jbsn)<grid_thrs        ) mark=1  !! merge when sum of basin grid number < threshold-1 (avoid merge of very large basins)
+          if( bnum(ibsn)<thrs2 .or. bnum(jbsn)<thrs2 ) mark=1  !! merge when one basin grid number < threshold-2 (small basins to be merged)
+
+          if( mark==1 )then
+            if( bnew(jbsn)==-9999 )then
+              bnew(jbsn)=ibsn  !! jbsn should be integrated to ibsn
+            elseif( bnew(jbsn)>ibsn )then
+              bnew(jbsn)=ibsn  !! jbsn should be integrated to ibsn
+            endif
           endif
 
         endif
@@ -163,9 +205,21 @@ print *, '-- decide basin IDs to be updated'
             kbsn=bnew(jbsn)
             jbsn=kbsn
           end do
-          bnew(ibsn)=jbsn
-          bnum(jbsn)=bnum(jbsn)+bnum(ibsn)  !! update number of grids in each basin
-          bnum(ibsn)=0
+
+          !! check size
+          mark=0
+          if( bnum(ibsn)+bnum(jbsn)<grid_thrs        ) mark=1  !! merge when sum of basin grid number < threshold-1 (avoid merge of very large basins)
+          if( bnum(ibsn)<thrs2 .or. bnum(jbsn)<thrs2 ) mark=1  !! merge when one basin grid number < threshold-2 (small basins to be merged)
+
+          if( mark==1 )then
+            !!print *, ibsn, 'merged to ->', jbsn
+            bnew(ibsn)=jbsn
+            bnum(jbsn)=bnum(jbsn)+bnum(ibsn)  !! update number of grids in each basin
+            bnum(ibsn)=0
+          else
+            bnew(ibsn)=-9999
+          endif
+
         endif
       end do
 
@@ -194,7 +248,16 @@ print *, 'check all bifurcation merged or not' !! if one basin has multiple conn
         if( wth(1)<=0 ) cycle
 
         if( basin(ix,iy)/=basin(jx,jy) )then
-          again=again+1
+          ibsn=basin(ix,iy)
+          jbsn=basin(jx,jy)
+          !! check size
+          mark=0
+          if( bnum(ibsn)+bnum(jbsn)<grid_thrs        ) mark=1  !! merge when sum of basin grid number < threshold-1 (avoid merge of very large basins)
+          if( bnum(ibsn)<thrs2 .or. bnum(jbsn)<thrs2 ) mark=1  !! merge when one basin grid number < threshold-2 (small basins to be merged)
+
+          if( mark==1 )then
+            again=again+1
+          endif
         endif
       end do
       close(12)
@@ -239,11 +302,19 @@ print *, '-- analyse inter-basin channels (overland)'
             jbsn=basin(ix,iy)
           endif
           
-          if( bnew(jbsn)==-9999 )then
-            bnew(jbsn)=ibsn  !! jbsn should be integrated to ibsn
-          elseif( bnew(jbsn)>ibsn )then
-            bnew(jbsn)=ibsn  !! jbsn should be integrated to ibsn
+          !! check size
+          mark=0
+          if( bnum(ibsn)+bnum(jbsn)<grid_thrs        ) mark=1  !! merge when sum of basin grid number < threshold-1 (avoid merge of very large basins)
+          if( bnum(ibsn)<thrs2 .or. bnum(jbsn)<thrs2 ) mark=1  !! merge when one basin grid number < threshold-2 (small basins to be merged)
+
+          if( mark==1 )then
+            if( bnew(jbsn)==-9999 )then
+              bnew(jbsn)=ibsn  !! jbsn should be integrated to ibsn
+            elseif( bnew(jbsn)>ibsn )then
+              bnew(jbsn)=ibsn  !! jbsn should be integrated to ibsn
+            endif
           endif
+
         endif
       end do
       close(12)
@@ -257,9 +328,21 @@ print *, '-- decide basin IDs to be updated'
             kbsn=bnew(jbsn)
             jbsn=kbsn
           end do
-          bnew(ibsn)=jbsn
-          bnum(jbsn)=bnum(jbsn)+bnum(ibsn)  !! update number of grids in each basin
-          bnum(ibsn)=0
+
+          !! check size
+          mark=0
+          if( bnum(ibsn)+bnum(jbsn)<grid_thrs        ) mark=1  !! merge when sum of basin grid number < threshold-1 (avoid merge of very large basins)
+          if( bnum(ibsn)<thrs2 .or. bnum(jbsn)<thrs2 ) mark=1  !! merge when one basin grid number < threshold-2 (small basins to be merged)
+
+          if( mark==1 )then
+            !!print *, ibsn, 'merged to ->', jbsn
+            bnew(ibsn)=jbsn
+            bnum(jbsn)=bnum(jbsn)+bnum(ibsn)  !! update number of grids in each basin
+            bnum(ibsn)=0
+          else
+            bnew(ibsn)=-9999
+          endif
+
         endif
       end do
 
@@ -290,11 +373,24 @@ print *, 'check all bifurcation passway merged or not' !! if one basin has multi
       open(12,file=fbifori,form='formatted')
       read(12,*) npth, nlev
 
+      npth_mpi=0
       again=0
       do ipth=1, npth
         read(12,*) ix,iy,jx,jy, len, elv, dph, (wth(ilev),ilev=1,nlev), lat, lon
-        if( basin(ix,iy)/=basin(jx,jy) )then
-          again=again+1
+
+        ibsn=basin(ix,iy)
+        jbsn=basin(jx,jy)
+        if( ibsn==jbsn )then
+          npth_mpi=npth_mpi+1
+        else
+          !! check size
+          mark=0
+          if( bnum(ibsn)+bnum(jbsn)<grid_thrs        ) mark=1  !! merge when sum of basin grid number < threshold-1 (avoid merge of very large basins)
+          if( bnum(ibsn)<thrs2 .or. bnum(jbsn)<thrs2 ) mark=1  !! merge when one basin grid number < threshold-2 (small basins to be merged)
+
+          if( mark==1 )then
+            again=again+1
+          endif
         endif
       end do
       close(12)
@@ -369,26 +465,51 @@ print *, 'Mark basins which exmands/absorved'
 !============================================
 print *, 'Write to Files'
 
-      fout='../bifbsn.bin'
+      fout='../bifbsn_mpi.bin'
       open(11,file=fout,form='unformatted',access='direct',recl=4*nx*ny)
       write(11,rec=1) basin
       close(11)
 
-      fout='../bpoint.bin'
+      fout='../bpoint_mpi.bin'
       open(11,file=fout,form='unformatted',access='direct',recl=4*nx*ny)
       write(11,rec=1) bpoint
       close(11)
 
-      fout='../bifmod.bin'
+      fout='../bifmod_mpi.bin'
       open(11,file=fout,form='unformatted',access='direct',recl=4*nx*ny)
       write(11,rec=1) bifmod
       close(11)
 
-      fout='../bifcol.bin'
+      fout='../bifcol_mpi.bin'
       open(11,file=fout,form='unformatted',access='direct',recl=4*nx*ny)
       write(11,rec=1) color
       close(11)
 !============================================
+print *, 'Update Bifparam file for MPI use'
+      fbifmpi='../bifprm_mpi.txt'
+      open(21,file=fbifmpi,form='formatted')
+      write(21,'(2i8,a)') npth_mpi, nlev, &
+               '   npath, nlev, (ix,iy), (jx,jy), length, elevtn, depth, (width1, width2, ... wodth_nlev), (lat,lon), basin'
+
+      write(clen,'(i2)') 3+nlev
+      cfmt='(4i8,'//trim(clen)//'f12.2,2f10.3,i8)'
+
+!===
+      open(12,file=fbifori,form='formatted')
+      read(12,*) npth, nlev
+      do ipth=1, npth
+        read(12,*) ix,iy,jx,jy, len, elv, dph, (wth(ilev),ilev=1,nlev), lat, lon
+        ibsn=basin(ix,iy)
+        jbsn=basin(jx,jy)
+        if( ibsn==jbsn ) then  !! write active bifurcation path after updating basins
+          write(21,cfmt) ix, iy, jx, jy, len, elv, dph, (wth(ilev),ilev=1,nlev), lat, lon, ibsn
+        endif
+      end do
+      close(12)
+!===
+      close(21)
+!============================================
+
 CONTAINS
       subroutine set_color
 

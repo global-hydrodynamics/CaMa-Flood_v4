@@ -75,7 +75,7 @@
 
 ! ===================
 
-      finp='../bifbsn.bin'
+      finp='../bifbsn_mpi.bin'
       open(11,file=finp,form='unformatted',access='direct',recl=4*nx*ny,status='old',iostat=ios)
       read(11,rec=1) basin
       close(11)
