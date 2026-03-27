@@ -55,7 +55,8 @@ for index, row in damcsv.iterrows():
         if Q100_all[index] * 0.4 >= Qn:
             Qf_new.append(Q100_all[index]*0.4)
         else:
-            Qf_new.append(Qn*1.1)
+            # Exceed effective_Qn = min(Qn, Qsto) * 1.5 ≤ 1.5 * Qn
+            Qf_new.append(Qn*2.0)
     else:
         Qf_new.append(Qf)
 
