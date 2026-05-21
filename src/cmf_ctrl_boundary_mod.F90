@@ -25,22 +25,23 @@ IMPLICIT NONE
 SAVE
 !*** NAMELIST/NBOUND/
 ! configulation
-LOGICAL                         :: LSEALEVCDF          !! true : netCDF sea level boundary
+
+LOGICAL                         :: LSEALEVCDF = .FALSE.          !! true : netCDF sea level boundary
 ! plain binary data
-CHARACTER(LEN=256)              :: CSEALEVDIR          !! Sea level boundary DIRECTORY
-CHARACTER(LEN=256)              :: CSEALEVPRE          !! Sea level boundary PREFIX
-CHARACTER(LEN=256)              :: CSEALEVSUF          !! Sea level boundary SUFFIX
+CHARACTER(LEN=256)              :: CSEALEVDIR = "./sealev/"      !! Sea level boundary DIRECTORY
+CHARACTER(LEN=256)              :: CSEALEVPRE = "sealev"         !! Sea level boundary PREFIX
+CHARACTER(LEN=256)              :: CSEALEVSUF = ".bin"           !! Sea level boundary SUFFIX
 ! netCDF data
-CHARACTER(LEN=256)              :: CSEALEVCDF          !! Sea level netCDF file name
-CHARACTER(LEN=256)              :: CVNSEALEV           !! Sea Level netCDF variable name
+CHARACTER(LEN=256)              :: CSEALEVCDF = "./sealev/"      !! Sea level netCDF file name
+CHARACTER(LEN=256)              :: CVNSEALEV = "variable"        !! Sea Level netCDF variable name
 !
-INTEGER(KIND=JPIM)              :: SYEARSL             !! Start YEAR  of netCDF sea level
-INTEGER(KIND=JPIM)              :: SMONSL              !! Start MONTH of netCDF sea level
-INTEGER(KIND=JPIM)              :: SDAYSL              !! Start DAY   of netCDF sea level
-INTEGER(KIND=JPIM)              :: SHOURSL             !! Start DAY   of netCDF sea level
+INTEGER(KIND=JPIM)              :: SYEARSL  = 0                  !! Start YEAR  of netCDF sea level
+INTEGER(KIND=JPIM)              :: SMONSL   = 0                  !! Start MONTH of netCDF sea level
+INTEGER(KIND=JPIM)              :: SDAYSL   = 0                  !! Start DAY   of netCDF sea level
+INTEGER(KIND=JPIM)              :: SHOURSL  = 0                  !! Start DAY   of netCDF sea level
 ! for interporlation (netCDF only)
 INTEGER(KIND=JPIM)              :: NLINKS, NCDFSTAT  !! Number of ser level station
-CHARACTER(LEN=256)              :: CSLMAP              !! Conversion table (Sta -> XY)
+CHARACTER(LEN=256)              :: CSLMAP = "./sealev/"          !! Conversion table (Sta -> XY)
 
 NAMELIST/NBOUND/   LSEALEVCDF, CSEALEVDIR, CSEALEVPRE, CSEALEVSUF,&
                      CSEALEVCDF, CVNSEALEV, SYEARSL, SMONSL, SDAYSL, SHOURSL, &
@@ -86,50 +87,13 @@ NSETFILE=INQUIRE_FID()
 OPEN(NSETFILE,FILE=CSETFILE,STATUS="OLD")
 WRITE(LOGNAM,*) "CMF::BOUNDARY_NMLIST: namelist OPEN in unit: ", TRIM(CSETFILE), NSETFILE 
 
-!*** 2. default value
-LSEALEVCDF=.FALSE.            !! true for netcdf sea level data
-
-CSEALEVDIR="./sealev/"
-CSEALEVPRE="sealev"
-CSEALEVSUF=".bin"
-
-CSEALEVCDF="./sealev/"
-CVNSEALEV="variable"
-CSLMAP="./sealev/"
-
-SYEARSL=0
-SMONSL =0 
-SDAYSL =0 
-SHOURSL=0
-
-IFRQ_SL= 9999              !! default: dynamic sea level not used
-
-!*** 3. read namelist
+!*** 2. read namelist
 REWIND(NSETFILE)
 READ(NSETFILE,NML=NBOUND)
-
-IF( LSEALEV )THEN
-  WRITE(LOGNAM,*)   "=== NAMELIST, NBOUNDARY ==="
-  WRITE(LOGNAM,*)   "LSEALEVCDF: ", LSEALEVCDF
-  IF( LSEALEVCDF )THEN
-    WRITE(LOGNAM,*) "CSEALEVCDF: ", TRIM(CSEALEVCDF)
-    WRITE(LOGNAM,*) "CVNSEALEV:  ", TRIM(CVNSEALEV)
-    WRITE(LOGNAM,*) "SYEARSL:    ", SYEARSL
-    WRITE(LOGNAM,*) "SMONSL:     ", SMONSL
-    WRITE(LOGNAM,*) "SDAYSL:     ", SDAYSL
-    WRITE(LOGNAM,*) "SHOURSL:    ", SHOURSL
-    WRITE(LOGNAM,*) "CSLMAP:     ", TRIM(CSLMAP)
-  ELSE
-    WRITE(LOGNAM,*) "CSEALEVDIR: ", TRIM(CSEALEVDIR)
-    WRITE(LOGNAM,*) "CSEALEVPRE: ", TRIM(CSEALEVPRE)
-    WRITE(LOGNAM,*) "CSEALEVSUF: ", TRIM(CSEALEVSUF)
-  ENDIF
-  WRITE(LOGNAM,*) "IFRQ_SL   ", IFRQ_SL
-ENDIF
-
+IF ( LSEALEV ) CALL PRINT_NAMELISTS("NBOUND")
 CLOSE(NSETFILE)
 
-!*** 4. modify base date (shared for KMIN)
+!*** 3. modify base date (shared for KMIN)
 IF( LSEALEV .and. LSEALEVCDF )THEN
   YYYY0=MIN(YYYY0,SYEARSL)
   YYYY0=MAX(YYYY0,0)
