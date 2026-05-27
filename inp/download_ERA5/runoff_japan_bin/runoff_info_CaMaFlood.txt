@@ -1,0 +1,74 @@
+#==========================================================
+# CaMa-Flood runoff forcing information
+#==========================================================
+# Sample name: ERA5-Land binary runoff forcing
+# Source format inspected: binary
+# Created from: runoff_japan_bin/runoff_20000101.bin
+# Requested period: 2000-01-01 to 2000-01-31
+
+#----------------------------------------------------------
+# 1. Parameters for generating the CaMa-Flood input mapping table
+#----------------------------------------------------------
+GRSIZEIN=0.1       # input grid size [degree]
+WESTIN=121.95        # input domain west edge
+EASTIN=154.05        # input domain east edge
+NORTHIN=46.05      # input domain north edge
+SOUTHIN=23.95      # input domain south edge
+OLAT="NtoS"        # north-south order of input data
+
+# Example:
+# ./generate_inpmat $MAPTAG $GRSIZEIN $WESTIN $EASTIN $NORTHIN $SOUTHIN $OLAT diminfo.txt inpmat.bin
+
+#----------------------------------------------------------
+# 2. Common CaMa-Flood namelist parameters
+#----------------------------------------------------------
+#============================
+#*** 1f. forcing setting
+IFRQ_INP="24"       # input forcing frequency [hour]
+DROFUNIT="86400000"       # [mm/24h -> m/s] runoff unit conversion
+# Unit conversion:
+#   runoff_m_per_s = runoff_mm_per_timestep / DROFUNIT
+
+#----------------------------------------------------------
+# 3. NetCDF runoff forcing namelist parameters
+#----------------------------------------------------------
+#----- for netCDF runoff forcing
+CROFPRE="runoff_"       # runoff file prefix
+CROFSUF=".nc"       # runoff file suffix
+CROFCDF=""              # netCDF runoff file; set each year/month if needed
+CVNROF="runoff"       # netCDF runoff variable name
+# File naming rule: runoff_YYYYMM.nc
+
+#----------------------------------------------------------
+# 4. Plain binary runoff forcing namelist parameters
+#----------------------------------------------------------
+#----- for plain binary runoff forcing
+CROFPRE="runoff_"       # runoff prefix
+CROFSUF=".bin"       # runoff suffix
+# File naming rule: runoff_YYYYMMDD.bin
+# GrADS tdef step: 1dy
+
+#----------------------------------------------------------
+# 5. Source metadata summary
+#----------------------------------------------------------
+source_format=binary
+nx=321
+ny=221
+dlon=0.1
+dlat=0.1
+forcing_timestep_hours=24
+time_step_hours_config=24
+time_step_hours_inferred=24
+ntime_in_sample=62
+time_start_in_sample=00Z01jan2000
+time_end_in_sample=N/A
+
+# Binary/CTL metadata
+ctl_file=runoff_japan_bin/runoff.ctl
+binary_files_found=31
+dset=^./runoff_%y4%m2%d2.bin
+undef=1e+20
+options=yrev little_endian template
+binary_variable=var
+title=ERA5Land Runoff
+tdef_step=1dy

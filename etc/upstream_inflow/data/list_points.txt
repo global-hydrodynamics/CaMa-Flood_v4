@@ -1,0 +1,3 @@
+Name               IX_fort IY_fort Lat         Lon         Uparea          
+Vientiane          52      69      17.92       102.62      305453.1
+UbonRatchathani    60      80      15.22       104.86      106544.1

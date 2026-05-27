@@ -26,6 +26,7 @@ REAL(KIND=JPRB),ALLOCATABLE,TARGET     :: D2COPY(:,:)        !! Dammy Array for 
 !*** input runoff (interporlated)
 REAL(KIND=JPRB),ALLOCATABLE,TARGET     :: D2RUNOFF(:,:)         !! input runoff             [m3/s]
 REAL(KIND=JPRB),ALLOCATABLE,TARGET     :: D2ROFSUB(:,:)         !! input sub-surface runoff [m3/s]
+REAL(KIND=JPRB),ALLOCATABLE,TARGET     :: D2UPSINF(:,:)         !! upstream inflow          [m3/s]
 REAL(KIND=JPRB),ALLOCATABLE,TARGET     :: D2WEVAP(:,:)          !! input Evaporation [m3/s]
 
 !================================================

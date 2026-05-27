@@ -17,7 +17,7 @@ MODULE CMF_CTRL_VARS_MOD
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
 USE PARKIND1,                ONLY: JPIM, JPRM, JPRB, JPRD
-USE YOS_CMF_INPUT,           ONLY: LOGNAM, LPTHOUT, LDAMOUT, LLEVEE, LWEVAP, LOUTINS
+USE YOS_CMF_INPUT,           ONLY: LOGNAM, LPTHOUT, LDAMOUT, LLEVEE, LWEVAP, LOUTINS, LUPSINF
 IMPLICIT NONE
 CONTAINS 
 !####################################################################
@@ -27,7 +27,7 @@ CONTAINS
 !####################################################################
 SUBROUTINE CMF_PROG_INIT
 USE YOS_CMF_MAP,             ONLY: NSEQMAX, NPTHOUT, NPTHLEV
-USE YOS_CMF_PROG,            ONLY: D2RUNOFF,     D2ROFSUB,     &
+USE YOS_CMF_PROG,            ONLY: D2RUNOFF,     D2ROFSUB,     D2UPSINF, &
                                  & P2RIVSTO,     P2FLDSTO,     D2RIVOUT,     D2FLDOUT,     &
                                  & D2RIVOUT_PRE, D2FLDOUT_PRE, D2RIVDPH_PRE, D2FLDSTO_PRE, &
                                  & D1PTHFLW,     D1PTHFLW_PRE, P2GDWSTO,     D2GDWRTN,     &
@@ -69,6 +69,11 @@ D2RIVOUT_PRE(:,:)=0._JPRB
 D2FLDOUT_PRE(:,:)=0._JPRB
 D2RIVDPH_PRE(:,:)=0._JPRB
 D2FLDSTO_PRE(:,:)=0._JPRB
+
+IF( LUPSINF )THEN
+  ALLOCATE( D2UPSINF(NSEQMAX,1)     )
+  D2UPSINF(:,:)=0._JPRB
+ENDIF
 
 !! prognostics for bifurcation (if no bifurcation, NPTHOUT=1, NPTHLEV=1)
 ALLOCATE( D1PTHFLW(NPTHOUT,NPTHLEV)     )

@@ -37,7 +37,8 @@ USE YOS_CMF_INPUT,      ONLY: LADPSTP,  LFPLAIN,  LKINE,    LFLDOUT,  LPTHOUT,  
                             & LRESTART, LSTOONLY, LGRIDMAP, LLEAPYR,  LMAPEND,  LBITSAFE, &
                             & LSTG_ES,  LLEVEE,   LOUTINS,  LOUTINI,  LSEDOUT,  LTRACE,   &
                             & LHEATLINK,                                                  &
-                            & LSLOPEMOUTH,LWEVAP, LWEVAPFIX,LWEXTRACTRIV,       LSPAMAT
+                            & LSLOPEMOUTH,LWEVAP, LWEVAPFIX,LWEXTRACTRIV,       LSPAMAT,  &
+                            & LUPSINF
 ! dimention & time
 USE YOS_CMF_INPUT,      ONLY: CDIMINFO, DT,       NX,NY,    NLFP,     NXIN,NYIN,    INPN, &
                             & IFRQ_INP, DTIN,     WEST,EAST,NORTH,SOUTH
@@ -53,7 +54,8 @@ NAMELIST/NRUNVER/  LADPSTP,  LFPLAIN,  LKINE,    LFLDOUT,  LPTHOUT,  LDAMOUT,   
                    LROSPLIT, LGDWDLY,  LSLPMIX,  LMEANSL,  LSEALEV,  LOUTPUT,      &
                    LRESTART, LSTOONLY, LGRIDMAP, LLEAPYR,  LMAPEND,  LBITSAFE,     &
                    LSTG_ES,  LLEVEE,   LSEDOUT,  LTRACE,   LHEATLINK, LOUTINS,  LSLOPEMOUTH,  &
-                   LWEVAP,   LWEVAPFIX,LWEXTRACTRIV,       LOUTINI,  LSPAMAT
+                   LWEVAP,   LWEVAPFIX,LWEXTRACTRIV,       LOUTINI,  LSPAMAT,      &
+                   LUPSINF
 
 NAMELIST/NDIMTIME/ CDIMINFO, DT, IFRQ_INP
 
@@ -84,6 +86,7 @@ LTRACE   = .FALSE.           !! true: activate tracer             (under develop
 LHEATLINK = .FALSE.          !! true: activate heatlink           (under development)
 LOUTINS  = .FALSE.           !! true: diagnose instantaneous discharge
 LSPAMAT  = .TRUE.            !! true: use quasi sparse matrix (fast but additional memory req)
+LUPSINF  = .FALSE.           !! true: use upstream inflow scheme
 
 !!=== this part is used by ECMWF
 LROSPLIT = .FALSE.           !! true: input if surface (Qs) and sub-surface (Qsb) runoff
@@ -128,6 +131,7 @@ WRITE(LOGNAM,*) "LSEDOUT ",  LSEDOUT
 WRITE(LOGNAM,*) "LTRACE  ",  LTRACE
 WRITE(LOGNAM,*) "LHEATLINK", LHEATLINK
 WRITE(LOGNAM,*) "LOUTINS ",  LOUTINS
+WRITE(LOGNAM,*) "LUPSINF ",  LUPSINF
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "LROSPLIT ", LROSPLIT
 WRITE(LOGNAM,*) "LWEVAP   ", LWEVAP

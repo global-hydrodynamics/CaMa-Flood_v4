@@ -29,7 +29,7 @@ cd src_param/
 
 ########################################
 echo "" 
-echo "@@@ set_bif_basin"
+echo "@@@ set_bif_basin_mpi"
 
 #######################################################'
 #If you want to use more MPI nodes : please add argument MaxMPI'
@@ -46,7 +46,7 @@ echo "@@@ set_bif_basin"
 TAG=''
 #TAG='MaxMPI'
 
-./set_bif_basin $TAG
+./set_bif_basin_mpi $TAG
 
 ########################################
 echo "" 
