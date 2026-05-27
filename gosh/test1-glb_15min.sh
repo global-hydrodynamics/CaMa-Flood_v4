@@ -37,7 +37,7 @@ export HDF5LIB="/opt/local/hdf5/lib"
 export DYLD_LIBRARY_PATH="${HDF5LIB}:${IFORTLIB}:${DYLD_LIBRARY_PATH}"
 
 #*** 0c. OpenMP thread number
-export OMP_NUM_THREADS=16                    # OpenMP cpu num
+export OMP_NUM_THREADS=8                    # OpenMP cpu num
 
 #================================================
 # (1) Experiment setting
@@ -45,7 +45,7 @@ export OMP_NUM_THREADS=16                    # OpenMP cpu num
 
 #============================
 #*** 1a. Experiment directory setting
-EXP="test1-glb_15min"                       # experiment name (output directory name)
+EXP="test"                       # experiment name (output directory name)
 RDIR=${BASE}/out/${EXP}                     # directory to run CaMa-Flood
 EXE="MAIN_cmf"                              # Execute file name
 PROG=${BASE}/src/${EXE}                     # location of Fortran main program
@@ -59,14 +59,15 @@ DT=3600                                     # base DT (modified in physics loop 
 LADPSTP=".TRUE."                            # .TRUE. for adaptive time step
 LPTHOUT=".TRUE."                            # .TRUE. to activate bifurcation flow, mainly for delta simulation
 LDAMOUT=".FALSE."                           # .TRUE. to activate reservoir operation (under development)
+LHEATLINK=".TRUE."                          # .TRUE. to activate heatlink scheme (under development)
 
 
 #============================
 #*** 1c. simulation time
 YSTA=2000                                   # start year ( from YSTA / Jan  1st _ 00:00)
-YEND=2001                                   # end   year (until YEND / Dec 31st _ 24:00)
+YEND=2000                                   # end   year (until YEND / Dec 31st _ 24:00)
 SPINUP=0                                    # [0]: zero-storage start, [1]: from restart file
-NSP=1                                       # spinup repeat time
+NSP=0                                       # spinup repeat time
 
 #============================
 #*** 1d. spinup setting
@@ -157,7 +158,7 @@ if [ ${SPINUP} -eq 0 ]; then
   rm -rf ${RDIR}/*.txt
   rm -rf ${RDIR}/restart*
 else
-  NSP=0  # restart, no spinup
+  NSP=1  # restart, no spinup
 fi
 
 
@@ -190,9 +191,10 @@ do
   SDAY=1
   SHOUR=0
 
-  EYEAR=`expr $SYEAR + 1`
+  #EYEAR=`expr $SYEAR + 1`
+  EYEAR=$IYR
   EMON=1
-  EDAY=1
+  EDAY=3
   EHOUR=0
 
   ln -sf $PROG $EXE
@@ -214,6 +216,7 @@ LADPSTP  = ${LADPSTP}                  ! true: use adaptive time step
 LPTHOUT  = ${LPTHOUT}                  ! true: activate bifurcation scheme
 LDAMOUT  = ${LDAMOUT}                  ! true: activate dam operation (under development)
 LRESTART = ${LRESTART}                 ! true: initial condition from restart file
+LHEATLINK = ${LHEATLINK}               ! true: heatlink scheme
 /
 &NDIMTIME
 CDIMINFO = "${CDIMINFO}"               ! text file for dimention information
@@ -295,6 +298,13 @@ NDLEVEL  = 0                           ! * NETCDF DEFLATION LEVEL
 IFRQ_OUT = ${IFRQ_OUT}                 ! output data write frequency (hour)
 /
 EOF
+
+# append HEAT-LINK config
+printf '\n' >> "${NMLIST}"
+cat ${BASE}/gosh/heat-link.nml >> ${NMLIST}
+printf '\n' >> "${NMLIST}"
+cat ${BASE}/gosh/atm_GSWP3.nml >> ${NMLIST}
+printf '\n' >> "${NMLIST}"
 
 #================================================
 # (5) Execute main program

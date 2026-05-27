@@ -1,0 +1,29 @@
+&intrp_map
+LINTRP = .TRUE.
+inpmat_names = '01', '02', '03', '04', '05', '06', '07', '08'
+/
+
+&nml_inpmat item='01', dir='/Users/dtokuda/work/data/flow/FLOW/out/glob_15min_nolake/inpmat', prefix='inpmat_01' &end
+&nml_inpmat item='02', dir='/Users/dtokuda/work/data/flow/FLOW/out/glob_15min_nolake/inpmat', prefix='inpmat_02' &end
+&nml_inpmat item='03', dir='/Users/dtokuda/work/data/flow/FLOW/out/glob_15min_nolake/inpmat', prefix='inpmat_03' &end
+&nml_inpmat item='04', dir='/Users/dtokuda/work/data/flow/FLOW/out/glob_15min_nolake/inpmat', prefix='inpmat_04' &end
+&nml_inpmat item='05', dir='/Users/dtokuda/work/data/flow/FLOW/out/glob_15min_nolake/inpmat', prefix='inpmat_05' &end
+&nml_inpmat item='06', dir='/Users/dtokuda/work/data/flow/FLOW/out/glob_15min_nolake/inpmat', prefix='inpmat_06' &end
+&nml_inpmat item='07', dir='/Users/dtokuda/work/data/flow/FLOW/out/glob_15min_nolake/inpmat', prefix='inpmat_07' &end
+&nml_inpmat item='08', dir='/Users/dtokuda/work/data/flow/FLOW/out/glob_15min_nolake/inpmat', prefix='inpmat_08' &end
+
+! === output ===
+&output_default
+    dt = 86400
+/
+! atmospheric forcing
+&nml_out item='LWDN', path='./lwdn2000' &end
+&nml_out item='PSRF', path='./psrf2000' &end
+&nml_out item='QAIR', path='./qair2000' &end
+&nml_out item='SWDN', path='./swdn2000' &end
+&nml_out item='TAIR', path='./tair2000' &end
+&nml_out item='TROF', path='./trof2000' &end
+&nml_out item='WIND', path='./wind2000' &end
+
+! state variables
+&nml_out item='RIVWAT_TMP', path='./rivwattmp2000' &end

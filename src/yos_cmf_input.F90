@@ -67,6 +67,7 @@ LOGICAL                         :: LSPAMAT                 !! true: quasi sparse
 
 LOGICAL                         :: LSEDOUT                 !! true: sediment scheme                 
 LOGICAL                         :: LTRACE                  !! true: tracer   scheme                 
+LOGICAL                         :: LHEATLINK               !! true: heatlink scheme
 LOGICAL                         :: LUPSINF                 !! true: upstream inflow scheme
 
 !================================================
@@ -126,5 +127,4 @@ REAL(KIND=JPRB), ALLOCATABLE :: ZACC1(:,:)
 INTEGER(KIND=JPIM)           :: ISTEPADV
 !===============================================
 #endif
-
 END MODULE YOS_CMF_INPUT
