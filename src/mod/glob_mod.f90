@@ -1,6 +1,4 @@
 module glob_mod
-    use PARKIND1,  only: &
-    &   JPIM, JPRB, JPRM
     use YOS_CMF_INPUT, only: &
     &   TMPNAM, LOGNAM
     use CMF_UTILS_MOD, only: &

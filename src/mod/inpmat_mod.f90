@@ -1,4 +1,6 @@
 module inpmat_mod
+    use PARKIND1, only: &
+    &   JPRM, JPRB
     use YOS_CMF_INPUT, only: &
     &   TMPNAM, LOGNAM, &
     &   RMIS, DMIS, &
@@ -25,7 +27,7 @@ module inpmat_mod
         &   inpn
         integer, allocatable :: &
         &   inpx(:,:,:), inpy(:,:,:)
-        real(8), allocatable :: &
+        real(kind=JPRB), allocatable :: &
         &   inpa(:,:,:)
 
         contains
@@ -48,7 +50,7 @@ function init_inpmat(item) result(obj)
     character(len=*), intent(in) :: item
     character(len=256) :: dir, prefix
     integer :: nxin, nyin
-    real(8) :: west, east, south, north
+    real(kind=JPRB) :: west, east, south, north
     logical :: is_n2s
     call read_inpmat_nml( &
     &   item, &
@@ -120,20 +122,25 @@ function init_inpmat(item) result(obj)
 
     subroutine read_inpmat_area(dir, prefix, west, east, south, north, is_n2s)
         character(len=*), intent(in)  :: dir, prefix
-        real(8),          intent(out) :: west, east, south, north
+        real(kind=JPRB),  intent(out) :: west, east, south, north
         logical,          intent(out) :: is_n2s
         character(len=256) :: path
+        real(kind=JPRM) :: west_file, east_file, south_file, north_file
 
         TMPNAM = INQUIRE_FID()
         path = path_inpmat(dir, prefix, '.cfg')
         open(TMPNAM, file=trim(path), form='formatted')
         read(TMPNAM, *)
-        read(TMPNAM, *) west
-        read(TMPNAM, *) east
-        read(TMPNAM, *) south
-        read(TMPNAM, *) north
+        read(TMPNAM, *) west_file
+        read(TMPNAM, *) east_file
+        read(TMPNAM, *) south_file
+        read(TMPNAM, *) north_file
         read(TMPNAM, *) is_n2s
         close(TMPNAM)
+        west  = real(west_file , kind=JPRB)
+        east  = real(east_file , kind=JPRB)
+        south = real(south_file, kind=JPRB)
+        north = real(north_file, kind=JPRB)
         !write(LOGNAM, '(a,4f0.2,L)') '  west, east, south, north =', west, east, south, north, is_n2s
     end subroutine read_inpmat_area
 
@@ -141,9 +148,9 @@ function init_inpmat(item) result(obj)
     subroutine read_inpmat_bin(dir, prefix, inpx, inpy, inpa, inpn)
         character(len=*),              intent(in)  :: dir, prefix
         integer,          allocatable, intent(out) :: inpx(:,:,:), inpy(:,:,:)
-        double precision, allocatable, intent(out) :: inpa(:,:,:)
+        real(kind=JPRB),  allocatable, intent(out) :: inpa(:,:,:)
         integer         ,              intent(in)  :: inpn
-        real, allocatable  :: rinp(:,:,:)
+        real(kind=JPRM), allocatable :: rinp(:,:,:)
         integer, parameter :: byte_recl = 4
         character(len=256) :: path
 
@@ -156,7 +163,7 @@ function init_inpmat(item) result(obj)
         read(TMPNAM, rec=2) inpy(:,:,:)
         read(TMPNAM, rec=3) rinp(:,:,:)
         close(TMPNAM)
-        inpa(:,:,:) = dble(rinp(:,:,:))
+        inpa(:,:,:) = real(rinp(:,:,:), kind=JPRB)
         deallocate(rinp)
     end subroutine read_inpmat_bin
 
@@ -167,30 +174,30 @@ end function init_inpmat
 ! ===================================================================================================
 subroutine map2vec_intrp(self, map, vec)
     class(Inpmat)   , intent(in)  :: self
-    real            , intent(in)  :: map(:,:)
-    double precision, intent(out) :: vec(:)
-    real(4), parameter :: fill_val = 1e16
+    real(kind=JPRM), intent(in)  :: map(:,:)
+    real(kind=JPRB), intent(out) :: vec(:)
+    real(kind=JPRM), parameter :: fill_val = 1.e16_JPRM
     integer :: iseq, ix, iy, inpi, ixin, iyin
-    real(8) :: grda
+    real(kind=JPRB) :: grda
 
     !$omp parallel do private(ix, iy, inpi, ixin, iyin, grda)
     do iseq = 1, NSEQMAX
-        vec(iseq) = 0.d0
+        vec(iseq) = 0.0_JPRB
         ix = I1SEQX(iseq)
         iy = I1SEQY(iseq)
-        grda = 0.d0
+        grda = 0.0_JPRB
         do inpi = 1, self%INPN
-            if ( self%inpa(ix,iy,inpi) <= 0.0 ) exit
+            if ( self%inpa(ix,iy,inpi) <= 0.0_JPRB ) exit
             ixin = self%INPX(ix, iy, inpi)
             iyin = self%INPY(ix, iy, inpi)
             if (ixin < 1) exit
             if (isnan(map(ixin,iyin))) cycle
-            if ( map(ixin,iyin) < 0.0 ) cycle
+            if ( map(ixin,iyin) < 0.0_JPRM ) cycle
             if ( map(ixin,iyin) >= fill_val ) cycle
-            vec(iseq) = vec(iseq) + map(ixin,iyin) * self%inpa(ix,iy,inpi)
+            vec(iseq) = vec(iseq) + real(map(ixin,iyin), kind=JPRB) * self%inpa(ix,iy,inpi)
             grda      = grda      +                  self%inpa(ix,iy,inpi)
         enddo
-        if (grda > 0.d0) vec(iseq) = vec(iseq) / grda
+        if (grda > 0.0_JPRB) vec(iseq) = vec(iseq) / grda
     enddo
     !$omp end parallel do
 end subroutine map2vec_intrp
