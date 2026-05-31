@@ -1,4 +1,6 @@
 module array_mod
+    use PARKIND1, only: &
+    &   JPRB
     implicit none
     private
     public :: &
@@ -97,9 +99,9 @@ end subroutine append_integer
 
 
 subroutine append_double(a, val)
-    double precision, allocatable, intent(inout) :: a(:)
-    double precision,               intent(in)   :: val
-    double precision, allocatable :: tmp(:)
+    real(kind=JPRB), allocatable, intent(inout) :: a(:)
+    real(kind=JPRB),               intent(in)   :: val
+    real(kind=JPRB), allocatable :: tmp(:)
     integer :: n
 
     if (.not. allocated(a)) then
@@ -108,7 +110,7 @@ subroutine append_double(a, val)
     end if
 
     n = size(a)
-    allocate(tmp(n+1), source=0.d0)
+    allocate(tmp(n+1), source=0.0_JPRB)
     tmp(1:n) = a
     tmp(n+1) = val
     call move_alloc(tmp, a)
@@ -133,11 +135,11 @@ end subroutine trim_array_i4 ! ***
 
 subroutine trim_array_r8( & ! ***
 &   arr, n)
-    real(8), allocatable, intent(inout) :: & ! ***
+    real(kind=JPRB), allocatable, intent(inout) :: & ! ***
     &   arr(:)
     integer, intent(in) :: &
     &   n
-    real(8), allocatable :: & ! ***
+    real(kind=JPRB), allocatable :: & ! ***
     &   tmp(:)
     allocate(tmp, source=arr(:n))
     deallocate(arr)
@@ -184,7 +186,7 @@ end function find_index_i_alloc
 
 ! ===================================================================================================
 subroutine allocate_array_1d_dble(out_array, nsize)
-    double precision, allocatable, intent(out) :: out_array(:)
+    real(kind=JPRB), allocatable, intent(out) :: out_array(:)
     integer, intent(in) :: nsize
     if (allocated(out_array) .and. size(out_array) /= nsize) then
         deallocate(out_array)
@@ -192,17 +194,17 @@ subroutine allocate_array_1d_dble(out_array, nsize)
     if (.not. allocated(out_array)) then
         allocate(out_array(nsize))
     endif
-    out_array(:) = 0.d0
+    out_array(:) = 0.0_JPRB
 end subroutine allocate_array_1d_dble
 ! ===================================================================================================
 subroutine sum_dif_with_rest(sumErr, aVec, bVec)
-    double precision, intent(out) :: sumErr
-    double precision, intent(in)  :: aVec(:), bVec(:)
-    double precision seqErr, rstErr, tmpErr
+    real(kind=JPRB), intent(out) :: sumErr
+    real(kind=JPRB), intent(in)  :: aVec(:), bVec(:)
+    real(kind=JPRB) :: seqErr, rstErr, tmpErr
     integer          iseq
 
-    sumErr = 0.d0
-    rstErr = 0.d0
+    sumErr = 0.0_JPRB
+    rstErr = 0.0_JPRB
 !    !$omp parallel do private(iseq, seqErr, rstErr, tmpErr) reduction(+:sumErr)
     do iseq = 1, size(aVec)
         seqErr = aVec(iseq) - bVec(iseq)
@@ -267,26 +269,26 @@ end subroutine heapsort
 ! ===================================================================================================
 function arange_dble(start, end, step) result(arr)
     ! step = 0 returns ZeroDivisionError
-    real(8), intent(in) :: &
+    real(kind=JPRB), intent(in) :: &
     &   start, end, step
-    real(8), allocatable :: &
+    real(kind=JPRB), allocatable :: &
     &   arr(:)
     integer :: &
     &   i, n
     if ((start < end .and. step < 0) .or. (start > end .and. step > 0)) then
-        allocate(arr(0), source=0.d0)
+        allocate(arr(0), source=0.0_JPRB)
         return
     endif
 
     n = int(abs(end - start) / abs(step))
-    if (start <= end .and. start + step * dble(n) < end) then
+    if (start <= end .and. start + step * real(n, kind=JPRB) < end) then
         n = n + 1
-    elseif (start > end .and. start + step * dble(n) > end) then
+    elseif (start > end .and. start + step * real(n, kind=JPRB) > end) then
         n = n + 1
     endif
-    allocate(arr(n), source=0.d0)
+    allocate(arr(n), source=0.0_JPRB)
     do i = 1, n
-        arr(i) = start + step * dble(i - 1)
+        arr(i) = start + step * real(i - 1, kind=JPRB)
     enddo
 end function arange_dble
 
@@ -294,7 +296,7 @@ end function arange_dble
 function bisect_left(arr, target) result(i)
     ! return i if arr(i-1) < target <= arr(i)
     ! min = 1, max = size(target) + 1 if arr(-1) < target
-    real(8), intent(in) :: &
+    real(kind=JPRB), intent(in) :: &
     &   arr(:), & ! should be sorted from smaller to bigger
     &   target
     integer :: &

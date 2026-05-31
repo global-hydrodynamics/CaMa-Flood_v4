@@ -1,5 +1,7 @@
 module nc_mod
 #ifdef UseCDF_CMF
+    use PARKIND1, only: &
+    &   JPRM, JPRB, JPRD
     use YOS_CMF_INPUT, only: &
     &   LOGNAM
     use netcdf
@@ -76,11 +78,11 @@ subroutine get_nc_domain( &
 &   left, right, top, bottom)
     type(NCConfig), intent(in) :: &
     &   ncconf
-    real(8), intent(out) :: &
+    real(kind=JPRB), intent(out) :: &
     &   left, right, top, bottom
-    real(8), allocatable :: &
+    real(kind=JPRB), allocatable :: &
     &   var(:)
-    real(8) :: &
+    real(kind=JPRB) :: &
     &   res
     integer :: &
     &   status
@@ -91,28 +93,28 @@ subroutine get_nc_domain( &
     status = nf90_inquire_variable( &
     &   ncconf%ncid, ncconf%varid, dimids=dimids)
 
-    allocate(var(ncconf%shape(1)), source=-9999.d0)
+    allocate(var(ncconf%shape(1)), source=-9999._JPRB)
     call handle_error( &
     &   nf90_get_var(ncconf%ncid, dimid2varid(ncconf%ncid, dimids(1)), var(:)))
     res = abs(var(1) - var(2))
     if (var(1) < var(2)) then
-        left = dble(nint(var(1) - res * 0.5d0))
-        right = dble(nint(var(ncconf%shape(1)) + res * 0.5d0))
+        left = real(nint(var(1) - res * 0.5_JPRB), kind=JPRB)
+        right = real(nint(var(ncconf%shape(1)) + res * 0.5_JPRB), kind=JPRB)
     else
-        left = dble(nint(var(1) + res * 0.5d0))
-        right = dble(nint(var(ncconf%shape(1)) - res * 0.5d0))
+        left = real(nint(var(1) + res * 0.5_JPRB), kind=JPRB)
+        right = real(nint(var(ncconf%shape(1)) - res * 0.5_JPRB), kind=JPRB)
     endif
     deallocate(var)
 
-    allocate(var(ncconf%shape(2)), source=-9999.d0)
+    allocate(var(ncconf%shape(2)), source=-9999._JPRB)
     call handle_error( &
     &   nf90_get_var(ncconf%ncid, dimid2varid(ncconf%ncid, dimids(2)), var(:)))
     if (var(1) > var(2)) then
-        top = dble(nint(var(1) + res * 0.5d0))
-        bottom = dble(nint(var(ncconf%shape(2)) - res * 0.5d0))
+        top = real(nint(var(1) + res * 0.5_JPRB), kind=JPRB)
+        bottom = real(nint(var(ncconf%shape(2)) - res * 0.5_JPRB), kind=JPRB)
     else
-        top = dble(nint(var(1) - res * 0.5d0))
-        bottom = dble(nint(var(ncconf%shape(2)) + res * 0.5d0))
+        top = real(nint(var(1) - res * 0.5_JPRB), kind=JPRB)
+        bottom = real(nint(var(ncconf%shape(2)) + res * 0.5_JPRB), kind=JPRB)
     endif
     deallocate(var)
 end subroutine get_nc_domain
@@ -123,7 +125,7 @@ integer function get_nc_dt(ncconf)
     &   ncconf
     integer :: &
     &   status, time_len
-    real(4), allocatable :: &
+    real(kind=JPRD), allocatable :: &
     &   time(:)
     integer, allocatable :: &
     &   dimids(:)
@@ -133,7 +135,7 @@ integer function get_nc_dt(ncconf)
     &   ncconf%ncid, ncconf%varid, dimids=dimids)
     call handle_error( &
     &   nf90_inquire_dimension(ncconf%ncid, dimids(ncconf%ndims), len=time_len))
-    allocate(time(time_len), source=0.0)
+    allocate(time(time_len), source=0.0_JPRD)
     call handle_error( &
     &   nf90_get_var(ncconf%ncid, dimid2varid(ncconf%ncid, dimids(ncconf%ndims)), time))
     get_nc_dt = int(time(2) - time(1))
@@ -143,7 +145,7 @@ end function get_nc_dt
 
 !subroutine get_nc_scale_offset(unit, var_id, scale, offset)
 !    integer, intent(in)  :: unit, var_id
-!    double precision, intent(out) :: scale, offset
+!    real(kind=JPRD), intent(out) :: scale, offset
 !    call handle_error(nf90_get_att(unit, var_id, 'scale_factor', scale ))
 !    call handle_error(nf90_get_att(unit, var_id, 'add_offset'  , offset))
 !    if (scale == 0.d0) scale = 1.d0
@@ -170,7 +172,7 @@ end subroutine check_get_var_error
 subroutine read_nc_r4_2d( &
 &   arr, file_is_end, &
 &   ncconf, recnum)
-    real(4), intent(out) :: &
+    real(kind=JPRM), intent(out) :: &
     &   arr(:,:)
     logical, intent(out) :: &
     &   file_is_end
@@ -192,7 +194,7 @@ end subroutine read_nc_r4_2d
 subroutine read_nc_r4_3d( &
 &   arr, file_is_end, &
 &   ncconf, recnum)
-    real(4), intent(out) :: &
+    real(kind=JPRM), intent(out) :: &
     &   arr(:,:,:)
     logical, intent(out) :: &
     &   file_is_end

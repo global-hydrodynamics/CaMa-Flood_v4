@@ -1,12 +1,13 @@
 module time_recorder_class
     use array_mod, only : append, find_index
+    use PARKIND1, only: JPRB
     implicit none
     private
     public :: TimeRecorder
 
     type :: TimeRecorder
         private
-        real(8),           allocatable :: total_times(:) ! [s]
+        real(kind=JPRB),   allocatable :: total_times(:) ! [s]
         integer,           allocatable :: start_times(:)
         character(len=64), allocatable :: items(:)
 
@@ -32,7 +33,7 @@ subroutine start(self, item)
     else
         call append(self%items      , item)
         call append(self%start_times, t1  )
-        call append(self%total_times, 0.d0)
+        call append(self%total_times, 0.0_JPRB)
     endif
 end subroutine start
 
@@ -41,7 +42,7 @@ subroutine stop(self, item)
     class(TimeRecorder), intent(inout) :: self
     character(len=*),    intent(in)    :: item
     integer :: t1, t2, t_rate, t_max, idx
-    real(8) :: elps_time
+    real(kind=JPRB) :: elps_time
     call system_clock(t2, t_rate, t_max)
     idx = find_index(self%items, item)
     if (idx < 1) then
@@ -55,7 +56,7 @@ subroutine stop(self, item)
 
     contains
 
-    real(8) function calc_elapsed_time(t1, t2, t_rate, t_max)
+    real(kind=JPRB) function calc_elapsed_time(t1, t2, t_rate, t_max)
         integer, intent(in) :: t1, t2, t_rate, t_max
         integer :: diff
         if (t2 < t1) then
@@ -63,13 +64,13 @@ subroutine stop(self, item)
         else
             diff = t2 - t1
         endif
-        calc_elapsed_time = diff / dble(t_rate)
+        calc_elapsed_time = real(diff, kind=JPRB) / real(t_rate, kind=JPRB)
     end function calc_elapsed_time
 
 end subroutine stop
 
 
-real(8) function get(self, item)
+real(kind=JPRB) function get(self, item)
     class(TimeRecorder), intent(in) :: self
     character(len=*),    intent(in) :: item
     integer :: idx

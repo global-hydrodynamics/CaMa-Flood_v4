@@ -1,4 +1,5 @@
 module datetime_ext_mod
+use PARKIND1, only: JPRD
 use datetime_module
 implicit none
 
@@ -91,7 +92,7 @@ function init_relativedelta1(years, months, days, hours, minutes, seconds, milli
     if (present(milliseconds)) milliseconds_ = milliseconds
     obj%TimeDelta = TimeDelta(days_, hours_, minutes_, seconds_, milliseconds_)
     if (years_ > 0 .or. months_ > 0) then
-        if (obj%TimeDelta%total_seconds() > 0.d0) then
+        if (obj%TimeDelta%total_seconds() > 0.0_JPRD) then
             write(*, *) 'init_relativedelta ERROR, ', years_, months_, obj%TimeDelta%total_seconds()
             stop
         endif
@@ -197,10 +198,10 @@ end function relativedelta_plus_datetime
 ! ===================================================================================================
 pure elemental function total_seconds(self) result(sec)
     class(RelativeDelta), intent(in) :: self
-    real(8) :: sec
+    real(kind=JPRD) :: sec
     sec = self%TimeDelta%total_seconds()
-    sec = sec + self%months * 86400.d0 * 30.d0
-    sec = sec + self%years  * 86400.d0 * 365.d0
+    sec = sec + self%months * 86400.0_JPRD * 30.0_JPRD
+    sec = sec + self%years  * 86400.0_JPRD * 365.0_JPRD
 end function total_seconds
 
 ! ===================================================================================================

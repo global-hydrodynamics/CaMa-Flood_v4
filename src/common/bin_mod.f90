@@ -1,4 +1,6 @@
 module bin_mod
+    use PARKIND1, only: &
+    &   JPRM, JPRD
     use funit_mod, only: TMP_UNIT
     implicit none
 
@@ -23,7 +25,7 @@ end subroutine open_bin
 
 ! ===================================================================================================
 subroutine read_bin_1d_r(array, inpath, rec)
-    real            ,  intent(out) :: array(:)
+    real(kind=JPRM) ,  intent(out) :: array(:)
     character(len=*),  intent(in)  :: inpath
     integer, optional, intent(in)  :: rec
     integer, parameter :: byte_recl = 4
@@ -36,7 +38,7 @@ subroutine read_bin_1d_r(array, inpath, rec)
 end subroutine read_bin_1d_r
 
 subroutine read_bin_2d_r(array, inpath, rec)
-    real            ,  intent(out) :: array(:,:)
+    real(kind=JPRM) ,  intent(out) :: array(:,:)
     character(len=*),  intent(in)  :: inpath
     integer, optional, intent(in)  :: rec
     integer, parameter :: byte_recl = 4
@@ -49,7 +51,7 @@ subroutine read_bin_2d_r(array, inpath, rec)
 end subroutine read_bin_2d_r
 
 subroutine read_bin_3d_r(array, inpath, rec)
-    real            ,  intent(out) :: array(:,:,:)
+    real(kind=JPRM) ,  intent(out) :: array(:,:,:)
     character(len=*),  intent(in)  :: inpath
     integer, optional, intent(in)  :: rec
     integer, parameter :: byte_recl = 4
@@ -89,35 +91,35 @@ end subroutine read_bin_2d_i1
 
 ! ---------------------------------------------------------------------------------------------------
 subroutine read_bin_1d_d(array, inpath, recnum)
-    double precision, intent(out) :: array(:)
+    real(kind=JPRD), intent(out) :: array(:)
     character(len=*), intent(in)  :: inpath
     integer         , intent(in)  :: recnum
-    real, allocatable :: rarray(:)
-    allocate(rarray, source=real(array))
+    real(kind=JPRM), allocatable :: rarray(:)
+    allocate(rarray(size(array)))
     call read_bin(rarray, inpath, recnum)
-    array = dble(rarray)
+    array = real(rarray, kind=JPRD)
     deallocate(rarray)
 end subroutine read_bin_1d_d
 
 subroutine read_bin_2d_d(array, inpath, recnum)
-    double precision, intent(out) :: array(:,:)
+    real(kind=JPRD), intent(out) :: array(:,:)
     character(len=*), intent(in)  :: inpath
     integer         , intent(in)  :: recnum
-    real, allocatable :: rarray(:,:)
-    allocate(rarray, source=real(array))
+    real(kind=JPRM), allocatable :: rarray(:,:)
+    allocate(rarray(size(array, 1), size(array, 2)))
     call read_bin(rarray, inpath, recnum)
-    array = dble(rarray)
+    array = real(rarray, kind=JPRD)
     deallocate(rarray)
 end subroutine read_bin_2d_d
 
 subroutine read_bin_3d_d(array, inpath, recnum)
-    double precision, intent(out) :: array(:,:,:)
+    real(kind=JPRD), intent(out) :: array(:,:,:)
     character(len=*), intent(in)  :: inpath
     integer         , intent(in)  :: recnum
-    real, allocatable :: rarray(:,:,:)
-    allocate(rarray, source=real(array))
+    real(kind=JPRM), allocatable :: rarray(:,:,:)
+    allocate(rarray(size(array, 1), size(array, 2), size(array, 3)))
     call read_bin(rarray, inpath, recnum)
-    array = dble(rarray)
+    array = real(rarray, kind=JPRD)
     deallocate(rarray)
 end subroutine read_bin_3d_d
 
