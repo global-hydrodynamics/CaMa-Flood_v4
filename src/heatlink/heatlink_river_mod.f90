@@ -1,6 +1,6 @@
 module heatlink_river_mod
     use PARKIND1, only: &
-    &   JPIM, JPRB, JPRM
+    &   JPIM, JPRB
     use YOS_CMF_INPUT, only: &
     &   LOGNAM
     use YOS_CMF_MAP, only: &
