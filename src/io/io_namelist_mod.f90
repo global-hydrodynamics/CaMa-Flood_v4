@@ -67,8 +67,8 @@ subroutine read_nml_input_item( &
         z_in = 1
         is_catm = .FALSE.
         is_fldstg = .FALSE.
-        scale = 1.d0
-        offset = 0.d0
+        scale = 1.0_JPRM
+        offset = 0.0_JPRM
         div_item = ''
         read(nml_unit, nml=input_item, iostat=ios)
         if (ios < 0) return
