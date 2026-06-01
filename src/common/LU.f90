@@ -52,7 +52,7 @@ CONTAINS
  DO I=1,N
    AMAX = 0.0_JPRB
    DO J=1,N
-     IF (DABS(A(I,J)).GT.AMAX) AMAX=DABS(A(I,J))
+     IF (ABS(A(I,J)).GT.AMAX) AMAX=ABS(A(I,J))
    END DO ! j loop
    IF(AMAX.LT.TINY) THEN
      CODE = 1
@@ -76,7 +76,7 @@ CONTAINS
        SUM = SUM - A(I,K)*A(K,J) 
      END DO ! k loop
      A(I,J) = SUM
-     DUM = VV(I)*DABS(SUM)
+     DUM = VV(I)*ABS(SUM)
      IF(DUM.GE.AMAX) THEN
        IMAX = I
        AMAX = DUM
@@ -94,7 +94,7 @@ CONTAINS
    END IF
 
    INDX(J) = IMAX
-   IF(DABS(A(J,J)) < TINY) A(J,J) = TINY
+   IF(ABS(A(J,J)) < TINY) A(J,J) = TINY
 
    IF(J.NE.N) THEN
      DUM = 1.0_JPRB / A(J,J)
