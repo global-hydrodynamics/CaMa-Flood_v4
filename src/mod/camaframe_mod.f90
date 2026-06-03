@@ -1,4 +1,6 @@
 module camaframe_mod
+    use PARKIND1, only: &
+    &   JPRB
     use mapframe_mod, only: &
     &   MapFrame, operator(==), init_MapFrame
     implicit none
@@ -36,7 +38,7 @@ contains
 function init_CaMaFrame(left, right, top, bottom, nx, ny, is_catm, is_fldstg) result(obj)
     type(CaMaFrame) :: &
     &   obj
-    real(8), intent(in), optional :: &
+    real(kind=JPRB), intent(in), optional :: &
     &   left, right, top, bottom
     integer, intent(in), optional :: &
     &   nx, ny

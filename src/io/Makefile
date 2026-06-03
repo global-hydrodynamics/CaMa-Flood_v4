@@ -25,9 +25,9 @@ LIBOBJS = \
 
 .SUFFIXES: .o .F90 .f90
 %.o: %.F90
-	$(FCMP) -c $(FFLAGS) $(INC) $(MODS) $*.F90 -o $*.o
+	$(FCMP) $(FFLAGS) $(FPPFLAG) $(FCMODFLAG) . -c $(INCDIRS) $(INC) $(MODS) $(CFLAGS) $*.F90 -o $*.o
 %.o: %.f90
-	$(FCMP) -c $(FFLAGS) $(INC) $(MODS) $*.f90 -o $*.o
+	$(FCMP) $(FFLAGS) $(FPPFLAG) $(FCMODFLAG) . -c $(INCDIRS) $(INC) $(MODS) $(CFLAGS) $*.f90 -o $*.o
 
 $(libname): $(LIBOBJS)
 	ar rcs $@ $^

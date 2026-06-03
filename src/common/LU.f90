@@ -12,12 +12,13 @@
 !*                                                     * 
 !*******************************************************
 MODULE LU
+  use PARKIND1, only: JPRB
 
 CONTAINS
 
   subroutine solve_matrix(X, A, b, n)
-    real*8, intent(out) :: X(:)
-    real*8, intent(in)  :: A(:,:), b(:)
+    real(kind=JPRB), intent(out) :: X(:)
+    real(kind=JPRB), intent(in)  :: A(:,:), b(:)
     integer, intent(in) :: n
     integer, allocatable :: INDX(:)
     integer d, rc
@@ -40,24 +41,24 @@ CONTAINS
 !  ***************************************************************
  Subroutine LUDCMP(A,N,INDX,D,CODE)
  integer, parameter :: nmax = 100
- real*8 , parameter :: TINY=1.5D-16
+ real(kind=JPRB), parameter :: TINY = 1.5e-16_JPRB
  integer n
- REAL*8  AMAX,DUM, SUM, A(N,N),VV(NMAX)
+ real(kind=JPRB)  AMAX, DUM, SUM, A(N,N), VV(NMAX)
  INTEGER CODE, D, INDX(N)
  integer i, j, k, IMAX
 
  D=1; CODE=0
 
  DO I=1,N
-   AMAX=0.d0
+   AMAX = 0.0_JPRB
    DO J=1,N
-     IF (DABS(A(I,J)).GT.AMAX) AMAX=DABS(A(I,J))
+     IF (ABS(A(I,J)).GT.AMAX) AMAX=ABS(A(I,J))
    END DO ! j loop
    IF(AMAX.LT.TINY) THEN
      CODE = 1
      RETURN
    END IF
-   VV(I) = 1.d0 / AMAX
+   VV(I) = 1.0_JPRB / AMAX
  END DO ! i loop
 
  DO J=1,N
@@ -68,14 +69,14 @@ CONTAINS
      END DO ! k loop
      A(I,J) = SUM
    END DO ! i loop
-   AMAX = 0.d0
+   AMAX = 0.0_JPRB
    DO I=J,N
      SUM = A(I,J)
      DO K=1,J-1
        SUM = SUM - A(I,K)*A(K,J) 
      END DO ! k loop
      A(I,J) = SUM
-     DUM = VV(I)*DABS(SUM)
+     DUM = VV(I)*ABS(SUM)
      IF(DUM.GE.AMAX) THEN
        IMAX = I
        AMAX = DUM
@@ -93,10 +94,10 @@ CONTAINS
    END IF
 
    INDX(J) = IMAX
-   IF(DABS(A(J,J)) < TINY) A(J,J) = TINY
+   IF(ABS(A(J,J)) < TINY) A(J,J) = TINY
 
    IF(J.NE.N) THEN
-     DUM = 1.d0 / A(J,J)
+     DUM = 1.0_JPRB / A(J,J)
      DO I=J+1,N
        A(I,J) = A(I,J)*DUM
      END DO ! i loop
@@ -119,7 +120,7 @@ CONTAINS
 !  ******************************************************************
  Subroutine LUBKSB(A,N,INDX,B)
  integer n
- REAL*8  SUM, A(N,N),B(N)
+ real(kind=JPRB)  SUM, A(N,N), B(N)
  INTEGER INDX(N)
  integer ii, i, ll, j
 
@@ -133,7 +134,7 @@ CONTAINS
      DO J=II,I-1
        SUM = SUM - A(I,J)*B(J)
      END DO ! j loop
-   ELSE IF(SUM.NE.0.d0) THEN
+   ELSE IF(SUM.NE.0.0_JPRB) THEN
      II = I
    END IF
    B(I) = SUM

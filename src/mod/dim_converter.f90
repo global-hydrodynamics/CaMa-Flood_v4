@@ -1,6 +1,6 @@
 module dim_converter
     use PARKIND1, only: &
-    &   JPRM, JPRD
+    &   JPRM, JPRB
     use YOS_CMF_INPUT, only: &
     &   TMPNAM, LOGNAM, &
     &   LLOGOUT, CLOGOUT, &
@@ -10,7 +10,8 @@ module dim_converter
     use CMF_UTILS_MOD, only: &
     &   INQUIRE_FID
     use CMF_UTILS_MOD, only: &
-    &   map2vec_catm, vec2map => vec2map_catm
+    &   map2vec_catm_jprb => mapR2vecD, &
+    &   vec2map_catm_jprm => vecD2mapR
 
     use array_mod, only: &
     &   find_index, append
@@ -25,6 +26,11 @@ module dim_converter
     public :: &
     &   init_dim_converter, map2vec, vec2map, find_inpmat
 
+    ! This module handles map/vector conversion for standard input/output.
+    ! File-side arrays are JPRM, and model-side arrays are JPRB.
+    ! JPRD storage variables should be explicitly converted to JPRB
+    ! before calling these conversion routines.
+
     type(Inpmat), allocatable :: &
     &   inpmats(:)
     character(len=32), allocatable :: &
@@ -34,9 +40,12 @@ module dim_converter
     &   LINTRP
 
     interface map2vec
-        module procedure :: map2vec_r2d
-        module procedure :: map2vec_r2r
+        module procedure :: map2vec_m2b
     end interface map2vec
+
+    interface vec2map
+        module procedure :: vec2map_b2m
+    end interface vec2map
 
 contains
 
@@ -97,20 +106,23 @@ function all_inpmat_have_different_size(inpmats) result(havediff)
 end function all_inpmat_have_different_size
 
 ! ===================================================================================================
-subroutine map2vec_r2d(map, vec, cmf, inpmat_idx)
+subroutine map2vec_m2b(map, vec, cmf, inpmat_idx)
     real(kind=JPRM), intent(in)  :: map(:, :)
-    real(kind=JPRD), intent(out) :: vec(NSEQMAX)
+    real(kind=JPRB), intent(out) :: vec(NSEQMAX)
     type(CaMaFrame), intent(in), optional :: cmf
     integer,         intent(in), optional :: inpmat_idx
     integer idx
+    real(kind=JPRB) :: tmpvec(NSEQMAX, 1)
     if (present(cmf)) then
         if (cmf%is_catm()) then
-            call map2vec_catm(map(:,:), vec(:))
+            call map2vec_catm_jprb(map(:,:), tmpvec(:,:))
+            vec(:) = tmpvec(:,1)
             return
         endif
     else
         if (.not. present(inpmat_idx))then
-            call map2vec_catm(map(:,:), vec(:))
+            call map2vec_catm_jprb(map(:,:), tmpvec(:,:))
+            vec(:) = tmpvec(:,1)
             return
         endif
     endif
@@ -125,19 +137,17 @@ subroutine map2vec_r2d(map, vec, cmf, inpmat_idx)
     else
         stop 'TODO: map2vec, not LINTRP'
     endif
-end subroutine map2vec_r2d
+end subroutine map2vec_m2b
 
 
-subroutine map2vec_r2r(map, vec, cmf, inpmat_idx)
-    real(kind=JPRM), intent(in)  :: map(:, :)
-    real(kind=JPRM), intent(out) :: vec(NSEQMAX)
-    type(CaMaFrame), intent(in), optional :: cmf
-    integer,         intent(in), optional :: inpmat_idx
-    real(kind=JPRD) :: dvec(NSEQMAX)
-    dvec(:) = real(vec(:), kind=JPRD)
-    call map2vec(map, dvec, cmf, inpmat_idx)
-    vec(:) = real(dvec(:), kind=JPRM)
-end subroutine map2vec_r2r
+subroutine vec2map_b2m(vec, map)
+    real(kind=JPRB), intent(in)  :: vec(NSEQMAX)
+    real(kind=JPRM), intent(out) :: map(:,:)
+    real(kind=JPRB) :: tmpvec(NSEQMAX, 1)
+
+    tmpvec(:,1) = vec(:)
+    call vec2map_catm_jprm(tmpvec(:,:), map(:,:))
+end subroutine vec2map_b2m
 
 ! ===================================================================================================
 function find_inpmat(cmf, inpmat_name) result(idx)

@@ -313,9 +313,18 @@ end subroutine set_is_updated
 subroutine apply_scale_offset(self, data)
     class(InputConf), intent(in) :: self
     real(kind=JPRM), intent(inout) :: data(:,:,:)
+    real(kind=JPRM), parameter :: fill_val = 1.e16_JPRM
 
-    if (self%apply_scale) data(:,:,:) = data(:,:,:) * self%scale
-    if (self%apply_offset) data(:,:,:) = data(:,:,:) + self%offset
+    if (self%apply_scale) then
+        where (.not. isnan(data(:,:,:)) .and. data(:,:,:) >= 0.0_JPRM .and. data(:,:,:) < fill_val)
+            data(:,:,:) = data(:,:,:) * self%scale
+        end where
+    endif
+    if (self%apply_offset) then
+        where (.not. isnan(data(:,:,:)) .and. data(:,:,:) >= 0.0_JPRM .and. data(:,:,:) < fill_val)
+            data(:,:,:) = data(:,:,:) + self%offset
+        end where
+    endif
 end subroutine apply_scale_offset
 
 ! ===================================================================================================
@@ -336,23 +345,23 @@ subroutine update_input(self, arr)
     logical :: &
     &   is_end
     real(kind=JPRM), allocatable :: &
-    &   arr_r4(:,:,:)
+    &   arr_file(:,:,:)
     select case (trim(to_lowercase(self%get_fmt())))
         case ('binary', 'bin')
             call self%get_file_shape(nx, ny, nz)
-            allocate(arr_r4(nx,ny,nz), source=0.0)
-            call read_bin(arr_r4(:,:,:), self%get_path(), self%get_rec())
+            allocate(arr_file(nx,ny,nz), source=0.0_JPRM)
+            call read_bin(arr_file(:,:,:), self%get_path(), self%get_rec())
             is_end = .FALSE.
 #ifdef UseCDF_CMF
         case ('netcdf', 'nc')
             call self%get_file_shape(nx, ny, nz)
-            allocate(arr_r4(nx,ny,nz), source=0.0)
+            allocate(arr_file(nx,ny,nz), source=0.0_JPRM)
             if (self%ncconf%ndims == 3) then ! (lon, lat, time)
                 call read_nc( &
-                &   arr_r4(:,:,1), is_end, self%ncconf, self%get_rec())
+                &   arr_file(:,:,1), is_end, self%ncconf, self%get_rec())
             else
                 call read_nc( &
-                &   arr_r4(:,:,:), is_end, self%ncconf, self%get_rec())
+                &   arr_file(:,:,:), is_end, self%ncconf, self%get_rec())
             endif
 #endif
         case default
@@ -360,17 +369,19 @@ subroutine update_input(self, arr)
             write(LOGNAM, '(2a)') 'fmt = ', trim(self%get_fmt())
             stop
     end select
-    call self%apply_scale_offset(arr_r4(:,:,:))
+    call self%apply_scale_offset(arr_file(:,:,:))
 
     if (is_end) then
         write(LOGNAM, *) trim(self%get_item()), ': read last step again'
-        if (allocated(arr_r4)) deallocate(arr_r4)
+        if (allocated(arr_file)) deallocate(arr_file)
         return
     endif
     write(LOGNAM, '(a10,i5)') trim(self%get_item()), self%get_rec()
 
-    call map2vec(arr_r4(:,:,self%get_z_in()), arr(:), self%get_map(), self%get_inpmat_idx())
-    deallocate(arr_r4)
+    ! Input files are read into JPRM buffers. Invalid file-side values are
+    ! left untouched, while valid cells are adjusted before map2vec.
+    call map2vec(arr_file(:,:,self%get_z_in()), arr(:), self%get_map(), self%get_inpmat_idx())
+    deallocate(arr_file)
     call self%set_next()
 end subroutine update_input
 

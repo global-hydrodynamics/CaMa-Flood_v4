@@ -1,11 +1,12 @@
 module mapframe_mod
+    use PARKIND1, only: JPRB
     implicit none
     private
     public :: &
     &   MapFrame, operator(==), init_mapframe
 
 type MapFrame
-    real(8) :: &
+    real(kind=JPRB) :: &
     &   left, right, top, bottom
     integer :: &
     &   nx, ny
@@ -42,7 +43,7 @@ contains
 function init_mapframe(left, right, top, bottom, nx, ny) result(obj)
     type(MapFrame) :: &
     &   obj
-    real(8), intent(in), optional :: &
+    real(kind=JPRB), intent(in), optional :: &
     &   left, right, top, bottom
     integer, intent(in), optional :: &
     &   nx, ny
@@ -60,7 +61,7 @@ end function init_mapframe
 subroutine domain(self, left, right, top, bottom)
     class(MapFrame),  intent(in) :: &
     &   self
-    real(8), intent(out) :: &
+    real(kind=JPRB), intent(out) :: &
     &   left, right, top, bottom
     left = self%left
     right = self%right
@@ -68,25 +69,25 @@ subroutine domain(self, left, right, top, bottom)
     bottom = self%bottom
 end subroutine domain
 
-real(8) function west(self)
+real(kind=JPRB) function west(self)
     class(MapFrame), intent(in) :: &
     &   self
     west = min(self%left, self%right)
 end function west
 
-real(8) function east(self)
+real(kind=JPRB) function east(self)
     class(MapFrame), intent(in) :: &
     &   self
     east = max(self%left, self%right)
 end function east
 
-real(8) function north(self)
+real(kind=JPRB) function north(self)
     class(MapFrame), intent(in) :: &
     &   self
     north = min(self%top, self%bottom)
 end function north
 
-real(8) function south(self)
+real(kind=JPRB) function south(self)
     class(MapFrame), intent(in) :: &
     &   self
     south = max(self%top, self%bottom)
@@ -107,7 +108,7 @@ end function is_w2e
 subroutine set_domain(self, left, right, top, bottom)
     class(MapFrame), intent(inout) :: &
     &   self
-    real(8), intent(in) :: &
+    real(kind=JPRB), intent(in) :: &
     &   left, right, top, bottom
     self%left = left
     self%right = right
@@ -137,7 +138,7 @@ end subroutine set_shape
 character(len=256) function str(self)
     class(MapFrame), intent(in) :: &
     &   self
-    real(8) :: &
+    real(kind=JPRB) :: &
     &   rl, rr, rt, rb
     integer :: &
     &   ix, iy
@@ -160,7 +161,7 @@ end function str
 logical function eq(a, b)
     type(MapFrame), intent(in) :: &
     &   a, b
-    real(8) :: &
+    real(kind=JPRB) :: &
     &   al, ar, at, ab, &
     &   bl, br, bt, bb
     integer :: &

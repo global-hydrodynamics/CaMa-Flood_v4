@@ -68,7 +68,7 @@ subroutine init_output_mod()
     if (.not. allocated(tmp_map)) then
         allocate(tmp_map(NX, NY))
     endif
-    tmp_map(:,:) = 0.0
+    tmp_map(:,:) = 0.0_JPRM
 end subroutine init_output_mod
 
 
@@ -133,8 +133,9 @@ end subroutine close_output
 subroutine write_one(idx)
     integer, intent(in) :: idx
 
-    real(8), allocatable :: buf1(:)
-    real(8), allocatable :: buf2(:,:)
+    ! Standard output stays on the JPRB side until the final file-side write.
+    real(kind=JPRB), allocatable :: buf1(:)
+    real(kind=JPRB), allocatable :: buf2(:,:)
     integer :: rk
     logical :: is_mapfmt
 
@@ -147,7 +148,7 @@ subroutine write_one(idx)
         case (1)
             allocate(buf1(arrs(idx)%get_shape(1)))
             call arrs(idx)%flush(buf1) ! average/instantaneous -> buf1; reset inside
-            tmp_map(:,:) = 0.0
+            tmp_map(:,:) = 0.0_JPRM
             call vec2map(buf1(:), tmp_map(:,:))
             call writers(idx)%write_2d(tmp_map(:,:))
             deallocate(buf1)

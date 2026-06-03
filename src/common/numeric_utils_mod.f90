@@ -1,5 +1,5 @@
 module numeric_utils_mod
-    use PARKIND1, only: JPRB, JPRM
+    use PARKIND1, only: JPRB, JPRM, JPRD
     implicit none
     private
 
@@ -7,8 +7,13 @@ module numeric_utils_mod
     ! Default tolerances
     ! =========================
     ! You can overwrite these from outside via set_default_tolerances().
+#ifdef SinglePrec_CMF
+    real(kind=JPRD), save :: default_abs_tol_r8 = 1.0e-12_JPRD
+    real(kind=JPRD), save :: default_rel_tol_r8 = 1.0e-12_JPRD
+#else
     real(kind=JPRB), save :: default_abs_tol_r8 = 1.0e-12_JPRB
     real(kind=JPRB), save :: default_rel_tol_r8 = 1.0e-12_JPRB
+#endif
     real(kind=JPRM), save :: default_abs_tol_r4 = 1.0e-6_JPRM
     real(kind=JPRM), save :: default_rel_tol_r4 = 1.0e-6_JPRM
 
@@ -41,7 +46,11 @@ contains
 ! Set module-level default tolerances
 !===========================================================
 subroutine set_default_tolerances(abs_tol_r8, rel_tol_r8, abs_tol_r4, rel_tol_r4)
+#ifdef SinglePrec_CMF
+    real(kind=JPRD), intent(in), optional :: abs_tol_r8, rel_tol_r8
+#else
     real(kind=JPRB), intent(in), optional :: abs_tol_r8, rel_tol_r8
+#endif
     real(kind=JPRM), intent(in), optional :: abs_tol_r4, rel_tol_r4
 
     if (present(abs_tol_r8)) default_abs_tol_r8 = abs_tol_r8
@@ -67,11 +76,20 @@ pure logical function nearly_equal_r4(a, b) result(eq)
 end function nearly_equal_r4
 
 pure logical function nearly_equal_r8(a, b) result(eq)
+#ifdef SinglePrec_CMF
+    real(kind=JPRD), intent(in) :: a, b
+    real(kind=JPRD) :: diff, scale, tol
+#else
     real(kind=JPRB), intent(in) :: a, b
     real(kind=JPRB) :: diff, scale, tol
+#endif
 
     diff  = abs(a - b)
+#ifdef SinglePrec_CMF
+    scale = max(1.0_JPRD, abs(a), abs(b))
+#else
     scale = max(1.0_JPRB, abs(a), abs(b))
+#endif
     tol   = max(default_abs_tol_r8, default_rel_tol_r8 * scale)
 
     eq = (diff <= tol)
@@ -81,10 +99,16 @@ end function nearly_equal_r8
 ! nearly_zero: |x| <= tol (default: abs_tol)
 !===========================================================
 pure logical function nearly_zero_r8(x, tol) result(ok)
+#ifdef SinglePrec_CMF
+    real(kind=JPRD), intent(in) :: x
+    real(kind=JPRD), intent(in), optional :: tol
+    real(kind=JPRD) :: t
+#else
     real(kind=JPRB), intent(in) :: x
     real(kind=JPRB), intent(in), optional :: tol
-
     real(kind=JPRB) :: t
+#endif
+
     t = default_abs_tol_r8
     if (present(tol)) t = tol
     ok = abs(x) <= t
@@ -105,12 +129,19 @@ end function nearly_zero_r4
 ! safe_divide: returns a/b if b is not (nearly) zero
 ! else returns default_value (default: 0)
 !===========================================================
+#ifdef SinglePrec_CMF
+pure real(kind=JPRD) function safe_divide_r8(a, b, default_value, tol) result(res)
+    real(kind=JPRD), intent(in) :: a, b
+    real(kind=JPRD), intent(in), optional :: default_value, tol
+    real(kind=JPRD) :: dv, t
+#else
 pure real(kind=JPRB) function safe_divide_r8(a, b, default_value, tol) result(res)
     real(kind=JPRB), intent(in) :: a, b
     real(kind=JPRB), intent(in), optional :: default_value, tol
-
     real(kind=JPRB) :: dv, t
-    dv = 0.0_JPRB
+#endif
+
+    dv = 0.0
     if (present(default_value)) dv = default_value
 
     t = default_abs_tol_r8
@@ -145,8 +176,13 @@ end function safe_divide_r4
 !===========================================================
 ! clamp: restrict x into [xmin, xmax]
 !===========================================================
+#ifdef SinglePrec_CMF
+pure real(kind=JPRD) function clamp_r8(x, xmin, xmax) result(y)
+    real(kind=JPRD), intent(in) :: x, xmin, xmax
+#else
 pure real(kind=JPRB) function clamp_r8(x, xmin, xmax) result(y)
     real(kind=JPRB), intent(in) :: x, xmin, xmax
+#endif
     y = min(max(x, xmin), xmax)
 end function clamp_r8
 

@@ -1,4 +1,6 @@
 module gt_mod
+    use PARKIND1, only: &
+    &   JPRM, JPRB
     use datetime_ext_mod, only: &
     &   RelativeDelta, strptime
     use funit_mod, only: &
@@ -29,15 +31,15 @@ subroutine get_lon_coord( &
 &   left, right)
     character(len=*), intent(in) :: &
     &   coord_name
-    real(8), intent(out) :: &
+    real(kind=JPRB), intent(out) :: &
     &   left, right
     select case (trim(coord_name))
         case ('GLON360M', 'GLON720M')
-            left = 0.d0
-            right = 360.d0
+            left = 0.0_JPRB
+            right = 360.0_JPRB
         case ('GLON1500M')
-            left = 123.d0
-            right = 148.d0
+            left = 123.0_JPRB
+            right = 148.0_JPRB
         case default
             write(LOG_UNIT, '(2a)') '[gt_lib/get_lon_coord InValidValueError] ', trim(coord_name)
             stop
@@ -50,18 +52,18 @@ subroutine get_lat_coord( &
 &   top, bottom)
     character(len=*), intent(in) :: &
     &   coord_name
-    real(8), intent(out) :: &
+    real(kind=JPRB), intent(out) :: &
     &   top, bottom
     select case (trim(coord_name))
         case ('GLAT180IM', 'GLAT360IM')
-            top = -90.d0
-            bottom = 90.d0
+            top = -90.0_JPRB
+            bottom = 90.0_JPRB
         case ('GLAT180M', 'GLAT360M')
-            top =  90.d0
-            bottom = -90.d0
+            top =  90.0_JPRB
+            bottom = -90.0_JPRB
         case ('GLAT1320IM')
-            top = 24.d0
-            bottom = 46.d0
+            top = 24.0_JPRB
+            bottom = 46.0_JPRB
         case default
             write(LOG_UNIT, '(2a)') '[gt_lib/get_lon_coord InValidValueError] ', trim(coord_name)
             stop
@@ -89,7 +91,7 @@ subroutine header2domain( &
 &   left, right, top, bottom)
     character(len=16), intent(in) :: &
     &   header(:)
-    real(8), intent(out) :: &
+    real(kind=JPRB), intent(out) :: &
     &   left, right, top, bottom
     call get_lon_coord( &
     &   header(29), &
@@ -130,7 +132,7 @@ subroutine read_headers( &
     &   unit
     character(len=16), intent(out) :: &
     &   header1(64), header2(64)
-    real, allocatable :: &
+    real(kind=JPRM), allocatable :: &
     &   tmpmap(:,:,:)
     integer :: &
     &   nx, ny, nz
@@ -140,7 +142,7 @@ subroutine read_headers( &
     &   header1(:), &
     &   nx, ny, nz)
 
-    allocate(tmpmap(nx, ny, nz), source=0.0)
+    allocate(tmpmap(nx, ny, nz), source=0.0_JPRM)
     read(unit) tmpmap(:,:,:)
     read(unit) header2
     close(unit)
@@ -150,7 +152,7 @@ end subroutine read_headers
 subroutine read_gt( &
 &   inputMap, file_is_end, &
 &   funit)
-    real, allocatable, intent(out) :: &
+    real(kind=JPRM), allocatable, intent(out) :: &
     &   inputMap(:,:,:)
     logical, intent(out) :: &
     &   file_is_end
@@ -166,7 +168,7 @@ subroutine read_gt( &
         call header2shape( &
         &   header(:), &
         &   nx, ny, nz)
-        allocate(inputMap(nx,ny,nz), source=0.0)
+        allocate(inputMap(nx,ny,nz), source=0.0_JPRM)
         file_is_end = .FALSE.
         read(funit) inputMap(:,:,:)
     elseif (ios == -1) then ! end of file

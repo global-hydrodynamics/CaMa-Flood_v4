@@ -1,6 +1,6 @@
 module const_mod
     use PARKIND1,  only: &
-    &   JPIM, JPRB, JPRM
+    &   JPIM, JPRB, JPRM, JPRD
     implicit none
 
     integer, parameter :: &
@@ -15,7 +15,7 @@ module const_mod
     &   RMIS = 1.E20_JPRM
     real   (kind=JPRB), parameter :: &
     &   DMIS = 1.E20_JPRB
-    double precision  , parameter :: &
-    &   STO_IGNORE = 1.d-9
+    real   (kind=JPRD), parameter :: &
+    &   STO_IGNORE = 1.e-9_JPRD
 
 end module const_mod
