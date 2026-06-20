@@ -80,6 +80,7 @@ CRESTSTO="" # see (3) set each year         # input restart FIle
 CRESTDIR="./"                               # output restart file directory
 CVNREST="restart"                           # output restart file prefix
 LRESTCDF=".FALSE."                          # .TRUE. to use netCDF restart file
+LRESTDBL=".TRUE."                           # .TRUE.: double precision, .FALSE.: single precision
 IFRQ_RST="0"                                # output restat frequency.
                                             # [0]: only at last time, [1,2,3,...,24] hourly restart, [30]: monthly restart
 #============================
@@ -269,6 +270,7 @@ CRESTSTO = "${CRESTSTO}"               ! restart file
 CRESTDIR = "${CRESTDIR}"               ! restart directory
 CVNREST  = "${CVNREST}"                ! restart variable name
 LRESTCDF = ${LRESTCDF}                 ! * true for netCDF restart file (double precision)
+LRESTDBL = ${LRESTDBL}                 ! true: double precision, false: single precision for restart file
 IFRQ_RST = ${IFRQ_RST}                 ! restart write frequency (1-24: hour, 0:end of run)
 /
 EOF
@@ -301,9 +303,9 @@ EOF
 
 # append HEAT-LINK config
 printf '\n' >> "${NMLIST}"
-cat ${BASE}/gosh/heat-link.nml >> ${NMLIST}
+cat ${BASE}/gosh/etc/heat-link.nml >> ${NMLIST}
 printf '\n' >> "${NMLIST}"
-cat ${BASE}/gosh/atm_GSWP3.nml >> ${NMLIST}
+cat ${BASE}/gosh/etc/atm_GSWP3.nml >> ${NMLIST}
 printf '\n' >> "${NMLIST}"
 
 #================================================

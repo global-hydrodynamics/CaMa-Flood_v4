@@ -18,6 +18,7 @@ OBJS = \
     ranked_array_class.o \
 	accumulated_array_class.o \
 	time_mod.o \
+	datetime_mod.o \
 	time_recorder_class.o \
 	bin_mod.o \
 	nc_mod.o \

@@ -70,6 +70,7 @@ ext-libs: ctrl
 		$(MAKE) -C $$d clean all; \
 	done
 drv: ctrl ext-libs $(DRV_OBJS)
+$(DRV_OBJS): ext-libs
 src: drv
 	ar -rv libcama.a $(OBJECTS)
 

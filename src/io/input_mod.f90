@@ -3,6 +3,8 @@ module input_mod
     &   JPIM, JPRB
     use YOS_CMF_INPUT, only: &
     &   LOGNAM, TMPNAM
+    use datetime_mod, only: &
+    &   DateTime
 
     use const_mod, only: &
     &   CLEN_ITEM
@@ -55,10 +57,9 @@ subroutine init_input_mod()
 end subroutine init_input_mod
 
 
-subroutine add_input(item, t)
+subroutine add_input(item, dt)
     character(len=*), intent(in) :: item
-    integer(kind=JPIM), intent(in) :: &
-    &   t ! [sec] current time
+    type(DateTime), intent(in) :: dt
     real(kind=JPRB) :: &
     &   arr(NSEQMAX)
 
@@ -66,7 +67,7 @@ subroutine add_input(item, t)
     if (.not. items%has_key(item)) then
         write(LOGNAM, '(2a)') '- add input: ', trim(item)
         call items%append(item)
-        call append_InputConf(confs, init_InputConf(item, TMPNAM, t))
+        call append_InputConf(confs, init_InputConf(item, TMPNAM, dt))
         IN_ITEM_NUM = IN_ITEM_NUM + 1
         arr(:) = 0.0_JPRB
         call append_ranked_array(arrs, arr)

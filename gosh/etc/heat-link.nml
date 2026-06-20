@@ -16,6 +16,13 @@ inpmat_names = '01', '02', '03', '04', '05', '06', '07', '08'
 &output_default
     dt = 86400
 /
+
+! === initialization/restart ===
+&restart_default
+    initial_state_is_dumped = .true.
+/
+&restart_config item='RIVWAT_TMP', file='.heatlink.bin', recnum=1, mapfmt=.true. &end
+
 ! atmospheric forcing
 &nml_out item='LWDN', path='./lwdn2000' &end
 &nml_out item='PSRF', path='./psrf2000' &end
