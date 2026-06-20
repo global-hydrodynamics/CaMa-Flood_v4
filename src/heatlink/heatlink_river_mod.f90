@@ -1,19 +1,30 @@
 module heatlink_river_mod
+#ifdef heatlink
     use PARKIND1, only: &
-    &   JPRB
+    &   JPIM, JPRB, JPRD
     use YOS_CMF_INPUT, only: &
     &   LOGNAM, LRESTART
     use YOS_CMF_MAP, only: &
-    &   NSEQMAX
+    &   NSEQMAX, NSEQALL, &
+    &   D2RIVLEN, D2RIVWTH
+    use YOS_CMF_DIAG, only: &
+    &   D2STORGE, &
+    &   D2RIVDPH, D2RIVVEL, D2FLDDPH, D2FLDVEL, D2FLDARE
+    use YOS_CMF_PROG, only: &
+    &   P2RIVSTO, P2FLDSTO
     use datetime_mod, only: &
     &   DateTime
 
+    use phys_const_mod, only: &
+    &   TMELT, RIVDPH_MIN
     use input_mod, only: &
     &   add_input, get_input
     use output_mod, only: &
     &   update_output
     use restart_mod, only: &
     &   read_restart, write_restart
+    use thermo_mod, only: &
+    &   calc_surface_heat_flux, calc_body_heat_flux, solve_heat_budget
     implicit none
     private
     public :: &
@@ -33,9 +44,26 @@ module heatlink_river_mod
     &   trof(:), & ! [K] tropopause temperature
     &   wind(:)  ! [m s-1] wind speed
 
+    real(kind=JPRB), allocatable, save :: &
+    &   hflx_srf(:), & ! [W m-2] surface heat flux (+: into water)
+    &   hflx_bdy(:)    ! [W m-2] body heat flux (+: into water)
+
+    real(kind=JPRB), allocatable, save :: &
+    &   watsto(:), & ! [m3] water storage (volume) in river + floodplain
+    &   rivdph(:), & ! [m] river depth
+    &   rivare(:), & ! [m2] river area
+    &   rivvel(:), & ! [m s-1] river velocity
+    &   flddph(:), & ! [m] flood depth
+    &   fldare(:), & ! [m2] flood area
+    &   fldvel(:)    ! [m s-1] flood velocity
+
 contains
 
 subroutine init_heatlink_river_mod(dt)
+    use topo_mod, only: &
+    &   init_topo_mod
+    use thermo_mod, only: &
+    &   init_thermo_mod
     type(DateTime), intent(in) :: dt
     logical :: is_found
 
@@ -49,8 +77,13 @@ subroutine init_heatlink_river_mod(dt)
     call add_input('TAIR', dt) ! [K]
     call add_input('TROF', dt) ! [K]
     call add_input('WIND', dt) ! [m s-1]
+    call init_topo_mod()
+    call init_thermo_mod()
 
     allocate(wattmp(NSEQMAX), source=0.0_JPRB)
+    allocate(hflx_srf(NSEQMAX), source=0.0_JPRB)
+    allocate(hflx_bdy(NSEQMAX), source=0.0_JPRB)
+
     allocate(lwdn(NSEQMAX), source=0.0_JPRB)
     allocate(psrf(NSEQMAX), source=0.0_JPRB)
     allocate(qair(NSEQMAX), source=0.0_JPRB)
@@ -59,9 +92,21 @@ subroutine init_heatlink_river_mod(dt)
     allocate(trof(NSEQMAX), source=0.0_JPRB)
     allocate(wind(NSEQMAX), source=0.0_JPRB)
 
+    allocate(watsto(NSEQMAX), source=0.0_JPRB)
+    allocate(rivdph(NSEQMAX), source=0.0_JPRB)
+    allocate(rivare(NSEQMAX), source=0.0_JPRB)
+    allocate(rivvel(NSEQMAX), source=0.0_JPRB)
+    allocate(flddph(NSEQMAX), source=0.0_JPRB)
+    allocate(fldare(NSEQMAX), source=0.0_JPRB)
+    allocate(fldvel(NSEQMAX), source=0.0_JPRB)
+
     if (LRESTART) then
         call read_restart('RIVWAT_TMP', dt, is_found, wattmp)
         if (.not. is_found) stop 'RIVWAT_TMP restart was not found.'
+    else
+        write(LOGNAM, '(a)') '  initialize river water temperature -> air temperature'
+        call get_input('TAIR', tair)
+        wattmp(:) = max(tair(:), TMELT)
     endif
     write(LOGNAM, *)
 end subroutine init_heatlink_river_mod
@@ -78,7 +123,7 @@ subroutine calc_heatlink(dt)
     call get_input('TAIR', tair)
     call get_input('TROF', trof)
     call get_input('WIND', wind)
-    trof(:) = max(trof(:), 273.15_JPRB)
+    trof(:) = max(trof(:), TMELT)
 
     call update_output('LWDN', lwdn)
     call update_output('PSRF', psrf)
@@ -88,9 +133,24 @@ subroutine calc_heatlink(dt)
     call update_output('TROF', trof)
     call update_output('WIND', wind)
 
-    wattmp(:) = tair(:) + 10.0_JPRB
+    call get_water()
+    call calc_surface_heat_flux( &
+    &   wattmp, watsto, lwdn, tair, psrf, qair, wind, &
+    &   hflx_srf)
+    call calc_body_heat_flux( &
+    &   watsto, &
+    &   swdn, &
+    &   rivdph, rivare, rivvel, &
+    &   flddph, fldare, fldvel, &
+    &   hflx_bdy)
+    call solve_heat_budget(wattmp, &
+    &   watsto, hflx_srf, hflx_bdy, rivare + fldare, dt)
+    wattmp(:) = max(wattmp(:), TMELT)
+
     call update_output('RIVWAT_TMP', wattmp)
+    write(LOGNAM, *) minval(wattmp), maxval(wattmp)
 end subroutine calc_heatlink
+
 
 subroutine write_heatlink_restart(dt)
     type(DateTime), intent(in) :: dt
@@ -98,9 +158,57 @@ subroutine write_heatlink_restart(dt)
     call write_restart('RIVWAT_TMP', dt, wattmp)
 end subroutine write_heatlink_restart
 
-subroutine fin_heatlink_river_mod()
-    write(LOGNAM, '(a)') '[fin_heatlink_river_mod]'
-    deallocate(wattmp)
-end subroutine fin_heatlink_river_mod
 
+subroutine get_water
+    real(kind=JPRB) :: &
+    &   dph_new, wth_new, sto_new, m
+    integer(kind=JPIM) :: &
+    &   iseq
+
+    watsto(:) = D2STORGE(:, 1)
+
+    rivdph(:) = D2RIVDPH(:, 1)
+    rivare(:) = D2RIVLEN(:, 1) * D2RIVWTH(:, 1)
+    rivvel(:) = D2RIVVEL(:, 1)
+    flddph(:) = D2FLDDPH(:, 1)
+    fldare(:) = D2FLDARE(:, 1)
+    fldvel(:) = D2FLDVEL(:, 1)
+
+    ! correct shallow flooded water
+    !$omp simd private(m, sto_new)
+    do iseq = 1, NSEQALL
+        m = merge(1.0_JPRB, 0.0_JPRB, (P2FLDSTO(iseq,1) > 0.0_JPRD) .and. (flddph(iseq) < RIVDPH_MIN))
+        sto_new = real(P2RIVSTO(iseq,1) + m * P2FLDSTO(iseq,1), JPRB)
+        rivdph(iseq) = (1.0_JPRB - m) * rivdph(iseq) + m * (sto_new / rivare(iseq))
+
+        flddph(iseq) = (1.0_JPRB - m) * flddph(iseq)
+        fldare(iseq) = (1.0_JPRB - m) * fldare(iseq)
+        fldvel(iseq) = (1.0_JPRB - m) * fldvel(iseq)
+    end do
+
+    ! correct shallow river water
+    !$omp simd private(dph_new, wth_new, m)
+    do iseq = 1, NSEQALL
+        dph_new = max(rivdph(iseq), RIVDPH_MIN)
+        m = merge(1.0_JPRB, 0.0_JPRB, dph_new > rivdph(iseq)) ! m = 1 if corrected, else 0
+
+        ! rivare_new = rivwth_old * rivdph_old / dph_new
+        wth_new = (1.0_JPRB - m) * D2RIVWTH(iseq,1) + m * D2RIVWTH(iseq,1) * rivdph(iseq) / dph_new
+        rivare(iseq) = D2RIVLEN(iseq,1) * wth_new
+        rivdph(iseq) = dph_new
+    end do
+end subroutine get_water
+
+
+subroutine fin_heatlink_river_mod()
+    use thermo_mod, only: &
+    &   fin_thermo_mod
+
+    write(LOGNAM, '(a)') '[fin_heatlink_river_mod]'
+    deallocate(wattmp, hflx_srf, hflx_bdy)
+    deallocate(lwdn, psrf, qair, swdn, tair, trof, wind)
+    deallocate(watsto, rivdph, rivare, rivvel, flddph, fldare, fldvel)
+    call fin_thermo_mod()
+end subroutine fin_heatlink_river_mod
+#endif
 end module heatlink_river_mod

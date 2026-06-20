@@ -21,6 +21,9 @@ USE YOS_CMF_MAP,        ONLY: I1UPST,   I1UPN,    I1P_OUT,  I1P_OUTN, I1P_INF, I
 USE YOS_CMF_PROG,       ONLY: P2RIVSTO, D2RIVOUT, P2FLDSTO, D2FLDOUT
 USE YOS_CMF_PROG,       ONLY: D2RIVOUT_PRE, D2RIVDPH_PRE, D2FLDOUT_PRE, D2FLDSTO_PRE
 USE YOS_CMF_DIAG,       ONLY: D2RIVDPH, D2RIVVEL, D2RIVINF, D2FLDDPH, D2FLDINF, D2SFCELV, D2STORGE
+#ifdef heatlink
+USE YOS_CMF_DIAG,       ONLY: D2FLDVEL
+#endif
 USE YOS_CMF_DIAG,       ONLY: D2SFCELV_PRE, D2DWNELV_PRE, D2FLDDPH_PRE
 !
 CONTAINS
@@ -36,6 +39,9 @@ INTEGER(KIND=JPIM),SAVE    :: ISEQ, JSEQ
 REAL(KIND=JPRB),SAVE       :: DFSTO,DSFC,DSFC_pr,DSLP,DFLW,DFLW_pr,DFLW_im,DARE,DARE_pr,DARE_im,DOUT_pr,DOUT,DVEL
 LOGICAL,SAVE               :: Mask
 REAL(KIND=JPRB),SAVE       :: RATE
+#ifdef heatlink
+REAL(KIND=JPRB), PARAMETER :: DARE_MIN = 1.0e-5_JPRB
+#endif
 !$OMP THREADPRIVATE          (JSEQ)
 !================================================
 
@@ -82,7 +88,7 @@ END DO
 
 !=== Floodplain Flow ===
 IF( LFLDOUT )THEN
-  !$OMP PARALLEL DO SIMD PRIVATE(DFSTO,DSFC,DSFC_pr,DSLP,DFLW,DFLW_pr,DFLW_im,DARE,DARE_pr,DARE_im,DOUT_pr,DOUT,Mask)
+  !$OMP PARALLEL DO SIMD PRIVATE(DFSTO,DSFC,DSFC_pr,DSLP,DFLW,DFLW_pr,DFLW_im,DARE,DARE_pr,DARE_im,DOUT_pr,DOUT,Mask,DVEL)
   DO ISEQ=1, NSEQRIV      
     DFSTO=REAL( P2FLDSTO(ISEQ,1),KIND=JPRB)
     DSFC   = MAX( D2SFCELV(ISEQ,1),    D2DWNELV(ISEQ,1) )
@@ -104,13 +110,18 @@ IF( LFLDOUT )THEN
     DOUT_pr = D2FLDOUT_PRE(ISEQ,1)
     DOUT = (DOUT_pr + PGRV*DT*DARE_im*DSLP) &
           * (1._JPRB +PGRV*DT*PMANFLD**2._JPRB * abs(DOUT_pr)*DFLW_im**(-4._JPRB/3._JPRB)*DARE_im**(-1._JPRB) )**(-1._JPRB)
-
+#ifdef heatlink
+    DVEL = D2FLDOUT(ISEQ,1) / max(DARE, DARE_MIN)  !! avoid zero division
+#endif
     Mask=(DFLW_im>1.E-5_JPRB .and. DARE>1.E-5_JPRB)  !! replace small depth location with zero
     D2FLDOUT(ISEQ,1) = merge( DOUT, 0._JPRB, Mask)
 
     DOUT=D2FLDOUT(ISEQ,1)
     Mask=( D2FLDOUT(ISEQ,1)*D2RIVOUT(ISEQ,1)>0._JPRB ) !! river and floodplain different direction
     D2FLDOUT(ISEQ,1) = merge( DOUT, 0._JPRB, Mask)
+#ifdef heatlink
+    D2FLDVEL(ISEQ,1) = merge( DVEL, 0._JPRB, Mask)
+#endif
   END DO
   !$OMP END PARALLEL DO SIMD
 ENDIF
@@ -141,7 +152,7 @@ END DO
 
 !=== floodplain mouth flow ===
 IF( LFLDOUT )THEN
-  !$OMP PARALLEL DO SIMD PRIVATE(DFSTO,DSFC,DSFC_pr,DSLP,DFLW,DFLW_pr,DFLW_im,DARE,DARE_pr,DARE_im,DOUT_pr,DOUT,Mask)
+  !$OMP PARALLEL DO SIMD PRIVATE(DFSTO,DSFC,DSFC_pr,DSLP,DFLW,DFLW_pr,DFLW_im,DARE,DARE_pr,DARE_im,DOUT_pr,DOUT,Mask,DVEL)
   DO ISEQ=NSEQRIV+1, NSEQALL
     DFSTO =REAL( P2FLDSTO(ISEQ,1),KIND=JPRB)
     DSLP = ( D2SFCELV(ISEQ,1) - D2DWNELV(ISEQ,1) ) * PDSTMTH ** (-1._JPRB)
@@ -160,13 +171,22 @@ IF( LFLDOUT )THEN
     DOUT_pr = D2FLDOUT_PRE(ISEQ,1)
     DOUT = ( DOUT_pr + PGRV*DT*DARE_im*DSLP ) &
            * (1._JPRB + PGRV*DT*PMANFLD**2._JPRB * abs(DOUT_pr)*DFLW_im**(-4._JPRB/3._JPRB)*DARE_im**(-1._JPRB) )**(-1._JPRB)
-
+#ifdef heatlink
+    DVEL = D2FLDOUT(ISEQ,1) / max(DARE, DARE_MIN)  !! avoid zero division
+#endif
     Mask=(DFLW_im>1.E-5 .and. DARE>1.E-5)   !! replace small depth location with zero
     D2FLDOUT(ISEQ,1) = merge( DOUT, 0._JPRB, Mask)
+#ifdef heatlink
+    D2FLDVEL(ISEQ,1) = merge( DVEL, 0._JPRB, Mask)
+#endif
 
     DOUT=D2FLDOUT(ISEQ,1)
     Mask=( D2FLDOUT(ISEQ,1)*D2RIVOUT(ISEQ,1)>0._JPRB ) !! river and floodplain different direction
     D2FLDOUT(ISEQ,1) = merge( DOUT, 0._JPRB, Mask)
+#ifdef heatlink
+    DVEL=D2FLDVEL(ISEQ,1)
+    D2FLDVEL(ISEQ,1) = merge( DVEL, 0._JPRB, Mask)
+#endif
   END DO
   !$OMP END PARALLEL DO SIMD
 ENDIF
@@ -179,6 +199,10 @@ DO ISEQ=1, NSEQRIV
   RATE = min( 0.05_JPRB*D2STORGE(ISEQ,1)/DOUT, 1._JPRB)
   D2RIVOUT(ISEQ,1)=D2RIVOUT(ISEQ,1)*RATE
   D2FLDOUT(ISEQ,1)=D2FLDOUT(ISEQ,1)*RATE
+  D2RIVVEL(ISEQ,1)=D2RIVVEL(ISEQ,1)*RATE
+#ifdef heatlink
+  D2FLDVEL(ISEQ,1)=D2FLDVEL(ISEQ,1)*RATE
+#endif
 END DO
 !$OMP END PARALLEL DO SIMD
 

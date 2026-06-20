@@ -31,9 +31,9 @@ array_mod.o: FFLAGS += -Wno-uninitialized -Wno-maybe-uninitialized
 
 .SUFFIXES: .o .F90 .f90
 %.o: %.F90
-	$(FCMP) -c $(FFLAGS) $(INC) $(MODS) $*.F90 -o $*.o
+	$(FCMP) -c $(FFLAGS) $(INC) $(MODS) $(CFLAGS) $< -o $@
 %.o: %.f90
-	$(FCMP) -c $(FFLAGS) $(INC) $(MODS) $*.f90 -o $*.o
+	$(FCMP) -c $(FFLAGS) $(INC) $(MODS) $(CFLAGS) $< -o $@
 
 $(libname): $(OBJS)
 	ar rcs $@ $^
