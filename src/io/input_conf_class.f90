@@ -5,6 +5,8 @@ module input_conf_class
     &   JPIM, JPRB, JPRM
     use YOS_CMF_INPUT, only: &
     &   LOGNAM
+    use datetime_mod, only: &
+    &   DateTime, datetime2string
 
     use const_mod, only: &
     &   CLEN_ITEM, CLEN_PATH, CLEN_SHORT
@@ -97,11 +99,11 @@ contains
 ! ===================================================================================================
 ! Constructor
 ! ===================================================================================================
-function init_InputConf(item_name, nml_unit, t) result(obj)
+function init_InputConf(item_name, nml_unit, start_dt) result(obj)
     type(InputConf) obj
     character(len=*), intent(in) :: item_name
     integer(kind=JPIM), intent(in) :: nml_unit
-    integer(kind=JPIM), intent(in) :: t ! [sec] time
+    type(DateTime), intent(in) :: start_dt
     character(len=CLEN_SHORT) :: &
     &   fmt, dt_unit
     character(len=CLEN_ITEM) :: &
@@ -200,15 +202,15 @@ function init_InputConf(item_name, nml_unit, t) result(obj)
 !write(LOGNAM, *) nx, ny, is_n2s, catm, fldstg
     obj%inpmat_idx = find_inpmat(obj%map)
     obj%dt = dt2sec(dt_val, dt_unit)
-    obj%now_t = t
-    obj%nxt_t = t
+    obj%now_t = 0_JPIM
+    obj%nxt_t = 0_JPIM
     obj%is_updated = .FALSE.
 
     write(LOGNAM, '(3a,i2,2a,i0)') '    shape: ', trim(obj%map%str())
     write(LOGNAM, '(a,i0,a)')      '    temporal resolution: ', dt_val, dt_unit
     write(LOGNAM, '(a,i0)')        '    inpmat_idx: ', obj%inpmat_idx
     write(LOGNAM, '(a,i0)')        '    nz = ', nz
-!    write(LOGNAM, '(2a)')      '    input datetime : ', t%strftime('%Y/%m/%d/%H:%M')
+    write(LOGNAM, '(2a)')          '    start datetime: ', datetime2string(start_dt)
     write(LOGNAM, '(2(a,L,a,e10.2))')  '    scale  = ', obj%apply_scale, ' ', obj%scale
     write(LOGNAM, '(2(a,L,a,e10.2))')  '    offset = ', obj%apply_offset, ' ', obj%offset
 end function init_InputConf

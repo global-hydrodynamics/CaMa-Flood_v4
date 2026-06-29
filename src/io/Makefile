@@ -21,7 +21,8 @@ LIBOBJS = \
 	output_writer_class.o \
 	output_mod.o \
 	input_conf_class.o \
-	input_mod.o
+	input_mod.o \
+	restart_mod.o
 
 .SUFFIXES: .o .F90 .f90
 %.o: %.F90

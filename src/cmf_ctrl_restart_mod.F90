@@ -766,4 +766,31 @@ END SUBROUTINE WRTE_REST_CDF
 END SUBROUTINE CMF_RESTART_WRITE
 !####################################################################
 
+!####################################################################
+LOGICAL FUNCTION restart_is_write_time()
+! return true when additional restart helpers should write state
+USE YOS_CMF_TIME,       ONLY: KSTEP, NSTEPS, JDD, JHOUR, JMIN
+IMPLICIT NONE
+!================================================
+restart_is_write_time=.FALSE.
+
+IF ( IFRQ_RST>=0 .and. KSTEP==NSTEPS )THEN         !! end of run
+  restart_is_write_time=.TRUE.
+ENDIF
+
+IF ( IFRQ_RST>=1 .and. IFRQ_RST<=24 )THEN
+  IF ( MOD(JHOUR,IFRQ_RST)==0 .and. JMIN==0 )THEN  !! at selected hour
+    restart_is_write_time=.TRUE.
+  ENDIF
+ENDIF
+
+IF ( IFRQ_RST==30 )THEN
+  IF ( JDD==1 .and. JHOUR==0 .and. JMIN==0 )THEN  !! at start of month
+    restart_is_write_time=.TRUE.
+  ENDIF
+ENDIF
+
+END FUNCTION restart_is_write_time
+!####################################################################
+
 END MODULE CMF_CTRL_RESTART_MOD

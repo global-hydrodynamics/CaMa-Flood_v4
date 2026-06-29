@@ -15,7 +15,7 @@ PROGRAM MAIN_cmf
 USE PARKIND1,                ONLY: JPRB, JPIM
 USE YOS_CMF_INPUT,           ONLY: NXIN, NYIN, DT,DTIN, LTRACE, &
 &   LHEATLINK
-USE YOS_CMF_TIME,            ONLY: NSTEPS
+USE YOS_CMF_TIME,            ONLY: NSTEPS, IYYYYMMDD, IHOUR
 USE CMF_DRV_CONTROL_MOD,     ONLY: CMF_DRV_INPUT,   CMF_DRV_INIT,    CMF_DRV_END
 USE CMF_DRV_ADVANCE_MOD,     ONLY: CMF_DRV_ADVANCE
 USE CMF_CTRL_FORCING_MOD,    ONLY: CMF_FORCING_GET, CMF_FORCING_PUT
@@ -32,12 +32,16 @@ USE cmf_ctrl_sedinp_mod,     ONLY: cmf_sed_forcing
 #endif
 !** tracer options**
 #ifdef heatlink
+USE datetime_mod, only: &
+&   date_hour2datetime
 USE dim_converter, only: &
 &   init_dim_converter
 USE input_mod, only: &
 &   init_input_mod, update_input
 USE output_mod, only: &
 &   init_output_mod, write_output, fin_output_mod
+USE restart_mod, only: &
+&   init_restart_mod
 USE heatlink_river_mod,      ONLY: &
 &   init_heatlink_river_mod, calc_heatlink, fin_heatlink_river_mod
 #endif
@@ -71,7 +75,8 @@ if (LHEATLINK) then
   call init_dim_converter()
   call init_input_mod()
   call init_output_mod()
-  call init_heatlink_river_mod(0)
+  call init_restart_mod()
+  call init_heatlink_river_mod(date_hour2datetime(IYYYYMMDD, IHOUR))
 endif
 #endif
 !============================
