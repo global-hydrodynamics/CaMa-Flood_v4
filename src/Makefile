@@ -16,6 +16,15 @@ TOP := $(abspath ..)
 include   ../adm/Mkinclude
 
 #=============================
+# These variables are optional.
+# If EXT_LIBS is empty, the build should behave as the original Makefile.
+#=============================
+EXT_LIBS ?=
+
+INCDIRS ?= $(INC) $(foreach d,$(EXT_LIBS),-I$(abspath $(d)))
+LIBS    ?= $(LIB)
+
+#=============================
 #*** module
 YOS_OBJS = \
 	parkind1.o      \

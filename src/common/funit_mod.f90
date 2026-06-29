@@ -2,7 +2,8 @@ module funit_mod
     implicit none
 
     integer, parameter :: &
-    &   STDOUT = 6
+    &   STDOUT = 6, &
+    &   TMP_UNIT = 11
     integer, protected :: &
     &   LOG_UNIT = STDOUT
 
