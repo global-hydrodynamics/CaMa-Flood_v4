@@ -36,8 +36,8 @@ USE CMF_CTRL_PHYSICS_MOD,    ONLY: CMF_PHYSICS_ADVANCE, CMF_PHYSICS_FLDSTG
 USE CMF_CTRL_RESTART_MOD,    ONLY: CMF_RESTART_WRITE, restart_is_write_time
 USE CMF_CTRL_OUTPUT_MOD,     ONLY: CMF_OUTPUT_WRITE, CMF_OUTTXT_WRTE
 USE CMF_CTRL_DAMOUT_MOD,     ONLY: CMF_DAMOUT_WRTE
-use datetime_mod,            only: DateTime, date_hour2datetime
 #ifdef heatlink
+use datetime_mod,            only: DateTime, date_hour2datetime
 use heatlink_river_mod,      only: write_heatlink_restart
 #endif
 
@@ -60,7 +60,9 @@ INTEGER(KIND=JPIM)              :: KSTEPS             !! Number of timesteps to 
 !* Local variables 
 INTEGER(KIND=JPIM)              :: ISTEP              !! Time Step
 REAL(KIND=JPRB)                 :: ZTT0, ZTT1, ZTT2   !! Time elapsed related 
+#ifdef heatlink
 type(DateTime)                  :: restart_dt
+#endif
 !$ INTEGER(KIND=JPIM)           :: NTHREADS           !! OpenMP thread number
 !==========================================================
 

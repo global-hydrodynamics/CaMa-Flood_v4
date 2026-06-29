@@ -67,6 +67,14 @@ OBJECTS = $(YOS_OBJS) $(CALC_OBJS) $(CTRL_OBJS) $(DRV_OBJS)
 SUBLIBS := $(foreach d,$(EXT_LIBS),$(abspath $(d))/lib$(notdir $(d)).a)
 
 #=============================
+#*** suffix rule
+.SUFFIXES : .o .F90 .f90
+.F90.o:
+	$(FCMP) $(FFLAGS) -c $(INCDIRS) $(MODS) $(CFLAGS) $< -o $@
+.f90.o:
+	$(FCMP) $(FFLAGS) -c $(INCDIRS) $(MODS) $(CFLAGS) $< -o $@
+
+#=============================
 #*** build steps
 .PHONY: all ext-libs clean
 yos: $(YOS_OBJS)
@@ -87,7 +95,7 @@ src: drv
 SRC_SUBLIBS := $(wildcard $(SRC_ROOT)/*/lib*.a)
 TARGET = MAIN_cmf
 $(TARGET): $(OBJECTS) src $(TARGET).o
-	$(FC) $(LFLAGS) $@.o $(OBJECTS) $(SUBLIBS) -o $@ $(LIBS)
+	$(FCMP) $(LFLAGS) $@.o $(OBJECTS) $(SUBLIBS) -o $@ $(LIBS)
 	@install_name_tool -delete_rpath $(NETCDFDIR)/lib $@ 2>/dev/null || true
 # bug in MacOSX libcama.a does not work
 #	$(FCMP) $(FFLAGS) $(LFLAGS) $@.o libcama.a -o $@ $(LIB)
