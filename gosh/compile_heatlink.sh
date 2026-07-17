@@ -59,3 +59,16 @@ do
 done
 
 echo "All common unit tests passed."
+
+echo "Building and running physics unit tests"
+make -C "${ROOT}/src/phys" \
+    MKINCLUDE="${ROOT}/adm/Mkinclude_heatlink" \
+    BUILD_MODE="${BUILD_MODE}" test
+
+for test_exe in test_heat_budget
+do
+    echo "  ${test_exe}"
+    "${ROOT}/src/phys/${test_exe}"
+done
+
+echo "All physics unit tests passed."

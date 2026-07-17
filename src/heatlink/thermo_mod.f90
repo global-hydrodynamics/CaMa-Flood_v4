@@ -14,7 +14,7 @@ module thermo_mod
     &   calc_SWd, calc_SWd_penetration_river, calc_SWd_penetration_flood, &
     &   calc_friction
     use heat_budget_mod, only: &
-    &   calc_water_heat_budget_noice
+    &   update_liquid_temperature_no_phase_change
     use output_mod, only: &
     &   update_output
     use topo_mod, only: &
@@ -200,7 +200,8 @@ subroutine solve_heat_budget(wattmp, watvol, hflx_srf, hflx_bdy, srfare, dt)
     do iseq = 1, NSEQALL
         q_net = hflx_srf(iseq) + hflx_bdy(iseq)
         dE    = q_net * srfare(iseq) * dt
-        call calc_water_heat_budget_noice(wattmp(iseq), watvol(iseq), dE)
+        call update_liquid_temperature_no_phase_change( &
+        &   wattmp(iseq), watvol(iseq), dE)
     end do
 end subroutine solve_heat_budget
 #endif
