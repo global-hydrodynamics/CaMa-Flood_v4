@@ -7,7 +7,7 @@ program test_heat_budget
     &   STO_IGNORE
     use phys_const_mod, only: &
     &   CW, RW, CI, RI, HFUS, TMELT, SB, &
-    &   iceSWref, iceLWref, iceSWatten, Kice2air
+    &   iceSWref, iceLWref, iceSWatten, Kice2air, KI
     use heat_flux_mod, only: &
     &   calc_ice_surface_heat_flux
     use heat_budget_mod, only: &
@@ -617,37 +617,104 @@ subroutine test_ice_surface_heat_flux()
     real(kind=JPRB) :: &
     &   net_ice_heat_flux_w_m2, &      ! [W m-2] Computed net atmospheric heat flux into ice.
     &   transmitted_shortwave_w_m2, & ! [W m-2] Computed shortwave radiation below the ice.
+    &   upward_conductive_heat_flux_w_m2, & ! [W m-2] Computed bottom-to-surface ice conduction.
     &   downward_shortwave_w_m2, &    ! [W m-2] Downward shortwave radiation above the ice.
     &   downward_longwave_w_m2, &     ! [W m-2] Downward longwave radiation above the ice.
     &   air_temperature_k, &          ! [K] Near-surface air temperature.
     &   ice_thickness_m, &            ! [m] Mean ice thickness.
-    &   surface_temperature_k, &      ! [K] Expected ice-surface temperature.
+    &   ice_surface_temperature_k, &  ! [K] Computed upper-surface ice temperature.
+    &   bottom_thermal_conductance_w_m2_k, & ! [W m-2 K-1] Conductance to ice bottom at TMELT.
     &   expected_transmitted_w_m2, &  ! [W m-2] Expected shortwave transmission through the ice.
     &   expected_net_flux_w_m2        ! [W m-2] Expected net atmospheric heat flux into ice.
 
     downward_shortwave_w_m2 = 120.0_JPRB
     downward_longwave_w_m2 = 280.0_JPRB
-    air_temperature_k = TMELT + 3.0_JPRB
     ice_thickness_m = 0.2_JPRB
-    surface_temperature_k = TMELT
+    bottom_thermal_conductance_w_m2_k = KI / ice_thickness_m
     expected_transmitted_w_m2 = (1.0_JPRB - iceSWref) * &
     &   downward_shortwave_w_m2 * exp(-iceSWatten * ice_thickness_m)
+
+    ! Cold forcing produces a linear temperature gradient whose upward
+    ! conductive flux balances the atmospheric loss at the upper surface.
+    air_temperature_k = TMELT - 10.0_JPRB
+    call calc_ice_surface_heat_flux( &
+    &   net_ice_heat_flux_w_m2, transmitted_shortwave_w_m2, &
+    &   ice_surface_temperature_k, upward_conductive_heat_flux_w_m2, &
+    &   downward_shortwave_w_m2, downward_longwave_w_m2, &
+    &   air_temperature_k, ice_thickness_m, bottom_thermal_conductance_w_m2_k)
+
+    call assert_close(transmitted_shortwave_w_m2, expected_transmitted_w_m2, 1.0e-13_JPRB, &
+    &   'cold ice shortwave transmission [W m-2]')
+    call assert_close(net_ice_heat_flux_w_m2 + upward_conductive_heat_flux_w_m2, &
+    &   0.0_JPRB, 0.0_JPRB, 'cold ice surface energy balance [W m-2]')
+    call assert_close(atmospheric_ice_flux_w_m2( &
+    &   ice_surface_temperature_k, downward_shortwave_w_m2, &
+    &   transmitted_shortwave_w_m2, downward_longwave_w_m2, air_temperature_k), &
+    &   net_ice_heat_flux_w_m2, 1.0e-12_JPRB, 'cold ice atmospheric flux [W m-2]')
+    call assert_close(min(ice_surface_temperature_k, TMELT), &
+    &   ice_surface_temperature_k, 0.0_JPRB, 'cold ice surface temperature cap [K]')
+    if (ice_surface_temperature_k >= TMELT .or. &
+    &   upward_conductive_heat_flux_w_m2 <= 0.0_JPRB) then
+        error stop '[TEST FAILED] cold ice must have a positive temperature gradient'
+    endif
+
+    ! Warm forcing leaves the surface at TMELT and supplies energy for melting.
+    air_temperature_k = TMELT + 3.0_JPRB
     expected_net_flux_w_m2 = &
     &   (1.0_JPRB - iceSWref) * downward_shortwave_w_m2 - expected_transmitted_w_m2 + &
     &   (1.0_JPRB - iceLWref) * downward_longwave_w_m2 - &
-    &   (1.0_JPRB - iceLWref) * SB * surface_temperature_k**4 + &
-    &   Kice2air * (air_temperature_k - surface_temperature_k)
+    &   (1.0_JPRB - iceLWref) * SB * TMELT**4 + &
+    &   Kice2air * (air_temperature_k - TMELT)
 
     call calc_ice_surface_heat_flux( &
     &   net_ice_heat_flux_w_m2, transmitted_shortwave_w_m2, &
+    &   ice_surface_temperature_k, upward_conductive_heat_flux_w_m2, &
     &   downward_shortwave_w_m2, downward_longwave_w_m2, &
-    &   air_temperature_k, ice_thickness_m)
+    &   air_temperature_k, ice_thickness_m, bottom_thermal_conductance_w_m2_k)
 
-    call assert_close(transmitted_shortwave_w_m2, expected_transmitted_w_m2, 1.0e-13_JPRB, &
-    &   'ice surface shortwave transmission [W m-2]')
+    call assert_close(ice_surface_temperature_k, TMELT, 0.0_JPRB, &
+    &   'melting ice surface temperature [K]')
+    call assert_close(upward_conductive_heat_flux_w_m2, 0.0_JPRB, 0.0_JPRB, &
+    &   'melting ice conductive flux [W m-2]')
     call assert_close(net_ice_heat_flux_w_m2, expected_net_flux_w_m2, 1.0e-13_JPRB, &
-    &   'ice surface net atmospheric flux [W m-2]')
+    &   'melting ice atmospheric flux [W m-2]')
+
+    ! An insulated ice body cools until its atmospheric surface flux is zero.
+    air_temperature_k = TMELT - 10.0_JPRB
+    call calc_ice_surface_heat_flux( &
+    &   net_ice_heat_flux_w_m2, transmitted_shortwave_w_m2, &
+    &   ice_surface_temperature_k, upward_conductive_heat_flux_w_m2, &
+    &   downward_shortwave_w_m2, downward_longwave_w_m2, &
+    &   air_temperature_k, ice_thickness_m, 0.0_JPRB)
+
+    call assert_close(net_ice_heat_flux_w_m2, 0.0_JPRB, 0.0_JPRB, &
+    &   'insulated cold ice atmospheric flux [W m-2]')
+    call assert_close(upward_conductive_heat_flux_w_m2, 0.0_JPRB, 0.0_JPRB, &
+    &   'insulated cold ice conductive flux [W m-2]')
+    call assert_close(atmospheric_ice_flux_w_m2( &
+    &   ice_surface_temperature_k, downward_shortwave_w_m2, &
+    &   transmitted_shortwave_w_m2, downward_longwave_w_m2, air_temperature_k), &
+    &   0.0_JPRB, 1.0e-12_JPRB, 'insulated cold ice surface balance [W m-2]')
 end subroutine test_ice_surface_heat_flux
+
+
+pure real(kind=JPRB) function atmospheric_ice_flux_w_m2( &
+    &   surface_temperature_k, downward_shortwave_w_m2, &
+    &   transmitted_shortwave_w_m2, downward_longwave_w_m2, &
+    &   air_temperature_k) result(net_flux_w_m2)
+    real(kind=JPRB), intent(in) :: &
+    &   surface_temperature_k, &       ! [K] Ice upper-surface temperature.
+    &   downward_shortwave_w_m2, &     ! [W m-2] Downward shortwave radiation above the ice.
+    &   transmitted_shortwave_w_m2, &  ! [W m-2] Shortwave radiation transmitted through the ice.
+    &   downward_longwave_w_m2, &      ! [W m-2] Downward longwave radiation above the ice.
+    &   air_temperature_k              ! [K] Near-surface air temperature.
+
+    net_flux_w_m2 = &
+    &   (1.0_JPRB - iceSWref) * downward_shortwave_w_m2 - transmitted_shortwave_w_m2 + &
+    &   (1.0_JPRB - iceLWref) * downward_longwave_w_m2 - &
+    &   (1.0_JPRB - iceLWref) * SB * surface_temperature_k**4 + &
+    &   Kice2air * (air_temperature_k - surface_temperature_k)
+end function atmospheric_ice_flux_w_m2
 
 
 subroutine check_equilibration( &

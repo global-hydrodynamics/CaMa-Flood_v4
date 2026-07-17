@@ -210,7 +210,8 @@ end subroutine solve_heat_budget
 
 ! ==============================================================================================
 ! Solve separate liquid-water, water-surface ice, and immobile excess-ice budgets.
-! Ice is represented at TMELT; there is no prognostic ice sensible-temperature state.
+! The zero-layer ice temperature profile is diagnosed outside this routine.
+! Ice sensible heat is not prognostic, so stored ice energy remains referenced at TMELT.
 ! ==============================================================================================
 subroutine solve_water_ice_heat_budget( &
     &   water_temperature_k, liquid_water_volume_m3, &

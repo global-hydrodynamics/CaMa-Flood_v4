@@ -241,6 +241,10 @@ dt = ${OUTPUT_DT}                   ! [s] Heatlink output interval.
 &nml_out item='RIVICE_THK', path='./rivicethk2000', is_mean=.false. &end
 &nml_out item='RIVICE_FRC', path='./rivicefrc2000', is_mean=.false. &end
 &nml_out item='RIVICE_VOL_EXCESS', path='./rivicevolexcess2000', is_mean=.false. &end
+&nml_out item='RIVICE_SRF_TMP', path='./rivicetmpsrf2000', is_mean=.false. &end
+&nml_out item='RIVICE_MEAN_TMP', path='./rivicetmpmean2000', is_mean=.false. &end
+&nml_out item='RIVICE_COND_FLX', path='./rivicecondflx2000', is_mean=.false. &end
+&nml_out item='RIVICE_EXCESS_TMP', path='./riviceexcesstmp2000', is_mean=.false. &end
 
 &restart_default
 initial_state_is_dumped = .false.
@@ -338,7 +342,11 @@ if [ "$ICE_ENABLED" -eq 1 ]; then
         riviceare2000.bin \
         rivicethk2000.bin \
         rivicefrc2000.bin \
-        rivicevolexcess2000.bin
+        rivicevolexcess2000.bin \
+        rivicetmpsrf2000.bin \
+        rivicetmpmean2000.bin \
+        rivicecondflx2000.bin \
+        riviceexcesstmp2000.bin
     do
         ice_path=${RUN_DIR}/${ice_output}
         if [ ! -f "$ice_path" ]; then
@@ -362,6 +370,21 @@ if [ "$ICE_ENABLED" -eq 1 ]; then
             exit 1
         fi
     done
+
+    if ! (LC_ALL=C od -An -v -t f4 "${RUN_DIR}/rivicetmpsrf2000.bin"; \
+          LC_ALL=C od -An -v -t f4 "${RUN_DIR}/rivicetmpmean2000.bin"; \
+          LC_ALL=C od -An -v -t f4 "${RUN_DIR}/riviceexcesstmp2000.bin") | awk '
+        {
+            for (i = 1; i <= NF; i++) {
+                value = $i + 0.0
+                is_missing = value >= 0.999e20 && value <= 1.001e20
+                if (!is_missing && value > 273.151) exit 1
+            }
+        }
+    '; then
+        echo "Found a river-ice temperature above the melting point." >&2
+        exit 1
+    fi
 
     if ! (LC_ALL=C od -An -v -t f4 "${RUN_DIR}/rivicevol2000.bin"; \
           LC_ALL=C od -An -v -t f4 "${RUN_DIR}/rivicevolexcess2000.bin") | awk '

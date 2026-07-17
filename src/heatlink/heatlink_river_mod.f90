@@ -15,10 +15,12 @@ module heatlink_river_mod
     use datetime_mod, only: &
     &   DateTime
 
+    use const_mod, only: &
+    &   STO_IGNORE
     use phys_const_mod, only: &
-    &   TMELT, RIVDPH_MIN
+    &   TMELT, RIVDPH_MIN, KI
     use ice_cover_mod, only: &
-    &   diagnose_ice_shape, update_ice_cover_state
+    &   ICE_THICKNESS_MIN_M, diagnose_ice_shape, update_ice_cover_state
     use heat_flux_mod, only: &
     &   calc_ice_surface_heat_flux
     use heat_budget_mod, only: &
@@ -50,7 +52,11 @@ module heatlink_river_mod
     &   icethickness(:), & ! [m] Mean thickness over the ice-covered area.
     &   icefraction(:), &  ! [-] Fraction of the water surface covered by ice.
     &   icearea_excess(:), & ! [m2] Effective atmospheric-exchange area of immobile excess ice.
-    &   icethickness_excess(:) ! [m] Mean thickness over the effective excess-ice area.
+    &   icethickness_excess(:), & ! [m] Mean thickness over the effective excess-ice area.
+    &   ice_surface_temperature(:), & ! [K] Upper-surface temperature of water-surface ice.
+    &   ice_mean_temperature(:), & ! [K] Vertical-mean temperature of water-surface ice.
+    &   ice_upward_conductive_heat_flux(:), & ! [W m-2] Bottom-to-surface conductive flux within water-surface ice.
+    &   ice_excess_surface_temperature(:) ! [K] Surface temperature of insulated immobile excess ice.
 
     real(kind=JPRB), parameter :: &
     &   RIVER_ICE_THICKNESS_MAX_M = 20.0_JPRB ! [m] Maximum ice thickness retained on the water surface.
@@ -117,6 +123,10 @@ subroutine init_heatlink_river_mod(dt)
     allocate(icefraction(NSEQMAX), source=0.0_JPRB)
     allocate(icearea_excess(NSEQMAX), source=0.0_JPRB)
     allocate(icethickness_excess(NSEQMAX), source=0.0_JPRB)
+    allocate(ice_surface_temperature(NSEQMAX), source=TMELT)
+    allocate(ice_mean_temperature(NSEQMAX), source=TMELT)
+    allocate(ice_upward_conductive_heat_flux(NSEQMAX), source=0.0_JPRB)
+    allocate(ice_excess_surface_temperature(NSEQMAX), source=TMELT)
     allocate(hflx_srf(NSEQMAX), source=0.0_JPRB)
     allocate(hflx_bdy(NSEQMAX), source=0.0_JPRB)
     allocate(hflx_ice_srf(NSEQMAX), source=0.0_JPRB)
@@ -227,6 +237,10 @@ subroutine calc_heatlink(dt)
         call update_output('RIVICE_VOL_EXCESS', icevol_excess)
         call update_output('RIVICE_EXCESS_ARE', icearea_excess)
         call update_output('RIVICE_EXCESS_THK', icethickness_excess)
+        call update_output('RIVICE_SRF_TMP', ice_surface_temperature)
+        call update_output('RIVICE_MEAN_TMP', ice_mean_temperature)
+        call update_output('RIVICE_COND_FLX', ice_upward_conductive_heat_flux)
+        call update_output('RIVICE_EXCESS_TMP', ice_excess_surface_temperature)
         call update_output('RIVICE_MASS_ERROR', phase_mass_budget_error)
         call update_output('RIVICE_ENERGY_ERROR', phase_energy_budget_error)
         call update_output('RIVICE_ENERGY_UNAPPLIED', phase_unapplied_energy)
@@ -296,21 +310,56 @@ end subroutine update_ice_cover
 
 subroutine calc_ice_heat_fluxes()
     real(kind=JPRB) :: &
-    &   transmitted_shortwave_w_m2 ! [W m-2] Shortwave radiation transmitted through excess ice.
+    &   transmitted_shortwave_w_m2, & ! [W m-2] Shortwave radiation transmitted through excess ice.
+    &   bottom_thermal_conductance_w_m2_k, & ! [W m-2 K-1] Ice conductance to a bottom boundary at TMELT.
+    &   excess_upward_conductive_heat_flux_w_m2 ! [W m-2] Bottom-to-surface flux within excess ice.
     integer(kind=JPIM) :: &
     &   iseq                         ! [-] Vector index of the river cell.
 
-    !$omp simd private(transmitted_shortwave_w_m2)
+    !$omp simd private(transmitted_shortwave_w_m2, bottom_thermal_conductance_w_m2_k, &
+    !$omp& excess_upward_conductive_heat_flux_w_m2)
     do iseq = 1, NSEQALL
-        call calc_ice_surface_heat_flux( &
-        &   hflx_ice_srf(iseq), swdn_to_water(iseq), &
-        &   swdn(iseq), lwdn(iseq), tair(iseq), icethickness(iseq))
-        swdn_to_water(iseq) = (1.0_JPRB - icefraction(iseq)) * swdn(iseq) + &
-        &   icefraction(iseq) * swdn_to_water(iseq)
+        if (icearea(iseq) > 0.0_JPRB .and. icevol(iseq) > 0.0_JPRB) then
+            if (watsto(iseq) > real(STO_IGNORE, kind=JPRB)) then
+                bottom_thermal_conductance_w_m2_k = &
+                &   KI / max(icethickness(iseq), ICE_THICKNESS_MIN_M)
+            else
+                bottom_thermal_conductance_w_m2_k = 0.0_JPRB
+            endif
+            call calc_ice_surface_heat_flux( &
+            &   hflx_ice_srf(iseq), swdn_to_water(iseq), &
+            &   ice_surface_temperature(iseq), ice_upward_conductive_heat_flux(iseq), &
+            &   swdn(iseq), lwdn(iseq), tair(iseq), icethickness(iseq), &
+            &   bottom_thermal_conductance_w_m2_k)
+            if (bottom_thermal_conductance_w_m2_k > 0.0_JPRB) then
+                ice_mean_temperature(iseq) = &
+                &   0.5_JPRB * (TMELT + ice_surface_temperature(iseq))
+            else
+                ice_mean_temperature(iseq) = ice_surface_temperature(iseq)
+            endif
+            swdn_to_water(iseq) = (1.0_JPRB - icefraction(iseq)) * swdn(iseq) + &
+            &   icefraction(iseq) * swdn_to_water(iseq)
+        else
+            hflx_ice_srf(iseq) = 0.0_JPRB
+            swdn_to_water(iseq) = swdn(iseq)
+            ice_surface_temperature(iseq) = TMELT
+            ice_mean_temperature(iseq) = TMELT
+            ice_upward_conductive_heat_flux(iseq) = 0.0_JPRB
+        endif
 
-        call calc_ice_surface_heat_flux( &
-        &   hflx_ice_excess_srf(iseq), transmitted_shortwave_w_m2, &
-        &   swdn(iseq), lwdn(iseq), tair(iseq), icethickness_excess(iseq))
+        if (icearea_excess(iseq) > 0.0_JPRB .and. icevol_excess(iseq) > 0.0_JPRB) then
+            ! Immobile excess ice has no underlying liquid-water boundary. Its
+            ! zero-layer bottom is therefore insulated (zero conductance).
+            call calc_ice_surface_heat_flux( &
+            &   hflx_ice_excess_srf(iseq), transmitted_shortwave_w_m2, &
+            &   ice_excess_surface_temperature(iseq), &
+            &   excess_upward_conductive_heat_flux_w_m2, &
+            &   swdn(iseq), lwdn(iseq), tair(iseq), icethickness_excess(iseq), &
+            &   0.0_JPRB)
+        else
+            hflx_ice_excess_srf(iseq) = 0.0_JPRB
+            ice_excess_surface_temperature(iseq) = TMELT
+        endif
     enddo
 end subroutine calc_ice_heat_fluxes
 
@@ -430,6 +479,8 @@ subroutine fin_heatlink_river_mod()
     deallocate(phase_unapplied_energy, phase_mass_budget_error, phase_energy_budget_error)
     deallocate(icevol, icevol_excess, icearea, icethickness, icefraction)
     deallocate(icearea_excess, icethickness_excess)
+    deallocate(ice_surface_temperature, ice_mean_temperature)
+    deallocate(ice_upward_conductive_heat_flux, ice_excess_surface_temperature)
     deallocate(lwdn, psrf, qair, swdn, tair, trof, wind)
     deallocate(watsto, rivdph, rivare, rivvel, flddph, fldare, fldvel)
     call fin_thermo_mod()

@@ -163,26 +163,29 @@ end subroutine calc_SWd_penetration_ice
 
 pure elemental subroutine calc_ice_surface_heat_flux( &
     &   net_ice_heat_flux_w_m2, transmitted_shortwave_w_m2, &
+    &   ice_surface_temperature_k, upward_conductive_heat_flux_w_m2, &
     &   downward_shortwave_w_m2, downward_longwave_w_m2, &
-    &   air_temperature_k, ice_thickness_m)
+    &   air_temperature_k, ice_thickness_m, bottom_thermal_conductance_w_m2_k)
     real(kind=JPRB), intent(out) :: &
     &   net_ice_heat_flux_w_m2, &        ! [W m-2] Net atmospheric heat flux into ice; positive melts ice.
-    &   transmitted_shortwave_w_m2       ! [W m-2] Shortwave radiation transmitted through the ice.
+    &   transmitted_shortwave_w_m2, &    ! [W m-2] Shortwave radiation transmitted through the ice.
+    &   ice_surface_temperature_k, &     ! [K] Diagnosed upper-surface ice temperature.
+    &   upward_conductive_heat_flux_w_m2 ! [W m-2] Conductive heat flux from the ice bottom to its surface.
     real(kind=JPRB), intent(in) :: &
     &   downward_shortwave_w_m2, &       ! [W m-2] Downward shortwave radiation above the ice.
     &   downward_longwave_w_m2, &        ! [W m-2] Downward longwave radiation above the ice.
     &   air_temperature_k, &             ! [K] Near-surface air temperature.
-    &   ice_thickness_m                   ! [m] Mean ice thickness over the ice-covered area.
+    &   ice_thickness_m, &                ! [m] Mean ice thickness over the ice-covered area.
+    &   bottom_thermal_conductance_w_m2_k ! [W m-2 K-1] Conductance to a bottom boundary held at TMELT; zero is insulated.
     real(kind=JPRB) :: &
     &   absorbed_shortwave_before_attenuation_w_m2, & ! [W m-2] Non-reflected shortwave entering the ice.
     &   absorbed_shortwave_in_ice_w_m2, &             ! [W m-2] Shortwave absorbed within the ice.
-    &   absorbed_downward_longwave_w_m2, &            ! [W m-2] Downward longwave absorbed by the ice.
-    &   emitted_upward_longwave_w_m2, &               ! [W m-2] Upward longwave emitted by the ice surface.
-    &   sensible_heat_into_ice_w_m2, &                ! [W m-2] Sensible heat transfer from air to ice.
-    &   ice_surface_temperature_k, &                  ! [K] Diagnosed ice-surface temperature.
-    &   surface_temperature_squared_k2                ! [K2] Squared ice-surface temperature.
+    &   surface_energy_balance_w_m2, &                ! [W m-2] Atmospheric plus upward conductive surface flux.
+    &   surface_energy_balance_derivative_w_m2_k, &   ! [W m-2 K-1] Temperature derivative of the surface balance.
+    &   thermal_conductance_w_m2_k                    ! [W m-2 K-1] Nonnegative bottom thermal conductance.
+    integer(kind=JPIM) :: &
+    &   iteration                                      ! [-] Newton iteration index.
 
-    ice_surface_temperature_k = min(air_temperature_k, TMELT)
     absorbed_shortwave_before_attenuation_w_m2 = &
     &   (1.0_JPRB - iceSWref) * downward_shortwave_w_m2
     transmitted_shortwave_w_m2 = exp( &
@@ -190,18 +193,67 @@ pure elemental subroutine calc_ice_surface_heat_flux( &
     &   absorbed_shortwave_before_attenuation_w_m2
     absorbed_shortwave_in_ice_w_m2 = &
     &   absorbed_shortwave_before_attenuation_w_m2 - transmitted_shortwave_w_m2
-    absorbed_downward_longwave_w_m2 = &
-    &   (1.0_JPRB - iceLWref) * downward_longwave_w_m2
-    surface_temperature_squared_k2 = &
-    &   ice_surface_temperature_k * ice_surface_temperature_k
-    emitted_upward_longwave_w_m2 = (1.0_JPRB - iceLWref) * SB * &
-    &   surface_temperature_squared_k2 * surface_temperature_squared_k2
-    sensible_heat_into_ice_w_m2 = Kice2air * &
-    &   (air_temperature_k - ice_surface_temperature_k)
 
-    net_ice_heat_flux_w_m2 = absorbed_shortwave_in_ice_w_m2 + &
-    &   absorbed_downward_longwave_w_m2 - emitted_upward_longwave_w_m2 + &
-    &   sensible_heat_into_ice_w_m2
+    ! This is the zero-layer approximation: ice in contact with liquid water
+    ! has a linear temperature profile between TMELT at the bottom and the
+    ! diagnosed surface temperature. With an insulated bottom, the same solver
+    ! diagnoses an isothermal profile. No ice sensible heat is stored in time.
+    thermal_conductance_w_m2_k = max(bottom_thermal_conductance_w_m2_k, 0.0_JPRB)
+    ice_surface_temperature_k = TMELT
+    net_ice_heat_flux_w_m2 = evaluate_surface_flux( &
+    &   ice_surface_temperature_k, absorbed_shortwave_in_ice_w_m2, &
+    &   downward_longwave_w_m2, air_temperature_k)
+    surface_energy_balance_w_m2 = net_ice_heat_flux_w_m2
+
+    if (surface_energy_balance_w_m2 < 0.0_JPRB) then
+        ! The surface can cool below TMELT. The balance is strictly monotonic,
+        ! so a few Newton iterations converge rapidly from the melting point.
+        do iteration = 1, 4
+            surface_energy_balance_derivative_w_m2_k = &
+            &   -4.0_JPRB * (1.0_JPRB - iceLWref) * SB * &
+            &   ice_surface_temperature_k**3 - Kice2air - thermal_conductance_w_m2_k
+            ice_surface_temperature_k = min(TMELT, max(1.0_JPRB, &
+            &   ice_surface_temperature_k - surface_energy_balance_w_m2 / &
+            &   surface_energy_balance_derivative_w_m2_k))
+            net_ice_heat_flux_w_m2 = evaluate_surface_flux( &
+            &   ice_surface_temperature_k, absorbed_shortwave_in_ice_w_m2, &
+            &   downward_longwave_w_m2, air_temperature_k)
+            upward_conductive_heat_flux_w_m2 = thermal_conductance_w_m2_k * &
+            &   (TMELT - ice_surface_temperature_k)
+            surface_energy_balance_w_m2 = net_ice_heat_flux_w_m2 + &
+            &   upward_conductive_heat_flux_w_m2
+        enddo
+
+        ! Enforce the converged zero-layer balance exactly in the phase-change
+        ! budget, avoiding cell-area amplification of round-off residuals.
+        upward_conductive_heat_flux_w_m2 = thermal_conductance_w_m2_k * &
+        &   (TMELT - ice_surface_temperature_k)
+        net_ice_heat_flux_w_m2 = -upward_conductive_heat_flux_w_m2
+    else
+        ! A positive balance at TMELT cannot be removed by a colder surface.
+        ! The surface remains at TMELT and the surplus energy melts ice.
+        upward_conductive_heat_flux_w_m2 = 0.0_JPRB
+    endif
+
+contains
+
+pure real(kind=JPRB) function evaluate_surface_flux( &
+    &   surface_temperature_k, absorbed_shortwave_w_m2, &
+    &   incident_longwave_w_m2, atmospheric_temperature_k) result(net_flux_w_m2)
+    real(kind=JPRB), intent(in) :: &
+    &   surface_temperature_k, &  ! [K] Upper-surface ice temperature.
+    &   absorbed_shortwave_w_m2, & ! [W m-2] Shortwave absorbed within the ice.
+    &   incident_longwave_w_m2, & ! [W m-2] Downward longwave radiation above the ice.
+    &   atmospheric_temperature_k ! [K] Near-surface air temperature.
+    real(kind=JPRB) :: &
+    &   surface_temperature_squared_k2 ! [K2] Squared upper-surface ice temperature.
+
+    surface_temperature_squared_k2 = surface_temperature_k * surface_temperature_k
+    net_flux_w_m2 = absorbed_shortwave_w_m2 + &
+    &   (1.0_JPRB - iceLWref) * incident_longwave_w_m2 - &
+    &   (1.0_JPRB - iceLWref) * SB * surface_temperature_squared_k2**2 + &
+    &   Kice2air * (atmospheric_temperature_k - surface_temperature_k)
+end function evaluate_surface_flux
 end subroutine calc_ice_surface_heat_flux
 
 

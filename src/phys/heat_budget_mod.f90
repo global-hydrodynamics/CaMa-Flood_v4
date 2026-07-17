@@ -128,7 +128,8 @@ pure elemental subroutine update_local_water_ice_state( &
     &   excess_melt_energy_j, &                 ! [J] Energy consumed by excess-ice melting.
     &   remaining_freeze_energy_j               ! [J] Positive cooling demand that cannot be satisfied.
 
-    ! Both ice pools are represented at TMELT in this local river-ice scheme.
+    ! The diagnostic zero-layer profiles have no prognostic sensible-heat
+    ! storage. Both ice pools are therefore referenced to ice at TMELT here.
     initial_mass_kg = water_ice_mass_kg( &
     &   liquid_water_volume_m3, surface_ice_volume_m3 + excess_ice_volume_m3)
     initial_energy_j = water_ice_energy_j( &
