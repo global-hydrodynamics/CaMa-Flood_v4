@@ -20,6 +20,7 @@ USE CMF_DRV_CONTROL_MOD,     ONLY: CMF_DRV_INPUT,   CMF_DRV_INIT,    CMF_DRV_END
 USE CMF_DRV_ADVANCE_MOD,     ONLY: CMF_DRV_ADVANCE
 USE CMF_CTRL_FORCING_MOD,    ONLY: CMF_FORCING_GET, CMF_FORCING_PUT
 USE CMF_CTRL_TRACER_MOD,     ONLY: CMF_TRACER_FORC_GET, CMF_TRACER_FORC_INTERP
+USE CMF_CTRL_RESTART_MOD,    ONLY: restart_is_write_time
 !** parallelization options**
 !$ USE OMP_LIB
 #ifdef UseMPI_CMF
@@ -43,7 +44,7 @@ USE output_mod, only: &
 USE restart_mod, only: &
 &   init_restart_mod
 USE heatlink_river_mod,      ONLY: &
-&   init_heatlink_river_mod, calc_heatlink, fin_heatlink_river_mod
+&   init_heatlink_river_mod, calc_heatlink, write_heatlink_restart, fin_heatlink_river_mod
 #endif
 use YOS_CMF_INPUT, only: &
 &   LOGNAM
@@ -112,6 +113,9 @@ DO ISTEP=1,NSTEPS
 #ifdef heatlink
 if (LHEATLINK) then
   call calc_heatlink(DT)
+  if (restart_is_write_time()) then
+    call write_heatlink_restart(date_hour2datetime(IYYYYMMDD, IHOUR))
+  endif
   call write_output(int(DT) * ISTEP) ! tail time of the current step
 endif
 #endif

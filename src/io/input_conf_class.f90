@@ -6,7 +6,7 @@ module input_conf_class
     use YOS_CMF_INPUT, only: &
     &   LOGNAM
     use datetime_mod, only: &
-    &   DateTime, datetime2string
+    &   DateTime, datetime2string, seconds_since_year_start
 
     use const_mod, only: &
     &   CLEN_ITEM, CLEN_PATH, CLEN_SHORT
@@ -194,7 +194,6 @@ function init_InputConf(item_name, nml_unit, start_dt) result(obj)
     end select
     !call read_area(west, east, south, north)
     obj%item = item_name
-    obj%rec = rec
     obj%nz = nz
     obj%map = init_CaMaFrame( &
     &   left, right, top, bottom, nx, ny, is_catm, is_fldstg)
@@ -202,6 +201,12 @@ function init_InputConf(item_name, nml_unit, start_dt) result(obj)
 !write(LOGNAM, *) nx, ny, is_n2s, catm, fldstg
     obj%inpmat_idx = find_inpmat(obj%map)
     obj%dt = dt2sec(dt_val, dt_unit)
+
+    ! Heatlink forcing files are annual files beginning at 00:00 on January 1.
+    ! Select the record corresponding to the simulation start instead of
+    ! restarting each annual file from record 1.
+    rec = 1_JPIM + seconds_since_year_start(start_dt) / obj%dt
+    obj%rec = rec
     obj%now_t = 0_JPIM
     obj%nxt_t = 0_JPIM
     obj%is_updated = .FALSE.
@@ -211,6 +216,7 @@ function init_InputConf(item_name, nml_unit, start_dt) result(obj)
     write(LOGNAM, '(a,i0)')        '    inpmat_idx: ', obj%inpmat_idx
     write(LOGNAM, '(a,i0)')        '    nz = ', nz
     write(LOGNAM, '(2a)')          '    start datetime: ', datetime2string(start_dt)
+    write(LOGNAM, '(a,i0)')        '    start record: ', obj%rec
     write(LOGNAM, '(2(a,L,a,e10.2))')  '    scale  = ', obj%apply_scale, ' ', obj%scale
     write(LOGNAM, '(2(a,L,a,e10.2))')  '    offset = ', obj%apply_offset, ' ', obj%offset
 end function init_InputConf

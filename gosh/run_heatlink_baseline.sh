@@ -2,7 +2,7 @@
 
 set -eu
 
-# Run the liquid-water-only heatlink baseline.
+# Run a heatlink regression case with optional zero-initialized river ice.
 # Usage: run_heatlink_baseline.sh [smoke|annual]
 #
 # Environment variables:
@@ -13,6 +13,11 @@ set -eu
 #   ATM_DIR       Directory containing the 3-hourly atmospheric forcing files.
 #   TOOLCHAIN_ROOT Directory containing the Fortran/netCDF runtime libraries.
 #   SDKROOT       macOS SDK selected by the conda Fortran toolchain.
+#   LICE          Fortran logical enabling river ice; defaults to .FALSE.
+#   START_*       Optional start date fields (YEAR, MONTH, DAY, HOUR).
+#   END_*         Optional end date fields overriding the selected run mode.
+#   EXPECTED_STEPS, EXPECTED_RECORDS Optional expected counts for overridden dates.
+#   RESTART_SOURCE_DIR Directory containing restart files at the requested start date.
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 RUN_MODE=${1:-smoke}
@@ -24,21 +29,44 @@ ATM_DIR=${ATM_DIR:-/Users/dtokuda/work/data/ils/ILS_data_20241118/test/frc}
 DIMINFO=${DIMINFO:-${ROOT}/map/glb_15min/diminfo_test-1deg.txt}
 RUNOFF_INPMAT=${RUNOFF_INPMAT:-${ROOT}/map/glb_15min/inpmat_test-1deg.bin}
 OMP_NUM_THREADS=${OMP_NUM_THREADS:-16}
+LICE=${LICE:-.FALSE.}
+START_YEAR=${START_YEAR:-2000}
+START_MONTH=${START_MONTH:-1}
+START_DAY=${START_DAY:-1}
+START_HOUR=${START_HOUR:-0}
+RESTART_SOURCE_DIR=${RESTART_SOURCE_DIR:-}
+
+case "$LICE" in
+    .TRUE.|.true.|TRUE|true)
+        LICE_NML=.TRUE.
+        ICE_ENABLED=1
+        ;;
+    .FALSE.|.false.|FALSE|false)
+        LICE_NML=.FALSE.
+        ICE_ENABLED=0
+        ;;
+    *)
+        echo "LICE must be a Fortran or shell logical: ${LICE}" >&2
+        exit 2
+        ;;
+esac
 
 case "$RUN_MODE" in
     smoke)
-        END_YEAR=2000
-        END_MONTH=1
-        END_DAY=2
-        EXPECTED_STEPS=24
-        EXPECTED_RECORDS=1
+        DEFAULT_END_YEAR=2000
+        DEFAULT_END_MONTH=1
+        DEFAULT_END_DAY=2
+        DEFAULT_END_HOUR=0
+        DEFAULT_EXPECTED_STEPS=24
+        DEFAULT_EXPECTED_RECORDS=1
         ;;
     annual)
-        END_YEAR=2001
-        END_MONTH=1
-        END_DAY=1
-        EXPECTED_STEPS=8784
-        EXPECTED_RECORDS=366
+        DEFAULT_END_YEAR=2001
+        DEFAULT_END_MONTH=1
+        DEFAULT_END_DAY=1
+        DEFAULT_END_HOUR=0
+        DEFAULT_EXPECTED_STEPS=8784
+        DEFAULT_EXPECTED_RECORDS=366
         ;;
     *)
         echo "Usage: $0 [smoke|annual]" >&2
@@ -46,12 +74,29 @@ case "$RUN_MODE" in
         ;;
 esac
 
+END_YEAR=${END_YEAR:-${DEFAULT_END_YEAR}}
+END_MONTH=${END_MONTH:-${DEFAULT_END_MONTH}}
+END_DAY=${END_DAY:-${DEFAULT_END_DAY}}
+END_HOUR=${END_HOUR:-${DEFAULT_END_HOUR}}
+EXPECTED_STEPS=${EXPECTED_STEPS:-${DEFAULT_EXPECTED_STEPS}}
+EXPECTED_RECORDS=${EXPECTED_RECORDS:-${DEFAULT_EXPECTED_RECORDS}}
+
 RUN_DIR=${RUN_DIR:-${ROOT}/out/step1-heatlink-${RUN_MODE}}
 EXE=${ROOT}/src/MAIN_cmf
 NML=${RUN_DIR}/input_cmf.nam
 LOG=${RUN_DIR}/log_CaMa.txt
 RIVWAT_OUTPUT=${RUN_DIR}/rivwattmp2000.bin
-FINAL_RESTART=${RUN_DIR}/restart${END_YEAR}$(printf '%02d' "${END_MONTH}")$(printf '%02d' "${END_DAY}")00.heatlink.bin
+START_STAMP=${START_YEAR}$(printf '%02d' "${START_MONTH}")$(printf '%02d' "${START_DAY}")$(printf '%02d' "${START_HOUR}")
+END_STAMP=${END_YEAR}$(printf '%02d' "${END_MONTH}")$(printf '%02d' "${END_DAY}")$(printf '%02d' "${END_HOUR}")
+FINAL_RESTART=${RUN_DIR}/restart${END_STAMP}.heatlink.bin
+
+if [ -n "$RESTART_SOURCE_DIR" ]; then
+    LRESTART_NML=.TRUE.
+    CRESTSTO_NML="./restart${START_STAMP}.bin"
+else
+    LRESTART_NML=.FALSE.
+    CRESTSTO_NML=""
+fi
 
 if [ ! -x "$EXE" ]; then
     echo "Executable not found: ${EXE}" >&2
@@ -72,7 +117,7 @@ for required_path in \
     "${FLOW_MAP_DIR}/rivhgt.bin" \
     "${FLOW_MAP_DIR}/rivman.bin" \
     "${FLOW_MAP_DIR}/bifprm.txt" \
-    "${RUNOFF_DIR}/Roff____20000101.one" \
+    "${RUNOFF_DIR}/Roff____${START_YEAR}$(printf '%02d' "${START_MONTH}")$(printf '%02d' "${START_DAY}").one" \
     "${ATM_DIR}/GSWP3.BC.LWdown.3hrMap.ILS.2000.nc" \
     "${ATM_DIR}/GSWP3.BC.PSurf.3hrMap.ILS.2000.nc" \
     "${ATM_DIR}/GSWP3.BC.Qair.3hrMap.ILS.2000.nc" \
@@ -93,14 +138,29 @@ if [ -d "$RUN_DIR" ] && [ -n "$(find "$RUN_DIR" -mindepth 1 -maxdepth 1 -print -
 fi
 mkdir -p "$RUN_DIR"
 
+if [ -n "$RESTART_SOURCE_DIR" ]; then
+    for restart_file in \
+        "restart${START_STAMP}.bin" \
+        "restart${START_STAMP}.bin.pth" \
+        "restart${START_STAMP}.heatlink.bin"
+    do
+        if [ ! -f "${RESTART_SOURCE_DIR}/${restart_file}" ]; then
+            echo "Restart source was not found: ${RESTART_SOURCE_DIR}/${restart_file}" >&2
+            exit 1
+        fi
+        cp "${RESTART_SOURCE_DIR}/${restart_file}" "${RUN_DIR}/${restart_file}"
+    done
+fi
+
 cat > "$NML" <<EOF
 &NRUNVER
 LADPSTP   = .TRUE.                 ! Use the adaptive hydraulic time step.
 LPTHOUT   = .TRUE.                 ! Enable bifurcation flow.
 LDAMOUT   = .FALSE.                ! Disable reservoir operation.
 LOUTPUT   = .FALSE.                ! Disable standard output; heatlink output remains enabled.
-LRESTART  = .FALSE.                ! Initialize without a restart file.
+LRESTART  = ${LRESTART_NML}        ! Initialize from the requested restart source when true.
 LHEATLINK = .TRUE.                 ! Enable river water thermodynamics.
+LICE      = ${LICE_NML}            ! Enable river ice state and diagnostics.
 /
 &NDIMTIME
 CDIMINFO = "${DIMINFO}"            ! Grid dimensions and geographic extent.
@@ -114,14 +174,14 @@ PDSTMTH = 10000.D0                 ! [m] Downstream distance at river mouths.
 PCADP   = 0.7                      ! [-] Adaptive-step CFL coefficient.
 /
 &NSIMTIME
-SYEAR = 2000
-SMON  = 1
-SDAY  = 1
-SHOUR = 0
+SYEAR = ${START_YEAR}
+SMON  = ${START_MONTH}
+SDAY  = ${START_DAY}
+SHOUR = ${START_HOUR}
 EYEAR = ${END_YEAR}
 EMON  = ${END_MONTH}
 EDAY  = ${END_DAY}
-EHOUR = 0
+EHOUR = ${END_HOUR}
 /
 &NMAP
 LMAPCDF = .FALSE.
@@ -137,7 +197,7 @@ CRIVMAN = "${FLOW_MAP_DIR}/rivman.bin"  ! [s m-1/3] River Manning roughness.
 CPTHOUT = "${FLOW_MAP_DIR}/bifprm.txt"  ! Bifurcation-channel table.
 /
 &NRESTART
-CRESTSTO = ""
+CRESTSTO = "${CRESTSTO_NML}"
 CRESTDIR = "./"
 CVNREST  = "restart"
 LRESTCDF = .FALSE.
@@ -172,11 +232,18 @@ inpmat_names = '01', '02', '03', '04', '05', '06', '07', '08'
 dt = 86400                          ! [s] Heatlink output interval.
 /
 &nml_out item='RIVWAT_TMP', path='./rivwattmp2000' &end
+&nml_out item='RIVICE_VOL', path='./rivicevol2000', is_mean=.false. &end
+&nml_out item='RIVICE_ARE', path='./riviceare2000', is_mean=.false. &end
+&nml_out item='RIVICE_THK', path='./rivicethk2000', is_mean=.false. &end
+&nml_out item='RIVICE_FRC', path='./rivicefrc2000', is_mean=.false. &end
+&nml_out item='RIVICE_XSCUM', path='./rivicexscum2000', is_mean=.false. &end
 
 &restart_default
 initial_state_is_dumped = .false.
 /
 &restart_config item='RIVWAT_TMP', file='.heatlink.bin', recnum=1, mapfmt=.true. &end
+&restart_config item='RIVICE_VOL', file='.heatlink.bin', recnum=2, mapfmt=.true. &end
+&restart_config item='RIVICE_XSCUM', file='.heatlink.bin', recnum=3, mapfmt=.true. &end
 
 &input_item item='LWDN', fmt='nc', path='${ATM_DIR}/GSWP3.BC.LWdown.3hrMap.ILS.2000.nc' /
 &input_item item='PSRF', fmt='nc', path='${ATM_DIR}/GSWP3.BC.PSurf.3hrMap.ILS.2000.nc', scale=1.0e-2 /
@@ -200,8 +267,9 @@ export DYLD_LIBRARY_PATH="${TOOLCHAIN_ROOT}/lib:${DYLD_LIBRARY_PATH:-}"
 export SDKROOT
 export OMP_NUM_THREADS
 
-echo "Running ${RUN_MODE} liquid-water baseline"
-echo "  period: 2000-01-01 00:00 to ${END_YEAR}-$(printf '%02d' "${END_MONTH}")-$(printf '%02d' "${END_DAY}") 00:00"
+echo "Running ${RUN_MODE} heatlink regression"
+echo "  period: ${START_YEAR}-$(printf '%02d' "${START_MONTH}")-$(printf '%02d' "${START_DAY}") $(printf '%02d' "${START_HOUR}"):00 to ${END_YEAR}-$(printf '%02d' "${END_MONTH}")-$(printf '%02d' "${END_DAY}") $(printf '%02d' "${END_HOUR}"):00"
+echo "  river ice: ${LICE_NML}"
 echo "  threads: ${OMP_NUM_THREADS}"
 echo "  run dir: ${RUN_DIR}"
 
@@ -226,6 +294,20 @@ if [ ! -f "$FINAL_RESTART" ]; then
     exit 1
 fi
 
+if stat -f %z "$FINAL_RESTART" >/dev/null 2>&1; then
+    RESTART_BYTES=$(stat -f %z "$FINAL_RESTART")
+else
+    RESTART_BYTES=$(stat -c %s "$FINAL_RESTART")
+fi
+RESTART_RECORD_BYTES=$((1440 * 720 * 8))
+EXPECTED_RESTART_RECORDS=$((1 + 2 * ICE_ENABLED))
+RESTART_RECORDS=$((RESTART_BYTES / RESTART_RECORD_BYTES))
+if [ "$RESTART_RECORDS" -ne "$EXPECTED_RESTART_RECORDS" ] || \
+    [ $((RESTART_BYTES % RESTART_RECORD_BYTES)) -ne 0 ]; then
+    echo "Unexpected heatlink restart size: ${RESTART_BYTES} bytes (${RESTART_RECORDS} records)." >&2
+    exit 1
+fi
+
 STEP_COUNT=$(grep -c '^\[MAIN_cmf\] Time step:' "$LOG" || true)
 if [ "$STEP_COUNT" -ne "$EXPECTED_STEPS" ]; then
     echo "Unexpected time-step count: ${STEP_COUNT} (expected ${EXPECTED_STEPS})." >&2
@@ -244,12 +326,52 @@ if [ "$OUTPUT_RECORDS" -ne "$EXPECTED_RECORDS" ] || [ $((OUTPUT_BYTES % RECORD_B
     exit 1
 fi
 
+if [ "$ICE_ENABLED" -eq 1 ]; then
+    ice_reference=
+    for ice_output in \
+        rivicevol2000.bin \
+        riviceare2000.bin \
+        rivicethk2000.bin \
+        rivicefrc2000.bin \
+        rivicexscum2000.bin
+    do
+        ice_path=${RUN_DIR}/${ice_output}
+        if [ ! -f "$ice_path" ]; then
+            echo "Run failed: river-ice output was not created: ${ice_path}" >&2
+            exit 1
+        fi
+        if [ "$(stat -f %z "$ice_path")" -ne "$OUTPUT_BYTES" ]; then
+            echo "Unexpected river-ice output size: ${ice_path}" >&2
+            exit 1
+        fi
+        if [ -z "$ice_reference" ]; then
+            ice_reference=$ice_path
+        elif ! cmp -s "$ice_reference" "$ice_path"; then
+            echo "Expected identical zero river-ice diagnostics in Step 3: ${ice_path}" >&2
+            exit 1
+        fi
+    done
+
+    if ! LC_ALL=C od -An -v -t f4 "$ice_reference" | awk '
+        {
+            for (i = 1; i <= NF; i++) {
+                value = $i + 0.0
+                if (value != 0.0 && (value < 0.999e20 || value > 1.001e20)) exit 1
+            }
+        }
+    '; then
+        echo "Expected only zero or map-missing values in Step 3: ${ice_reference}" >&2
+        exit 1
+    fi
+fi
+
 if grep -Eiq '(^|[^[:alpha:]])(nan|infinity)([^[:alpha:]]|$)' "$LOG"; then
     echo "Run failed: non-finite value found in the model log." >&2
     exit 1
 fi
 
-FINAL_MINMAX=$(grep '  min/max = ' "$LOG" | tail -n 1 | sed 's/^ *min\/max = *//')
+FINAL_MINMAX=$(grep -A8 'item   = RIVWAT_TMP' "$LOG" | \
+    grep '  min/max = ' | tail -n 1 | sed 's/^ *min\/max = *//')
 if [ -z "$FINAL_MINMAX" ]; then
     echo "Run failed: final temperature range was not found in the model log." >&2
     exit 1
@@ -261,8 +383,10 @@ COMPILER_VERSION=$(gfortran --version | head -n 1)
 
 cat > "${RUN_DIR}/summary.txt" <<EOF
 run_mode=${RUN_MODE}
-period_start=2000-01-01T00:00:00
-period_end=${END_YEAR}-$(printf '%02d' "${END_MONTH}")-$(printf '%02d' "${END_DAY}")T00:00:00
+period_start=${START_YEAR}-$(printf '%02d' "${START_MONTH}")-$(printf '%02d' "${START_DAY}")T$(printf '%02d' "${START_HOUR}"):00:00
+period_end=${END_YEAR}-$(printf '%02d' "${END_MONTH}")-$(printf '%02d' "${END_DAY}")T$(printf '%02d' "${END_HOUR}"):00:00
+lice=${LICE_NML}
+restart_source_dir=${RESTART_SOURCE_DIR}
 omp_num_threads=${OMP_NUM_THREADS}
 compiler=${COMPILER_VERSION}
 elapsed_seconds=${ELAPSED_SECONDS}
@@ -270,6 +394,8 @@ time_steps=${STEP_COUNT}
 rivwattmp_records=${OUTPUT_RECORDS}
 rivwattmp_bytes=${OUTPUT_BYTES}
 rivwattmp_sha256=${OUTPUT_SHA256}
+heatlink_restart_records=${RESTART_RECORDS}
+heatlink_restart_bytes=${RESTART_BYTES}
 final_restart_sha256=${RESTART_SHA256}
 final_rivwattmp_minmax_K=${FINAL_MINMAX}
 EOF

@@ -45,7 +45,8 @@ $(libname): $(OBJS)
 TESTS = \
 	test_numeric_utils \
 	test_key_table \
-	test_ranked_array
+	test_ranked_array \
+	test_datetime
 	
 TEST_SRCS = $(addprefix test/,$(addsuffix .f90,$(TESTS)))
 TEST_EXES = $(TESTS)

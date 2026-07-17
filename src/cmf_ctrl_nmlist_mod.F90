@@ -36,7 +36,7 @@ USE YOS_CMF_INPUT,      ONLY: LADPSTP,  LFPLAIN,  LKINE,    LFLDOUT,  LPTHOUT,  
                             & LROSPLIT, LGDWDLY,  LSLPMIX,  LMEANSL,  LSEALEV,  LOUTPUT,  &
                             & LRESTART, LSTOONLY, LGRIDMAP, LLEAPYR,  LMAPEND,  LBITSAFE, &
                             & LSTG_ES,  LLEVEE,   LOUTINS,  LOUTINI,  LSEDOUT,  LTRACE,   &
-                            & LHEATLINK,                                                  &
+                            & LHEATLINK, LICE,                                            &
                             & LSLOPEMOUTH,LWEVAP, LWEVAPFIX,LWEXTRACTRIV,       LSPAMAT,  &
                             & LUPSINF
 ! dimention & time
@@ -53,7 +53,7 @@ CHARACTER(LEN=8)              :: CREG                 !!
 NAMELIST/NRUNVER/  LADPSTP,  LFPLAIN,  LKINE,    LFLDOUT,  LPTHOUT,  LDAMOUT,      &
                    LROSPLIT, LGDWDLY,  LSLPMIX,  LMEANSL,  LSEALEV,  LOUTPUT,      &
                    LRESTART, LSTOONLY, LGRIDMAP, LLEAPYR,  LMAPEND,  LBITSAFE,     &
-                   LSTG_ES,  LLEVEE,   LSEDOUT,  LTRACE,   LHEATLINK, LOUTINS,  LSLOPEMOUTH,  &
+                   LSTG_ES,  LLEVEE,   LSEDOUT,  LTRACE,   LHEATLINK, LICE, LOUTINS,  LSLOPEMOUTH,  &
                    LWEVAP,   LWEVAPFIX,LWEXTRACTRIV,       LOUTINI,  LSPAMAT,      &
                    LUPSINF
 
@@ -84,6 +84,7 @@ LLEVEE   = .FALSE.           !! true: activate levee scheme  (under development)
 LSEDOUT  = .FALSE.           !! true: activate sediment transport (under development)
 LTRACE   = .FALSE.           !! true: activate tracer             (under development)
 LHEATLINK = .FALSE.          !! true: activate heatlink           (under development)
+LICE      = .FALSE.          !! true: activate river ice state and diagnostics
 LOUTINS  = .FALSE.           !! true: diagnose instantaneous discharge
 LSPAMAT  = .TRUE.            !! true: use quasi sparse matrix (fast but additional memory req)
 LUPSINF  = .FALSE.           !! true: use upstream inflow scheme
@@ -118,6 +119,11 @@ LSTG_ES  = .FALSE.           !! true: for Vector Processor optimization (CMF_OPT
 REWIND(NSETFILE)
 READ(NSETFILE,NML=NRUNVER)
 
+IF (LICE .AND. (.NOT. LHEATLINK)) THEN
+  WRITE(LOGNAM,*) "ERROR: LICE requires LHEATLINK=.TRUE."
+  ERROR STOP 1
+ENDIF
+
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "=== NAMELIST, NRUNVER ==="
 WRITE(LOGNAM,*) "LADPSTP ",  LADPSTP
@@ -130,6 +136,7 @@ WRITE(LOGNAM,*) "LLEVEE  ",  LLEVEE
 WRITE(LOGNAM,*) "LSEDOUT ",  LSEDOUT
 WRITE(LOGNAM,*) "LTRACE  ",  LTRACE
 WRITE(LOGNAM,*) "LHEATLINK", LHEATLINK
+WRITE(LOGNAM,*) "LICE     ", LICE
 WRITE(LOGNAM,*) "LOUTINS ",  LOUTINS
 WRITE(LOGNAM,*) "LUPSINF ",  LUPSINF
 WRITE(LOGNAM,*) ""

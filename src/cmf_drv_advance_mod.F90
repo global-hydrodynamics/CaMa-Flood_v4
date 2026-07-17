@@ -28,19 +28,14 @@ CONTAINS
 !
 !####################################################################
 SUBROUTINE CMF_DRV_ADVANCE(KSTEPS)
-USE YOS_CMF_INPUT,           ONLY: LOUTPUT, LSEALEV, LUPSINF, LTRACE, LHEATLINK, IFRQ_OUT
+USE YOS_CMF_INPUT,           ONLY: LOUTPUT, LSEALEV, LUPSINF, LTRACE, IFRQ_OUT
 USE YOS_CMF_TIME,            ONLY: KSTEP, JYYYYMMDD, JHHMM, JHOUR, JMIN
 !
 USE CMF_CTRL_TIME_MOD,       ONLY: CMF_TIME_NEXT, CMF_TIME_UPDATE
 USE CMF_CTRL_PHYSICS_MOD,    ONLY: CMF_PHYSICS_ADVANCE, CMF_PHYSICS_FLDSTG
-USE CMF_CTRL_RESTART_MOD,    ONLY: CMF_RESTART_WRITE, restart_is_write_time
+USE CMF_CTRL_RESTART_MOD,    ONLY: CMF_RESTART_WRITE
 USE CMF_CTRL_OUTPUT_MOD,     ONLY: CMF_OUTPUT_WRITE, CMF_OUTTXT_WRTE
 USE CMF_CTRL_DAMOUT_MOD,     ONLY: CMF_DAMOUT_WRTE
-#ifdef heatlink
-use datetime_mod,            only: DateTime, date_hour2datetime
-use heatlink_river_mod,      only: write_heatlink_restart
-#endif
-
 USE CMF_CALC_DIAG_MOD,       ONLY: CMF_DIAG_AVEMAX_OUTPUT, CMF_DIAG_GETAVE_OUTPUT, CMF_DIAG_RESET_OUTPUT
 USE CMF_CTRL_BOUNDARY_MOD,   ONLY: CMF_BOUNDARY_UPDATE
 USE CMF_CTRL_UPSINF_MOD,     ONLY: CMF_UPSINF_UPDATE
@@ -60,9 +55,6 @@ INTEGER(KIND=JPIM)              :: KSTEPS             !! Number of timesteps to 
 !* Local variables 
 INTEGER(KIND=JPIM)              :: ISTEP              !! Time Step
 REAL(KIND=JPRB)                 :: ZTT0, ZTT1, ZTT2   !! Time elapsed related 
-#ifdef heatlink
-type(DateTime)                  :: restart_dt
-#endif
 !$ INTEGER(KIND=JPIM)           :: NTHREADS           !! OpenMP thread number
 !==========================================================
 
@@ -147,13 +139,6 @@ DO ISTEP=1,KSTEPS
   IF( LTRACE )THEN
     CALL CMF_TRACER_RESTART_WRITE
   ENDIF
-#ifdef heatlink
-  if( LHEATLINK .and. restart_is_write_time() )then
-    restart_dt = date_hour2datetime(JYYYYMMDD, JHOUR)
-    call write_heatlink_restart(restart_dt)
-  endif
-#endif
-
   !============================ 
   !*** 5. Update current time      !! Update KMIN, IYYYYMMDD, IHHMM (to KMINNEXT, JYYYYMMDD, JHHMM)
   CALL CMF_TIME_UPDATE

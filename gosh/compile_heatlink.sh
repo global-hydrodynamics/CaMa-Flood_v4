@@ -52,7 +52,7 @@ make -C "${ROOT}/src/common" \
     MKINCLUDE="${ROOT}/adm/Mkinclude_heatlink" \
     BUILD_MODE="${BUILD_MODE}" test
 
-for test_exe in test_numeric_utils test_key_table test_ranked_array
+for test_exe in test_numeric_utils test_key_table test_ranked_array test_datetime
 do
     echo "  ${test_exe}"
     "${ROOT}/src/common/${test_exe}"
@@ -65,7 +65,7 @@ make -C "${ROOT}/src/phys" \
     MKINCLUDE="${ROOT}/adm/Mkinclude_heatlink" \
     BUILD_MODE="${BUILD_MODE}" test
 
-for test_exe in test_heat_budget
+for test_exe in test_heat_budget test_ice_cover
 do
     echo "  ${test_exe}"
     "${ROOT}/src/phys/${test_exe}"

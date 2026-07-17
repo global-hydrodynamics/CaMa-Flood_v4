@@ -17,12 +17,14 @@ LIBOBJS = \
 	water_mod.o \
 	channel_mod.o \
 	heat_flux_mod.o \
-	heat_budget_mod.o
+	heat_budget_mod.o \
+	ice_cover_mod.o
 #eddy_mod.o
 #sed_mod
 
 TESTS = \
-	test_heat_budget
+	test_heat_budget \
+	test_ice_cover
 TEST_EXES = $(TESTS)
 .SUFFIXES: .o .F90 .f90
 %.o: %.F90
