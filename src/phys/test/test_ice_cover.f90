@@ -21,6 +21,8 @@ program test_ice_cover
     &   0.0_JPRB, 10.0_JPRB, 0.0_JPRB, 0.0_JPRB, 0.0_JPRB, 'zero surface area')
     call check_immobile_excess_state()
     call check_immobile_excess_shape()
+    call check_repeated_geometry_changes()
+    call check_large_ice_state()
 
     write(*, '(a)') '[ALL TESTS PASSED] test_ice_cover'
 
@@ -77,6 +79,71 @@ subroutine check_immobile_excess_state()
     call assert_close(ice_volume_m3 + excess_ice_volume_m3, &
     &   initial_total_volume_m3, 'immobile excess no-remobilization conservation')
 end subroutine check_immobile_excess_state
+
+
+subroutine check_repeated_geometry_changes()
+    real(kind=JPRB), parameter :: &
+    &   initial_total_volume_m3 = 2010.0_JPRB ! [m3] Total ice volume before geometry changes.
+    real(kind=JPRB) :: &
+    &   ice_volume_m3, &          ! [m3] Ice retained on the water surface.
+    &   excess_ice_volume_m3, &   ! [m3] Immobile excess ice retained in the grid cell.
+    &   ice_area_m2, &            ! [m2] Diagnosed water-surface ice area.
+    &   ice_thickness_m, &        ! [m] Diagnosed water-surface ice thickness.
+    &   ice_fraction              ! [-] Diagnosed water-surface ice fraction.
+    integer :: &
+    &   geometry_cycle            ! [-] Water-surface shrink-grow cycle index.
+
+    ice_volume_m3 = initial_total_volume_m3
+    excess_ice_volume_m3 = 0.0_JPRB
+    do geometry_cycle = 1, 100
+        ! A contracted water surface transfers newly excessive surface ice to
+        ! the immobile pool at the geometry-diagnosis boundary.
+        call update_ice_cover_state( &
+        &   ice_volume_m3, excess_ice_volume_m3, 100.0_JPRB, 20.0_JPRB, &
+        &   ice_area_m2, ice_thickness_m, ice_fraction)
+        call assert_close(ice_volume_m3, 2000.0_JPRB, &
+        &   'geometry cycle contracted-surface retained volume')
+        call assert_close(excess_ice_volume_m3, 10.0_JPRB, &
+        &   'geometry cycle contracted-surface excess volume')
+
+        ! Later expansion changes the diagnosed capacity but never remobilizes
+        ! ice that has already entered the immobile pool.
+        call update_ice_cover_state( &
+        &   ice_volume_m3, excess_ice_volume_m3, 200.0_JPRB, 20.0_JPRB, &
+        &   ice_area_m2, ice_thickness_m, ice_fraction)
+        call assert_close(ice_volume_m3, 2000.0_JPRB, &
+        &   'geometry cycle expanded-surface retained volume')
+        call assert_close(excess_ice_volume_m3, 10.0_JPRB, &
+        &   'geometry cycle expanded-surface no remobilization')
+        call assert_close(ice_volume_m3 + excess_ice_volume_m3, initial_total_volume_m3, &
+        &   'geometry cycle total-volume conservation')
+    enddo
+end subroutine check_repeated_geometry_changes
+
+
+subroutine check_large_ice_state()
+    real(kind=JPRB) :: &
+    &   ice_volume_m3, &          ! [m3] Ice retained on the water surface.
+    &   excess_ice_volume_m3, &   ! [m3] Immobile excess ice retained in the grid cell.
+    &   ice_area_m2, &            ! [m2] Diagnosed water-surface ice area.
+    &   ice_thickness_m, &        ! [m] Diagnosed water-surface ice thickness.
+    &   ice_fraction              ! [-] Diagnosed water-surface ice fraction.
+
+    ice_volume_m3 = 1.0e15_JPRB
+    excess_ice_volume_m3 = 1.0e12_JPRB
+    call update_ice_cover_state( &
+    &   ice_volume_m3, excess_ice_volume_m3, 100.0_JPRB, 20.0_JPRB, &
+    &   ice_area_m2, ice_thickness_m, ice_fraction)
+
+    call assert_close(ice_volume_m3, 2000.0_JPRB, 'large ice retained surface volume')
+    call assert_close(excess_ice_volume_m3, 1.001e15_JPRB - 2000.0_JPRB, &
+    &   'large ice immobile excess volume')
+    call assert_close(ice_volume_m3 + excess_ice_volume_m3, 1.001e15_JPRB, &
+    &   'large ice total-volume conservation')
+    call assert_close(ice_area_m2, 100.0_JPRB, 'large ice surface area')
+    call assert_close(ice_thickness_m, 20.0_JPRB, 'large ice surface thickness')
+    call assert_close(ice_fraction, 1.0_JPRB, 'large ice surface fraction')
+end subroutine check_large_ice_state
 
 subroutine check_shape( &
     &   ice_volume_m3, water_surface_area_m2, maximum_ice_thickness_m, &

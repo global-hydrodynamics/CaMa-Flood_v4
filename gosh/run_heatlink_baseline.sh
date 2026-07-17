@@ -17,6 +17,8 @@ set -eu
 #   START_*       Optional start date fields (YEAR, MONTH, DAY, HOUR).
 #   END_*         Optional end date fields overriding the selected run mode.
 #   EXPECTED_STEPS, EXPECTED_RECORDS Optional expected counts for overridden dates.
+#   MODEL_DT      CaMa/heatlink coupling time step [s]; defaults to 3600.
+#   OUTPUT_DT     Heatlink output interval [s]; defaults to 86400.
 #   RESTART_SOURCE_DIR Directory containing restart files at the requested start date.
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
@@ -30,6 +32,8 @@ DIMINFO=${DIMINFO:-${ROOT}/map/glb_15min/diminfo_test-1deg.txt}
 RUNOFF_INPMAT=${RUNOFF_INPMAT:-${ROOT}/map/glb_15min/inpmat_test-1deg.bin}
 OMP_NUM_THREADS=${OMP_NUM_THREADS:-16}
 LICE=${LICE:-.FALSE.}
+MODEL_DT=${MODEL_DT:-3600}
+OUTPUT_DT=${OUTPUT_DT:-86400}
 START_YEAR=${START_YEAR:-2000}
 START_MONTH=${START_MONTH:-1}
 START_DAY=${START_DAY:-1}
@@ -164,7 +168,7 @@ LICE      = ${LICE_NML}            ! Enable river ice state and diagnostics.
 /
 &NDIMTIME
 CDIMINFO = "${DIMINFO}"            ! Grid dimensions and geographic extent.
-DT       = 3600                    ! [s] Coupling time step.
+DT       = ${MODEL_DT}             ! [s] CaMa/heatlink coupling time step.
 IFRQ_INP = 24                      ! [hour] Runoff update interval.
 /
 &NPARAM
@@ -229,7 +233,7 @@ inpmat_names = '01', '02', '03', '04', '05', '06', '07', '08'
 &nml_inpmat item='08', dir='${FLOW_MAP_DIR}/inpmat', prefix='inpmat_08' &end
 
 &output_default
-dt = 86400                          ! [s] Heatlink output interval.
+dt = ${OUTPUT_DT}                   ! [s] Heatlink output interval.
 /
 &nml_out item='RIVWAT_TMP', path='./rivwattmp2000' &end
 &nml_out item='RIVICE_VOL', path='./rivicevol2000', is_mean=.false. &end
@@ -271,6 +275,8 @@ echo "Running ${RUN_MODE} heatlink regression"
 echo "  period: ${START_YEAR}-$(printf '%02d' "${START_MONTH}")-$(printf '%02d' "${START_DAY}") $(printf '%02d' "${START_HOUR}"):00 to ${END_YEAR}-$(printf '%02d' "${END_MONTH}")-$(printf '%02d' "${END_DAY}") $(printf '%02d' "${END_HOUR}"):00"
 echo "  river ice: ${LICE_NML}"
 echo "  threads: ${OMP_NUM_THREADS}"
+echo "  model time step: ${MODEL_DT} s"
+echo "  output interval: ${OUTPUT_DT} s"
 echo "  run dir: ${RUN_DIR}"
 
 START_EPOCH=$(date +%s)
@@ -395,6 +401,8 @@ period_end=${END_YEAR}-$(printf '%02d' "${END_MONTH}")-$(printf '%02d' "${END_DA
 lice=${LICE_NML}
 restart_source_dir=${RESTART_SOURCE_DIR}
 omp_num_threads=${OMP_NUM_THREADS}
+model_dt_seconds=${MODEL_DT}
+output_dt_seconds=${OUTPUT_DT}
 compiler=${COMPILER_VERSION}
 elapsed_seconds=${ELAPSED_SECONDS}
 time_steps=${STEP_COUNT}

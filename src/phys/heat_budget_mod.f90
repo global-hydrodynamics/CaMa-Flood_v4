@@ -150,9 +150,13 @@ pure elemental subroutine update_local_water_ice_state( &
     surface_ice_mass_kg = max(surface_ice_volume_m3, 0.0_JPRB) * RI
     if (surface_ice_added_energy_j > 0.0_JPRB) then
         if (surface_ice_mass_kg > 0.0_JPRB) then
-            surface_melt_energy_j = min( &
-            &   surface_ice_added_energy_j, surface_ice_mass_kg * HFUS)
-            surface_ice_melted_mass_kg = surface_melt_energy_j / HFUS
+            if (surface_ice_added_energy_j >= surface_ice_mass_kg * HFUS) then
+                surface_melt_energy_j = surface_ice_mass_kg * HFUS
+                surface_ice_melted_mass_kg = surface_ice_mass_kg
+            else
+                surface_melt_energy_j = surface_ice_added_energy_j
+                surface_ice_melted_mass_kg = surface_melt_energy_j / HFUS
+            endif
             pending_liquid_energy_j = pending_liquid_energy_j + &
             &   surface_ice_added_energy_j - surface_melt_energy_j
         else
@@ -171,9 +175,13 @@ pure elemental subroutine update_local_water_ice_state( &
     excess_ice_mass_kg = max(excess_ice_volume_m3, 0.0_JPRB) * RI
     if (excess_ice_added_energy_j > 0.0_JPRB) then
         if (excess_ice_mass_kg > 0.0_JPRB) then
-            excess_melt_energy_j = min( &
-            &   excess_ice_added_energy_j, excess_ice_mass_kg * HFUS)
-            excess_ice_melted_mass_kg = excess_melt_energy_j / HFUS
+            if (excess_ice_added_energy_j >= excess_ice_mass_kg * HFUS) then
+                excess_melt_energy_j = excess_ice_mass_kg * HFUS
+                excess_ice_melted_mass_kg = excess_ice_mass_kg
+            else
+                excess_melt_energy_j = excess_ice_added_energy_j
+                excess_ice_melted_mass_kg = excess_melt_energy_j / HFUS
+            endif
             pending_liquid_energy_j = pending_liquid_energy_j + &
             &   excess_ice_added_energy_j - excess_melt_energy_j
         else
@@ -187,10 +195,18 @@ pure elemental subroutine update_local_water_ice_state( &
     ! temperature from its unchanged sensible energy performs conservative mixing.
     liquid_sensible_energy_j = liquid_water_energy_j( &
     &   liquid_water_volume_m3, liquid_water_temperature_k)
-    surface_ice_volume_m3 = max(surface_ice_volume_m3 - &
-    &   surface_ice_melted_mass_kg / RI, 0.0_JPRB)
-    excess_ice_volume_m3 = max(excess_ice_volume_m3 - &
-    &   excess_ice_melted_mass_kg / RI, 0.0_JPRB)
+    if (surface_ice_melted_mass_kg >= surface_ice_mass_kg) then
+        surface_ice_volume_m3 = 0.0_JPRB
+    else
+        surface_ice_volume_m3 = max(surface_ice_volume_m3 - &
+        &   surface_ice_melted_mass_kg / RI, 0.0_JPRB)
+    endif
+    if (excess_ice_melted_mass_kg >= excess_ice_mass_kg) then
+        excess_ice_volume_m3 = 0.0_JPRB
+    else
+        excess_ice_volume_m3 = max(excess_ice_volume_m3 - &
+        &   excess_ice_melted_mass_kg / RI, 0.0_JPRB)
+    endif
     total_melted_mass_kg = surface_ice_melted_mass_kg + excess_ice_melted_mass_kg
     liquid_water_volume_m3 = liquid_water_volume_m3 + total_melted_mass_kg / RW
     if (liquid_water_volume_m3 > 0.0_JPRB) then
@@ -225,12 +241,17 @@ pure elemental subroutine update_local_water_ice_state( &
         available_liquid_mass_kg = RW * max(liquid_water_volume_m3, 0.0_JPRB)
         freeze_energy_per_mass_j_kg = HFUS + CW * &
         &   max(liquid_water_temperature_k - TMELT, 0.0_JPRB)
-        requested_frozen_mass_kg = total_freeze_energy_demand_j / &
-        &   freeze_energy_per_mass_j_kg
-        frozen_water_mass_kg = min(requested_frozen_mass_kg, available_liquid_mass_kg)
-
-        liquid_water_volume_m3 = max( &
-        &   liquid_water_volume_m3 - frozen_water_mass_kg / RW, 0.0_JPRB)
+        if (total_freeze_energy_demand_j >= &
+        &   available_liquid_mass_kg * freeze_energy_per_mass_j_kg) then
+            frozen_water_mass_kg = available_liquid_mass_kg
+            liquid_water_volume_m3 = 0.0_JPRB
+        else
+            requested_frozen_mass_kg = total_freeze_energy_demand_j / &
+            &   freeze_energy_per_mass_j_kg
+            frozen_water_mass_kg = requested_frozen_mass_kg
+            liquid_water_volume_m3 = max( &
+            &   liquid_water_volume_m3 - frozen_water_mass_kg / RW, 0.0_JPRB)
+        endif
         surface_ice_volume_m3 = surface_ice_volume_m3 + frozen_water_mass_kg / RI
         if (liquid_water_volume_m3 <= 0.0_JPRB) liquid_water_temperature_k = TMELT
 

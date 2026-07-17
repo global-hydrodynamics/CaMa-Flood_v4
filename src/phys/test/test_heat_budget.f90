@@ -1,4 +1,6 @@
 program test_heat_budget
+    use, intrinsic :: ieee_arithmetic, only: &
+    &   ieee_is_finite
     use PARKIND1, only: &
     &   JPRB
     use const_mod, only: &
@@ -26,6 +28,10 @@ program test_heat_budget
     call test_separate_excess_ice_only_melts()
     call test_separate_complete_melt_warms_water()
     call test_separate_complete_freeze_residual()
+    call test_separate_zero_and_tiny_water()
+    call test_separate_large_ice_volume()
+    call test_separate_abrupt_phase_cycles()
+    call test_separate_substep_invariance()
     call test_ice_surface_heat_flux()
 
     write(*, '(a)') '[ALL TESTS PASSED] test_heat_budget'
@@ -369,6 +375,209 @@ subroutine test_separate_complete_freeze_residual()
 end subroutine test_separate_complete_freeze_residual
 
 
+subroutine test_separate_zero_and_tiny_water()
+    real(kind=JPRB) :: &
+    &   water_volume_m3, water_temperature_k, & ! [m3], [K] Liquid-water state.
+    &   surface_ice_volume_m3, excess_ice_volume_m3, & ! [m3] Ice-pool states.
+    &   frozen_mass_kg, surface_melted_mass_kg, excess_melted_mass_kg, & ! [kg] Phase changes.
+    &   unapplied_energy_j                      ! [J] Energy not applied by the update.
+
+    ! A positive water volume remains a physical state even when it is below
+    ! the storage threshold used to skip atmospheric heat-flux calculations.
+    water_volume_m3 = 1.0e-12_JPRB
+    water_temperature_k = TMELT
+    surface_ice_volume_m3 = 0.0_JPRB
+    excess_ice_volume_m3 = 0.0_JPRB
+    call check_separate_update( &
+    &   water_volume_m3, water_temperature_k, surface_ice_volume_m3, excess_ice_volume_m3, &
+    &   -RW * 1.0e-12_JPRB * HFUS, 0.0_JPRB, 0.0_JPRB, &
+    &   frozen_mass_kg, surface_melted_mass_kg, excess_melted_mass_kg, unapplied_energy_j)
+    call assert_close(water_volume_m3, 0.0_JPRB, 0.0_JPRB, &
+    &   'tiny-water complete freeze liquid volume [m3]')
+    call assert_close(surface_ice_volume_m3, RW * 1.0e-12_JPRB / RI, 1.0e-13_JPRB, &
+    &   'tiny-water complete freeze surface-ice volume [m3]')
+    call assert_finite(surface_ice_volume_m3, 'tiny-water surface-ice volume is finite')
+
+    ! Energy presented to an empty cell cannot create mass and is reported as
+    ! unapplied with its algebraic sign.
+    water_volume_m3 = 0.0_JPRB
+    water_temperature_k = TMELT
+    surface_ice_volume_m3 = 0.0_JPRB
+    excess_ice_volume_m3 = 0.0_JPRB
+    call check_separate_update( &
+    &   water_volume_m3, water_temperature_k, surface_ice_volume_m3, excess_ice_volume_m3, &
+    &   10.0_JPRB, -20.0_JPRB, 30.0_JPRB, &
+    &   frozen_mass_kg, surface_melted_mass_kg, excess_melted_mass_kg, unapplied_energy_j)
+    call assert_close(water_volume_m3 + surface_ice_volume_m3 + excess_ice_volume_m3, &
+    &   0.0_JPRB, 0.0_JPRB, 'empty update creates no water or ice [m3]')
+    call assert_close(unapplied_energy_j, 20.0_JPRB, 0.0_JPRB, &
+    &   'empty update signed unapplied energy [J]')
+    call assert_finite(water_temperature_k, 'empty-update water temperature is finite')
+end subroutine test_separate_zero_and_tiny_water
+
+
+subroutine test_separate_large_ice_volume()
+    real(kind=JPRB) :: &
+    &   water_volume_m3, water_temperature_k, & ! [m3], [K] Liquid-water state.
+    &   surface_ice_volume_m3, excess_ice_volume_m3, & ! [m3] Ice-pool states.
+    &   initial_mass_kg, initial_energy_j, &     ! [kg], [J] Conservation scales before the update.
+    &   excess_melt_energy_j, &                 ! [J] Energy used to melt immobile excess ice.
+    &   frozen_mass_kg, surface_melted_mass_kg, excess_melted_mass_kg, & ! [kg] Phase changes.
+    &   unapplied_energy_j, mass_budget_error_kg, energy_budget_error_j ! [J], [kg], [J] Diagnostics.
+
+    water_volume_m3 = 1.0e12_JPRB
+    water_temperature_k = TMELT + 1.0_JPRB
+    surface_ice_volume_m3 = 2.0e12_JPRB
+    excess_ice_volume_m3 = 1.0e15_JPRB
+    excess_melt_energy_j = RI * 1.0e9_JPRB * HFUS
+    initial_mass_kg = water_ice_mass_kg( &
+    &   water_volume_m3, surface_ice_volume_m3 + excess_ice_volume_m3)
+    initial_energy_j = water_ice_energy_j( &
+    &   water_volume_m3, water_temperature_k, &
+    &   surface_ice_volume_m3 + excess_ice_volume_m3, TMELT)
+
+    call update_local_water_ice_state( &
+    &   water_volume_m3, water_temperature_k, surface_ice_volume_m3, excess_ice_volume_m3, &
+    &   0.0_JPRB, 0.0_JPRB, excess_melt_energy_j, &
+    &   frozen_mass_kg, surface_melted_mass_kg, excess_melted_mass_kg, unapplied_energy_j, &
+    &   mass_budget_error_kg, energy_budget_error_j)
+
+    call assert_close(excess_ice_volume_m3, 1.0e15_JPRB - 1.0e9_JPRB, 1.0e-13_JPRB, &
+    &   'large-volume excess ice after partial melt [m3]')
+    call assert_close(excess_melted_mass_kg, RI * 1.0e9_JPRB, 1.0e-13_JPRB, &
+    &   'large-volume excess melted mass [kg]')
+    call assert_abs_le(mass_budget_error_kg, 1.0e-12_JPRB * initial_mass_kg, &
+    &   'large-volume relative mass conservation [kg]')
+    call assert_abs_le(energy_budget_error_j, &
+    &   1.0e-12_JPRB * max(abs(initial_energy_j), excess_melt_energy_j), &
+    &   'large-volume relative energy conservation [J]')
+    call assert_finite(water_temperature_k, 'large-volume water temperature is finite')
+    call assert_finite(excess_ice_volume_m3, 'large-volume excess ice is finite')
+end subroutine test_separate_large_ice_volume
+
+
+subroutine test_separate_abrupt_phase_cycles()
+    integer, parameter :: &
+    &   number_of_cycles = 100
+    real(kind=JPRB), parameter :: &
+    &   initial_water_volume_m3 = 2.0_JPRB ! [m3] Liquid water at the start of every cycle.
+    real(kind=JPRB) :: &
+    &   water_volume_m3, water_temperature_k, & ! [m3], [K] Liquid-water state.
+    &   surface_ice_volume_m3, excess_ice_volume_m3, & ! [m3] Ice-pool states.
+    &   frozen_mass_kg, surface_melted_mass_kg, excess_melted_mass_kg, & ! [kg] Phase changes.
+    &   unapplied_energy_j                      ! [J] Energy not applied by the update.
+    integer :: &
+    &   cycle_index                              ! [-] Freeze-melt cycle index.
+
+    water_volume_m3 = initial_water_volume_m3
+    water_temperature_k = TMELT
+    surface_ice_volume_m3 = 0.0_JPRB
+    excess_ice_volume_m3 = 0.0_JPRB
+    do cycle_index = 1, number_of_cycles
+        call check_separate_update( &
+        &   water_volume_m3, water_temperature_k, surface_ice_volume_m3, excess_ice_volume_m3, &
+        &   -RW * water_volume_m3 * HFUS, 0.0_JPRB, 0.0_JPRB, &
+        &   frozen_mass_kg, surface_melted_mass_kg, excess_melted_mass_kg, unapplied_energy_j)
+        call assert_close(water_volume_m3, 0.0_JPRB, 0.0_JPRB, &
+        &   'abrupt cycle complete freeze liquid volume [m3]')
+        call assert_close(unapplied_energy_j, 0.0_JPRB, 1.0e-13_JPRB, &
+        &   'abrupt cycle complete freeze unapplied energy [J]')
+
+        call check_separate_update( &
+        &   water_volume_m3, water_temperature_k, surface_ice_volume_m3, excess_ice_volume_m3, &
+        &   0.0_JPRB, RI * surface_ice_volume_m3 * HFUS, 0.0_JPRB, &
+        &   frozen_mass_kg, surface_melted_mass_kg, excess_melted_mass_kg, unapplied_energy_j)
+        call assert_close(surface_ice_volume_m3, 0.0_JPRB, 0.0_JPRB, &
+        &   'abrupt cycle complete melt surface-ice volume [m3]')
+        call assert_close(unapplied_energy_j, 0.0_JPRB, 1.0e-13_JPRB, &
+        &   'abrupt cycle complete melt unapplied energy [J]')
+    enddo
+
+    call assert_close(water_volume_m3, initial_water_volume_m3, 1.0e-12_JPRB, &
+    &   'abrupt freeze-melt cycles conserve liquid volume [m3]')
+    call assert_close(water_temperature_k, TMELT, 0.0_JPRB, &
+    &   'abrupt freeze-melt cycles retain melting temperature [K]')
+end subroutine test_separate_abrupt_phase_cycles
+
+
+subroutine test_separate_substep_invariance()
+    integer, parameter :: &
+    &   number_of_substeps = 12
+    real(kind=JPRB) :: &
+    &   one_step_water_volume_m3, one_step_water_temperature_k, & ! [m3], [K] One-step liquid state.
+    &   one_step_surface_ice_volume_m3, one_step_excess_ice_volume_m3, & ! [m3] One-step ice state.
+    &   split_water_volume_m3, split_water_temperature_k, & ! [m3], [K] Substepped liquid state.
+    &   split_surface_ice_volume_m3, split_excess_ice_volume_m3, & ! [m3] Substepped ice state.
+    &   total_added_energy_j, &                    ! [J] Energy integrated over the full update.
+    &   frozen_mass_kg, surface_melted_mass_kg, excess_melted_mass_kg, & ! [kg] Phase changes.
+    &   unapplied_energy_j                         ! [J] Energy not applied by an update.
+    integer :: &
+    &   substep_index                               ! [-] Thermal substep index.
+
+    ! Pure water cooling must give the same phase partition when the integrated
+    ! energy is applied in one step or split into equal thermal substeps.
+    total_added_energy_j = -RW * (CW * 1.0_JPRB + 0.4_JPRB * HFUS)
+    one_step_water_volume_m3 = 1.0_JPRB
+    one_step_water_temperature_k = TMELT + 1.0_JPRB
+    one_step_surface_ice_volume_m3 = 0.0_JPRB
+    one_step_excess_ice_volume_m3 = 0.0_JPRB
+    split_water_volume_m3 = one_step_water_volume_m3
+    split_water_temperature_k = one_step_water_temperature_k
+    split_surface_ice_volume_m3 = one_step_surface_ice_volume_m3
+    split_excess_ice_volume_m3 = one_step_excess_ice_volume_m3
+    call check_separate_update( &
+    &   one_step_water_volume_m3, one_step_water_temperature_k, &
+    &   one_step_surface_ice_volume_m3, one_step_excess_ice_volume_m3, &
+    &   total_added_energy_j, 0.0_JPRB, 0.0_JPRB, &
+    &   frozen_mass_kg, surface_melted_mass_kg, excess_melted_mass_kg, unapplied_energy_j)
+    do substep_index = 1, number_of_substeps
+        call check_separate_update( &
+        &   split_water_volume_m3, split_water_temperature_k, &
+        &   split_surface_ice_volume_m3, split_excess_ice_volume_m3, &
+        &   total_added_energy_j / real(number_of_substeps, kind=JPRB), &
+        &   0.0_JPRB, 0.0_JPRB, &
+        &   frozen_mass_kg, surface_melted_mass_kg, excess_melted_mass_kg, unapplied_energy_j)
+    enddo
+    call assert_close(split_water_volume_m3, one_step_water_volume_m3, 1.0e-12_JPRB, &
+    &   'substep-invariant water-freezing liquid volume [m3]')
+    call assert_close(split_surface_ice_volume_m3, one_step_surface_ice_volume_m3, 1.0e-12_JPRB, &
+    &   'substep-invariant water-freezing ice volume [m3]')
+    call assert_close(split_water_temperature_k, one_step_water_temperature_k, 1.0e-12_JPRB, &
+    &   'substep-invariant water-freezing temperature [K]')
+
+    ! The same invariance is required across complete melting, including the
+    ! point at which surplus melt energy begins to warm the liquid water.
+    total_added_energy_j = RI * (HFUS + CW * 2.0_JPRB)
+    one_step_water_volume_m3 = 0.0_JPRB
+    one_step_water_temperature_k = TMELT
+    one_step_surface_ice_volume_m3 = 1.0_JPRB
+    one_step_excess_ice_volume_m3 = 0.0_JPRB
+    split_water_volume_m3 = one_step_water_volume_m3
+    split_water_temperature_k = one_step_water_temperature_k
+    split_surface_ice_volume_m3 = one_step_surface_ice_volume_m3
+    split_excess_ice_volume_m3 = one_step_excess_ice_volume_m3
+    call check_separate_update( &
+    &   one_step_water_volume_m3, one_step_water_temperature_k, &
+    &   one_step_surface_ice_volume_m3, one_step_excess_ice_volume_m3, &
+    &   0.0_JPRB, total_added_energy_j, 0.0_JPRB, &
+    &   frozen_mass_kg, surface_melted_mass_kg, excess_melted_mass_kg, unapplied_energy_j)
+    do substep_index = 1, number_of_substeps
+        call check_separate_update( &
+        &   split_water_volume_m3, split_water_temperature_k, &
+        &   split_surface_ice_volume_m3, split_excess_ice_volume_m3, &
+        &   0.0_JPRB, total_added_energy_j / real(number_of_substeps, kind=JPRB), &
+        &   0.0_JPRB, &
+        &   frozen_mass_kg, surface_melted_mass_kg, excess_melted_mass_kg, unapplied_energy_j)
+    enddo
+    call assert_close(split_water_volume_m3, one_step_water_volume_m3, 1.0e-12_JPRB, &
+    &   'substep-invariant complete-melt liquid volume [m3]')
+    call assert_close(split_surface_ice_volume_m3, one_step_surface_ice_volume_m3, 1.0e-12_JPRB, &
+    &   'substep-invariant complete-melt ice volume [m3]')
+    call assert_close(split_water_temperature_k, one_step_water_temperature_k, 1.0e-12_JPRB, &
+    &   'substep-invariant complete-melt temperature [K]')
+end subroutine test_separate_substep_invariance
+
+
 subroutine check_separate_update( &
     &   water_volume_m3, water_temperature_k, surface_ice_volume_m3, excess_ice_volume_m3, &
     &   water_added_energy_j, surface_ice_added_energy_j, excess_ice_added_energy_j, &
@@ -503,5 +712,35 @@ subroutine assert_close(actual_value, expected_value, relative_tolerance, label)
     write(*, '(a,es24.15)') '  tolerance= ', absolute_tolerance
     error stop 1
 end subroutine assert_close
+
+
+subroutine assert_abs_le(actual_value, maximum_absolute_value, label)
+    real(kind=JPRB), intent(in) :: &
+    &   actual_value, &             ! [caller-defined unit] Computed value.
+    &   maximum_absolute_value      ! [caller-defined unit] Maximum accepted absolute value.
+    character(len=*), intent(in) :: &
+    &   label                       ! [-] Human-readable assertion label.
+
+    if (abs(actual_value) <= maximum_absolute_value) return
+
+    write(*, '(a)') '[TEST FAILED] '//trim(label)
+    write(*, '(a,es24.15)') '  actual absolute value = ', abs(actual_value)
+    write(*, '(a,es24.15)') '  allowed maximum       = ', maximum_absolute_value
+    error stop 1
+end subroutine assert_abs_le
+
+
+subroutine assert_finite(actual_value, label)
+    real(kind=JPRB), intent(in) :: &
+    &   actual_value             ! [caller-defined unit] Computed value.
+    character(len=*), intent(in) :: &
+    &   label                    ! [-] Human-readable assertion label.
+
+    if (ieee_is_finite(actual_value)) return
+
+    write(*, '(a)') '[TEST FAILED] '//trim(label)
+    write(*, '(a,es24.15)') '  actual = ', actual_value
+    error stop 1
+end subroutine assert_finite
 
 end program test_heat_budget
