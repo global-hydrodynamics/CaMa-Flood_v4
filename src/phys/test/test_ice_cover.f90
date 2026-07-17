@@ -2,7 +2,7 @@ program test_ice_cover
     use PARKIND1, only: &
     &   JPRB
     use ice_cover_mod, only: &
-    &   diagnose_ice_cover
+    &   diagnose_ice_cover, update_ice_cover_state
     implicit none
 
     call check_shape(0.0_JPRB, 100.0_JPRB, 20.0_JPRB, &
@@ -19,10 +19,42 @@ program test_ice_cover
     &   2000.0_JPRB, 500.0_JPRB, 100.0_JPRB, 20.0_JPRB, 1.0_JPRB, 'excess ice')
     call check_shape(10.0_JPRB, 0.0_JPRB, 20.0_JPRB, &
     &   0.0_JPRB, 10.0_JPRB, 0.0_JPRB, 0.0_JPRB, 0.0_JPRB, 'zero surface area')
+    call check_immobile_excess_state()
 
     write(*, '(a)') '[ALL TESTS PASSED] test_ice_cover'
 
 contains
+
+subroutine check_immobile_excess_state()
+    real(kind=JPRB) :: &
+    &   ice_volume_m3, &          ! [m3] Ice retained on the water surface.
+    &   excess_ice_volume_m3, &   ! [m3] Immobile excess ice retained in the grid cell.
+    &   initial_total_volume_m3, & ! [m3] Total ice volume before applying the capacity limit.
+    &   ice_area_m2, &            ! [m2] Diagnosed water-surface ice area.
+    &   ice_thickness_m, &        ! [m] Diagnosed water-surface ice thickness.
+    &   ice_fraction              ! [-] Diagnosed water-surface ice fraction.
+
+    ice_volume_m3 = 2500.0_JPRB
+    excess_ice_volume_m3 = 25.0_JPRB
+    initial_total_volume_m3 = ice_volume_m3 + excess_ice_volume_m3
+    call update_ice_cover_state( &
+    &   ice_volume_m3, excess_ice_volume_m3, 100.0_JPRB, 20.0_JPRB, &
+    &   ice_area_m2, ice_thickness_m, ice_fraction)
+
+    call assert_close(ice_volume_m3, 2000.0_JPRB, 'immobile excess retained water-surface volume')
+    call assert_close(excess_ice_volume_m3, 525.0_JPRB, 'immobile excess transferred volume')
+    call assert_close(ice_volume_m3 + excess_ice_volume_m3, &
+    &   initial_total_volume_m3, 'immobile excess total-volume conservation')
+
+    ! Increasing water-surface capacity must not remobilize existing excess ice.
+    call update_ice_cover_state( &
+    &   ice_volume_m3, excess_ice_volume_m3, 200.0_JPRB, 20.0_JPRB, &
+    &   ice_area_m2, ice_thickness_m, ice_fraction)
+    call assert_close(ice_volume_m3, 2000.0_JPRB, 'immobile excess no remobilization water-surface volume')
+    call assert_close(excess_ice_volume_m3, 525.0_JPRB, 'immobile excess no remobilization excess volume')
+    call assert_close(ice_volume_m3 + excess_ice_volume_m3, &
+    &   initial_total_volume_m3, 'immobile excess no-remobilization conservation')
+end subroutine check_immobile_excess_state
 
 subroutine check_shape( &
     &   ice_volume_m3, water_surface_area_m2, maximum_ice_thickness_m, &
@@ -33,7 +65,7 @@ subroutine check_shape( &
     &   water_surface_area_m2, &          ! [m2] Available water-surface area.
     &   maximum_ice_thickness_m, &        ! [m] Maximum retained ice thickness.
     &   expected_retained_volume_m3, &    ! [m3] Expected retained ice volume.
-    &   expected_excess_volume_m3, &      ! [m3] Expected removed ice volume.
+    &   expected_excess_volume_m3, &      ! [m3] Expected ice volume transferred to the immobile pool.
     &   expected_ice_area_m2, &           ! [m2] Expected ice-covered area.
     &   expected_ice_thickness_m, &       ! [m] Expected mean ice thickness.
     &   expected_ice_fraction             ! [-] Expected ice-covered fraction.
@@ -41,7 +73,7 @@ subroutine check_shape( &
     &   label                             ! [-] Human-readable test-case label.
     real(kind=JPRB) :: &
     &   retained_ice_volume_m3, &         ! [m3] Diagnosed retained ice volume.
-    &   excess_ice_volume_m3, &           ! [m3] Diagnosed removed ice volume.
+    &   excess_ice_volume_m3, &           ! [m3] Diagnosed ice volume transferred to the immobile pool.
     &   ice_area_m2, &                    ! [m2] Diagnosed ice-covered area.
     &   ice_thickness_m, &                ! [m] Diagnosed mean ice thickness.
     &   ice_fraction                      ! [-] Diagnosed ice-covered fraction.

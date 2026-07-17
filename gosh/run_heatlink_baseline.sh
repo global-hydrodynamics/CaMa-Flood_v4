@@ -236,14 +236,14 @@ dt = 86400                          ! [s] Heatlink output interval.
 &nml_out item='RIVICE_ARE', path='./riviceare2000', is_mean=.false. &end
 &nml_out item='RIVICE_THK', path='./rivicethk2000', is_mean=.false. &end
 &nml_out item='RIVICE_FRC', path='./rivicefrc2000', is_mean=.false. &end
-&nml_out item='RIVICE_XSCUM', path='./rivicexscum2000', is_mean=.false. &end
+&nml_out item='RIVICE_VOL_EXCESS', path='./rivicevolexcess2000', is_mean=.false. &end
 
 &restart_default
 initial_state_is_dumped = .false.
 /
 &restart_config item='RIVWAT_TMP', file='.heatlink.bin', recnum=1, mapfmt=.true. &end
 &restart_config item='RIVICE_VOL', file='.heatlink.bin', recnum=2, mapfmt=.true. &end
-&restart_config item='RIVICE_XSCUM', file='.heatlink.bin', recnum=3, mapfmt=.true. &end
+&restart_config item='RIVICE_VOL_EXCESS', file='.heatlink.bin', recnum=3, mapfmt=.true. &end
 
 &input_item item='LWDN', fmt='nc', path='${ATM_DIR}/GSWP3.BC.LWdown.3hrMap.ILS.2000.nc' /
 &input_item item='PSRF', fmt='nc', path='${ATM_DIR}/GSWP3.BC.PSurf.3hrMap.ILS.2000.nc', scale=1.0e-2 /
@@ -333,7 +333,7 @@ if [ "$ICE_ENABLED" -eq 1 ]; then
         riviceare2000.bin \
         rivicethk2000.bin \
         rivicefrc2000.bin \
-        rivicexscum2000.bin
+        rivicevolexcess2000.bin
     do
         ice_path=${RUN_DIR}/${ice_output}
         if [ ! -f "$ice_path" ]; then

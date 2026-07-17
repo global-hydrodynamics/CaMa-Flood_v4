@@ -18,7 +18,7 @@ module heatlink_river_mod
     use phys_const_mod, only: &
     &   TMELT, RIVDPH_MIN
     use ice_cover_mod, only: &
-    &   diagnose_ice_cover
+    &   update_ice_cover_state
     use input_mod, only: &
     &   add_input, get_input
     use output_mod, only: &
@@ -36,17 +36,17 @@ module heatlink_river_mod
     real(kind=JPRB), allocatable, save :: &
     &   wattmp(:) ! [K] river water temperature
 
-    ! River-ice state and diagnostics. The cumulative sink is accounting state,
-    ! not a second physical ice pool.
+    ! River-ice state and diagnostics. Excess ice remains in the source cell,
+    ! is reserved for local melting, and is excluded from future river transport.
     real(kind=JPRB), allocatable, save :: &
-    &   icevol(:), &       ! [m3] Ice volume retained in the model system.
+    &   icevol(:), &       ! [m3] Ice retained on the water surface and eligible for river transport.
+    &   icevol_excess(:), & ! [m3] Immobile excess ice retained in the river grid cell.
     &   icearea(:), &      ! [m2] Horizontal area covered by river ice.
     &   icethickness(:), & ! [m] Mean thickness over the ice-covered area.
-    &   icefraction(:), &  ! [-] Fraction of the water surface covered by ice.
-    &   excess_ice_sink_volume_cumulative(:) ! [m3] Cumulative ice volume removed from the model system.
+    &   icefraction(:)     ! [-] Fraction of the water surface covered by ice.
 
     real(kind=JPRB), parameter :: &
-    &   RIVER_ICE_THICKNESS_MAX_M = 20.0_JPRB ! [m] Maximum river-ice thickness retained in the model.
+    &   RIVER_ICE_THICKNESS_MAX_M = 20.0_JPRB ! [m] Maximum ice thickness retained on the water surface.
 
     ! atmospheric forcing
     real(kind=JPRB), allocatable, save :: &
@@ -96,10 +96,10 @@ subroutine init_heatlink_river_mod(dt)
 
     allocate(wattmp(NSEQMAX), source=0.0_JPRB)
     allocate(icevol(NSEQMAX), source=0.0_JPRB)
+    allocate(icevol_excess(NSEQMAX), source=0.0_JPRB)
     allocate(icearea(NSEQMAX), source=0.0_JPRB)
     allocate(icethickness(NSEQMAX), source=0.0_JPRB)
     allocate(icefraction(NSEQMAX), source=0.0_JPRB)
-    allocate(excess_ice_sink_volume_cumulative(NSEQMAX), source=0.0_JPRB)
     allocate(hflx_srf(NSEQMAX), source=0.0_JPRB)
     allocate(hflx_bdy(NSEQMAX), source=0.0_JPRB)
 
@@ -125,15 +125,15 @@ subroutine init_heatlink_river_mod(dt)
         if (LICE) then
             call read_restart('RIVICE_VOL', dt, is_found, icevol)
             if (.not. is_found) stop 'RIVICE_VOL restart was not found.'
-            call read_restart('RIVICE_XSCUM', dt, is_found, excess_ice_sink_volume_cumulative)
-            if (.not. is_found) stop 'RIVICE_XSCUM restart was not found.'
+            call read_restart('RIVICE_VOL_EXCESS', dt, is_found, icevol_excess)
+            if (.not. is_found) stop 'RIVICE_VOL_EXCESS restart was not found.'
         endif
     else
         write(LOGNAM, '(a)') '  initialize river water temperature -> air temperature'
         call get_input('TAIR', tair)
         wattmp(:) = max(tair(:), TMELT)
         icevol(:) = 0.0_JPRB
-        excess_ice_sink_volume_cumulative(:) = 0.0_JPRB
+        icevol_excess(:) = 0.0_JPRB
     endif
     call get_water()
     call update_ice_cover()
@@ -183,7 +183,7 @@ subroutine calc_heatlink(dt)
         call update_output('RIVICE_ARE', icearea)
         call update_output('RIVICE_THK', icethickness)
         call update_output('RIVICE_FRC', icefraction)
-        call update_output('RIVICE_XSCUM', excess_ice_sink_volume_cumulative)
+        call update_output('RIVICE_VOL_EXCESS', icevol_excess)
     endif
     write(LOGNAM, *) minval(wattmp), maxval(wattmp)
 end subroutine calc_heatlink
@@ -195,15 +195,13 @@ subroutine write_heatlink_restart(dt)
     call write_restart('RIVWAT_TMP', dt, wattmp)
     if (LICE) then
         call write_restart('RIVICE_VOL', dt, icevol)
-        call write_restart('RIVICE_XSCUM', dt, excess_ice_sink_volume_cumulative)
+        call write_restart('RIVICE_VOL_EXCESS', dt, icevol_excess)
     endif
 end subroutine write_heatlink_restart
 
 
 subroutine update_ice_cover()
     real(kind=JPRB) :: &
-    &   input_ice_volume_m3, &       ! [m3] Ice volume before the river-capacity constraint.
-    &   excess_ice_volume_m3, &      ! [m3] Ice volume removed during this diagnosis.
     &   water_surface_area_m2        ! [m2] Combined river and inundated water-surface area.
     integer(kind=JPIM) :: &
     &   iseq                          ! [-] Vector index of the river cell.
@@ -213,20 +211,17 @@ subroutine update_ice_cover()
         icearea(:) = 0.0_JPRB
         icethickness(:) = 0.0_JPRB
         icefraction(:) = 0.0_JPRB
-        excess_ice_sink_volume_cumulative(:) = 0.0_JPRB
+        icevol_excess(:) = 0.0_JPRB
         return
     endif
 
-    !$omp simd private(input_ice_volume_m3, excess_ice_volume_m3, water_surface_area_m2)
+    !$omp simd private(water_surface_area_m2)
     do iseq = 1, NSEQALL
-        input_ice_volume_m3 = icevol(iseq)
         water_surface_area_m2 = rivare(iseq) + fldare(iseq)
-        call diagnose_ice_cover( &
-        &   input_ice_volume_m3, water_surface_area_m2, RIVER_ICE_THICKNESS_MAX_M, &
-        &   icevol(iseq), excess_ice_volume_m3, &
+        call update_ice_cover_state( &
+        &   icevol(iseq), icevol_excess(iseq), &
+        &   water_surface_area_m2, RIVER_ICE_THICKNESS_MAX_M, &
         &   icearea(iseq), icethickness(iseq), icefraction(iseq))
-        excess_ice_sink_volume_cumulative(iseq) = &
-        &   excess_ice_sink_volume_cumulative(iseq) + excess_ice_volume_m3
     enddo
 end subroutine update_ice_cover
 
@@ -278,8 +273,7 @@ subroutine fin_heatlink_river_mod()
 
     write(LOGNAM, '(a)') '[fin_heatlink_river_mod]'
     deallocate(wattmp, hflx_srf, hflx_bdy)
-    deallocate(icevol, icearea, icethickness, icefraction)
-    deallocate(excess_ice_sink_volume_cumulative)
+    deallocate(icevol, icevol_excess, icearea, icethickness, icefraction)
     deallocate(lwdn, psrf, qair, swdn, tair, trof, wind)
     deallocate(watsto, rivdph, rivare, rivvel, flddph, fldare, fldvel)
     call fin_thermo_mod()

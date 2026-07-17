@@ -7,7 +7,7 @@ module ice_cover_mod
     public :: &
     &   ICE_THICKNESS_MIN_M, ICE_THICKNESS_FULL_COVER_M, &
     &   ICE_FRACTION_AT_MIN_THICKNESS, &
-    &   diagnose_ice_cover
+    &   diagnose_ice_cover, update_ice_cover_state
 
     real(kind=JPRB), parameter :: &
     &   ICE_THICKNESS_MIN_M = 0.05_JPRB, &
@@ -23,10 +23,10 @@ pure elemental subroutine diagnose_ice_cover( &
     real(kind=JPRB), intent(in) :: &
     &   ice_volume_m3, &              ! [m3] Ice volume presented to the river surface.
     &   water_surface_area_m2, &      ! [m2] Water-surface area available for ice cover.
-    &   maximum_ice_thickness_m       ! [m] Maximum ice thickness retained in the model system.
+    &   maximum_ice_thickness_m       ! [m] Maximum ice thickness retained on the water surface.
     real(kind=JPRB), intent(out) :: &
     &   retained_ice_volume_m3, &     ! [m3] Ice volume retained on the water surface.
-    &   excess_ice_volume_m3, &       ! [m3] Ice volume removed from the model system.
+    &   excess_ice_volume_m3, &       ! [m3] Ice volume to transfer to an immobile pool.
     &   ice_area_m2, &                ! [m2] Horizontal area covered by retained ice.
     &   ice_thickness_m, &            ! [m] Mean thickness over the ice-covered area.
     &   ice_fraction                   ! [-] Fraction of the water surface covered by ice.
@@ -63,5 +63,32 @@ pure elemental subroutine diagnose_ice_cover( &
         ice_thickness_m = retained_ice_volume_m3 / ice_area_m2
     endif
 end subroutine diagnose_ice_cover
+
+
+pure elemental subroutine update_ice_cover_state( &
+    &   ice_volume_m3, excess_ice_volume_m3, &
+    &   water_surface_area_m2, maximum_ice_thickness_m, &
+    &   ice_area_m2, ice_thickness_m, ice_fraction)
+    real(kind=JPRB), intent(inout) :: &
+    &   ice_volume_m3, &             ! [m3] Ice retained on the water surface.
+    &   excess_ice_volume_m3         ! [m3] Immobile excess ice retained in the river grid cell.
+    real(kind=JPRB), intent(in) :: &
+    &   water_surface_area_m2, &     ! [m2] Water-surface area available for ice cover.
+    &   maximum_ice_thickness_m      ! [m] Maximum ice thickness retained on the water surface.
+    real(kind=JPRB), intent(out) :: &
+    &   ice_area_m2, &               ! [m2] Horizontal area covered by water-surface ice.
+    &   ice_thickness_m, &           ! [m] Mean thickness over the ice-covered water surface.
+    &   ice_fraction                 ! [-] Fraction of the water surface covered by ice.
+    real(kind=JPRB) :: &
+    &   input_ice_volume_m3, &       ! [m3] Water-surface ice volume before applying the capacity limit.
+    &   transferred_excess_m3        ! [m3] Newly immobile ice volume transferred during this call.
+
+    input_ice_volume_m3 = ice_volume_m3
+    call diagnose_ice_cover( &
+    &   input_ice_volume_m3, water_surface_area_m2, maximum_ice_thickness_m, &
+    &   ice_volume_m3, transferred_excess_m3, &
+    &   ice_area_m2, ice_thickness_m, ice_fraction)
+    excess_ice_volume_m3 = excess_ice_volume_m3 + transferred_excess_m3
+end subroutine update_ice_cover_state
 
 end module ice_cover_mod
