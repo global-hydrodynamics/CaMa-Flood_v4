@@ -1,5 +1,6 @@
 TOP := $(abspath ../..)
-include $(TOP)/adm/Mkinclude
+MKINCLUDE ?= $(TOP)/adm/Mkinclude
+include $(MKINCLUDE)
 
 LIBNAME = libmod.a
 

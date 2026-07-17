@@ -1,0 +1,14 @@
+baseline=step1_liquid_water_only
+build_mode=release
+compiler=GNU Fortran (GCC) 13.2.0
+period_start=2000-01-01T00:00:00
+period_end=2000-01-02T00:00:00
+coupling_time_step_seconds=3600
+omp_num_threads=16
+time_steps=24
+rivwattmp_records=1
+rivwattmp_bytes=4147200
+rivwattmp_sha256=e0fa3d258fa63a4c3faf96b5260f3cdd39c9630fee41b7154f2ef1cab6160e1b
+final_restart_sha256=35c2c5ec1beb4a564af612db7fc5add8dd1e174adc8bdfa299bc1e6b138216a7
+final_rivwattmp_min_K=2.731500000000000E+02
+final_rivwattmp_max_K=3.049593083530152E+02

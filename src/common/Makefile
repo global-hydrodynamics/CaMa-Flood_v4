@@ -1,4 +1,5 @@
-include ../../adm/Mkinclude
+MKINCLUDE ?= ../../adm/Mkinclude
+include $(MKINCLUDE)
 
 LIBNAME = libcommon.a
 TOPDIR ?= ..
@@ -48,6 +49,7 @@ TESTS = \
 	
 TEST_SRCS = $(addprefix test/,$(addsuffix .f90,$(TESTS)))
 TEST_EXES = $(TESTS)
+TEST_SUPPORT_OBJS = ../yos_cmf_input.o
 
 
 .PHONY: all clean test
@@ -61,8 +63,8 @@ clean:
 
 test: $(TEST_EXES)
 
-%: test/%.f90 $(LIBNAME)
+%: test/%.f90 $(LIBNAME) $(TEST_SUPPORT_OBJS)
 	$(FCMP) $(FFLAGS) $(INC) $(MODS) $< \
-	    -L. -lcommon \
+	    -L. -lcommon $(TEST_SUPPORT_OBJS) \
 	    $(LDFLAGS) $(LIBS) -o $@
 	@install_name_tool -delete_rpath $(NETCDFDIR)/lib $@ 2>/dev/null || true

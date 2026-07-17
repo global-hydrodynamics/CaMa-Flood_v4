@@ -1,4 +1,5 @@
-include ../../adm/Mkinclude
+MKINCLUDE ?= ../../adm/Mkinclude
+include $(MKINCLUDE)
 
 libname = libphys.a
 
