@@ -2,7 +2,7 @@
 
 set -eu
 
-# Run a heatlink regression case with optional zero-initialized river ice.
+# Run a heatlink regression case with optional prognostic river ice.
 # Usage: run_heatlink_baseline.sh [smoke|annual]
 #
 # Environment variables:
@@ -327,7 +327,6 @@ if [ "$OUTPUT_RECORDS" -ne "$EXPECTED_RECORDS" ] || [ $((OUTPUT_BYTES % RECORD_B
 fi
 
 if [ "$ICE_ENABLED" -eq 1 ]; then
-    ice_reference=
     for ice_output in \
         rivicevol2000.bin \
         riviceare2000.bin \
@@ -344,23 +343,31 @@ if [ "$ICE_ENABLED" -eq 1 ]; then
             echo "Unexpected river-ice output size: ${ice_path}" >&2
             exit 1
         fi
-        if [ -z "$ice_reference" ]; then
-            ice_reference=$ice_path
-        elif ! cmp -s "$ice_reference" "$ice_path"; then
-            echo "Expected identical zero river-ice diagnostics in Step 3: ${ice_path}" >&2
+        if ! LC_ALL=C od -An -v -t f4 "$ice_path" | awk '
+        {
+            for (i = 1; i <= NF; i++) {
+                value = $i + 0.0
+                is_missing = value >= 0.999e20 && value <= 1.001e20
+                if (!is_missing && value < 0.0) exit 1
+            }
+        }
+        '; then
+            echo "Found a negative river-ice diagnostic: ${ice_path}" >&2
             exit 1
         fi
     done
 
-    if ! LC_ALL=C od -An -v -t f4 "$ice_reference" | awk '
+    if ! (LC_ALL=C od -An -v -t f4 "${RUN_DIR}/rivicevol2000.bin"; \
+          LC_ALL=C od -An -v -t f4 "${RUN_DIR}/rivicevolexcess2000.bin") | awk '
         {
             for (i = 1; i <= NF; i++) {
                 value = $i + 0.0
-                if (value != 0.0 && (value < 0.999e20 || value > 1.001e20)) exit 1
+                if (value > 0.0 && value < 0.999e20) found = 1
             }
         }
+        END { exit(found ? 0 : 1) }
     '; then
-        echo "Expected only zero or map-missing values in Step 3: ${ice_reference}" >&2
+        echo "Expected nonzero river-ice volume in the ice-enabled regression." >&2
         exit 1
     fi
 fi

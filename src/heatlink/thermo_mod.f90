@@ -7,14 +7,15 @@ module thermo_mod
     use const_mod, only: &
     &   STO_IGNORE
     use phys_const_mod, only: &
-    &   RW, CW, RIVDPH_MIN, &
+    &   RW, CW, RIVDPH_MIN, TMELT, Kice2wat, &
     &   watSWref, watLWref, ew
     use heat_flux_mod, only: &
     &   calc_LWd, calc_LWu, calc_bulk, &
     &   calc_SWd, calc_SWd_penetration_river, calc_SWd_penetration_flood, &
     &   calc_friction
     use heat_budget_mod, only: &
-    &   update_liquid_temperature_no_phase_change
+    &   update_liquid_temperature_no_phase_change, &
+    &   update_local_water_ice_state
     use output_mod, only: &
     &   update_output
     use topo_mod, only: &
@@ -24,7 +25,8 @@ module thermo_mod
 
     public :: &
     &   init_thermo_mod, fin_thermo_mod, &
-    &   calc_surface_heat_flux, calc_body_heat_flux, solve_heat_budget
+    &   calc_surface_heat_flux, calc_body_heat_flux, &
+    &   solve_heat_budget, solve_water_ice_heat_budget
 
     ! Surface-related flux components (per unit area, W/m2)
     real(kind=JPRB), allocatable, save :: &
@@ -204,5 +206,76 @@ subroutine solve_heat_budget(wattmp, watvol, hflx_srf, hflx_bdy, srfare, dt)
         &   wattmp(iseq), watvol(iseq), dE)
     end do
 end subroutine solve_heat_budget
+
+
+! ==============================================================================================
+! Solve separate liquid-water, water-surface ice, and immobile excess-ice budgets.
+! Ice is represented at TMELT; there is no prognostic ice sensible-temperature state.
+! ==============================================================================================
+subroutine solve_water_ice_heat_budget( &
+    &   water_temperature_k, liquid_water_volume_m3, &
+    &   surface_ice_volume_m3, excess_ice_volume_m3, &
+    &   water_surface_area_m2, surface_ice_area_m2, excess_ice_area_m2, &
+    &   open_water_surface_heat_flux_w_m2, water_body_heat_flux_w_m2, &
+    &   surface_ice_atmospheric_heat_flux_w_m2, &
+    &   excess_ice_atmospheric_heat_flux_w_m2, timestep_s, &
+    &   unapplied_energy_j, mass_budget_error_kg, energy_budget_error_j)
+    real(kind=JPRB), intent(inout) :: &
+    &   water_temperature_k(:), &   ! [K] Liquid-water temperature before and after the local update.
+    &   liquid_water_volume_m3(:), & ! [m3] Liquid-water volume before and after the local update.
+    &   surface_ice_volume_m3(:), &  ! [m3] Water-surface ice volume before and after the local update.
+    &   excess_ice_volume_m3(:)      ! [m3] Immobile excess-ice volume before and after the local update.
+    real(kind=JPRB), intent(in) :: &
+    &   water_surface_area_m2(:), &  ! [m2] Combined river and inundated water-surface area.
+    &   surface_ice_area_m2(:), &    ! [m2] Water-surface area covered by ice.
+    &   excess_ice_area_m2(:), &     ! [m2] Effective atmospheric-exchange area of immobile excess ice.
+    &   open_water_surface_heat_flux_w_m2(:), & ! [W m-2] Atmospheric flux into uncovered liquid water.
+    &   water_body_heat_flux_w_m2(:), & ! [W m-2] Shortwave and frictional heat flux into the water body.
+    &   surface_ice_atmospheric_heat_flux_w_m2(:), & ! [W m-2] Atmospheric flux into water-surface ice.
+    &   excess_ice_atmospheric_heat_flux_w_m2(:), & ! [W m-2] Atmospheric flux into immobile excess ice.
+    &   timestep_s                     ! [s] Coupling time-step duration.
+    real(kind=JPRB), intent(out) :: &
+    &   unapplied_energy_j(:), &       ! [J] Energy not applied by the local phase-change kernel.
+    &   mass_budget_error_kg(:), &     ! [kg] Final minus initial local water-plus-ice mass.
+    &   energy_budget_error_j(:)       ! [J] Local energy-conservation error after accounting for unapplied energy.
+    real(kind=JPRB) :: &
+    &   open_water_area_m2, &          ! [m2] Water-surface area not covered by ice.
+    &   water_to_ice_heat_flux_w_m2, & ! [W m-2] Conductive heat flux from liquid water into surface ice.
+    &   water_added_energy_j, &        ! [J] Net energy increment applied directly to liquid water.
+    &   surface_ice_added_energy_j, &  ! [J] Net energy increment applied to water-surface ice.
+    &   excess_ice_added_energy_j, &   ! [J] Net atmospheric energy increment presented to excess ice.
+    &   frozen_water_mass_kg, &        ! [kg] Liquid-water mass frozen during this update.
+    &   surface_ice_melted_mass_kg, &  ! [kg] Water-surface ice mass melted during this update.
+    &   excess_ice_melted_mass_kg      ! [kg] Immobile excess-ice mass melted during this update.
+    integer(kind=JPIM) :: &
+    &   iseq                            ! [-] Vector index of the river cell.
+
+    do iseq = 1, NSEQALL
+        open_water_area_m2 = max( &
+        &   water_surface_area_m2(iseq) - surface_ice_area_m2(iseq), 0.0_JPRB)
+        water_to_ice_heat_flux_w_m2 = Kice2wat * &
+        &   max(water_temperature_k(iseq) - TMELT, 0.0_JPRB)
+
+        water_added_energy_j = ( &
+        &   open_water_surface_heat_flux_w_m2(iseq) * open_water_area_m2 + &
+        &   water_body_heat_flux_w_m2(iseq) * water_surface_area_m2(iseq) - &
+        &   water_to_ice_heat_flux_w_m2 * surface_ice_area_m2(iseq)) * timestep_s
+        surface_ice_added_energy_j = ( &
+        &   surface_ice_atmospheric_heat_flux_w_m2(iseq) + &
+        &   water_to_ice_heat_flux_w_m2) * surface_ice_area_m2(iseq) * timestep_s
+        excess_ice_added_energy_j = &
+        &   excess_ice_atmospheric_heat_flux_w_m2(iseq) * &
+        &   excess_ice_area_m2(iseq) * timestep_s
+
+        call update_local_water_ice_state( &
+        &   liquid_water_volume_m3(iseq), water_temperature_k(iseq), &
+        &   surface_ice_volume_m3(iseq), excess_ice_volume_m3(iseq), &
+        &   water_added_energy_j, surface_ice_added_energy_j, &
+        &   excess_ice_added_energy_j, &
+        &   frozen_water_mass_kg, surface_ice_melted_mass_kg, &
+        &   excess_ice_melted_mass_kg, unapplied_energy_j(iseq), &
+        &   mass_budget_error_kg(iseq), energy_budget_error_j(iseq))
+    enddo
+end subroutine solve_water_ice_heat_budget
 #endif
 end module thermo_mod

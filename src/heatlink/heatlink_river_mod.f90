@@ -6,7 +6,7 @@ module heatlink_river_mod
     &   LOGNAM, LRESTART, LICE
     use YOS_CMF_MAP, only: &
     &   NSEQMAX, NSEQALL, &
-    &   D2RIVLEN, D2RIVWTH
+    &   D2GRAREA, D2RIVLEN, D2RIVWTH
     use YOS_CMF_DIAG, only: &
     &   D2STORGE, &
     &   D2RIVDPH, D2RIVVEL, D2FLDDPH, D2FLDVEL, D2FLDARE
@@ -18,7 +18,11 @@ module heatlink_river_mod
     use phys_const_mod, only: &
     &   TMELT, RIVDPH_MIN
     use ice_cover_mod, only: &
-    &   update_ice_cover_state
+    &   diagnose_ice_shape, update_ice_cover_state
+    use heat_flux_mod, only: &
+    &   calc_ice_surface_heat_flux
+    use heat_budget_mod, only: &
+    &   water_ice_mass_kg, water_ice_energy_j
     use input_mod, only: &
     &   add_input, get_input
     use output_mod, only: &
@@ -26,7 +30,8 @@ module heatlink_river_mod
     use restart_mod, only: &
     &   read_restart, write_restart
     use thermo_mod, only: &
-    &   calc_surface_heat_flux, calc_body_heat_flux, solve_heat_budget
+    &   calc_surface_heat_flux, calc_body_heat_flux, &
+    &   solve_heat_budget, solve_water_ice_heat_budget
     implicit none
     private
     public :: &
@@ -43,7 +48,9 @@ module heatlink_river_mod
     &   icevol_excess(:), & ! [m3] Immobile excess ice retained in the river grid cell.
     &   icearea(:), &      ! [m2] Horizontal area covered by river ice.
     &   icethickness(:), & ! [m] Mean thickness over the ice-covered area.
-    &   icefraction(:)     ! [-] Fraction of the water surface covered by ice.
+    &   icefraction(:), &  ! [-] Fraction of the water surface covered by ice.
+    &   icearea_excess(:), & ! [m2] Effective atmospheric-exchange area of immobile excess ice.
+    &   icethickness_excess(:) ! [m] Mean thickness over the effective excess-ice area.
 
     real(kind=JPRB), parameter :: &
     &   RIVER_ICE_THICKNESS_MAX_M = 20.0_JPRB ! [m] Maximum ice thickness retained on the water surface.
@@ -60,7 +67,15 @@ module heatlink_river_mod
 
     real(kind=JPRB), allocatable, save :: &
     &   hflx_srf(:), & ! [W m-2] surface heat flux (+: into water)
-    &   hflx_bdy(:)    ! [W m-2] body heat flux (+: into water)
+    &   hflx_bdy(:), & ! [W m-2] body heat flux (+: into water)
+    &   hflx_ice_srf(:), & ! [W m-2] atmospheric heat flux into water-surface ice.
+    &   hflx_ice_excess_srf(:), & ! [W m-2] atmospheric heat flux into immobile excess ice.
+    &   swdn_to_water(:) ! [W m-2] Area-weighted shortwave radiation reaching the water surface.
+
+    real(kind=JPRB), allocatable, save :: &
+    &   phase_unapplied_energy(:), & ! [J] Energy not applied by the local phase-change kernel.
+    &   phase_mass_budget_error(:), & ! [kg] Local water-plus-ice mass-conservation error.
+    &   phase_energy_budget_error(:) ! [J] Local water-plus-ice energy-conservation error.
 
     real(kind=JPRB), allocatable, save :: &
     &   watsto(:), & ! [m3] water storage (volume) in river + floodplain
@@ -100,8 +115,16 @@ subroutine init_heatlink_river_mod(dt)
     allocate(icearea(NSEQMAX), source=0.0_JPRB)
     allocate(icethickness(NSEQMAX), source=0.0_JPRB)
     allocate(icefraction(NSEQMAX), source=0.0_JPRB)
+    allocate(icearea_excess(NSEQMAX), source=0.0_JPRB)
+    allocate(icethickness_excess(NSEQMAX), source=0.0_JPRB)
     allocate(hflx_srf(NSEQMAX), source=0.0_JPRB)
     allocate(hflx_bdy(NSEQMAX), source=0.0_JPRB)
+    allocate(hflx_ice_srf(NSEQMAX), source=0.0_JPRB)
+    allocate(hflx_ice_excess_srf(NSEQMAX), source=0.0_JPRB)
+    allocate(swdn_to_water(NSEQMAX), source=0.0_JPRB)
+    allocate(phase_unapplied_energy(NSEQMAX), source=0.0_JPRB)
+    allocate(phase_mass_budget_error(NSEQMAX), source=0.0_JPRB)
+    allocate(phase_energy_budget_error(NSEQMAX), source=0.0_JPRB)
 
     allocate(lwdn(NSEQMAX), source=0.0_JPRB)
     allocate(psrf(NSEQMAX), source=0.0_JPRB)
@@ -135,8 +158,9 @@ subroutine init_heatlink_river_mod(dt)
         icevol(:) = 0.0_JPRB
         icevol_excess(:) = 0.0_JPRB
     endif
-    call get_water()
-    call update_ice_cover()
+    ! Defer the first water/ice geometry diagnosis to calc_heatlink, after
+    ! CaMa advances. Diagnosing here would add an extra irreversible transfer
+    ! from water-surface ice to immobile excess ice only on restart runs.
     write(LOGNAM, *)
 end subroutine init_heatlink_river_mod
 
@@ -167,15 +191,32 @@ subroutine calc_heatlink(dt)
     call calc_surface_heat_flux( &
     &   wattmp, watsto, lwdn, tair, psrf, qair, wind, &
     &   hflx_srf)
-    call calc_body_heat_flux( &
-    &   watsto, &
-    &   swdn, &
-    &   rivdph, rivare, rivvel, &
-    &   flddph, fldare, fldvel, &
-    &   hflx_bdy)
-    call solve_heat_budget(wattmp, &
-    &   watsto, hflx_srf, hflx_bdy, rivare + fldare, dt)
-    wattmp(:) = max(wattmp(:), TMELT)
+    if (LICE) then
+        call calc_ice_heat_fluxes()
+        call calc_body_heat_flux( &
+        &   watsto, &
+        &   swdn_to_water, &
+        &   rivdph, rivare, rivvel, &
+        &   flddph, fldare, fldvel, &
+        &   hflx_bdy)
+        call solve_water_ice_heat_budget( &
+        &   wattmp, watsto, icevol, icevol_excess, &
+        &   rivare + fldare, icearea, icearea_excess, &
+        &   hflx_srf, hflx_bdy, hflx_ice_srf, hflx_ice_excess_srf, dt, &
+        &   phase_unapplied_energy, phase_mass_budget_error, phase_energy_budget_error)
+        call put_water_storage()
+        call update_ice_cover()
+    else
+        call calc_body_heat_flux( &
+        &   watsto, &
+        &   swdn, &
+        &   rivdph, rivare, rivvel, &
+        &   flddph, fldare, fldvel, &
+        &   hflx_bdy)
+        call solve_heat_budget(wattmp, &
+        &   watsto, hflx_srf, hflx_bdy, rivare + fldare, dt)
+        wattmp(:) = max(wattmp(:), TMELT)
+    endif
 
     call update_output('RIVWAT_TMP', wattmp)
     if (LICE) then
@@ -184,8 +225,16 @@ subroutine calc_heatlink(dt)
         call update_output('RIVICE_THK', icethickness)
         call update_output('RIVICE_FRC', icefraction)
         call update_output('RIVICE_VOL_EXCESS', icevol_excess)
+        call update_output('RIVICE_EXCESS_ARE', icearea_excess)
+        call update_output('RIVICE_EXCESS_THK', icethickness_excess)
+        call update_output('RIVICE_MASS_ERROR', phase_mass_budget_error)
+        call update_output('RIVICE_ENERGY_ERROR', phase_energy_budget_error)
+        call update_output('RIVICE_ENERGY_UNAPPLIED', phase_unapplied_energy)
     endif
-    write(LOGNAM, *) minval(wattmp), maxval(wattmp)
+    write(LOGNAM, *) minval(wattmp(:NSEQALL)), maxval(wattmp(:NSEQALL))
+    if (LICE) then
+        call log_ice_budget()
+    endif
 end subroutine calc_heatlink
 
 
@@ -202,7 +251,10 @@ end subroutine write_heatlink_restart
 
 subroutine update_ice_cover()
     real(kind=JPRB) :: &
-    &   water_surface_area_m2        ! [m2] Combined river and inundated water-surface area.
+    &   water_surface_area_m2, &      ! [m2] Combined river and inundated water-surface area.
+    &   land_surface_area_m2, &       ! [m2] Grid-cell area not occupied by the diagnosed water surface.
+    &   excess_surface_area_limit_m2, & ! [m2] Effective area available to immobile excess ice.
+    &   excess_ice_fraction           ! [-] Fraction of the effective excess-ice area covered by ice.
     integer(kind=JPIM) :: &
     &   iseq                          ! [-] Vector index of the river cell.
 
@@ -212,18 +264,119 @@ subroutine update_ice_cover()
         icethickness(:) = 0.0_JPRB
         icefraction(:) = 0.0_JPRB
         icevol_excess(:) = 0.0_JPRB
+        icearea_excess(:) = 0.0_JPRB
+        icethickness_excess(:) = 0.0_JPRB
         return
     endif
 
-    !$omp simd private(water_surface_area_m2)
+    !$omp simd private(water_surface_area_m2, land_surface_area_m2, excess_surface_area_limit_m2, excess_ice_fraction)
     do iseq = 1, NSEQALL
         water_surface_area_m2 = rivare(iseq) + fldare(iseq)
         call update_ice_cover_state( &
         &   icevol(iseq), icevol_excess(iseq), &
         &   water_surface_area_m2, RIVER_ICE_THICKNESS_MAX_M, &
         &   icearea(iseq), icethickness(iseq), icefraction(iseq))
+
+        ! Existing excess ice never returns to the water-surface pool. Its
+        ! effective area follows the non-water part of the source grid cell.
+        ! Fully inundated cells fall back to the grid-cell footprint so that
+        ! retained excess ice can still exchange heat and melt locally.
+        land_surface_area_m2 = max(D2GRAREA(iseq,1) - water_surface_area_m2, 0.0_JPRB)
+        if (land_surface_area_m2 > 0.0_JPRB) then
+            excess_surface_area_limit_m2 = land_surface_area_m2
+        else
+            excess_surface_area_limit_m2 = max(D2GRAREA(iseq,1), 0.0_JPRB)
+        endif
+        call diagnose_ice_shape( &
+        &   icevol_excess(iseq), excess_surface_area_limit_m2, &
+        &   icearea_excess(iseq), icethickness_excess(iseq), excess_ice_fraction)
     enddo
 end subroutine update_ice_cover
+
+
+subroutine calc_ice_heat_fluxes()
+    real(kind=JPRB) :: &
+    &   transmitted_shortwave_w_m2 ! [W m-2] Shortwave radiation transmitted through excess ice.
+    integer(kind=JPIM) :: &
+    &   iseq                         ! [-] Vector index of the river cell.
+
+    !$omp simd private(transmitted_shortwave_w_m2)
+    do iseq = 1, NSEQALL
+        call calc_ice_surface_heat_flux( &
+        &   hflx_ice_srf(iseq), swdn_to_water(iseq), &
+        &   swdn(iseq), lwdn(iseq), tair(iseq), icethickness(iseq))
+        swdn_to_water(iseq) = (1.0_JPRB - icefraction(iseq)) * swdn(iseq) + &
+        &   icefraction(iseq) * swdn_to_water(iseq)
+
+        call calc_ice_surface_heat_flux( &
+        &   hflx_ice_excess_srf(iseq), transmitted_shortwave_w_m2, &
+        &   swdn(iseq), lwdn(iseq), tair(iseq), icethickness_excess(iseq))
+    enddo
+end subroutine calc_ice_heat_fluxes
+
+
+subroutine put_water_storage()
+    real(kind=JPRD) :: &
+    &   old_river_volume_m3, &      ! [m3] River storage before applying local phase change.
+    &   old_floodplain_volume_m3, & ! [m3] Floodplain storage before applying local phase change.
+    &   old_total_volume_m3, &      ! [m3] Total liquid-water storage before applying local phase change.
+    &   new_total_volume_m3, &      ! [m3] Total liquid-water storage after applying local phase change.
+    &   river_storage_fraction      ! [-] Fraction of pre-update liquid water held in the river storage.
+    integer(kind=JPIM) :: &
+    &   iseq                         ! [-] Vector index of the river cell.
+
+    do iseq = 1, NSEQALL
+        old_river_volume_m3 = max(P2RIVSTO(iseq,1), 0.0_JPRD)
+        old_floodplain_volume_m3 = max(P2FLDSTO(iseq,1), 0.0_JPRD)
+        old_total_volume_m3 = old_river_volume_m3 + old_floodplain_volume_m3
+        new_total_volume_m3 = max(real(watsto(iseq), kind=JPRD), 0.0_JPRD)
+
+        if (old_total_volume_m3 > 0.0_JPRD) then
+            river_storage_fraction = old_river_volume_m3 / old_total_volume_m3
+            P2RIVSTO(iseq,1) = new_total_volume_m3 * river_storage_fraction
+            P2FLDSTO(iseq,1) = new_total_volume_m3 - P2RIVSTO(iseq,1)
+        else
+            P2RIVSTO(iseq,1) = new_total_volume_m3
+            P2FLDSTO(iseq,1) = 0.0_JPRD
+        endif
+        D2STORGE(iseq,1) = real(P2RIVSTO(iseq,1) + P2FLDSTO(iseq,1), kind=JPRB)
+    enddo
+end subroutine put_water_storage
+
+
+subroutine log_ice_budget()
+    real(kind=JPRB) :: &
+    &   local_mass_scale_kg, &     ! [kg] Local total water-plus-ice mass used to normalize mass error.
+    &   local_energy_scale_j, &    ! [J] Local water-plus-ice energy magnitude used to normalize energy error.
+    &   maximum_relative_mass_error, & ! [-] Maximum cellwise relative mass-conservation error.
+    &   maximum_relative_energy_error  ! [-] Maximum cellwise relative energy-conservation error.
+    integer(kind=JPIM) :: &
+    &   iseq                         ! [-] Vector index of the river cell.
+
+    maximum_relative_mass_error = 0.0_JPRB
+    maximum_relative_energy_error = 0.0_JPRB
+    do iseq = 1, NSEQALL
+        local_mass_scale_kg = max(abs(water_ice_mass_kg( &
+        &   watsto(iseq), icevol(iseq) + icevol_excess(iseq))), 1.0_JPRB)
+        local_energy_scale_j = max(abs(water_ice_energy_j( &
+        &   watsto(iseq), wattmp(iseq), &
+        &   icevol(iseq) + icevol_excess(iseq), TMELT)), &
+        &   abs(phase_unapplied_energy(iseq)), 1.0_JPRB)
+        maximum_relative_mass_error = max(maximum_relative_mass_error, &
+        &   abs(phase_mass_budget_error(iseq)) / local_mass_scale_kg)
+        maximum_relative_energy_error = max(maximum_relative_energy_error, &
+        &   abs(phase_energy_budget_error(iseq)) / local_energy_scale_j)
+    enddo
+
+    write(LOGNAM, '(a,3(1x,es12.4))') &
+    &   '  ice budget max(abs): mass_error[kg], energy_error[J], unapplied_energy[J] =', &
+    &   maxval(abs(phase_mass_budget_error(:NSEQALL))), &
+    &   maxval(abs(phase_energy_budget_error(:NSEQALL))), &
+    &   maxval(abs(phase_unapplied_energy(:NSEQALL)))
+    write(LOGNAM, '(a,2(1x,es12.4))') &
+    &   '  ice budget max(relative): mass_error[-], energy_error[-] =', &
+    &   maximum_relative_mass_error, maximum_relative_energy_error
+end subroutine log_ice_budget
 
 
 subroutine get_water
@@ -273,7 +426,10 @@ subroutine fin_heatlink_river_mod()
 
     write(LOGNAM, '(a)') '[fin_heatlink_river_mod]'
     deallocate(wattmp, hflx_srf, hflx_bdy)
+    deallocate(hflx_ice_srf, hflx_ice_excess_srf, swdn_to_water)
+    deallocate(phase_unapplied_energy, phase_mass_budget_error, phase_energy_budget_error)
     deallocate(icevol, icevol_excess, icearea, icethickness, icefraction)
+    deallocate(icearea_excess, icethickness_excess)
     deallocate(lwdn, psrf, qair, swdn, tair, trof, wind)
     deallocate(watsto, rivdph, rivare, rivvel, flddph, fldare, fldvel)
     call fin_thermo_mod()

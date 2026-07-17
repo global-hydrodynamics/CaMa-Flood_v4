@@ -7,7 +7,7 @@ module ice_cover_mod
     public :: &
     &   ICE_THICKNESS_MIN_M, ICE_THICKNESS_FULL_COVER_M, &
     &   ICE_FRACTION_AT_MIN_THICKNESS, &
-    &   diagnose_ice_cover, update_ice_cover_state
+    &   diagnose_ice_shape, diagnose_ice_cover, update_ice_cover_state
 
     real(kind=JPRB), parameter :: &
     &   ICE_THICKNESS_MIN_M = 0.05_JPRB, &
@@ -15,6 +15,46 @@ module ice_cover_mod
     &   ICE_FRACTION_AT_MIN_THICKNESS = 0.1_JPRB
 
 contains
+
+pure elemental subroutine diagnose_ice_shape( &
+    &   ice_volume_m3, maximum_surface_area_m2, &
+    &   ice_area_m2, ice_thickness_m, ice_fraction)
+    real(kind=JPRB), intent(in) :: &
+    &   ice_volume_m3, &          ! [m3] Ice volume represented by this shape.
+    &   maximum_surface_area_m2   ! [m2] Maximum horizontal area available to the ice.
+    real(kind=JPRB), intent(out) :: &
+    &   ice_area_m2, &            ! [m2] Diagnosed horizontal ice area.
+    &   ice_thickness_m, &        ! [m] Mean thickness over the diagnosed ice area.
+    &   ice_fraction              ! [-] Fraction of the maximum surface area covered by ice.
+    real(kind=JPRB) :: &
+    &   available_ice_volume_m3, & ! [m3] Nonnegative ice volume used by the diagnosis.
+    &   available_surface_area_m2  ! [m2] Nonnegative maximum surface area.
+
+    available_ice_volume_m3 = max(ice_volume_m3, 0.0_JPRB)
+    available_surface_area_m2 = max(maximum_surface_area_m2, 0.0_JPRB)
+    ice_area_m2 = 0.0_JPRB
+    ice_thickness_m = 0.0_JPRB
+    ice_fraction = 0.0_JPRB
+    if (available_ice_volume_m3 <= 0.0_JPRB .or. &
+    &   available_surface_area_m2 <= 0.0_JPRB) return
+
+    if (available_ice_volume_m3 >= &
+    &   available_surface_area_m2 * ICE_THICKNESS_FULL_COVER_M) then
+        ice_area_m2 = available_surface_area_m2
+        ice_thickness_m = available_ice_volume_m3 / ice_area_m2
+        ice_fraction = 1.0_JPRB
+    else if (available_ice_volume_m3 < available_surface_area_m2 * &
+    &   ICE_THICKNESS_MIN_M * ICE_FRACTION_AT_MIN_THICKNESS) then
+        ice_thickness_m = ICE_THICKNESS_MIN_M
+        ice_area_m2 = available_ice_volume_m3 / ice_thickness_m
+        ice_fraction = ice_area_m2 / available_surface_area_m2
+    else
+        ice_fraction = sqrt(available_ice_volume_m3 / &
+        &   (available_surface_area_m2 * ICE_THICKNESS_FULL_COVER_M))
+        ice_area_m2 = available_surface_area_m2 * ice_fraction
+        ice_thickness_m = available_ice_volume_m3 / ice_area_m2
+    endif
+end subroutine diagnose_ice_shape
 
 pure elemental subroutine diagnose_ice_cover( &
     &   ice_volume_m3, water_surface_area_m2, maximum_ice_thickness_m, &
@@ -41,27 +81,9 @@ pure elemental subroutine diagnose_ice_cover( &
     retained_ice_volume_m3 = min(available_ice_volume_m3, maximum_ice_volume_m3)
     excess_ice_volume_m3 = available_ice_volume_m3 - retained_ice_volume_m3
 
-    ice_area_m2 = 0.0_JPRB
-    ice_thickness_m = 0.0_JPRB
-    ice_fraction = 0.0_JPRB
-    if (retained_ice_volume_m3 <= 0.0_JPRB .or. water_surface_area_m2 <= 0.0_JPRB) return
-
-    if (retained_ice_volume_m3 >= &
-    &   water_surface_area_m2 * ICE_THICKNESS_FULL_COVER_M) then
-        ice_area_m2 = water_surface_area_m2
-        ice_thickness_m = retained_ice_volume_m3 / ice_area_m2
-        ice_fraction = 1.0_JPRB
-    else if (retained_ice_volume_m3 < water_surface_area_m2 * &
-    &   ICE_THICKNESS_MIN_M * ICE_FRACTION_AT_MIN_THICKNESS) then
-        ice_thickness_m = ICE_THICKNESS_MIN_M
-        ice_area_m2 = retained_ice_volume_m3 / ice_thickness_m
-        ice_fraction = ice_area_m2 / water_surface_area_m2
-    else
-        ice_fraction = sqrt(retained_ice_volume_m3 / &
-        &   (water_surface_area_m2 * ICE_THICKNESS_FULL_COVER_M))
-        ice_area_m2 = water_surface_area_m2 * ice_fraction
-        ice_thickness_m = retained_ice_volume_m3 / ice_area_m2
-    endif
+    call diagnose_ice_shape( &
+    &   retained_ice_volume_m3, water_surface_area_m2, &
+    &   ice_area_m2, ice_thickness_m, ice_fraction)
 end subroutine diagnose_ice_cover
 
 

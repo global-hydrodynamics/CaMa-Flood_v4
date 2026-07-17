@@ -2,7 +2,7 @@ program test_ice_cover
     use PARKIND1, only: &
     &   JPRB
     use ice_cover_mod, only: &
-    &   diagnose_ice_cover, update_ice_cover_state
+    &   diagnose_ice_shape, diagnose_ice_cover, update_ice_cover_state
     implicit none
 
     call check_shape(0.0_JPRB, 100.0_JPRB, 20.0_JPRB, &
@@ -20,10 +20,32 @@ program test_ice_cover
     call check_shape(10.0_JPRB, 0.0_JPRB, 20.0_JPRB, &
     &   0.0_JPRB, 10.0_JPRB, 0.0_JPRB, 0.0_JPRB, 0.0_JPRB, 'zero surface area')
     call check_immobile_excess_state()
+    call check_immobile_excess_shape()
 
     write(*, '(a)') '[ALL TESTS PASSED] test_ice_cover'
 
 contains
+
+subroutine check_immobile_excess_shape()
+    real(kind=JPRB) :: &
+    &   ice_area_m2, &       ! [m2] Diagnosed effective excess-ice area.
+    &   ice_thickness_m, &   ! [m] Diagnosed excess-ice thickness.
+    &   ice_fraction         ! [-] Diagnosed fraction of the effective excess-ice area.
+
+    ! Immobile excess ice has no second thickness cap; it remains in the cell
+    ! and becomes thicker after filling its effective exchange area.
+    call diagnose_ice_shape( &
+    &   2500.0_JPRB, 100.0_JPRB, ice_area_m2, ice_thickness_m, ice_fraction)
+    call assert_close(ice_area_m2, 100.0_JPRB, 'immobile excess shape area')
+    call assert_close(ice_thickness_m, 25.0_JPRB, 'immobile excess shape thickness')
+    call assert_close(ice_fraction, 1.0_JPRB, 'immobile excess shape fraction')
+
+    call diagnose_ice_shape( &
+    &   10.0_JPRB, 0.0_JPRB, ice_area_m2, ice_thickness_m, ice_fraction)
+    call assert_close(ice_area_m2, 0.0_JPRB, 'immobile excess zero-area shape area')
+    call assert_close(ice_thickness_m, 0.0_JPRB, 'immobile excess zero-area shape thickness')
+    call assert_close(ice_fraction, 0.0_JPRB, 'immobile excess zero-area shape fraction')
+end subroutine check_immobile_excess_shape
 
 subroutine check_immobile_excess_state()
     real(kind=JPRB) :: &

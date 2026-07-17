@@ -4,7 +4,8 @@ module heat_flux_mod
     use phys_const_mod, only: &
     &   EW, SB, TMELT, iceSWatten, Rsrf, Dbtm, Kw, Ksed, porosity, dsoil, &
     &   RW, GRAVITY_ACCEL, watSWref, ATTEN_SWD_RIV, ATTEN_SWD_LAK, &
-    &   AIR_DENSITY, AIR_SPCHEAT, TMELT, EVAP_EFF
+    &   AIR_DENSITY, AIR_SPCHEAT, EVAP_EFF, &
+    &   iceSWref, iceLWref, Kice2air
     use water_mod, only: &
     &   get_tetens_params, water_latent, saturated_specific_humidity, saturated_vapour_pressure
     !$ use omp_lib
@@ -158,6 +159,50 @@ subroutine calc_SWd_penetration_ice(Hswp, &
 
     Hswp = exp(-1.d0 * iceSWatten * iceD) * Hswd
 end subroutine calc_SWd_penetration_ice
+
+
+pure elemental subroutine calc_ice_surface_heat_flux( &
+    &   net_ice_heat_flux_w_m2, transmitted_shortwave_w_m2, &
+    &   downward_shortwave_w_m2, downward_longwave_w_m2, &
+    &   air_temperature_k, ice_thickness_m)
+    real(kind=JPRB), intent(out) :: &
+    &   net_ice_heat_flux_w_m2, &        ! [W m-2] Net atmospheric heat flux into ice; positive melts ice.
+    &   transmitted_shortwave_w_m2       ! [W m-2] Shortwave radiation transmitted through the ice.
+    real(kind=JPRB), intent(in) :: &
+    &   downward_shortwave_w_m2, &       ! [W m-2] Downward shortwave radiation above the ice.
+    &   downward_longwave_w_m2, &        ! [W m-2] Downward longwave radiation above the ice.
+    &   air_temperature_k, &             ! [K] Near-surface air temperature.
+    &   ice_thickness_m                   ! [m] Mean ice thickness over the ice-covered area.
+    real(kind=JPRB) :: &
+    &   absorbed_shortwave_before_attenuation_w_m2, & ! [W m-2] Non-reflected shortwave entering the ice.
+    &   absorbed_shortwave_in_ice_w_m2, &             ! [W m-2] Shortwave absorbed within the ice.
+    &   absorbed_downward_longwave_w_m2, &            ! [W m-2] Downward longwave absorbed by the ice.
+    &   emitted_upward_longwave_w_m2, &               ! [W m-2] Upward longwave emitted by the ice surface.
+    &   sensible_heat_into_ice_w_m2, &                ! [W m-2] Sensible heat transfer from air to ice.
+    &   ice_surface_temperature_k, &                  ! [K] Diagnosed ice-surface temperature.
+    &   surface_temperature_squared_k2                ! [K2] Squared ice-surface temperature.
+
+    ice_surface_temperature_k = min(air_temperature_k, TMELT)
+    absorbed_shortwave_before_attenuation_w_m2 = &
+    &   (1.0_JPRB - iceSWref) * downward_shortwave_w_m2
+    transmitted_shortwave_w_m2 = exp( &
+    &   -iceSWatten * max(ice_thickness_m, 0.0_JPRB)) * &
+    &   absorbed_shortwave_before_attenuation_w_m2
+    absorbed_shortwave_in_ice_w_m2 = &
+    &   absorbed_shortwave_before_attenuation_w_m2 - transmitted_shortwave_w_m2
+    absorbed_downward_longwave_w_m2 = &
+    &   (1.0_JPRB - iceLWref) * downward_longwave_w_m2
+    surface_temperature_squared_k2 = &
+    &   ice_surface_temperature_k * ice_surface_temperature_k
+    emitted_upward_longwave_w_m2 = (1.0_JPRB - iceLWref) * SB * &
+    &   surface_temperature_squared_k2 * surface_temperature_squared_k2
+    sensible_heat_into_ice_w_m2 = Kice2air * &
+    &   (air_temperature_k - ice_surface_temperature_k)
+
+    net_ice_heat_flux_w_m2 = absorbed_shortwave_in_ice_w_m2 + &
+    &   absorbed_downward_longwave_w_m2 - emitted_upward_longwave_w_m2 + &
+    &   sensible_heat_into_ice_w_m2
+end subroutine calc_ice_surface_heat_flux
 
 
 subroutine calc_SWd_penetration_river(Hswp, &

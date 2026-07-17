@@ -14,13 +14,13 @@ PROGRAM MAIN_cmf
 !==========================================================
 USE PARKIND1,                ONLY: JPRB, JPIM
 USE YOS_CMF_INPUT,           ONLY: NXIN, NYIN, DT,DTIN, LTRACE, &
-&   LHEATLINK
+&   LHEATLINK, LICE
 USE YOS_CMF_TIME,            ONLY: NSTEPS, IYYYYMMDD, IHOUR
 USE CMF_DRV_CONTROL_MOD,     ONLY: CMF_DRV_INPUT,   CMF_DRV_INIT,    CMF_DRV_END
 USE CMF_DRV_ADVANCE_MOD,     ONLY: CMF_DRV_ADVANCE
 USE CMF_CTRL_FORCING_MOD,    ONLY: CMF_FORCING_GET, CMF_FORCING_PUT
 USE CMF_CTRL_TRACER_MOD,     ONLY: CMF_TRACER_FORC_GET, CMF_TRACER_FORC_INTERP
-USE CMF_CTRL_RESTART_MOD,    ONLY: restart_is_write_time
+USE CMF_CTRL_RESTART_MOD,    ONLY: CMF_RESTART_WRITE, restart_is_write_time
 !** parallelization options**
 !$ USE OMP_LIB
 #ifdef UseMPI_CMF
@@ -114,6 +114,10 @@ DO ISTEP=1,NSTEPS
 if (LHEATLINK) then
   call calc_heatlink(DT)
   if (restart_is_write_time()) then
+    ! River-ice phase change updates CaMa liquid-water storage after the
+    ! standard driver restart call. Rewrite the core state so that the CaMa
+    ! and heatlink restart files represent the same end-of-step state.
+    if (LICE) call CMF_RESTART_WRITE
     call write_heatlink_restart(date_hour2datetime(IYYYYMMDD, IHOUR))
   endif
   call write_output(int(DT) * ISTEP) ! tail time of the current step
