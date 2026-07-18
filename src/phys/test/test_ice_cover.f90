@@ -23,6 +23,7 @@ program test_ice_cover
     call check_immobile_excess_shape()
     call check_repeated_geometry_changes()
     call check_geometry_diagnosis_preserves_state()
+    call check_capacity_preserves_invalid_negative_state()
     call check_large_ice_state()
 
     write(*, '(a)') '[ALL TESTS PASSED] test_ice_cover'
@@ -162,6 +163,24 @@ subroutine check_geometry_diagnosis_preserves_state()
     call assert_close(ice_thickness_m, 10.0_JPRB, 'expanded-area geometry diagnosis thickness')
     call assert_close(ice_fraction, 1.0_JPRB, 'expanded-area geometry diagnosis fraction')
 end subroutine check_geometry_diagnosis_preserves_state
+
+
+subroutine check_capacity_preserves_invalid_negative_state()
+    real(kind=JPRB) :: &
+    &   surface_ice_volume_m3, & ! [m3] Invalid negative water-surface ice volume.
+    &   excess_ice_volume_m3     ! [m3] Invalid negative immobile excess-ice volume.
+
+    surface_ice_volume_m3 = -1.0_JPRB
+    excess_ice_volume_m3 = -2.0_JPRB
+    call enforce_surface_ice_capacity( &
+    &   surface_ice_volume_m3, excess_ice_volume_m3, 100.0_JPRB, 20.0_JPRB)
+
+    ! Capacity enforcement must not hide invalid state before validation.
+    call assert_close(surface_ice_volume_m3, -1.0_JPRB, &
+    &   'capacity preserves invalid negative surface-ice volume')
+    call assert_close(excess_ice_volume_m3, -2.0_JPRB, &
+    &   'capacity preserves invalid negative excess-ice volume')
+end subroutine check_capacity_preserves_invalid_negative_state
 
 
 subroutine check_large_ice_state()

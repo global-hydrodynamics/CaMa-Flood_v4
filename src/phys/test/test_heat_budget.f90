@@ -1,6 +1,6 @@
 program test_heat_budget
     use, intrinsic :: ieee_arithmetic, only: &
-    &   ieee_is_finite
+    &   ieee_is_finite, ieee_value, ieee_quiet_nan, ieee_positive_inf
     use PARKIND1, only: &
     &   JPRB
     use const_mod, only: &
@@ -11,7 +11,7 @@ program test_heat_budget
     use heat_flux_mod, only: &
     &   calc_ice_surface_heat_flux
     use heat_budget_mod, only: &
-    &   water_ice_mass_kg, water_ice_energy_j, &
+    &   NEGATIVE_VOLUME_TOLERANCE_M3, water_ice_mass_kg, water_ice_energy_j, &
     &   update_liquid_temperature_no_phase_change, update_local_water_ice_state, &
     &   equilibrate_water_ice
     implicit none
@@ -32,6 +32,8 @@ program test_heat_budget
     call test_separate_large_ice_volume()
     call test_separate_abrupt_phase_cycles()
     call test_separate_substep_invariance()
+    call test_tiny_negative_state_normalization()
+    call test_invalid_local_state_detection()
     call test_ice_surface_heat_flux()
 
     write(*, '(a)') '[ALL TESTS PASSED] test_heat_budget'
@@ -423,7 +425,11 @@ subroutine test_separate_large_ice_volume()
     &   initial_mass_kg, initial_energy_j, &     ! [kg], [J] Conservation scales before the update.
     &   excess_melt_energy_j, &                 ! [J] Energy used to melt immobile excess ice.
     &   frozen_mass_kg, surface_melted_mass_kg, excess_melted_mass_kg, & ! [kg] Phase changes.
-    &   unapplied_energy_j, mass_budget_error_kg, energy_budget_error_j ! [J], [kg], [J] Diagnostics.
+    &   unapplied_energy_j, mass_budget_error_kg, energy_budget_error_j, & ! [J], [kg], [J] Diagnostics.
+    &   maximum_negative_volume_m3              ! [m3] Largest negative input-volume magnitude.
+    logical :: &
+    &   state_is_valid, &                       ! [-] Local-state validation result.
+    &   nonfinite_input_detected                ! [-] Nonfinite-input detection result.
 
     water_volume_m3 = 1.0e12_JPRB
     water_temperature_k = TMELT + 1.0_JPRB
@@ -437,10 +443,25 @@ subroutine test_separate_large_ice_volume()
     &   surface_ice_volume_m3 + excess_ice_volume_m3, TMELT)
 
     call update_local_water_ice_state( &
-    &   water_volume_m3, water_temperature_k, surface_ice_volume_m3, excess_ice_volume_m3, &
-    &   0.0_JPRB, 0.0_JPRB, excess_melt_energy_j, &
-    &   frozen_mass_kg, surface_melted_mass_kg, excess_melted_mass_kg, unapplied_energy_j, &
-    &   mass_budget_error_kg, energy_budget_error_j)
+    &   liquid_water_volume_m3=water_volume_m3, &
+    &   liquid_water_temperature_k=water_temperature_k, &
+    &   surface_ice_volume_m3=surface_ice_volume_m3, &
+    &   excess_ice_volume_m3=excess_ice_volume_m3, &
+    &   liquid_water_added_energy_j=0.0_JPRB, &
+    &   surface_ice_added_energy_j=0.0_JPRB, &
+    &   excess_ice_added_energy_j=excess_melt_energy_j, &
+    &   frozen_water_mass_kg=frozen_mass_kg, &
+    &   surface_ice_melted_mass_kg=surface_melted_mass_kg, &
+    &   excess_ice_melted_mass_kg=excess_melted_mass_kg, &
+    &   unapplied_energy_j=unapplied_energy_j, &
+    &   mass_budget_error_kg=mass_budget_error_kg, &
+    &   energy_budget_error_j=energy_budget_error_j, &
+    &   state_is_valid=state_is_valid, &
+    &   nonfinite_input_detected=nonfinite_input_detected, &
+    &   maximum_negative_volume_m3=maximum_negative_volume_m3)
+
+    call assert_true(state_is_valid, 'large-volume local state is valid')
+    call assert_true(.not. nonfinite_input_detected, 'large-volume inputs are finite')
 
     call assert_close(excess_ice_volume_m3, 1.0e15_JPRB - 1.0e9_JPRB, 1.0e-13_JPRB, &
     &   'large-volume excess ice after partial melt [m3]')
@@ -578,6 +599,152 @@ subroutine test_separate_substep_invariance()
 end subroutine test_separate_substep_invariance
 
 
+subroutine test_tiny_negative_state_normalization()
+    real(kind=JPRB) :: &
+    &   water_volume_m3, water_temperature_k, & ! [m3], [K] Liquid-water state.
+    &   surface_ice_volume_m3, excess_ice_volume_m3, & ! [m3] Ice-pool states.
+    &   water_correction_m3, surface_ice_correction_m3, & ! [m3] Tiny negative-volume magnitudes.
+    &   expected_mass_adjustment_kg, expected_energy_adjustment_j, & ! [kg], [J] Expected diagnostics.
+    &   frozen_mass_kg, surface_melted_mass_kg, excess_melted_mass_kg, & ! [kg] Phase changes.
+    &   unapplied_energy_j, mass_budget_error_kg, energy_budget_error_j, & ! [J], [kg], [J] Diagnostics.
+    &   maximum_negative_volume_m3              ! [m3] Largest negative input-volume magnitude.
+    logical :: &
+    &   state_is_valid, &                       ! [-] Local-state validation result.
+    &   nonfinite_input_detected                ! [-] Nonfinite-input detection result.
+
+    water_correction_m3 = 0.25_JPRB * NEGATIVE_VOLUME_TOLERANCE_M3
+    surface_ice_correction_m3 = 0.5_JPRB * NEGATIVE_VOLUME_TOLERANCE_M3
+    water_volume_m3 = -water_correction_m3
+    water_temperature_k = TMELT + 2.0_JPRB
+    surface_ice_volume_m3 = -surface_ice_correction_m3
+    excess_ice_volume_m3 = 0.0_JPRB
+    expected_mass_adjustment_kg = RW * water_correction_m3 + &
+    &   RI * surface_ice_correction_m3
+    expected_energy_adjustment_j = CW * RW * water_correction_m3 * 2.0_JPRB - &
+    &   RI * surface_ice_correction_m3 * HFUS
+
+    call update_local_water_ice_state( &
+    &   liquid_water_volume_m3=water_volume_m3, &
+    &   liquid_water_temperature_k=water_temperature_k, &
+    &   surface_ice_volume_m3=surface_ice_volume_m3, &
+    &   excess_ice_volume_m3=excess_ice_volume_m3, &
+    &   liquid_water_added_energy_j=0.0_JPRB, &
+    &   surface_ice_added_energy_j=0.0_JPRB, &
+    &   excess_ice_added_energy_j=0.0_JPRB, &
+    &   frozen_water_mass_kg=frozen_mass_kg, &
+    &   surface_ice_melted_mass_kg=surface_melted_mass_kg, &
+    &   excess_ice_melted_mass_kg=excess_melted_mass_kg, &
+    &   unapplied_energy_j=unapplied_energy_j, &
+    &   mass_budget_error_kg=mass_budget_error_kg, &
+    &   energy_budget_error_j=energy_budget_error_j, &
+    &   state_is_valid=state_is_valid, &
+    &   nonfinite_input_detected=nonfinite_input_detected, &
+    &   maximum_negative_volume_m3=maximum_negative_volume_m3)
+
+    call assert_true(state_is_valid, 'tiny negative volumes are accepted')
+    call assert_true(.not. nonfinite_input_detected, 'tiny negative inputs are finite')
+    call assert_close(water_volume_m3, 0.0_JPRB, 0.0_JPRB, &
+    &   'tiny negative liquid-water volume is normalized [m3]')
+    call assert_close(surface_ice_volume_m3, 0.0_JPRB, 0.0_JPRB, &
+    &   'tiny negative surface-ice volume is normalized [m3]')
+    call assert_close(maximum_negative_volume_m3, surface_ice_correction_m3, 1.0e-13_JPRB, &
+    &   'tiny negative maximum volume magnitude [m3]')
+    call assert_close(mass_budget_error_kg, expected_mass_adjustment_kg, 1.0e-13_JPRB, &
+    &   'tiny negative normalization mass adjustment [kg]')
+    call assert_close(energy_budget_error_j, expected_energy_adjustment_j, 1.0e-13_JPRB, &
+    &   'tiny negative normalization energy adjustment [J]')
+end subroutine test_tiny_negative_state_normalization
+
+
+subroutine test_invalid_local_state_detection()
+    real(kind=JPRB) :: &
+    &   water_volume_m3, water_temperature_k, & ! [m3], [K] Liquid-water state.
+    &   surface_ice_volume_m3, excess_ice_volume_m3, & ! [m3] Ice-pool states.
+    &   liquid_added_energy_j, &                ! [J] Energy added directly to liquid water.
+    &   frozen_mass_kg, surface_melted_mass_kg, excess_melted_mass_kg, & ! [kg] Phase changes.
+    &   unapplied_energy_j, mass_budget_error_kg, energy_budget_error_j, & ! [J], [kg], [J] Diagnostics.
+    &   maximum_negative_volume_m3              ! [m3] Largest negative input-volume magnitude.
+    logical :: &
+    &   state_is_valid, &                       ! [-] Local-state validation result.
+    &   nonfinite_input_detected                ! [-] Nonfinite-input detection result.
+
+    water_volume_m3 = -2.0_JPRB * NEGATIVE_VOLUME_TOLERANCE_M3
+    water_temperature_k = TMELT
+    surface_ice_volume_m3 = 0.0_JPRB
+    excess_ice_volume_m3 = 0.0_JPRB
+    liquid_added_energy_j = 0.0_JPRB
+    call update_local_water_ice_state( &
+    &   liquid_water_volume_m3=water_volume_m3, &
+    &   liquid_water_temperature_k=water_temperature_k, &
+    &   surface_ice_volume_m3=surface_ice_volume_m3, &
+    &   excess_ice_volume_m3=excess_ice_volume_m3, &
+    &   liquid_water_added_energy_j=liquid_added_energy_j, &
+    &   surface_ice_added_energy_j=0.0_JPRB, &
+    &   excess_ice_added_energy_j=0.0_JPRB, &
+    &   frozen_water_mass_kg=frozen_mass_kg, &
+    &   surface_ice_melted_mass_kg=surface_melted_mass_kg, &
+    &   excess_ice_melted_mass_kg=excess_melted_mass_kg, &
+    &   unapplied_energy_j=unapplied_energy_j, &
+    &   mass_budget_error_kg=mass_budget_error_kg, &
+    &   energy_budget_error_j=energy_budget_error_j, &
+    &   state_is_valid=state_is_valid, &
+    &   nonfinite_input_detected=nonfinite_input_detected, &
+    &   maximum_negative_volume_m3=maximum_negative_volume_m3)
+    call assert_true(.not. state_is_valid, 'large negative volume is rejected')
+    call assert_true(.not. nonfinite_input_detected, 'large negative volume remains finite')
+    call assert_close(maximum_negative_volume_m3, &
+    &   2.0_JPRB * NEGATIVE_VOLUME_TOLERANCE_M3, 1.0e-13_JPRB, &
+    &   'large negative volume magnitude [m3]')
+    call assert_close(water_volume_m3, &
+    &   -2.0_JPRB * NEGATIVE_VOLUME_TOLERANCE_M3, 0.0_JPRB, &
+    &   'invalid negative volume is not modified [m3]')
+
+    water_volume_m3 = 1.0_JPRB
+    water_temperature_k = ieee_value(0.0_JPRB, ieee_quiet_nan)
+    call update_local_water_ice_state( &
+    &   liquid_water_volume_m3=water_volume_m3, &
+    &   liquid_water_temperature_k=water_temperature_k, &
+    &   surface_ice_volume_m3=surface_ice_volume_m3, &
+    &   excess_ice_volume_m3=excess_ice_volume_m3, &
+    &   liquid_water_added_energy_j=0.0_JPRB, &
+    &   surface_ice_added_energy_j=0.0_JPRB, &
+    &   excess_ice_added_energy_j=0.0_JPRB, &
+    &   frozen_water_mass_kg=frozen_mass_kg, &
+    &   surface_ice_melted_mass_kg=surface_melted_mass_kg, &
+    &   excess_ice_melted_mass_kg=excess_melted_mass_kg, &
+    &   unapplied_energy_j=unapplied_energy_j, &
+    &   mass_budget_error_kg=mass_budget_error_kg, &
+    &   energy_budget_error_j=energy_budget_error_j, &
+    &   state_is_valid=state_is_valid, &
+    &   nonfinite_input_detected=nonfinite_input_detected, &
+    &   maximum_negative_volume_m3=maximum_negative_volume_m3)
+    call assert_true(.not. state_is_valid, 'NaN state is rejected')
+    call assert_true(nonfinite_input_detected, 'NaN state is reported as nonfinite')
+
+    water_temperature_k = TMELT
+    liquid_added_energy_j = ieee_value(0.0_JPRB, ieee_positive_inf)
+    call update_local_water_ice_state( &
+    &   liquid_water_volume_m3=water_volume_m3, &
+    &   liquid_water_temperature_k=water_temperature_k, &
+    &   surface_ice_volume_m3=surface_ice_volume_m3, &
+    &   excess_ice_volume_m3=excess_ice_volume_m3, &
+    &   liquid_water_added_energy_j=liquid_added_energy_j, &
+    &   surface_ice_added_energy_j=0.0_JPRB, &
+    &   excess_ice_added_energy_j=0.0_JPRB, &
+    &   frozen_water_mass_kg=frozen_mass_kg, &
+    &   surface_ice_melted_mass_kg=surface_melted_mass_kg, &
+    &   excess_ice_melted_mass_kg=excess_melted_mass_kg, &
+    &   unapplied_energy_j=unapplied_energy_j, &
+    &   mass_budget_error_kg=mass_budget_error_kg, &
+    &   energy_budget_error_j=energy_budget_error_j, &
+    &   state_is_valid=state_is_valid, &
+    &   nonfinite_input_detected=nonfinite_input_detected, &
+    &   maximum_negative_volume_m3=maximum_negative_volume_m3)
+    call assert_true(.not. state_is_valid, 'infinite energy input is rejected')
+    call assert_true(nonfinite_input_detected, 'infinite energy input is reported as nonfinite')
+end subroutine test_invalid_local_state_detection
+
+
 subroutine check_separate_update( &
     &   water_volume_m3, water_temperature_k, surface_ice_volume_m3, excess_ice_volume_m3, &
     &   water_added_energy_j, surface_ice_added_energy_j, excess_ice_added_energy_j, &
@@ -598,14 +765,32 @@ subroutine check_separate_update( &
     &   unapplied_energy_j             ! [J] Energy not applied by the update.
     real(kind=JPRB) :: &
     &   mass_budget_error_kg, &        ! [kg] Mass-conservation error returned by the update.
-    &   energy_budget_error_j          ! [J] Energy-conservation error returned by the update.
+    &   energy_budget_error_j, &       ! [J] Energy-conservation error returned by the update.
+    &   maximum_negative_volume_m3     ! [m3] Largest negative input-volume magnitude.
+    logical :: &
+    &   state_is_valid, &              ! [-] Local-state validation result.
+    &   nonfinite_input_detected       ! [-] Nonfinite-input detection result.
 
     call update_local_water_ice_state( &
-    &   water_volume_m3, water_temperature_k, surface_ice_volume_m3, excess_ice_volume_m3, &
-    &   water_added_energy_j, surface_ice_added_energy_j, excess_ice_added_energy_j, &
-    &   frozen_mass_kg, surface_melted_mass_kg, excess_melted_mass_kg, unapplied_energy_j, &
-    &   mass_budget_error_kg, energy_budget_error_j)
+    &   liquid_water_volume_m3=water_volume_m3, &
+    &   liquid_water_temperature_k=water_temperature_k, &
+    &   surface_ice_volume_m3=surface_ice_volume_m3, &
+    &   excess_ice_volume_m3=excess_ice_volume_m3, &
+    &   liquid_water_added_energy_j=water_added_energy_j, &
+    &   surface_ice_added_energy_j=surface_ice_added_energy_j, &
+    &   excess_ice_added_energy_j=excess_ice_added_energy_j, &
+    &   frozen_water_mass_kg=frozen_mass_kg, &
+    &   surface_ice_melted_mass_kg=surface_melted_mass_kg, &
+    &   excess_ice_melted_mass_kg=excess_melted_mass_kg, &
+    &   unapplied_energy_j=unapplied_energy_j, &
+    &   mass_budget_error_kg=mass_budget_error_kg, &
+    &   energy_budget_error_j=energy_budget_error_j, &
+    &   state_is_valid=state_is_valid, &
+    &   nonfinite_input_detected=nonfinite_input_detected, &
+    &   maximum_negative_volume_m3=maximum_negative_volume_m3)
 
+    call assert_true(state_is_valid, 'separate-budget local state is valid')
+    call assert_true(.not. nonfinite_input_detected, 'separate-budget inputs are finite')
     call assert_close(mass_budget_error_kg, 0.0_JPRB, 1.0e-12_JPRB, &
     &   'separate-budget mass conservation [kg]')
     call assert_close(energy_budget_error_j, 0.0_JPRB, 1.0e-6_JPRB, &
@@ -809,5 +994,18 @@ subroutine assert_finite(actual_value, label)
     write(*, '(a,es24.15)') '  actual = ', actual_value
     error stop 1
 end subroutine assert_finite
+
+
+subroutine assert_true(condition, label)
+    logical, intent(in) :: &
+    &   condition             ! [-] Condition expected to be true.
+    character(len=*), intent(in) :: &
+    &   label                 ! [-] Human-readable assertion label.
+
+    if (condition) return
+
+    write(*, '(a)') '[TEST FAILED] '//trim(label)
+    error stop 1
+end subroutine assert_true
 
 end program test_heat_budget

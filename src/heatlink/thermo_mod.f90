@@ -4,6 +4,8 @@ module thermo_mod
     &   JPIM, JPRB
     use YOS_CMF_MAP, only: &
     &   NSEQALL
+    use YOS_CMF_INPUT, only: &
+    &   LOGNAM
     use const_mod, only: &
     &   STO_IGNORE
     use phys_const_mod, only: &
@@ -237,8 +239,8 @@ subroutine solve_water_ice_heat_budget( &
     &   timestep_s                     ! [s] Coupling time-step duration.
     real(kind=JPRB), intent(out) :: &
     &   unapplied_energy_j(:), &       ! [J] Energy not applied by the local phase-change kernel.
-    &   mass_budget_error_kg(:), &     ! [kg] Final minus initial local water-plus-ice mass.
-    &   energy_budget_error_j(:)       ! [J] Local energy-conservation error after accounting for unapplied energy.
+    &   mass_budget_error_kg(:), &     ! [kg] Final minus unnormalized initial local water-plus-ice mass.
+    &   energy_budget_error_j(:)       ! [J] Error including unapplied energy and tiny-volume normalization.
     real(kind=JPRB) :: &
     &   open_water_area_m2, &          ! [m2] Water-surface area not covered by ice.
     &   water_to_ice_heat_flux_w_m2, & ! [W m-2] Conductive heat flux from liquid water into surface ice.
@@ -247,10 +249,20 @@ subroutine solve_water_ice_heat_budget( &
     &   excess_ice_added_energy_j, &   ! [J] Net atmospheric energy increment presented to excess ice.
     &   frozen_water_mass_kg, &        ! [kg] Liquid-water mass frozen during this update.
     &   surface_ice_melted_mass_kg, &  ! [kg] Water-surface ice mass melted during this update.
-    &   excess_ice_melted_mass_kg      ! [kg] Immobile excess-ice mass melted during this update.
+    &   excess_ice_melted_mass_kg, &   ! [kg] Immobile excess-ice mass melted during this update.
+    &   maximum_negative_volume_m3, &  ! [m3] Largest negative state-volume magnitude in one cell.
+    &   domain_maximum_negative_volume_m3 ! [m3] Largest invalid negative state-volume magnitude.
     integer(kind=JPIM) :: &
-    &   iseq                            ! [-] Vector index of the river cell.
+    &   iseq, &                         ! [-] Vector index of the river cell.
+    &   invalid_cell_count, &           ! [-] Number of cells rejected by local-state validation.
+    &   nonfinite_cell_count            ! [-] Number of cells containing a NaN or infinite input.
+    logical :: &
+    &   state_is_valid, &               ! [-] True when the current cell may enter the physical update.
+    &   nonfinite_input_detected        ! [-] True when the current cell contains a NaN or infinite input.
 
+    invalid_cell_count = 0
+    nonfinite_cell_count = 0
+    domain_maximum_negative_volume_m3 = 0.0_JPRB
     do iseq = 1, NSEQALL
         open_water_area_m2 = max( &
         &   water_surface_area_m2(iseq) - surface_ice_area_m2(iseq), 0.0_JPRB)
@@ -269,14 +281,39 @@ subroutine solve_water_ice_heat_budget( &
         &   excess_ice_area_m2(iseq) * timestep_s
 
         call update_local_water_ice_state( &
-        &   liquid_water_volume_m3(iseq), water_temperature_k(iseq), &
-        &   surface_ice_volume_m3(iseq), excess_ice_volume_m3(iseq), &
-        &   water_added_energy_j, surface_ice_added_energy_j, &
-        &   excess_ice_added_energy_j, &
-        &   frozen_water_mass_kg, surface_ice_melted_mass_kg, &
-        &   excess_ice_melted_mass_kg, unapplied_energy_j(iseq), &
-        &   mass_budget_error_kg(iseq), energy_budget_error_j(iseq))
+        &   liquid_water_volume_m3=liquid_water_volume_m3(iseq), &
+        &   liquid_water_temperature_k=water_temperature_k(iseq), &
+        &   surface_ice_volume_m3=surface_ice_volume_m3(iseq), &
+        &   excess_ice_volume_m3=excess_ice_volume_m3(iseq), &
+        &   liquid_water_added_energy_j=water_added_energy_j, &
+        &   surface_ice_added_energy_j=surface_ice_added_energy_j, &
+        &   excess_ice_added_energy_j=excess_ice_added_energy_j, &
+        &   frozen_water_mass_kg=frozen_water_mass_kg, &
+        &   surface_ice_melted_mass_kg=surface_ice_melted_mass_kg, &
+        &   excess_ice_melted_mass_kg=excess_ice_melted_mass_kg, &
+        &   unapplied_energy_j=unapplied_energy_j(iseq), &
+        &   mass_budget_error_kg=mass_budget_error_kg(iseq), &
+        &   energy_budget_error_j=energy_budget_error_j(iseq), &
+        &   state_is_valid=state_is_valid, &
+        &   nonfinite_input_detected=nonfinite_input_detected, &
+        &   maximum_negative_volume_m3=maximum_negative_volume_m3)
+        if (.not. state_is_valid) then
+            invalid_cell_count = invalid_cell_count + 1
+            if (nonfinite_input_detected) nonfinite_cell_count = nonfinite_cell_count + 1
+            domain_maximum_negative_volume_m3 = max( &
+            &   domain_maximum_negative_volume_m3, maximum_negative_volume_m3)
+        endif
     enddo
+    if (invalid_cell_count > 0) then
+        write(LOGNAM, '(a,i0)') &
+        &   'ERROR: invalid local water-ice state cell count = ', invalid_cell_count
+        write(LOGNAM, '(a,i0)') &
+        &   'ERROR: cells with nonfinite local water-ice inputs = ', nonfinite_cell_count
+        write(LOGNAM, '(a,es12.4)') &
+        &   'ERROR: maximum negative state-volume magnitude [m3] = ', &
+        &   domain_maximum_negative_volume_m3
+        error stop 'Invalid local water-ice state detected; see the model log.'
+    endif
 end subroutine solve_water_ice_heat_budget
 #endif
 end module thermo_mod

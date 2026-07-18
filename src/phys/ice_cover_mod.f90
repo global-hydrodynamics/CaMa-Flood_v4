@@ -66,17 +66,16 @@ pure elemental subroutine enforce_surface_ice_capacity( &
     &   water_surface_area_m2, &     ! [m2] Water-surface area available for ice cover.
     &   maximum_ice_thickness_m      ! [m] Maximum ice thickness retained on the water surface.
     real(kind=JPRB) :: &
-    &   available_surface_ice_volume_m3, & ! [m3] Nonnegative water-surface ice available before transfer.
     &   maximum_surface_ice_volume_m3, &   ! [m3] Ice capacity of the available water surface.
     &   transferred_excess_m3        ! [m3] Newly immobile ice volume transferred during this call.
 
-    available_surface_ice_volume_m3 = max(surface_ice_volume_m3, 0.0_JPRB)
     maximum_surface_ice_volume_m3 = max(water_surface_area_m2, 0.0_JPRB) * &
     &   max(maximum_ice_thickness_m, 0.0_JPRB)
-    surface_ice_volume_m3 = min( &
-    &   available_surface_ice_volume_m3, maximum_surface_ice_volume_m3)
-    transferred_excess_m3 = available_surface_ice_volume_m3 - surface_ice_volume_m3
-    excess_ice_volume_m3 = excess_ice_volume_m3 + transferred_excess_m3
+    if (surface_ice_volume_m3 > maximum_surface_ice_volume_m3) then
+        transferred_excess_m3 = surface_ice_volume_m3 - maximum_surface_ice_volume_m3
+        surface_ice_volume_m3 = maximum_surface_ice_volume_m3
+        excess_ice_volume_m3 = excess_ice_volume_m3 + transferred_excess_m3
+    endif
 end subroutine enforce_surface_ice_capacity
 
 end module ice_cover_mod
