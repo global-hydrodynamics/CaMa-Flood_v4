@@ -93,3 +93,16 @@ do
 done
 
 echo "All physics unit tests passed."
+
+echo "Building and running heatlink unit tests"
+make -C "${ROOT}/src/heatlink" \
+    MKINCLUDE="${ROOT}/adm/Mkinclude_heatlink" \
+    BUILD_MODE="${BUILD_MODE}" test
+
+for test_exe in test_water_storage_adapter
+do
+    echo "  ${test_exe}"
+    "${ROOT}/src/heatlink/${test_exe}"
+done
+
+echo "All heatlink unit tests passed."

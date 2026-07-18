@@ -25,6 +25,8 @@ module heatlink_river_mod
     &   calc_ice_surface_heat_flux
     use heat_budget_mod, only: &
     &   water_ice_mass_kg, water_ice_energy_j
+    use water_storage_adapter_mod, only: &
+    &   apply_liquid_volume_delta_to_storage
     use input_mod, only: &
     &   add_input, get_input
     use output_mod, only: &
@@ -219,7 +221,7 @@ subroutine calc_heatlink(dt)
         &   rivare + fldare, icearea, icearea_excess, &
         &   hflx_srf, hflx_bdy, hflx_ice_srf, hflx_ice_excess_srf, dt, &
         &   phase_unapplied_energy, phase_mass_budget_error, phase_energy_budget_error)
-        call put_water_storage()
+        call apply_phase_change_to_water_storage()
         call enforce_river_ice_capacity()
         call diagnose_river_ice_geometry()
     else
@@ -374,33 +376,51 @@ subroutine calc_ice_heat_fluxes()
 end subroutine calc_ice_heat_fluxes
 
 
-subroutine put_water_storage()
+subroutine apply_phase_change_to_water_storage()
     real(kind=JPRD) :: &
-    &   old_river_volume_m3, &      ! [m3] River storage before applying local phase change.
-    &   old_floodplain_volume_m3, & ! [m3] Floodplain storage before applying local phase change.
-    &   old_total_volume_m3, &      ! [m3] Total liquid-water storage before applying local phase change.
-    &   new_total_volume_m3, &      ! [m3] Total liquid-water storage after applying local phase change.
-    &   river_storage_fraction      ! [-] Fraction of pre-update liquid water held in the river storage.
+    &   canonical_total_volume_m3, & ! [m3] Canonical CaMa liquid storage before applying local phase change.
+    &   liquid_volume_delta_m3, &    ! [m3] Final minus initial liquid-water volume from local phase change.
+    &   unavailable_liquid_volume_m3, & ! [m3] Requested removal exceeding available liquid storage.
+    &   maximum_unavailable_liquid_volume_m3 ! [m3] Largest unavailable removal across invalid cells.
+    real(kind=JPRB) :: &
+    &   phase_initial_liquid_volume_m3 ! [m3] Liquid storage presented to the JPRB phase-change kernel.
     integer(kind=JPIM) :: &
-    &   iseq                         ! [-] Vector index of the river cell.
+    &   iseq, &                      ! [-] Vector index of the river cell.
+    &   invalid_update_cell_count    ! [-] Number of storage deltas that cannot be applied.
+    logical :: &
+    &   update_is_valid              ! [-] True when the current storage delta was applied safely.
 
+    invalid_update_cell_count = 0
+    maximum_unavailable_liquid_volume_m3 = 0.0_JPRD
     do iseq = 1, NSEQALL
-        old_river_volume_m3 = max(P2RIVSTO(iseq,1), 0.0_JPRD)
-        old_floodplain_volume_m3 = max(P2FLDSTO(iseq,1), 0.0_JPRD)
-        old_total_volume_m3 = old_river_volume_m3 + old_floodplain_volume_m3
-        new_total_volume_m3 = max(real(watsto(iseq), kind=JPRD), 0.0_JPRD)
-
-        if (old_total_volume_m3 > 0.0_JPRD) then
-            river_storage_fraction = old_river_volume_m3 / old_total_volume_m3
-            P2RIVSTO(iseq,1) = new_total_volume_m3 * river_storage_fraction
-            P2FLDSTO(iseq,1) = new_total_volume_m3 - P2RIVSTO(iseq,1)
-        else
-            P2RIVSTO(iseq,1) = new_total_volume_m3
-            P2FLDSTO(iseq,1) = 0.0_JPRD
+        canonical_total_volume_m3 = P2RIVSTO(iseq,1) + P2FLDSTO(iseq,1)
+        phase_initial_liquid_volume_m3 = real(canonical_total_volume_m3, kind=JPRB)
+        liquid_volume_delta_m3 = real( &
+        &   watsto(iseq) - phase_initial_liquid_volume_m3, kind=JPRD)
+        call apply_liquid_volume_delta_to_storage( &
+        &   river_storage_volume_m3=P2RIVSTO(iseq,1), &
+        &   floodplain_storage_volume_m3=P2FLDSTO(iseq,1), &
+        &   liquid_volume_delta_m3=liquid_volume_delta_m3, &
+        &   update_is_valid=update_is_valid, &
+        &   unavailable_liquid_volume_m3=unavailable_liquid_volume_m3)
+        if (.not. update_is_valid) then
+            invalid_update_cell_count = invalid_update_cell_count + 1
+            maximum_unavailable_liquid_volume_m3 = max( &
+            &   maximum_unavailable_liquid_volume_m3, unavailable_liquid_volume_m3)
         endif
         D2STORGE(iseq,1) = real(P2RIVSTO(iseq,1) + P2FLDSTO(iseq,1), kind=JPRB)
+        watsto(iseq) = D2STORGE(iseq,1)
     enddo
-end subroutine put_water_storage
+    if (invalid_update_cell_count > 0) then
+        write(LOGNAM, '(a,i0)') &
+        &   'ERROR: invalid phase-change storage-update cell count = ', &
+        &   invalid_update_cell_count
+        write(LOGNAM, '(a,es12.4)') &
+        &   'ERROR: maximum unavailable liquid-water removal [m3] = ', &
+        &   maximum_unavailable_liquid_volume_m3
+        error stop 'Invalid phase-change update to canonical CaMa storage.'
+    endif
+end subroutine apply_phase_change_to_water_storage
 
 
 subroutine log_ice_budget()
@@ -444,7 +464,7 @@ subroutine get_water
     integer(kind=JPIM) :: &
     &   iseq
 
-    watsto(:) = D2STORGE(:, 1)
+    watsto(:) = real(P2RIVSTO(:,1) + P2FLDSTO(:,1), kind=JPRB)
 
     rivdph(:) = D2RIVDPH(:, 1)
     rivare(:) = D2RIVLEN(:, 1) * D2RIVWTH(:, 1)
