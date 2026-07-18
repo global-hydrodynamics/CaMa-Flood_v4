@@ -29,6 +29,9 @@ CONTAINS
 !####################################################################
 SUBROUTINE CMF_DRV_ADVANCE(KSTEPS)
 USE YOS_CMF_INPUT,           ONLY: LOUTPUT, LSEALEV, LUPSINF, LTRACE, IFRQ_OUT
+#ifdef heatlink
+USE YOS_CMF_INPUT,           ONLY: LHEATLINK
+#endif
 USE YOS_CMF_TIME,            ONLY: KSTEP, JYYYYMMDD, JHHMM, JHOUR, JMIN
 !
 USE CMF_CTRL_TIME_MOD,       ONLY: CMF_TIME_NEXT, CMF_TIME_UPDATE
@@ -135,10 +138,17 @@ DO ISTEP=1,KSTEPS
 
   !============================ 
   !*** 4. Write restart file 
+#ifdef heatlink
+  ! Heatlink writes a synchronized checkpoint after its end-of-step update.
+  IF( .NOT. LHEATLINK )THEN
+#endif
   CALL CMF_RESTART_WRITE
   IF( LTRACE )THEN
     CALL CMF_TRACER_RESTART_WRITE
   ENDIF
+#ifdef heatlink
+  ENDIF
+#endif
   !============================ 
   !*** 5. Update current time      !! Update KMIN, IYYYYMMDD, IHHMM (to KMINNEXT, JYYYYMMDD, JHHMM)
   CALL CMF_TIME_UPDATE

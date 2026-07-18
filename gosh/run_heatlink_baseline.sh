@@ -13,6 +13,7 @@ set -eu
 #   ATM_DIR       Directory containing the 3-hourly atmospheric forcing files.
 #   TOOLCHAIN_ROOT Directory containing the Fortran/netCDF runtime libraries.
 #   SDKROOT       macOS SDK selected by the conda Fortran toolchain.
+#   LHEATLINK      Fortran logical enabling river thermodynamics; defaults to .TRUE.
 #   LICE          Fortran logical enabling river ice; defaults to .FALSE.
 #   START_*       Optional start date fields (YEAR, MONTH, DAY, HOUR).
 #   END_*         Optional end date fields overriding the selected run mode.
@@ -31,6 +32,7 @@ ATM_DIR=${ATM_DIR:-/Users/dtokuda/work/data/ils/ILS_data_20241118/test/frc}
 DIMINFO=${DIMINFO:-${ROOT}/map/glb_15min/diminfo_test-1deg.txt}
 RUNOFF_INPMAT=${RUNOFF_INPMAT:-${ROOT}/map/glb_15min/inpmat_test-1deg.bin}
 OMP_NUM_THREADS=${OMP_NUM_THREADS:-16}
+LHEATLINK=${LHEATLINK:-.TRUE.}
 LICE=${LICE:-.FALSE.}
 MODEL_DT=${MODEL_DT:-3600}
 OUTPUT_DT=${OUTPUT_DT:-86400}
@@ -39,6 +41,21 @@ START_MONTH=${START_MONTH:-1}
 START_DAY=${START_DAY:-1}
 START_HOUR=${START_HOUR:-0}
 RESTART_SOURCE_DIR=${RESTART_SOURCE_DIR:-}
+
+case "$LHEATLINK" in
+    .TRUE.|.true.|TRUE|true)
+        LHEATLINK_NML=.TRUE.
+        HEATLINK_ENABLED=1
+        ;;
+    .FALSE.|.false.|FALSE|false)
+        LHEATLINK_NML=.FALSE.
+        HEATLINK_ENABLED=0
+        ;;
+    *)
+        echo "LHEATLINK must be a Fortran or shell logical: ${LHEATLINK}" >&2
+        exit 2
+        ;;
+esac
 
 case "$LICE" in
     .TRUE.|.true.|TRUE|true)
@@ -54,6 +71,11 @@ case "$LICE" in
         exit 2
         ;;
 esac
+
+if [ "$HEATLINK_ENABLED" -eq 0 ] && [ "$ICE_ENABLED" -eq 1 ]; then
+    echo "LICE=.TRUE. requires LHEATLINK=.TRUE." >&2
+    exit 2
+fi
 
 case "$RUN_MODE" in
     smoke)
@@ -92,6 +114,7 @@ LOG=${RUN_DIR}/log_CaMa.txt
 RIVWAT_OUTPUT=${RUN_DIR}/rivwattmp2000.bin
 START_STAMP=${START_YEAR}$(printf '%02d' "${START_MONTH}")$(printf '%02d' "${START_DAY}")$(printf '%02d' "${START_HOUR}")
 END_STAMP=${END_YEAR}$(printf '%02d' "${END_MONTH}")$(printf '%02d' "${END_DAY}")$(printf '%02d' "${END_HOUR}")
+FINAL_CORE_RESTART=${RUN_DIR}/restart${END_STAMP}.bin
 FINAL_RESTART=${RUN_DIR}/restart${END_STAMP}.heatlink.bin
 
 if [ -n "$RESTART_SOURCE_DIR" ]; then
@@ -145,8 +168,7 @@ mkdir -p "$RUN_DIR"
 if [ -n "$RESTART_SOURCE_DIR" ]; then
     for restart_file in \
         "restart${START_STAMP}.bin" \
-        "restart${START_STAMP}.bin.pth" \
-        "restart${START_STAMP}.heatlink.bin"
+        "restart${START_STAMP}.bin.pth"
     do
         if [ ! -f "${RESTART_SOURCE_DIR}/${restart_file}" ]; then
             echo "Restart source was not found: ${RESTART_SOURCE_DIR}/${restart_file}" >&2
@@ -154,6 +176,14 @@ if [ -n "$RESTART_SOURCE_DIR" ]; then
         fi
         cp "${RESTART_SOURCE_DIR}/${restart_file}" "${RUN_DIR}/${restart_file}"
     done
+    if [ "$HEATLINK_ENABLED" -eq 1 ]; then
+        restart_file="restart${START_STAMP}.heatlink.bin"
+        if [ ! -f "${RESTART_SOURCE_DIR}/${restart_file}" ]; then
+            echo "Restart source was not found: ${RESTART_SOURCE_DIR}/${restart_file}" >&2
+            exit 1
+        fi
+        cp "${RESTART_SOURCE_DIR}/${restart_file}" "${RUN_DIR}/${restart_file}"
+    fi
 fi
 
 cat > "$NML" <<EOF
@@ -163,7 +193,7 @@ LPTHOUT   = .TRUE.                 ! Enable bifurcation flow.
 LDAMOUT   = .FALSE.                ! Disable reservoir operation.
 LOUTPUT   = .FALSE.                ! Disable standard output; heatlink output remains enabled.
 LRESTART  = ${LRESTART_NML}        ! Initialize from the requested restart source when true.
-LHEATLINK = .TRUE.                 ! Enable river water thermodynamics.
+LHEATLINK = ${LHEATLINK_NML}       ! Enable river water thermodynamics.
 LICE      = ${LICE_NML}            ! Enable river ice state and diagnostics.
 /
 &NDIMTIME
@@ -277,6 +307,7 @@ export OMP_NUM_THREADS
 
 echo "Running ${RUN_MODE} heatlink regression"
 echo "  period: ${START_YEAR}-$(printf '%02d' "${START_MONTH}")-$(printf '%02d' "${START_DAY}") $(printf '%02d' "${START_HOUR}"):00 to ${END_YEAR}-$(printf '%02d' "${END_MONTH}")-$(printf '%02d' "${END_DAY}") $(printf '%02d' "${END_HOUR}"):00"
+echo "  heatlink: ${LHEATLINK_NML}"
 echo "  river ice: ${LICE_NML}"
 echo "  threads: ${OMP_NUM_THREADS}"
 echo "  model time step: ${MODEL_DT} s"
@@ -295,27 +326,36 @@ if [ ! -f "$LOG" ]; then
     echo "Run failed: model log was not created." >&2
     exit 1
 fi
-if [ ! -f "$RIVWAT_OUTPUT" ]; then
-    echo "Run failed: river water temperature output was not created." >&2
-    exit 1
-fi
-if [ ! -f "$FINAL_RESTART" ]; then
-    echo "Run failed: final heatlink restart was not created." >&2
+if [ ! -f "$FINAL_CORE_RESTART" ]; then
+    echo "Run failed: final CaMa restart was not created." >&2
     exit 1
 fi
 
-if stat -f %z "$FINAL_RESTART" >/dev/null 2>&1; then
-    RESTART_BYTES=$(stat -f %z "$FINAL_RESTART")
-else
-    RESTART_BYTES=$(stat -c %s "$FINAL_RESTART")
-fi
-RESTART_RECORD_BYTES=$((1440 * 720 * 8))
-EXPECTED_RESTART_RECORDS=$((1 + 2 * ICE_ENABLED))
-RESTART_RECORDS=$((RESTART_BYTES / RESTART_RECORD_BYTES))
-if [ "$RESTART_RECORDS" -ne "$EXPECTED_RESTART_RECORDS" ] || \
-    [ $((RESTART_BYTES % RESTART_RECORD_BYTES)) -ne 0 ]; then
-    echo "Unexpected heatlink restart size: ${RESTART_BYTES} bytes (${RESTART_RECORDS} records)." >&2
-    exit 1
+RESTART_RECORDS=0
+RESTART_BYTES=0
+if [ "$HEATLINK_ENABLED" -eq 1 ]; then
+    if [ ! -f "$RIVWAT_OUTPUT" ]; then
+        echo "Run failed: river water temperature output was not created." >&2
+        exit 1
+    fi
+    if [ ! -f "$FINAL_RESTART" ]; then
+        echo "Run failed: final heatlink restart was not created." >&2
+        exit 1
+    fi
+
+    if stat -f %z "$FINAL_RESTART" >/dev/null 2>&1; then
+        RESTART_BYTES=$(stat -f %z "$FINAL_RESTART")
+    else
+        RESTART_BYTES=$(stat -c %s "$FINAL_RESTART")
+    fi
+    RESTART_RECORD_BYTES=$((1440 * 720 * 8))
+    EXPECTED_RESTART_RECORDS=$((1 + 2 * ICE_ENABLED))
+    RESTART_RECORDS=$((RESTART_BYTES / RESTART_RECORD_BYTES))
+    if [ "$RESTART_RECORDS" -ne "$EXPECTED_RESTART_RECORDS" ] || \
+        [ $((RESTART_BYTES % RESTART_RECORD_BYTES)) -ne 0 ]; then
+        echo "Unexpected heatlink restart size: ${RESTART_BYTES} bytes (${RESTART_RECORDS} records)." >&2
+        exit 1
+    fi
 fi
 
 STEP_COUNT=$(grep -c '^\[MAIN_cmf\] Time step:' "$LOG" || true)
@@ -324,6 +364,15 @@ if [ "$STEP_COUNT" -ne "$EXPECTED_STEPS" ]; then
     exit 1
 fi
 
+RESTART_WRITE_COUNT=$(grep -c 'CMF::RESTART_WRITE: write time:' "$LOG" || true)
+if [ "$RESTART_WRITE_COUNT" -ne 1 ]; then
+    echo "Unexpected CaMa restart write count: ${RESTART_WRITE_COUNT} (expected 1)." >&2
+    exit 1
+fi
+
+OUTPUT_RECORDS=0
+OUTPUT_BYTES=0
+if [ "$HEATLINK_ENABLED" -eq 1 ]; then
 if stat -f %z "$RIVWAT_OUTPUT" >/dev/null 2>&1; then
     OUTPUT_BYTES=$(stat -f %z "$RIVWAT_OUTPUT")
 else
@@ -400,27 +449,36 @@ if [ "$ICE_ENABLED" -eq 1 ]; then
         exit 1
     fi
 fi
+fi
 
 if grep -Eiq '(^|[^[:alpha:]])(nan|infinity)([^[:alpha:]]|$)' "$LOG"; then
     echo "Run failed: non-finite value found in the model log." >&2
     exit 1
 fi
 
-FINAL_MINMAX=$(grep -A8 'item   = RIVWAT_TMP' "$LOG" | \
-    grep '  min/max = ' | tail -n 1 | sed 's/^ *min\/max = *//')
-if [ -z "$FINAL_MINMAX" ]; then
-    echo "Run failed: final temperature range was not found in the model log." >&2
-    exit 1
+OUTPUT_SHA256=not_applicable
+RESTART_SHA256=not_applicable
+FINAL_MINMAX=not_applicable
+if [ "$HEATLINK_ENABLED" -eq 1 ]; then
+    FINAL_MINMAX=$(grep -A8 'item   = RIVWAT_TMP' "$LOG" | \
+        grep '  min/max = ' | tail -n 1 | sed 's/^ *min\/max = *//')
+    if [ -z "$FINAL_MINMAX" ]; then
+        echo "Run failed: final temperature range was not found in the model log." >&2
+        exit 1
+    fi
+
+    OUTPUT_SHA256=$(shasum -a 256 "$RIVWAT_OUTPUT" | awk '{print $1}')
+    RESTART_SHA256=$(shasum -a 256 "$FINAL_RESTART" | awk '{print $1}')
 fi
 
-OUTPUT_SHA256=$(shasum -a 256 "$RIVWAT_OUTPUT" | awk '{print $1}')
-RESTART_SHA256=$(shasum -a 256 "$FINAL_RESTART" | awk '{print $1}')
+CORE_RESTART_SHA256=$(shasum -a 256 "$FINAL_CORE_RESTART" | awk '{print $1}')
 COMPILER_VERSION=$(gfortran --version | head -n 1)
 
 cat > "${RUN_DIR}/summary.txt" <<EOF
 run_mode=${RUN_MODE}
 period_start=${START_YEAR}-$(printf '%02d' "${START_MONTH}")-$(printf '%02d' "${START_DAY}")T$(printf '%02d' "${START_HOUR}"):00:00
 period_end=${END_YEAR}-$(printf '%02d' "${END_MONTH}")-$(printf '%02d' "${END_DAY}")T$(printf '%02d' "${END_HOUR}"):00:00
+lheatlink=${LHEATLINK_NML}
 lice=${LICE_NML}
 restart_source_dir=${RESTART_SOURCE_DIR}
 omp_num_threads=${OMP_NUM_THREADS}
@@ -429,6 +487,8 @@ output_dt_seconds=${OUTPUT_DT}
 compiler=${COMPILER_VERSION}
 elapsed_seconds=${ELAPSED_SECONDS}
 time_steps=${STEP_COUNT}
+cama_restart_write_count=${RESTART_WRITE_COUNT}
+cama_restart_sha256=${CORE_RESTART_SHA256}
 rivwattmp_records=${OUTPUT_RECORDS}
 rivwattmp_bytes=${OUTPUT_BYTES}
 rivwattmp_sha256=${OUTPUT_SHA256}
