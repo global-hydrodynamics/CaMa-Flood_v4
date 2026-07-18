@@ -5,7 +5,7 @@ module heat_flux_mod
     &   EW, SB, TMELT, iceSWatten, Rsrf, Dbtm, Kw, Ksed, porosity, dsoil, &
     &   RW, GRAVITY_ACCEL, watSWref, ATTEN_SWD_RIV, ATTEN_SWD_LAK, &
     &   AIR_DENSITY, AIR_SPCHEAT, EVAP_EFF, &
-    &   iceSWref, iceLWref, Kice2air
+    &   iceSWref, ICE_LONGWAVE_EMISSIVITY, Kice2air
     use water_mod, only: &
     &   get_tetens_params, water_latent, saturated_specific_humidity, saturated_vapour_pressure
     !$ use omp_lib
@@ -151,6 +151,24 @@ subroutine deriv_LWup(Hlwd, Hlwd_deriv, Tsrf)
     Hlwd_deriv = 4.d0 * EW * SB * Tsrf2 * Tsrf
 end subroutine deriv_LWup
 
+
+pure elemental real(kind=JPRB) function calc_ice_absorbed_longwave_flux( &
+    &   downward_longwave_w_m2) result(absorbed_longwave_w_m2)
+    real(kind=JPRB), intent(in) :: &
+    &   downward_longwave_w_m2 ! [W m-2] Downward longwave radiation incident on the ice surface.
+
+    absorbed_longwave_w_m2 = ICE_LONGWAVE_EMISSIVITY * downward_longwave_w_m2
+end function calc_ice_absorbed_longwave_flux
+
+
+pure elemental real(kind=JPRB) function calc_ice_emitted_longwave_flux( &
+    &   ice_surface_temperature_k) result(emitted_longwave_w_m2)
+    real(kind=JPRB), intent(in) :: &
+    &   ice_surface_temperature_k ! [K] Upper-surface ice temperature.
+
+    emitted_longwave_w_m2 = ICE_LONGWAVE_EMISSIVITY * SB * ice_surface_temperature_k**4
+end function calc_ice_emitted_longwave_flux
+
 ! ===================================================================================================
 subroutine calc_SWd_penetration_ice(Hswp, &
 &                                   Hswd, iceD)
@@ -210,7 +228,7 @@ pure elemental subroutine calc_ice_surface_heat_flux( &
         ! so a few Newton iterations converge rapidly from the melting point.
         do iteration = 1, 4
             surface_energy_balance_derivative_w_m2_k = &
-            &   -4.0_JPRB * (1.0_JPRB - iceLWref) * SB * &
+            &   -4.0_JPRB * ICE_LONGWAVE_EMISSIVITY * SB * &
             &   ice_surface_temperature_k**3 - Kice2air - thermal_conductance_w_m2_k
             ice_surface_temperature_k = min(TMELT, max(1.0_JPRB, &
             &   ice_surface_temperature_k - surface_energy_balance_w_m2 / &
@@ -245,13 +263,9 @@ pure real(kind=JPRB) function evaluate_surface_flux( &
     &   absorbed_shortwave_w_m2, & ! [W m-2] Shortwave absorbed within the ice.
     &   incident_longwave_w_m2, & ! [W m-2] Downward longwave radiation above the ice.
     &   atmospheric_temperature_k ! [K] Near-surface air temperature.
-    real(kind=JPRB) :: &
-    &   surface_temperature_squared_k2 ! [K2] Squared upper-surface ice temperature.
-
-    surface_temperature_squared_k2 = surface_temperature_k * surface_temperature_k
     net_flux_w_m2 = absorbed_shortwave_w_m2 + &
-    &   (1.0_JPRB - iceLWref) * incident_longwave_w_m2 - &
-    &   (1.0_JPRB - iceLWref) * SB * surface_temperature_squared_k2**2 + &
+    &   calc_ice_absorbed_longwave_flux(incident_longwave_w_m2) - &
+    &   calc_ice_emitted_longwave_flux(surface_temperature_k) + &
     &   Kice2air * (atmospheric_temperature_k - surface_temperature_k)
 end function evaluate_surface_flux
 end subroutine calc_ice_surface_heat_flux

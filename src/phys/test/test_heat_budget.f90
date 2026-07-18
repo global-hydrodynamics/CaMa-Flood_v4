@@ -7,8 +7,9 @@ program test_heat_budget
     &   STO_IGNORE
     use phys_const_mod, only: &
     &   CW, RW, CI, RI, HFUS, TMELT, SB, &
-    &   iceSWref, iceLWref, iceSWatten, Kice2air, KI
+    &   iceSWref, ICE_LONGWAVE_EMISSIVITY, iceSWatten, Kice2air, KI
     use heat_flux_mod, only: &
+    &   calc_ice_absorbed_longwave_flux, calc_ice_emitted_longwave_flux, &
     &   calc_ice_surface_heat_flux
     use heat_budget_mod, only: &
     &   NEGATIVE_VOLUME_TOLERANCE_M3, water_ice_mass_kg, water_ice_energy_j, &
@@ -34,6 +35,7 @@ program test_heat_budget
     call test_separate_substep_invariance()
     call test_tiny_negative_state_normalization()
     call test_invalid_local_state_detection()
+    call test_ice_longwave_fluxes()
     call test_ice_surface_heat_flux()
 
     write(*, '(a)') '[ALL TESTS PASSED] test_heat_budget'
@@ -798,6 +800,30 @@ subroutine check_separate_update( &
 end subroutine check_separate_update
 
 
+subroutine test_ice_longwave_fluxes()
+    real(kind=JPRB) :: &
+    &   downward_longwave_w_m2, &       ! [W m-2] Downward longwave radiation incident on ice.
+    &   ice_surface_temperature_k, &    ! [K] Prescribed upper-surface ice temperature.
+    &   absorbed_longwave_w_m2, &       ! [W m-2] Longwave radiation absorbed by ice.
+    &   emitted_longwave_w_m2, &        ! [W m-2] Longwave radiation emitted by ice.
+    &   expected_absorbed_w_m2, &       ! [W m-2] Hand-calculated absorbed longwave radiation.
+    &   expected_emitted_w_m2           ! [W m-2] Hand-calculated emitted longwave radiation.
+
+    downward_longwave_w_m2 = 300.0_JPRB
+    ice_surface_temperature_k = 260.0_JPRB
+    expected_absorbed_w_m2 = ICE_LONGWAVE_EMISSIVITY * downward_longwave_w_m2
+    expected_emitted_w_m2 = ICE_LONGWAVE_EMISSIVITY * SB * ice_surface_temperature_k**4
+
+    absorbed_longwave_w_m2 = calc_ice_absorbed_longwave_flux(downward_longwave_w_m2)
+    emitted_longwave_w_m2 = calc_ice_emitted_longwave_flux(ice_surface_temperature_k)
+
+    call assert_close(absorbed_longwave_w_m2, expected_absorbed_w_m2, 1.0e-13_JPRB, &
+    &   'ice absorbed longwave flux [W m-2]')
+    call assert_close(emitted_longwave_w_m2, expected_emitted_w_m2, 1.0e-13_JPRB, &
+    &   'ice emitted longwave flux [W m-2]')
+end subroutine test_ice_longwave_fluxes
+
+
 subroutine test_ice_surface_heat_flux()
     real(kind=JPRB) :: &
     &   net_ice_heat_flux_w_m2, &      ! [W m-2] Computed net atmospheric heat flux into ice.
@@ -847,8 +873,8 @@ subroutine test_ice_surface_heat_flux()
     air_temperature_k = TMELT + 3.0_JPRB
     expected_net_flux_w_m2 = &
     &   (1.0_JPRB - iceSWref) * downward_shortwave_w_m2 - expected_transmitted_w_m2 + &
-    &   (1.0_JPRB - iceLWref) * downward_longwave_w_m2 - &
-    &   (1.0_JPRB - iceLWref) * SB * TMELT**4 + &
+    &   ICE_LONGWAVE_EMISSIVITY * downward_longwave_w_m2 - &
+    &   ICE_LONGWAVE_EMISSIVITY * SB * TMELT**4 + &
     &   Kice2air * (air_temperature_k - TMELT)
 
     call calc_ice_surface_heat_flux( &
@@ -896,8 +922,8 @@ pure real(kind=JPRB) function atmospheric_ice_flux_w_m2( &
 
     net_flux_w_m2 = &
     &   (1.0_JPRB - iceSWref) * downward_shortwave_w_m2 - transmitted_shortwave_w_m2 + &
-    &   (1.0_JPRB - iceLWref) * downward_longwave_w_m2 - &
-    &   (1.0_JPRB - iceLWref) * SB * surface_temperature_k**4 + &
+    &   ICE_LONGWAVE_EMISSIVITY * downward_longwave_w_m2 - &
+    &   ICE_LONGWAVE_EMISSIVITY * SB * surface_temperature_k**4 + &
     &   Kice2air * (air_temperature_k - surface_temperature_k)
 end function atmospheric_ice_flux_w_m2
 

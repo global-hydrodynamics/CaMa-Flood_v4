@@ -9,7 +9,7 @@ module phys_const_mod
 !    &   init_phys_const_mod, &
     &   CW, RW, VISC_WAT, FUSION_HEAT_WAT, &
     &   RIVDPH_MIN, ICETHK_MIN, &
-    &   watSWref, watLWref, iceSWref, iceLWref, iceSWatten, &
+    &   watSWref, watLWref, iceSWref, ICE_LONGWAVE_EMISSIVITY, iceSWatten, &
     &   ew, sb, Rsrf, Dbtm, ATTEN_SWD_RIV, ATTEN_SWD_LAK, &
     &   AIR_DENSITY, AIR_SPCHEAT, EVAP_EFF, &
     &   Tdelta, cp, g, rair, cair, Dc, Kw, Ksed, porosity, dsoil, &
@@ -32,7 +32,9 @@ module phys_const_mod
     real(kind=JPRB), parameter :: watSWref = 0.1d0  ! albedo []
     real(kind=JPRB), parameter :: watLWref = 0.03d0
     real(kind=JPRB), parameter :: iceSWref = 0.6d0
-    real(kind=JPRB), parameter :: iceLWref = 0.6d0 ! 0.03d0
+    ! Broadband longwave emissivity of bare ice from Wang et al. (2010),
+    ! Journal of Geophysical Research: Oceans, doi:10.1029/2009JC005857.
+    real(kind=JPRB), parameter :: ICE_LONGWAVE_EMISSIVITY = 0.988_JPRB ! [-]
     real(kind=JPRB), parameter :: iceSWatten = 10.d0
     real(kind=JPRB), parameter :: ew = 0.97d0   ! water emissivity []
     real(kind=JPRB), parameter :: sb = 5.670367d-8 ! Stefan-Boltzmann constant
