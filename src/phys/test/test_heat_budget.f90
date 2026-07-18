@@ -9,6 +9,7 @@ program test_heat_budget
     &   CW, RW, CI, RI, HFUS, TMELT, SB, &
     &   iceSWref, ICE_LONGWAVE_EMISSIVITY, iceSWatten, Kice2air, KI
     use heat_flux_mod, only: &
+    &   ICE_SURFACE_NEWTON_RESIDUAL_TOLERANCE_W_M2, &
     &   calc_ice_absorbed_longwave_flux, calc_ice_emitted_longwave_flux, &
     &   calc_ice_surface_heat_flux
     use heat_budget_mod, only: &
@@ -37,6 +38,7 @@ program test_heat_budget
     call test_invalid_local_state_detection()
     call test_ice_longwave_fluxes()
     call test_ice_surface_heat_flux()
+    call test_ice_surface_newton_convergence_range()
 
     write(*, '(a)') '[ALL TESTS PASSED] test_heat_budget'
 
@@ -836,7 +838,12 @@ subroutine test_ice_surface_heat_flux()
     &   ice_surface_temperature_k, &  ! [K] Computed upper-surface ice temperature.
     &   bottom_thermal_conductance_w_m2_k, & ! [W m-2 K-1] Conductance to ice bottom at TMELT.
     &   expected_transmitted_w_m2, &  ! [W m-2] Expected shortwave transmission through the ice.
-    &   expected_net_flux_w_m2        ! [W m-2] Expected net atmospheric heat flux into ice.
+    &   expected_net_flux_w_m2, &     ! [W m-2] Expected net atmospheric heat flux into ice.
+    &   newton_residual_w_m2          ! [W m-2] Ice-surface energy-balance residual.
+    integer :: &
+    &   newton_iteration_count        ! [-] Number of Newton updates performed.
+    logical :: &
+    &   newton_converged              ! [-] True when the Newton residual meets its tolerance.
 
     downward_shortwave_w_m2 = 120.0_JPRB
     downward_longwave_w_m2 = 280.0_JPRB
@@ -851,13 +858,21 @@ subroutine test_ice_surface_heat_flux()
     call calc_ice_surface_heat_flux( &
     &   net_ice_heat_flux_w_m2, transmitted_shortwave_w_m2, &
     &   ice_surface_temperature_k, upward_conductive_heat_flux_w_m2, &
+    &   newton_iteration_count, newton_residual_w_m2, newton_converged, &
     &   downward_shortwave_w_m2, downward_longwave_w_m2, &
-    &   air_temperature_k, ice_thickness_m, bottom_thermal_conductance_w_m2_k)
+    &   air_temperature_k, ice_thickness_m, bottom_thermal_conductance_w_m2_k, 4)
 
     call assert_close(transmitted_shortwave_w_m2, expected_transmitted_w_m2, 1.0e-13_JPRB, &
     &   'cold ice shortwave transmission [W m-2]')
     call assert_close(net_ice_heat_flux_w_m2 + upward_conductive_heat_flux_w_m2, &
-    &   0.0_JPRB, 0.0_JPRB, 'cold ice surface energy balance [W m-2]')
+    &   0.0_JPRB, ICE_SURFACE_NEWTON_RESIDUAL_TOLERANCE_W_M2, &
+    &   'cold ice surface energy balance [W m-2]')
+    call assert_true(newton_converged, 'cold ice Newton solve converged')
+    call assert_true(newton_iteration_count >= 1 .and. newton_iteration_count < 4, &
+    &   'cold ice Newton solve exits before its maximum iteration count')
+    call assert_close(newton_residual_w_m2, &
+    &   abs(net_ice_heat_flux_w_m2 + upward_conductive_heat_flux_w_m2), &
+    &   1.0e-13_JPRB, 'cold ice reported Newton residual [W m-2]')
     call assert_close(atmospheric_ice_flux_w_m2( &
     &   ice_surface_temperature_k, downward_shortwave_w_m2, &
     &   transmitted_shortwave_w_m2, downward_longwave_w_m2, air_temperature_k), &
@@ -880,8 +895,9 @@ subroutine test_ice_surface_heat_flux()
     call calc_ice_surface_heat_flux( &
     &   net_ice_heat_flux_w_m2, transmitted_shortwave_w_m2, &
     &   ice_surface_temperature_k, upward_conductive_heat_flux_w_m2, &
+    &   newton_iteration_count, newton_residual_w_m2, newton_converged, &
     &   downward_shortwave_w_m2, downward_longwave_w_m2, &
-    &   air_temperature_k, ice_thickness_m, bottom_thermal_conductance_w_m2_k)
+    &   air_temperature_k, ice_thickness_m, bottom_thermal_conductance_w_m2_k, 4)
 
     call assert_close(ice_surface_temperature_k, TMELT, 0.0_JPRB, &
     &   'melting ice surface temperature [K]')
@@ -889,24 +905,109 @@ subroutine test_ice_surface_heat_flux()
     &   'melting ice conductive flux [W m-2]')
     call assert_close(net_ice_heat_flux_w_m2, expected_net_flux_w_m2, 1.0e-13_JPRB, &
     &   'melting ice atmospheric flux [W m-2]')
+    call assert_true(newton_converged, 'melting ice does not require a Newton solve')
+    call assert_true(newton_iteration_count == 0, &
+    &   'melting ice uses zero Newton iterations')
+    call assert_close(newton_residual_w_m2, 0.0_JPRB, 0.0_JPRB, &
+    &   'melting ice Newton residual [W m-2]')
 
     ! An insulated ice body cools until its atmospheric surface flux is zero.
     air_temperature_k = TMELT - 10.0_JPRB
     call calc_ice_surface_heat_flux( &
     &   net_ice_heat_flux_w_m2, transmitted_shortwave_w_m2, &
     &   ice_surface_temperature_k, upward_conductive_heat_flux_w_m2, &
+    &   newton_iteration_count, newton_residual_w_m2, newton_converged, &
     &   downward_shortwave_w_m2, downward_longwave_w_m2, &
-    &   air_temperature_k, ice_thickness_m, 0.0_JPRB)
+    &   air_temperature_k, ice_thickness_m, 0.0_JPRB, 4)
 
-    call assert_close(net_ice_heat_flux_w_m2, 0.0_JPRB, 0.0_JPRB, &
+    call assert_close(net_ice_heat_flux_w_m2, 0.0_JPRB, &
+    &   ICE_SURFACE_NEWTON_RESIDUAL_TOLERANCE_W_M2, &
     &   'insulated cold ice atmospheric flux [W m-2]')
     call assert_close(upward_conductive_heat_flux_w_m2, 0.0_JPRB, 0.0_JPRB, &
     &   'insulated cold ice conductive flux [W m-2]')
     call assert_close(atmospheric_ice_flux_w_m2( &
     &   ice_surface_temperature_k, downward_shortwave_w_m2, &
     &   transmitted_shortwave_w_m2, downward_longwave_w_m2, air_temperature_k), &
-    &   0.0_JPRB, 1.0e-12_JPRB, 'insulated cold ice surface balance [W m-2]')
+    &   0.0_JPRB, ICE_SURFACE_NEWTON_RESIDUAL_TOLERANCE_W_M2, &
+    &   'insulated cold ice surface balance [W m-2]')
+    call assert_true(newton_converged, 'insulated cold ice Newton solve converged')
+    call assert_true(newton_iteration_count >= 1 .and. newton_iteration_count < 4, &
+    &   'insulated cold ice Newton solve exits before its maximum iteration count')
+
+    ! A deliberately insufficient iteration limit must be reported rather than
+    ! hiding the remaining surface-balance residual in a component flux.
+    call calc_ice_surface_heat_flux( &
+    &   net_ice_heat_flux_w_m2, transmitted_shortwave_w_m2, &
+    &   ice_surface_temperature_k, upward_conductive_heat_flux_w_m2, &
+    &   newton_iteration_count, newton_residual_w_m2, newton_converged, &
+    &   downward_shortwave_w_m2, downward_longwave_w_m2, &
+    &   air_temperature_k, ice_thickness_m, 0.0_JPRB, 1)
+    call assert_true(.not. newton_converged, &
+    &   'one-iteration ice-surface solve reports nonconvergence')
+    call assert_true(newton_iteration_count == 1, &
+    &   'ice-surface solve respects configured maximum iterations')
+    call assert_true(newton_residual_w_m2 > &
+    &   ICE_SURFACE_NEWTON_RESIDUAL_TOLERANCE_W_M2, &
+    &   'nonconverged ice-surface solve retains its residual')
+    call assert_close(atmospheric_ice_flux_w_m2( &
+    &   ice_surface_temperature_k, downward_shortwave_w_m2, &
+    &   transmitted_shortwave_w_m2, downward_longwave_w_m2, air_temperature_k), &
+    &   net_ice_heat_flux_w_m2, 1.0e-12_JPRB, &
+    &   'nonconverged ice atmospheric flux remains physically evaluated [W m-2]')
 end subroutine test_ice_surface_heat_flux
+
+
+subroutine test_ice_surface_newton_convergence_range()
+    integer, parameter :: &
+    &   case_count = 4                  ! [-] Number of forcing and ice-geometry cases.
+    real(kind=JPRB), parameter :: &
+    &   downward_shortwave_w_m2(case_count) = [ &
+    &       0.0_JPRB, 0.0_JPRB, 0.0_JPRB, 500.0_JPRB], &
+    &   downward_longwave_w_m2(case_count) = [ &
+    &       250.0_JPRB, 250.0_JPRB, 100.0_JPRB, 100.0_JPRB], &
+    &   air_temperature_k(case_count) = [ &
+    &       260.0_JPRB, 240.0_JPRB, 200.0_JPRB, 250.0_JPRB], &
+    &   ice_thickness_m(case_count) = [ &
+    &       0.01_JPRB, 20.0_JPRB, 1.0_JPRB, 1.0_JPRB], &
+    &   bottom_thermal_conductance_w_m2_k(case_count) = [ &
+    &       KI / 0.01_JPRB, KI / 20.0_JPRB, 0.0_JPRB, KI]
+    real(kind=JPRB) :: &
+    &   net_ice_heat_flux_w_m2, &       ! [W m-2] Atmospheric heat flux into ice.
+    &   transmitted_shortwave_w_m2, &   ! [W m-2] Shortwave transmitted through ice.
+    &   ice_surface_temperature_k, &    ! [K] Diagnosed upper-surface ice temperature.
+    &   upward_conductive_heat_flux_w_m2, & ! [W m-2] Bottom-to-surface conductive heat flux.
+    &   newton_residual_w_m2             ! [W m-2] Cold-surface energy-balance residual.
+    integer :: &
+    &   case_index, &                    ! [-] Test-case index.
+    &   newton_iteration_count           ! [-] Newton updates performed.
+    logical :: &
+    &   newton_converged                 ! [-] True when the Newton residual meets its tolerance.
+
+    do case_index = 1, case_count
+        call calc_ice_surface_heat_flux( &
+        &   net_ice_heat_flux_w_m2, transmitted_shortwave_w_m2, &
+        &   ice_surface_temperature_k, upward_conductive_heat_flux_w_m2, &
+        &   newton_iteration_count, newton_residual_w_m2, newton_converged, &
+        &   downward_shortwave_w_m2(case_index), downward_longwave_w_m2(case_index), &
+        &   air_temperature_k(case_index), ice_thickness_m(case_index), &
+        &   bottom_thermal_conductance_w_m2_k(case_index), 4)
+
+        call assert_true(newton_converged, &
+        &   'ice-surface Newton convergence across geometry and forcing range')
+        call assert_true(newton_iteration_count >= 1 .and. newton_iteration_count <= 4, &
+        &   'ice-surface Newton iteration count across geometry and forcing range')
+        call assert_true(ice_surface_temperature_k >= 1.0_JPRB .and. &
+        &   ice_surface_temperature_k < TMELT, &
+        &   'ice-surface temperature bounds across geometry and forcing range')
+        call assert_abs_le(newton_residual_w_m2, &
+        &   ICE_SURFACE_NEWTON_RESIDUAL_TOLERANCE_W_M2, &
+        &   'ice-surface Newton residual across geometry and forcing range [W m-2]')
+        call assert_close(newton_residual_w_m2, &
+        &   abs(net_ice_heat_flux_w_m2 + upward_conductive_heat_flux_w_m2), &
+        &   1.0e-13_JPRB, &
+        &   'reported ice-surface residual across geometry and forcing range [W m-2]')
+    enddo
+end subroutine test_ice_surface_newton_convergence_range
 
 
 pure real(kind=JPRB) function atmospheric_ice_flux_w_m2( &

@@ -15,6 +15,7 @@ set -eu
 #   SDKROOT       macOS SDK selected by the conda Fortran toolchain.
 #   LHEATLINK      Fortran logical enabling river thermodynamics; defaults to .TRUE.
 #   LICE          Fortran logical enabling river ice; defaults to .FALSE.
+#   NICE_NEWTON_MAX Maximum river-ice surface Newton iterations; defaults to 4.
 #   START_*       Optional start date fields (YEAR, MONTH, DAY, HOUR).
 #   END_*         Optional end date fields overriding the selected run mode.
 #   EXPECTED_STEPS, EXPECTED_RECORDS Optional expected counts for overridden dates.
@@ -34,6 +35,7 @@ RUNOFF_INPMAT=${RUNOFF_INPMAT:-${ROOT}/map/glb_15min/inpmat_test-1deg.bin}
 OMP_NUM_THREADS=${OMP_NUM_THREADS:-16}
 LHEATLINK=${LHEATLINK:-.TRUE.}
 LICE=${LICE:-.FALSE.}
+NICE_NEWTON_MAX=${NICE_NEWTON_MAX:-4}
 MODEL_DT=${MODEL_DT:-3600}
 OUTPUT_DT=${OUTPUT_DT:-86400}
 START_YEAR=${START_YEAR:-2000}
@@ -76,6 +78,13 @@ if [ "$HEATLINK_ENABLED" -eq 0 ] && [ "$ICE_ENABLED" -eq 1 ]; then
     echo "LICE=.TRUE. requires LHEATLINK=.TRUE." >&2
     exit 2
 fi
+
+case "$NICE_NEWTON_MAX" in
+    ''|*[!0-9]*|0)
+        echo "NICE_NEWTON_MAX must be a positive integer: ${NICE_NEWTON_MAX}" >&2
+        exit 2
+        ;;
+esac
 
 case "$RUN_MODE" in
     smoke)
@@ -206,6 +215,7 @@ PMANRIV = 0.03D0                   ! [s m-1/3] River Manning roughness.
 PMANFLD = 0.10D0                   ! [s m-1/3] Floodplain Manning roughness.
 PDSTMTH = 10000.D0                 ! [m] Downstream distance at river mouths.
 PCADP   = 0.7                      ! [-] Adaptive-step CFL coefficient.
+NICE_NEWTON_MAX = ${NICE_NEWTON_MAX} ! [-] Maximum river-ice surface Newton iterations.
 /
 &NSIMTIME
 SYEAR = ${START_YEAR}
@@ -309,6 +319,7 @@ echo "Running ${RUN_MODE} heatlink regression"
 echo "  period: ${START_YEAR}-$(printf '%02d' "${START_MONTH}")-$(printf '%02d' "${START_DAY}") $(printf '%02d' "${START_HOUR}"):00 to ${END_YEAR}-$(printf '%02d' "${END_MONTH}")-$(printf '%02d' "${END_DAY}") $(printf '%02d' "${END_HOUR}"):00"
 echo "  heatlink: ${LHEATLINK_NML}"
 echo "  river ice: ${LICE_NML}"
+echo "  maximum ice Newton iterations: ${NICE_NEWTON_MAX}"
 echo "  threads: ${OMP_NUM_THREADS}"
 echo "  model time step: ${MODEL_DT} s"
 echo "  output interval: ${OUTPUT_DT} s"
@@ -480,6 +491,7 @@ period_start=${START_YEAR}-$(printf '%02d' "${START_MONTH}")-$(printf '%02d' "${
 period_end=${END_YEAR}-$(printf '%02d' "${END_MONTH}")-$(printf '%02d' "${END_DAY}")T$(printf '%02d' "${END_HOUR}"):00:00
 lheatlink=${LHEATLINK_NML}
 lice=${LICE_NML}
+nice_newton_max=${NICE_NEWTON_MAX}
 restart_source_dir=${RESTART_SOURCE_DIR}
 omp_num_threads=${OMP_NUM_THREADS}
 model_dt_seconds=${MODEL_DT}

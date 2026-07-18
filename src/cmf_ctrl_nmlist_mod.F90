@@ -44,7 +44,8 @@ USE YOS_CMF_INPUT,      ONLY: CDIMINFO, DT,       NX,NY,    NLFP,     NXIN,NYIN,
                             & IFRQ_INP, DTIN,     WEST,EAST,NORTH,SOUTH
 ! parameters
 USE YOS_CMF_INPUT,      ONLY: PMANRIV,  PMANFLD,  PDSTMTH,  PMINSLP,  PGRV, PCADP, &
-                            & IMIS, RMIS, DMIS,   CSUFBIN,  CSUFVEC,  CSUFPTH,  CSUFCDF
+                            & IMIS, RMIS, DMIS,   CSUFBIN,  CSUFVEC,  CSUFPTH,  CSUFCDF, &
+                            & NICE_NEWTON_MAX
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
 IMPLICIT NONE
 !* local
@@ -60,7 +61,8 @@ NAMELIST/NRUNVER/  LADPSTP,  LFPLAIN,  LKINE,    LFLDOUT,  LPTHOUT,  LDAMOUT,   
 NAMELIST/NDIMTIME/ CDIMINFO, DT, IFRQ_INP
 
 NAMELIST/NPARAM/   PMANRIV, PMANFLD, PGRV,    PDSTMTH, PCADP,   PMINSLP, &
-                   IMIS, RMIS, DMIS, CSUFBIN, CSUFVEC, CSUFPTH, CSUFCDF
+                   IMIS, RMIS, DMIS, CSUFBIN, CSUFVEC, CSUFPTH, CSUFCDF, &
+                   NICE_NEWTON_MAX
 !================================================
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "!--------------------"
@@ -252,10 +254,16 @@ CSUFBIN='.bin'
 CSUFVEC='.vec'
 CSUFPTH='.pth'
 CSUFCDF='.nc'
+NICE_NEWTON_MAX=4                           !! maximum Newton iterations for river-ice surface temperature
 
 ! * change
 REWIND(NSETFILE)
 READ(NSETFILE,NML=NPARAM)
+
+IF (NICE_NEWTON_MAX < 1) THEN
+  WRITE(LOGNAM,*) "ERROR: NICE_NEWTON_MAX must be at least one."
+  ERROR STOP 1
+ENDIF
 
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "=== NAMELIST, NPARAM ==="
@@ -274,6 +282,7 @@ WRITE(LOGNAM,*) "CSUFBIN  ", TRIM(CSUFBIN)
 WRITE(LOGNAM,*) "CSUFVEC  ", TRIM(CSUFVEC)
 WRITE(LOGNAM,*) "CSUFPTH  ", TRIM(CSUFPTH)
 WRITE(LOGNAM,*) "CSUFCDF  ", TRIM(CSUFCDF)
+WRITE(LOGNAM,*) "NICE_NEWTON_MAX", NICE_NEWTON_MAX
 
 !===============================
 !*** CLOSE FILE 

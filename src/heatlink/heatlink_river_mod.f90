@@ -3,7 +3,7 @@ module heatlink_river_mod
     use PARKIND1, only: &
     &   JPIM, JPRB, JPRD
     use YOS_CMF_INPUT, only: &
-    &   LOGNAM, LRESTART, LICE
+    &   LOGNAM, LRESTART, LICE, NICE_NEWTON_MAX
     use YOS_CMF_MAP, only: &
     &   NSEQMAX, NSEQALL, &
     &   D2GRAREA, D2RIVLEN, D2RIVWTH
@@ -22,7 +22,7 @@ module heatlink_river_mod
     use ice_cover_mod, only: &
     &   ICE_THICKNESS_MIN_M, diagnose_ice_geometry, enforce_surface_ice_capacity
     use heat_flux_mod, only: &
-    &   calc_ice_surface_heat_flux
+    &   ICE_SURFACE_NEWTON_RESIDUAL_TOLERANCE_W_M2, calc_ice_surface_heat_flux
     use heat_budget_mod, only: &
     &   water_ice_mass_kg, water_ice_energy_j
     use water_storage_adapter_mod, only: &
@@ -105,6 +105,13 @@ subroutine init_heatlink_river_mod(dt)
     logical :: is_found
 
     write(LOGNAM, '(a)') '[heatlink_river_mod/init_heatlink_river_mod]'
+    if (LICE) then
+        write(LOGNAM, '(a,i0)') &
+        &   '  maximum river-ice surface Newton iterations = ', NICE_NEWTON_MAX
+        write(LOGNAM, '(a,es12.4)') &
+        &   '  river-ice surface Newton residual tolerance [W m-2] = ', &
+        &   ICE_SURFACE_NEWTON_RESIDUAL_TOLERANCE_W_M2
+    endif
 
     write(LOGNAM, '(a)') '  read the first-step input'
     call add_input('LWDN', dt) ! [W m-2]
@@ -324,12 +331,26 @@ subroutine calc_ice_heat_fluxes()
     real(kind=JPRB) :: &
     &   transmitted_shortwave_w_m2, & ! [W m-2] Shortwave radiation transmitted through excess ice.
     &   bottom_thermal_conductance_w_m2_k, & ! [W m-2 K-1] Ice conductance to a bottom boundary at TMELT.
-    &   excess_upward_conductive_heat_flux_w_m2 ! [W m-2] Bottom-to-surface flux within excess ice.
+    &   excess_upward_conductive_heat_flux_w_m2, & ! [W m-2] Bottom-to-surface flux within excess ice.
+    &   newton_residual_w_m2, &       ! [W m-2] Residual from one ice-surface Newton solve.
+    &   maximum_newton_residual_w_m2  ! [W m-2] Maximum residual among all ice-surface solves.
     integer(kind=JPIM) :: &
-    &   iseq                         ! [-] Vector index of the river cell.
+    &   iseq, &                       ! [-] Vector index of the river cell.
+    &   newton_iteration_count, &     ! [-] Newton updates used by one ice-surface solve.
+    &   maximum_newton_iterations_used, & ! [-] Maximum Newton updates used across the domain.
+    &   nonconverged_newton_solve_count ! [-] Number of ice-surface solves that failed to converge.
+    logical :: &
+    &   newton_converged              ! [-] True when one ice-surface Newton solve converged.
+
+    maximum_newton_residual_w_m2 = 0.0_JPRB
+    maximum_newton_iterations_used = 0
+    nonconverged_newton_solve_count = 0
 
     !$omp simd private(transmitted_shortwave_w_m2, bottom_thermal_conductance_w_m2_k, &
-    !$omp& excess_upward_conductive_heat_flux_w_m2)
+    !$omp& excess_upward_conductive_heat_flux_w_m2, newton_residual_w_m2, &
+    !$omp& newton_iteration_count, newton_converged) &
+    !$omp& reduction(max:maximum_newton_residual_w_m2, maximum_newton_iterations_used) &
+    !$omp& reduction(+:nonconverged_newton_solve_count)
     do iseq = 1, NSEQALL
         if (icearea(iseq) > 0.0_JPRB .and. icevol(iseq) > 0.0_JPRB) then
             if (watsto(iseq) > real(STO_IGNORE, kind=JPRB)) then
@@ -341,8 +362,16 @@ subroutine calc_ice_heat_fluxes()
             call calc_ice_surface_heat_flux( &
             &   hflx_ice_srf(iseq), swdn_to_water(iseq), &
             &   ice_surface_temperature(iseq), ice_upward_conductive_heat_flux(iseq), &
+            &   newton_iteration_count, newton_residual_w_m2, newton_converged, &
             &   swdn(iseq), lwdn(iseq), tair(iseq), icethickness(iseq), &
-            &   bottom_thermal_conductance_w_m2_k)
+            &   bottom_thermal_conductance_w_m2_k, NICE_NEWTON_MAX)
+            maximum_newton_residual_w_m2 = max( &
+            &   maximum_newton_residual_w_m2, newton_residual_w_m2)
+            maximum_newton_iterations_used = max( &
+            &   maximum_newton_iterations_used, newton_iteration_count)
+            if (.not. newton_converged) then
+                nonconverged_newton_solve_count = nonconverged_newton_solve_count + 1
+            endif
             if (bottom_thermal_conductance_w_m2_k > 0.0_JPRB) then
                 ice_mean_temperature(iseq) = &
                 &   0.5_JPRB * (TMELT + ice_surface_temperature(iseq))
@@ -366,13 +395,32 @@ subroutine calc_ice_heat_fluxes()
             &   hflx_ice_excess_srf(iseq), transmitted_shortwave_w_m2, &
             &   ice_excess_surface_temperature(iseq), &
             &   excess_upward_conductive_heat_flux_w_m2, &
+            &   newton_iteration_count, newton_residual_w_m2, newton_converged, &
             &   swdn(iseq), lwdn(iseq), tair(iseq), icethickness_excess(iseq), &
-            &   0.0_JPRB)
+            &   0.0_JPRB, NICE_NEWTON_MAX)
+            maximum_newton_residual_w_m2 = max( &
+            &   maximum_newton_residual_w_m2, newton_residual_w_m2)
+            maximum_newton_iterations_used = max( &
+            &   maximum_newton_iterations_used, newton_iteration_count)
+            if (.not. newton_converged) then
+                nonconverged_newton_solve_count = nonconverged_newton_solve_count + 1
+            endif
         else
             hflx_ice_excess_srf(iseq) = 0.0_JPRB
             ice_excess_surface_temperature(iseq) = TMELT
         endif
     enddo
+
+    if (nonconverged_newton_solve_count > 0) then
+        write(LOGNAM, '(a,i0)') &
+        &   'ERROR: nonconverged river-ice surface Newton solves = ', &
+        &   nonconverged_newton_solve_count
+        write(LOGNAM, '(a,i0)') &
+        &   'ERROR: maximum Newton iterations used = ', maximum_newton_iterations_used
+        write(LOGNAM, '(a,es12.4)') &
+        &   'ERROR: maximum Newton residual [W m-2] = ', maximum_newton_residual_w_m2
+        error stop 'River-ice surface temperature Newton solve did not converge.'
+    endif
 end subroutine calc_ice_heat_fluxes
 
 

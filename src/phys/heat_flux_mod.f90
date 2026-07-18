@@ -12,6 +12,8 @@ module heat_flux_mod
     implicit none
 
     real(kind=JPRB), parameter :: CH_DEF = 1.2d-3, CE_DEF = 1.2d-3 ! default bulk coefficient
+    real(kind=JPRB), parameter :: &
+    &   ICE_SURFACE_NEWTON_RESIDUAL_TOLERANCE_W_M2 = 1.0e-6_JPRB ! [W m-2] Maximum cold-surface energy-balance residual.
 
 contains
 
@@ -182,19 +184,29 @@ end subroutine calc_SWd_penetration_ice
 pure elemental subroutine calc_ice_surface_heat_flux( &
     &   net_ice_heat_flux_w_m2, transmitted_shortwave_w_m2, &
     &   ice_surface_temperature_k, upward_conductive_heat_flux_w_m2, &
+    &   newton_iteration_count, newton_residual_w_m2, newton_converged, &
     &   downward_shortwave_w_m2, downward_longwave_w_m2, &
-    &   air_temperature_k, ice_thickness_m, bottom_thermal_conductance_w_m2_k)
+    &   air_temperature_k, ice_thickness_m, bottom_thermal_conductance_w_m2_k, &
+    &   maximum_newton_iterations)
     real(kind=JPRB), intent(out) :: &
     &   net_ice_heat_flux_w_m2, &        ! [W m-2] Net atmospheric heat flux into ice; positive melts ice.
     &   transmitted_shortwave_w_m2, &    ! [W m-2] Shortwave radiation transmitted through the ice.
     &   ice_surface_temperature_k, &     ! [K] Diagnosed upper-surface ice temperature.
     &   upward_conductive_heat_flux_w_m2 ! [W m-2] Conductive heat flux from the ice bottom to its surface.
+    integer(kind=JPIM), intent(out) :: &
+    &   newton_iteration_count            ! [-] Newton updates performed for the cold-surface solution.
+    real(kind=JPRB), intent(out) :: &
+    &   newton_residual_w_m2              ! [W m-2] Absolute cold-surface energy-balance residual.
+    logical, intent(out) :: &
+    &   newton_converged                  ! [-] True when the cold-surface residual meets its tolerance.
     real(kind=JPRB), intent(in) :: &
     &   downward_shortwave_w_m2, &       ! [W m-2] Downward shortwave radiation above the ice.
     &   downward_longwave_w_m2, &        ! [W m-2] Downward longwave radiation above the ice.
     &   air_temperature_k, &             ! [K] Near-surface air temperature.
     &   ice_thickness_m, &                ! [m] Mean ice thickness over the ice-covered area.
     &   bottom_thermal_conductance_w_m2_k ! [W m-2 K-1] Conductance to a bottom boundary held at TMELT; zero is insulated.
+    integer(kind=JPIM), intent(in) :: &
+    &   maximum_newton_iterations         ! [-] Maximum Newton updates allowed for a cold ice surface.
     real(kind=JPRB) :: &
     &   absorbed_shortwave_before_attenuation_w_m2, & ! [W m-2] Non-reflected shortwave entering the ice.
     &   absorbed_shortwave_in_ice_w_m2, &             ! [W m-2] Shortwave absorbed within the ice.
@@ -218,6 +230,9 @@ pure elemental subroutine calc_ice_surface_heat_flux( &
     ! diagnoses an isothermal profile. No ice sensible heat is stored in time.
     thermal_conductance_w_m2_k = max(bottom_thermal_conductance_w_m2_k, 0.0_JPRB)
     ice_surface_temperature_k = TMELT
+    newton_iteration_count = 0
+    newton_residual_w_m2 = 0.0_JPRB
+    newton_converged = .true.
     net_ice_heat_flux_w_m2 = evaluate_surface_flux( &
     &   ice_surface_temperature_k, absorbed_shortwave_in_ice_w_m2, &
     &   downward_longwave_w_m2, air_temperature_k)
@@ -225,8 +240,13 @@ pure elemental subroutine calc_ice_surface_heat_flux( &
 
     if (surface_energy_balance_w_m2 < 0.0_JPRB) then
         ! The surface can cool below TMELT. The balance is strictly monotonic,
-        ! so a few Newton iterations converge rapidly from the melting point.
-        do iteration = 1, 4
+        ! so Newton iteration converges rapidly from the melting point.
+        newton_residual_w_m2 = abs(surface_energy_balance_w_m2)
+        newton_converged = newton_residual_w_m2 <= &
+        &   ICE_SURFACE_NEWTON_RESIDUAL_TOLERANCE_W_M2
+        do iteration = 1, max(maximum_newton_iterations, 0_JPIM)
+            if (newton_converged) exit
+            newton_iteration_count = iteration
             surface_energy_balance_derivative_w_m2_k = &
             &   -4.0_JPRB * ICE_LONGWAVE_EMISSIVITY * SB * &
             &   ice_surface_temperature_k**3 - Kice2air - thermal_conductance_w_m2_k
@@ -240,13 +260,16 @@ pure elemental subroutine calc_ice_surface_heat_flux( &
             &   (TMELT - ice_surface_temperature_k)
             surface_energy_balance_w_m2 = net_ice_heat_flux_w_m2 + &
             &   upward_conductive_heat_flux_w_m2
+            newton_residual_w_m2 = abs(surface_energy_balance_w_m2)
+            newton_converged = newton_residual_w_m2 <= &
+            &   ICE_SURFACE_NEWTON_RESIDUAL_TOLERANCE_W_M2
         enddo
 
-        ! Enforce the converged zero-layer balance exactly in the phase-change
-        ! budget, avoiding cell-area amplification of round-off residuals.
+        ! Preserve the atmospheric flux evaluated at the diagnosed surface
+        ! temperature. The separately diagnosed residual measures the remaining
+        ! zero-layer imbalance instead of hiding it in either component flux.
         upward_conductive_heat_flux_w_m2 = thermal_conductance_w_m2_k * &
         &   (TMELT - ice_surface_temperature_k)
-        net_ice_heat_flux_w_m2 = -upward_conductive_heat_flux_w_m2
     else
         ! A positive balance at TMELT cannot be removed by a colder surface.
         ! The surface remains at TMELT and the surplus energy melts ice.
