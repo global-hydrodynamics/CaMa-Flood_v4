@@ -27,22 +27,29 @@ EXT_LIBS = common mod phys io heatlink
 EXT_LIB_TARGETS := $(foreach d,$(EXT_LIBS),$(d)/lib$(notdir $(d)).a)
 
 #======================================
-# gfortran Mac OSX
+# GNU Fortran and netCDF from one conda toolchain
+TOOLCHAIN_ROOT ?= $(CONDA_PREFIX)
+ifeq ($(strip $(TOOLCHAIN_ROOT)),)
+  $(error TOOLCHAIN_ROOT is not set. Activate conda environment ils or use gosh/compile_heatlink.sh)
+endif
 
-# without netCDF
-#INC = -I/opt/homebrew/include
-#LIB = -L/opt/homebrew/lib
+NF_CONFIG ?= $(TOOLCHAIN_ROOT)/bin/nf-config
+ifeq ($(wildcard $(NF_CONFIG)),)
+  $(error nf-config was not found at $(NF_CONFIG))
+endif
 
-# with netCDF
-INC = -I/opt/homebrew/include
-LIB = -L/opt/homebrew/lib -lnetcdff
-NETCDFDIR = /Users/dtokuda/miniconda3/envs/ils
+NETCDF_FC     := $(shell $(NF_CONFIG) --fc)
+NETCDF_FFLAGS := $(shell $(NF_CONFIG) --fflags)
+NETCDF_FLIBS  := $(shell $(NF_CONFIG) --flibs)
+NETCDFDIR     := $(TOOLCHAIN_ROOT)
 
-#==============================
-# FCMP: main program (src/), FC: pre/post process (map/ etc/)
-FCMP = gfortran
-#FCMP = mpif90
-FC = gfortran
+# INC and LIB are retained for extension-library Makefiles.
+INC = $(NETCDF_FFLAGS)
+LIB = $(NETCDF_FLIBS)
+
+# FCMP: main program (src/), FC: extension libraries and preprocessing tools.
+FCMP ?= $(NETCDF_FC)
+FC = $(FCMP)
 DBGFLAGS   := -g -fbacktrace -fcheck=all -ffpe-trap=invalid,zero,overflow -finit-real=nan -finit-integer=-999999
 WARNFLAGS  := -Wextra -Wimplicit-interface -Wsurprising -Waliasing -Wampersand -Wunderflow -Wconversion -Wno-compare-reals
 BASEFLAGS  := $(WARNFLAGS) -Wall -ffree-line-length-none -fimplicit-none -ftree-vectorize
@@ -59,7 +66,7 @@ else ifeq ($(BUILD_MODE),release)
 else
   $(error BUILD_MODE must be either debug or release)
 endif
-LIBS   :=
+LIBS   := $(NETCDF_FLIBS)
 
 OPENMP := -fopenmp
 FFLAGS += $(OPENMP)
@@ -82,17 +89,11 @@ SRC_ROOT  := $(PROJ_ROOT)/src
 
 #==============================
 inc = $(if $(wildcard $1),-I$1)
-NETCDFINC_DIR := $(if $(NETCDFDIR),$(NETCDFDIR)/include)
-#NETCDFLIB     := $(if $(NETCDFDIR),-L$(NETCDFDIR)/lib -lnetcdff -lnetcdf)
-NETCDFLIB := $(if $(NETCDFDIR), \
-  $(NETCDFDIR)/lib/libnetcdff.dylib \
-  $(NETCDFDIR)/lib/libnetcdf.dylib)
-LIBS += $(NETCDFLIB)
 
 INCDIRS := \
   $(call inc,$(SRC_ROOT)) \
   $(foreach d,$(EXT_LIBS),$(call inc,$(SRC_ROOT)/$(d))) \
-  $(call inc,$(NETCDFINC_DIR))
+  $(NETCDF_FFLAGS)
 
 %.o %.mod: %.f90
 	$(FC) $(FFLAGS) $(FPPFLAG) $(FCMODFLAG) $(@D) -c $(INCDIRS) $(CFLAGS) $< -o $*.o

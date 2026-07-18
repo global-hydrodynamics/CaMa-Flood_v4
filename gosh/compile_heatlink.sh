@@ -9,6 +9,8 @@ ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 BUILD_MODE=${1:-debug}
 TOOLCHAIN_ROOT=${TOOLCHAIN_ROOT:-/Users/dtokuda/miniconda3/envs/ils}
 SDKROOT=${SDKROOT:-$(xcrun --show-sdk-path)}
+GFORTRAN=${TOOLCHAIN_ROOT}/bin/gfortran
+NF_CONFIG=${TOOLCHAIN_ROOT}/bin/nf-config
 
 case "$BUILD_MODE" in
     debug|release)
@@ -19,17 +21,36 @@ case "$BUILD_MODE" in
         ;;
 esac
 
-export PATH="${TOOLCHAIN_ROOT}/bin:${PATH}"
-export DYLD_LIBRARY_PATH="${TOOLCHAIN_ROOT}/lib:${DYLD_LIBRARY_PATH:-}"
-export SDKROOT
-
-if ! command -v gfortran >/dev/null 2>&1; then
-    echo "gfortran was not found under TOOLCHAIN_ROOT=${TOOLCHAIN_ROOT}." >&2
+if [ ! -x "${GFORTRAN}" ]; then
+    echo "gfortran was not found at ${GFORTRAN}." >&2
+    exit 1
+fi
+if [ ! -x "${NF_CONFIG}" ]; then
+    echo "nf-config was not found at ${NF_CONFIG}." >&2
     exit 1
 fi
 
+NETCDF_FC=$("${NF_CONFIG}" --fc)
+case "${NETCDF_FC}" in
+    "${TOOLCHAIN_ROOT}"/*) ;;
+    *)
+        echo "nf-config selects a compiler outside TOOLCHAIN_ROOT: ${NETCDF_FC}" >&2
+        exit 1
+        ;;
+esac
+if [ ! -x "${NETCDF_FC}" ]; then
+    echo "The compiler selected by nf-config is not executable: ${NETCDF_FC}" >&2
+    exit 1
+fi
+
+export PATH="${TOOLCHAIN_ROOT}/bin:${PATH}"
+export DYLD_LIBRARY_PATH="${TOOLCHAIN_ROOT}/lib:${DYLD_LIBRARY_PATH:-}"
+export SDKROOT TOOLCHAIN_ROOT NF_CONFIG
+
 echo "Building heatlink executable (${BUILD_MODE})"
-echo "  compiler: $(command -v gfortran)"
+echo "  compiler: ${NETCDF_FC}"
+echo "  nf-config: ${NF_CONFIG}"
+echo "  netCDF:   $("${NF_CONFIG}" --version)"
 echo "  config:   ${ROOT}/adm/Mkinclude_heatlink"
 echo "  SDK:      ${SDKROOT}"
 
