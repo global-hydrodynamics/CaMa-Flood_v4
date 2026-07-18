@@ -124,6 +124,12 @@ IF (LICE .AND. (.NOT. LHEATLINK)) THEN
   ERROR STOP 1
 ENDIF
 
+IF (LHEATLINK .AND. LLEVEE) THEN
+  WRITE(LOGNAM,*) "ERROR: LHEATLINK and LLEVEE cannot be enabled together."
+  WRITE(LOGNAM,*) "       Heatlink does not support levee storage in its local heat budget."
+  ERROR STOP 1
+ENDIF
+
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "=== NAMELIST, NRUNVER ==="
 WRITE(LOGNAM,*) "LADPSTP ",  LADPSTP

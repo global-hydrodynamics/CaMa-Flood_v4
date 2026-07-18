@@ -116,25 +116,27 @@ subroutine init_heatlink_river_mod(dt)
     call init_thermo_mod()
 
     allocate(wattmp(NSEQMAX), source=0.0_JPRB)
-    allocate(icevol(NSEQMAX), source=0.0_JPRB)
-    allocate(icevol_excess(NSEQMAX), source=0.0_JPRB)
-    allocate(icearea(NSEQMAX), source=0.0_JPRB)
-    allocate(icethickness(NSEQMAX), source=0.0_JPRB)
-    allocate(icefraction(NSEQMAX), source=0.0_JPRB)
-    allocate(icearea_excess(NSEQMAX), source=0.0_JPRB)
-    allocate(icethickness_excess(NSEQMAX), source=0.0_JPRB)
-    allocate(ice_surface_temperature(NSEQMAX), source=TMELT)
-    allocate(ice_mean_temperature(NSEQMAX), source=TMELT)
-    allocate(ice_upward_conductive_heat_flux(NSEQMAX), source=0.0_JPRB)
-    allocate(ice_excess_surface_temperature(NSEQMAX), source=TMELT)
     allocate(hflx_srf(NSEQMAX), source=0.0_JPRB)
     allocate(hflx_bdy(NSEQMAX), source=0.0_JPRB)
-    allocate(hflx_ice_srf(NSEQMAX), source=0.0_JPRB)
-    allocate(hflx_ice_excess_srf(NSEQMAX), source=0.0_JPRB)
-    allocate(swdn_to_water(NSEQMAX), source=0.0_JPRB)
-    allocate(phase_unapplied_energy(NSEQMAX), source=0.0_JPRB)
-    allocate(phase_mass_budget_error(NSEQMAX), source=0.0_JPRB)
-    allocate(phase_energy_budget_error(NSEQMAX), source=0.0_JPRB)
+    if (LICE) then
+        allocate(icevol(NSEQMAX), source=0.0_JPRB)
+        allocate(icevol_excess(NSEQMAX), source=0.0_JPRB)
+        allocate(icearea(NSEQMAX), source=0.0_JPRB)
+        allocate(icethickness(NSEQMAX), source=0.0_JPRB)
+        allocate(icefraction(NSEQMAX), source=0.0_JPRB)
+        allocate(icearea_excess(NSEQMAX), source=0.0_JPRB)
+        allocate(icethickness_excess(NSEQMAX), source=0.0_JPRB)
+        allocate(ice_surface_temperature(NSEQMAX), source=TMELT)
+        allocate(ice_mean_temperature(NSEQMAX), source=TMELT)
+        allocate(ice_upward_conductive_heat_flux(NSEQMAX), source=0.0_JPRB)
+        allocate(ice_excess_surface_temperature(NSEQMAX), source=TMELT)
+        allocate(hflx_ice_srf(NSEQMAX), source=0.0_JPRB)
+        allocate(hflx_ice_excess_srf(NSEQMAX), source=0.0_JPRB)
+        allocate(swdn_to_water(NSEQMAX), source=0.0_JPRB)
+        allocate(phase_unapplied_energy(NSEQMAX), source=0.0_JPRB)
+        allocate(phase_mass_budget_error(NSEQMAX), source=0.0_JPRB)
+        allocate(phase_energy_budget_error(NSEQMAX), source=0.0_JPRB)
+    endif
 
     allocate(lwdn(NSEQMAX), source=0.0_JPRB)
     allocate(psrf(NSEQMAX), source=0.0_JPRB)
@@ -165,8 +167,10 @@ subroutine init_heatlink_river_mod(dt)
         write(LOGNAM, '(a)') '  initialize river water temperature -> air temperature'
         call get_input('TAIR', tair)
         wattmp(:) = max(tair(:), TMELT)
-        icevol(:) = 0.0_JPRB
-        icevol_excess(:) = 0.0_JPRB
+        if (LICE) then
+            icevol(:) = 0.0_JPRB
+            icevol_excess(:) = 0.0_JPRB
+        endif
     endif
     ! Defer the first water/ice geometry diagnosis to calc_heatlink, after
     ! CaMa advances. Diagnosing here would add an extra irreversible transfer
@@ -197,11 +201,11 @@ subroutine calc_heatlink(dt)
     call update_output('WIND', wind)
 
     call get_water()
-    call update_ice_cover()
     call calc_surface_heat_flux( &
     &   wattmp, watsto, lwdn, tair, psrf, qair, wind, &
     &   hflx_srf)
     if (LICE) then
+        call update_ice_cover()
         call calc_ice_heat_fluxes()
         call calc_body_heat_flux( &
         &   watsto, &
@@ -271,17 +275,6 @@ subroutine update_ice_cover()
     &   excess_ice_fraction           ! [-] Fraction of the effective excess-ice area covered by ice.
     integer(kind=JPIM) :: &
     &   iseq                          ! [-] Vector index of the river cell.
-
-    if (.not. LICE) then
-        icevol(:) = 0.0_JPRB
-        icearea(:) = 0.0_JPRB
-        icethickness(:) = 0.0_JPRB
-        icefraction(:) = 0.0_JPRB
-        icevol_excess(:) = 0.0_JPRB
-        icearea_excess(:) = 0.0_JPRB
-        icethickness_excess(:) = 0.0_JPRB
-        return
-    endif
 
     !$omp simd private(water_surface_area_m2, land_surface_area_m2, excess_surface_area_limit_m2, excess_ice_fraction)
     do iseq = 1, NSEQALL
@@ -474,15 +467,40 @@ subroutine fin_heatlink_river_mod()
     &   fin_thermo_mod
 
     write(LOGNAM, '(a)') '[fin_heatlink_river_mod]'
-    deallocate(wattmp, hflx_srf, hflx_bdy)
-    deallocate(hflx_ice_srf, hflx_ice_excess_srf, swdn_to_water)
-    deallocate(phase_unapplied_energy, phase_mass_budget_error, phase_energy_budget_error)
-    deallocate(icevol, icevol_excess, icearea, icethickness, icefraction)
-    deallocate(icearea_excess, icethickness_excess)
-    deallocate(ice_surface_temperature, ice_mean_temperature)
-    deallocate(ice_upward_conductive_heat_flux, ice_excess_surface_temperature)
-    deallocate(lwdn, psrf, qair, swdn, tair, trof, wind)
-    deallocate(watsto, rivdph, rivare, rivvel, flddph, fldare, fldvel)
+    if (allocated(wattmp)) deallocate(wattmp)
+    if (allocated(hflx_srf)) deallocate(hflx_srf)
+    if (allocated(hflx_bdy)) deallocate(hflx_bdy)
+    if (allocated(hflx_ice_srf)) deallocate(hflx_ice_srf)
+    if (allocated(hflx_ice_excess_srf)) deallocate(hflx_ice_excess_srf)
+    if (allocated(swdn_to_water)) deallocate(swdn_to_water)
+    if (allocated(phase_unapplied_energy)) deallocate(phase_unapplied_energy)
+    if (allocated(phase_mass_budget_error)) deallocate(phase_mass_budget_error)
+    if (allocated(phase_energy_budget_error)) deallocate(phase_energy_budget_error)
+    if (allocated(icevol)) deallocate(icevol)
+    if (allocated(icevol_excess)) deallocate(icevol_excess)
+    if (allocated(icearea)) deallocate(icearea)
+    if (allocated(icethickness)) deallocate(icethickness)
+    if (allocated(icefraction)) deallocate(icefraction)
+    if (allocated(icearea_excess)) deallocate(icearea_excess)
+    if (allocated(icethickness_excess)) deallocate(icethickness_excess)
+    if (allocated(ice_surface_temperature)) deallocate(ice_surface_temperature)
+    if (allocated(ice_mean_temperature)) deallocate(ice_mean_temperature)
+    if (allocated(ice_upward_conductive_heat_flux)) deallocate(ice_upward_conductive_heat_flux)
+    if (allocated(ice_excess_surface_temperature)) deallocate(ice_excess_surface_temperature)
+    if (allocated(lwdn)) deallocate(lwdn)
+    if (allocated(psrf)) deallocate(psrf)
+    if (allocated(qair)) deallocate(qair)
+    if (allocated(swdn)) deallocate(swdn)
+    if (allocated(tair)) deallocate(tair)
+    if (allocated(trof)) deallocate(trof)
+    if (allocated(wind)) deallocate(wind)
+    if (allocated(watsto)) deallocate(watsto)
+    if (allocated(rivdph)) deallocate(rivdph)
+    if (allocated(rivare)) deallocate(rivare)
+    if (allocated(rivvel)) deallocate(rivvel)
+    if (allocated(flddph)) deallocate(flddph)
+    if (allocated(fldare)) deallocate(fldare)
+    if (allocated(fldvel)) deallocate(fldvel)
     call fin_thermo_mod()
 end subroutine fin_heatlink_river_mod
 #endif
