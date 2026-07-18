@@ -2,7 +2,7 @@ program test_ice_cover
     use PARKIND1, only: &
     &   JPRB
     use ice_cover_mod, only: &
-    &   diagnose_ice_shape, diagnose_ice_cover, update_ice_cover_state
+    &   diagnose_ice_geometry, enforce_surface_ice_capacity
     implicit none
 
     call check_shape(0.0_JPRB, 100.0_JPRB, 20.0_JPRB, &
@@ -22,6 +22,7 @@ program test_ice_cover
     call check_immobile_excess_state()
     call check_immobile_excess_shape()
     call check_repeated_geometry_changes()
+    call check_geometry_diagnosis_preserves_state()
     call check_large_ice_state()
 
     write(*, '(a)') '[ALL TESTS PASSED] test_ice_cover'
@@ -36,13 +37,13 @@ subroutine check_immobile_excess_shape()
 
     ! Immobile excess ice has no second thickness cap; it remains in the cell
     ! and becomes thicker after filling its effective exchange area.
-    call diagnose_ice_shape( &
+    call diagnose_ice_geometry( &
     &   2500.0_JPRB, 100.0_JPRB, ice_area_m2, ice_thickness_m, ice_fraction)
     call assert_close(ice_area_m2, 100.0_JPRB, 'immobile excess shape area')
     call assert_close(ice_thickness_m, 25.0_JPRB, 'immobile excess shape thickness')
     call assert_close(ice_fraction, 1.0_JPRB, 'immobile excess shape fraction')
 
-    call diagnose_ice_shape( &
+    call diagnose_ice_geometry( &
     &   10.0_JPRB, 0.0_JPRB, ice_area_m2, ice_thickness_m, ice_fraction)
     call assert_close(ice_area_m2, 0.0_JPRB, 'immobile excess zero-area shape area')
     call assert_close(ice_thickness_m, 0.0_JPRB, 'immobile excess zero-area shape thickness')
@@ -61,8 +62,10 @@ subroutine check_immobile_excess_state()
     ice_volume_m3 = 2500.0_JPRB
     excess_ice_volume_m3 = 25.0_JPRB
     initial_total_volume_m3 = ice_volume_m3 + excess_ice_volume_m3
-    call update_ice_cover_state( &
-    &   ice_volume_m3, excess_ice_volume_m3, 100.0_JPRB, 20.0_JPRB, &
+    call enforce_surface_ice_capacity( &
+    &   ice_volume_m3, excess_ice_volume_m3, 100.0_JPRB, 20.0_JPRB)
+    call diagnose_ice_geometry( &
+    &   ice_volume_m3, 100.0_JPRB, &
     &   ice_area_m2, ice_thickness_m, ice_fraction)
 
     call assert_close(ice_volume_m3, 2000.0_JPRB, 'immobile excess retained water-surface volume')
@@ -71,8 +74,10 @@ subroutine check_immobile_excess_state()
     &   initial_total_volume_m3, 'immobile excess total-volume conservation')
 
     ! Increasing water-surface capacity must not remobilize existing excess ice.
-    call update_ice_cover_state( &
-    &   ice_volume_m3, excess_ice_volume_m3, 200.0_JPRB, 20.0_JPRB, &
+    call enforce_surface_ice_capacity( &
+    &   ice_volume_m3, excess_ice_volume_m3, 200.0_JPRB, 20.0_JPRB)
+    call diagnose_ice_geometry( &
+    &   ice_volume_m3, 200.0_JPRB, &
     &   ice_area_m2, ice_thickness_m, ice_fraction)
     call assert_close(ice_volume_m3, 2000.0_JPRB, 'immobile excess no remobilization water-surface volume')
     call assert_close(excess_ice_volume_m3, 525.0_JPRB, 'immobile excess no remobilization excess volume')
@@ -97,9 +102,11 @@ subroutine check_repeated_geometry_changes()
     excess_ice_volume_m3 = 0.0_JPRB
     do geometry_cycle = 1, 100
         ! A contracted water surface transfers newly excessive surface ice to
-        ! the immobile pool at the geometry-diagnosis boundary.
-        call update_ice_cover_state( &
-        &   ice_volume_m3, excess_ice_volume_m3, 100.0_JPRB, 20.0_JPRB, &
+        ! the immobile pool at the explicit capacity-enforcement boundary.
+        call enforce_surface_ice_capacity( &
+        &   ice_volume_m3, excess_ice_volume_m3, 100.0_JPRB, 20.0_JPRB)
+        call diagnose_ice_geometry( &
+        &   ice_volume_m3, 100.0_JPRB, &
         &   ice_area_m2, ice_thickness_m, ice_fraction)
         call assert_close(ice_volume_m3, 2000.0_JPRB, &
         &   'geometry cycle contracted-surface retained volume')
@@ -108,8 +115,10 @@ subroutine check_repeated_geometry_changes()
 
         ! Later expansion changes the diagnosed capacity but never remobilizes
         ! ice that has already entered the immobile pool.
-        call update_ice_cover_state( &
-        &   ice_volume_m3, excess_ice_volume_m3, 200.0_JPRB, 20.0_JPRB, &
+        call enforce_surface_ice_capacity( &
+        &   ice_volume_m3, excess_ice_volume_m3, 200.0_JPRB, 20.0_JPRB)
+        call diagnose_ice_geometry( &
+        &   ice_volume_m3, 200.0_JPRB, &
         &   ice_area_m2, ice_thickness_m, ice_fraction)
         call assert_close(ice_volume_m3, 2000.0_JPRB, &
         &   'geometry cycle expanded-surface retained volume')
@@ -119,6 +128,40 @@ subroutine check_repeated_geometry_changes()
         &   'geometry cycle total-volume conservation')
     enddo
 end subroutine check_repeated_geometry_changes
+
+
+subroutine check_geometry_diagnosis_preserves_state()
+    real(kind=JPRB) :: &
+    &   surface_ice_volume_m3, &       ! [m3] Ice retained on the water surface.
+    &   excess_ice_volume_m3, &        ! [m3] Immobile excess ice retained in the grid cell.
+    &   retained_volume_before_m3, &   ! [m3] Surface-ice volume before repeated diagnosis.
+    &   excess_volume_before_m3, &     ! [m3] Excess-ice volume before repeated diagnosis.
+    &   ice_area_m2, &                 ! [m2] Diagnosed water-surface ice area.
+    &   ice_thickness_m, &             ! [m] Diagnosed water-surface ice thickness.
+    &   ice_fraction                   ! [-] Diagnosed water-surface ice fraction.
+
+    surface_ice_volume_m3 = 2500.0_JPRB
+    excess_ice_volume_m3 = 25.0_JPRB
+    call enforce_surface_ice_capacity( &
+    &   surface_ice_volume_m3, excess_ice_volume_m3, 100.0_JPRB, 20.0_JPRB)
+    retained_volume_before_m3 = surface_ice_volume_m3
+    excess_volume_before_m3 = excess_ice_volume_m3
+
+    call diagnose_ice_geometry( &
+    &   surface_ice_volume_m3, 100.0_JPRB, &
+    &   ice_area_m2, ice_thickness_m, ice_fraction)
+    call diagnose_ice_geometry( &
+    &   surface_ice_volume_m3, 200.0_JPRB, &
+    &   ice_area_m2, ice_thickness_m, ice_fraction)
+
+    call assert_close(surface_ice_volume_m3, retained_volume_before_m3, &
+    &   'geometry diagnosis preserves surface-ice volume')
+    call assert_close(excess_ice_volume_m3, excess_volume_before_m3, &
+    &   'geometry diagnosis preserves excess-ice volume')
+    call assert_close(ice_area_m2, 200.0_JPRB, 'expanded-area geometry diagnosis area')
+    call assert_close(ice_thickness_m, 10.0_JPRB, 'expanded-area geometry diagnosis thickness')
+    call assert_close(ice_fraction, 1.0_JPRB, 'expanded-area geometry diagnosis fraction')
+end subroutine check_geometry_diagnosis_preserves_state
 
 
 subroutine check_large_ice_state()
@@ -131,8 +174,10 @@ subroutine check_large_ice_state()
 
     ice_volume_m3 = 1.0e15_JPRB
     excess_ice_volume_m3 = 1.0e12_JPRB
-    call update_ice_cover_state( &
-    &   ice_volume_m3, excess_ice_volume_m3, 100.0_JPRB, 20.0_JPRB, &
+    call enforce_surface_ice_capacity( &
+    &   ice_volume_m3, excess_ice_volume_m3, 100.0_JPRB, 20.0_JPRB)
+    call diagnose_ice_geometry( &
+    &   ice_volume_m3, 100.0_JPRB, &
     &   ice_area_m2, ice_thickness_m, ice_fraction)
 
     call assert_close(ice_volume_m3, 2000.0_JPRB, 'large ice retained surface volume')
@@ -161,15 +206,19 @@ subroutine check_shape( &
     character(len=*), intent(in) :: &
     &   label                             ! [-] Human-readable test-case label.
     real(kind=JPRB) :: &
-    &   retained_ice_volume_m3, &         ! [m3] Diagnosed retained ice volume.
-    &   excess_ice_volume_m3, &           ! [m3] Diagnosed ice volume transferred to the immobile pool.
+    &   retained_ice_volume_m3, &         ! [m3] Retained water-surface ice volume.
+    &   excess_ice_volume_m3, &           ! [m3] Ice volume transferred to the immobile pool.
     &   ice_area_m2, &                    ! [m2] Diagnosed ice-covered area.
     &   ice_thickness_m, &                ! [m] Diagnosed mean ice thickness.
     &   ice_fraction                      ! [-] Diagnosed ice-covered fraction.
 
-    call diagnose_ice_cover( &
-    &   ice_volume_m3, water_surface_area_m2, maximum_ice_thickness_m, &
+    retained_ice_volume_m3 = ice_volume_m3
+    excess_ice_volume_m3 = 0.0_JPRB
+    call enforce_surface_ice_capacity( &
     &   retained_ice_volume_m3, excess_ice_volume_m3, &
+    &   water_surface_area_m2, maximum_ice_thickness_m)
+    call diagnose_ice_geometry( &
+    &   retained_ice_volume_m3, water_surface_area_m2, &
     &   ice_area_m2, ice_thickness_m, ice_fraction)
 
     call assert_close(retained_ice_volume_m3, expected_retained_volume_m3, label//' retained volume')

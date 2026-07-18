@@ -20,7 +20,7 @@ module heatlink_river_mod
     use phys_const_mod, only: &
     &   TMELT, RIVDPH_MIN, KI
     use ice_cover_mod, only: &
-    &   ICE_THICKNESS_MIN_M, diagnose_ice_shape, update_ice_cover_state
+    &   ICE_THICKNESS_MIN_M, diagnose_ice_geometry, enforce_surface_ice_capacity
     use heat_flux_mod, only: &
     &   calc_ice_surface_heat_flux
     use heat_budget_mod, only: &
@@ -205,7 +205,8 @@ subroutine calc_heatlink(dt)
     &   wattmp, watsto, lwdn, tair, psrf, qair, wind, &
     &   hflx_srf)
     if (LICE) then
-        call update_ice_cover()
+        call enforce_river_ice_capacity()
+        call diagnose_river_ice_geometry()
         call calc_ice_heat_fluxes()
         call calc_body_heat_flux( &
         &   watsto, &
@@ -219,7 +220,8 @@ subroutine calc_heatlink(dt)
         &   hflx_srf, hflx_bdy, hflx_ice_srf, hflx_ice_excess_srf, dt, &
         &   phase_unapplied_energy, phase_mass_budget_error, phase_energy_budget_error)
         call put_water_storage()
-        call update_ice_cover()
+        call enforce_river_ice_capacity()
+        call diagnose_river_ice_geometry()
     else
         call calc_body_heat_flux( &
         &   watsto, &
@@ -267,7 +269,23 @@ subroutine write_heatlink_restart(dt)
 end subroutine write_heatlink_restart
 
 
-subroutine update_ice_cover()
+subroutine enforce_river_ice_capacity()
+    real(kind=JPRB) :: &
+    &   water_surface_area_m2       ! [m2] Combined river and inundated water-surface area.
+    integer(kind=JPIM) :: &
+    &   iseq                        ! [-] Vector index of the river cell.
+
+    !$omp simd private(water_surface_area_m2)
+    do iseq = 1, NSEQALL
+        water_surface_area_m2 = rivare(iseq) + fldare(iseq)
+        call enforce_surface_ice_capacity( &
+        &   icevol(iseq), icevol_excess(iseq), &
+        &   water_surface_area_m2, RIVER_ICE_THICKNESS_MAX_M)
+    enddo
+end subroutine enforce_river_ice_capacity
+
+
+subroutine diagnose_river_ice_geometry()
     real(kind=JPRB) :: &
     &   water_surface_area_m2, &      ! [m2] Combined river and inundated water-surface area.
     &   land_surface_area_m2, &       ! [m2] Grid-cell area not occupied by the diagnosed water surface.
@@ -279,9 +297,8 @@ subroutine update_ice_cover()
     !$omp simd private(water_surface_area_m2, land_surface_area_m2, excess_surface_area_limit_m2, excess_ice_fraction)
     do iseq = 1, NSEQALL
         water_surface_area_m2 = rivare(iseq) + fldare(iseq)
-        call update_ice_cover_state( &
-        &   icevol(iseq), icevol_excess(iseq), &
-        &   water_surface_area_m2, RIVER_ICE_THICKNESS_MAX_M, &
+        call diagnose_ice_geometry( &
+        &   icevol(iseq), water_surface_area_m2, &
         &   icearea(iseq), icethickness(iseq), icefraction(iseq))
 
         ! Existing excess ice never returns to the water-surface pool. Its
@@ -294,11 +311,11 @@ subroutine update_ice_cover()
         else
             excess_surface_area_limit_m2 = max(D2GRAREA(iseq,1), 0.0_JPRB)
         endif
-        call diagnose_ice_shape( &
+        call diagnose_ice_geometry( &
         &   icevol_excess(iseq), excess_surface_area_limit_m2, &
         &   icearea_excess(iseq), icethickness_excess(iseq), excess_ice_fraction)
     enddo
-end subroutine update_ice_cover
+end subroutine diagnose_river_ice_geometry
 
 
 subroutine calc_ice_heat_fluxes()
