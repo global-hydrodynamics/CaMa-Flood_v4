@@ -126,6 +126,12 @@ IF (LICE .AND. (.NOT. LHEATLINK)) THEN
   ERROR STOP 1
 ENDIF
 
+if (LHEATLINK .and. LWEVAP) then
+  write(LOGNAM,*) "ERROR: LHEATLINK and LWEVAP cannot be enabled together."
+  write(LOGNAM,*) "       Heatlink does not yet include evaporation water, sensible-heat, and latent-heat losses."
+  error stop 1
+endif
+
 IF (LHEATLINK .AND. LLEVEE) THEN
   WRITE(LOGNAM,*) "ERROR: LHEATLINK and LLEVEE cannot be enabled together."
   WRITE(LOGNAM,*) "       Heatlink does not support levee storage in its local heat budget."

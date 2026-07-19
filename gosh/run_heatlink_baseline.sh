@@ -15,6 +15,8 @@ set -eu
 #   SDKROOT       macOS SDK selected by the conda Fortran toolchain.
 #   LHEATLINK      Fortran logical enabling river thermodynamics; defaults to .TRUE.
 #   LICE          Fortran logical enabling river ice; defaults to .FALSE.
+#   LPTHOUT       Fortran logical enabling bifurcation flow; defaults to .FALSE.
+#   LWEVAP        Fortran logical enabling existing CaMa evaporation loss; defaults to .FALSE.
 #   NNEWTON_MAX_ICE Maximum river-ice surface Newton iterations; defaults to 4.
 #   START_*       Optional start date fields (YEAR, MONTH, DAY, HOUR).
 #   END_*         Optional end date fields overriding the selected run mode.
@@ -35,6 +37,8 @@ RUNOFF_INPMAT=${RUNOFF_INPMAT:-${ROOT}/map/glb_15min/inpmat_test-1deg.bin}
 OMP_NUM_THREADS=${OMP_NUM_THREADS:-16}
 LHEATLINK=${LHEATLINK:-.TRUE.}
 LICE=${LICE:-.FALSE.}
+LPTHOUT=${LPTHOUT:-.FALSE.}
+LWEVAP=${LWEVAP:-.FALSE.}
 NNEWTON_MAX_ICE=${NNEWTON_MAX_ICE:-4}
 MODEL_DT=${MODEL_DT:-3600}
 OUTPUT_DT=${OUTPUT_DT:-86400}
@@ -74,10 +78,54 @@ case "$LICE" in
         ;;
 esac
 
+case "$LPTHOUT" in
+    .TRUE.|.true.|TRUE|true)
+        LPTHOUT_NML=.TRUE.
+        PTHOUT_ENABLED=1
+        ;;
+    .FALSE.|.false.|FALSE|false)
+        LPTHOUT_NML=.FALSE.
+        PTHOUT_ENABLED=0
+        ;;
+    *)
+        echo "LPTHOUT must be a Fortran or shell logical: ${LPTHOUT}" >&2
+        exit 2
+        ;;
+esac
+
+case "$LWEVAP" in
+    .TRUE.|.true.|TRUE|true)
+        LWEVAP_NML=.TRUE.
+        ;;
+    .FALSE.|.false.|FALSE|false)
+        LWEVAP_NML=.FALSE.
+        ;;
+    *)
+        echo "LWEVAP must be a Fortran or shell logical: ${LWEVAP}" >&2
+        exit 2
+        ;;
+esac
+
 if [ "$HEATLINK_ENABLED" -eq 0 ] && [ "$ICE_ENABLED" -eq 1 ]; then
     echo "LICE=.TRUE. requires LHEATLINK=.TRUE." >&2
     exit 2
 fi
+
+check_binary_finite()
+{
+    binary_path=$1
+    if ! LC_ALL=C od -An -v -t f4 "$binary_path" | awk '
+    {
+        for (i = 1; i <= NF; i++) {
+            token = tolower($i)
+            if (token ~ /nan/ || token ~ /inf/) exit 1
+        }
+    }
+    '; then
+        echo "Found a non-finite value in binary output: ${binary_path}" >&2
+        exit 1
+    fi
+}
 
 case "$NNEWTON_MAX_ICE" in
     ''|*[!0-9]*|0)
@@ -154,7 +202,6 @@ for required_path in \
     "${FLOW_MAP_DIR}/rivwth.bin" \
     "${FLOW_MAP_DIR}/rivhgt.bin" \
     "${FLOW_MAP_DIR}/rivman.bin" \
-    "${FLOW_MAP_DIR}/bifprm.txt" \
     "${RUNOFF_DIR}/Roff____${START_YEAR}$(printf '%02d' "${START_MONTH}")$(printf '%02d' "${START_DAY}").one" \
     "${ATM_DIR}/GSWP3.BC.LWdown.3hrMap.ILS.2000.nc" \
     "${ATM_DIR}/GSWP3.BC.PSurf.3hrMap.ILS.2000.nc" \
@@ -169,6 +216,11 @@ do
     fi
 done
 
+if [ "$PTHOUT_ENABLED" -eq 1 ] && [ ! -e "${FLOW_MAP_DIR}/bifprm.txt" ]; then
+    echo "Required bifurcation input was not found: ${FLOW_MAP_DIR}/bifprm.txt" >&2
+    exit 1
+fi
+
 if [ -d "$RUN_DIR" ] && [ -n "$(find "$RUN_DIR" -mindepth 1 -maxdepth 1 -print -quit)" ]; then
     echo "Run directory is not empty: ${RUN_DIR}" >&2
     echo "Set RUN_DIR to a new or empty directory." >&2
@@ -177,9 +229,7 @@ fi
 mkdir -p "$RUN_DIR"
 
 if [ -n "$RESTART_SOURCE_DIR" ]; then
-    for restart_file in \
-        "restart${START_STAMP}.bin" \
-        "restart${START_STAMP}.bin.pth"
+    for restart_file in "restart${START_STAMP}.bin"
     do
         if [ ! -f "${RESTART_SOURCE_DIR}/${restart_file}" ]; then
             echo "Restart source was not found: ${RESTART_SOURCE_DIR}/${restart_file}" >&2
@@ -187,6 +237,14 @@ if [ -n "$RESTART_SOURCE_DIR" ]; then
         fi
         cp "${RESTART_SOURCE_DIR}/${restart_file}" "${RUN_DIR}/${restart_file}"
     done
+    if [ "$PTHOUT_ENABLED" -eq 1 ]; then
+        restart_file="restart${START_STAMP}.bin.pth"
+        if [ ! -f "${RESTART_SOURCE_DIR}/${restart_file}" ]; then
+            echo "Restart source was not found: ${RESTART_SOURCE_DIR}/${restart_file}" >&2
+            exit 1
+        fi
+        cp "${RESTART_SOURCE_DIR}/${restart_file}" "${RUN_DIR}/${restart_file}"
+    fi
     if [ "$HEATLINK_ENABLED" -eq 1 ]; then
         restart_file="restart${START_STAMP}.heatlink.bin"
         if [ ! -f "${RESTART_SOURCE_DIR}/${restart_file}" ]; then
@@ -200,12 +258,13 @@ fi
 cat > "$NML" <<EOF
 &NRUNVER
 LADPSTP   = .TRUE.                 ! Use the adaptive hydraulic time step.
-LPTHOUT   = .TRUE.                 ! Enable bifurcation flow.
+LPTHOUT   = ${LPTHOUT_NML}         ! Enable bifurcation flow.
 LDAMOUT   = .FALSE.                ! Disable reservoir operation.
 LOUTPUT   = ${STANDARD_OUTPUT_NML} ! Enable daily CaMa standard output for annual analysis runs.
 LRESTART  = ${LRESTART_NML}        ! Initialize from the requested restart source when true.
 LHEATLINK = ${LHEATLINK_NML}       ! Enable river water thermodynamics.
 LICE      = ${LICE_NML}            ! Enable river ice state and diagnostics.
+LWEVAP    = ${LWEVAP_NML}          ! Enable existing CaMa evaporation loss.
 /
 &NDIMTIME
 CDIMINFO = "${DIMINFO}"            ! Grid dimensions and geographic extent.
@@ -323,8 +382,8 @@ dt = ${OUTPUT_DT}                   ! [s] Heatlink output interval.
 &nml_out item='RIVICE_EXCESS_TMP', path='./riviceexcesstmp2000', is_mean=.false. &end
 
 ! Conservation diagnostics retain the final local-update diagnostic value.
-&nml_out item='RIVICE_MASS_ERROR', path='./rivicemasserror2000', is_mean=.false. &end
-&nml_out item='RIVICE_ENERGY_ERROR', path='./riviceenergyerror2000', is_mean=.false. &end
+&nml_out item='RIVICE_MASS_RESIDUAL', path='./rivicemassresidual2000', is_mean=.false. &end
+&nml_out item='RIVICE_ENERGY_RESIDUAL', path='./riviceenergyresidual2000', is_mean=.false. &end
 &nml_out item='RIVICE_ENERGY_UNAPPLIED', path='./riviceenergyunapplied2000', is_mean=.false. &end
 
 &restart_default
@@ -436,6 +495,7 @@ if [ "$OUTPUT_RECORDS" -ne "$EXPECTED_RECORDS" ] || [ $((OUTPUT_BYTES % RECORD_B
     echo "Unexpected RIVWAT_TMP size: ${OUTPUT_BYTES} bytes (${OUTPUT_RECORDS} records)." >&2
     exit 1
 fi
+check_binary_finite "$RIVWAT_OUTPUT"
 
 for heatlink_output in \
     lwdn2000.bin psrf2000.bin qair2000.bin swdn2000.bin \
@@ -453,6 +513,7 @@ do
         echo "Unexpected Heatlink output size: ${heatlink_path}" >&2
         exit 1
     fi
+    check_binary_finite "$heatlink_path"
 done
 
 if [ "$ICE_ENABLED" -eq 1 ]; then
@@ -477,6 +538,7 @@ if [ "$ICE_ENABLED" -eq 1 ]; then
             echo "Unexpected river-ice output size: ${ice_path}" >&2
             exit 1
         fi
+        check_binary_finite "$ice_path"
         if ! LC_ALL=C od -An -v -t f4 "$ice_path" | awk '
         {
             for (i = 1; i <= NF; i++) {
@@ -495,8 +557,8 @@ if [ "$ICE_ENABLED" -eq 1 ]; then
         riviceatmflx2000.bin \
         riviceexcessatmflx2000.bin \
         swdntowater2000.bin \
-        rivicemasserror2000.bin \
-        riviceenergyerror2000.bin \
+        rivicemassresidual2000.bin \
+        riviceenergyresidual2000.bin \
         riviceenergyunapplied2000.bin
     do
         ice_path=${RUN_DIR}/${ice_output}
@@ -508,6 +570,7 @@ if [ "$ICE_ENABLED" -eq 1 ]; then
             echo "Unexpected river-ice output size: ${ice_path}" >&2
             exit 1
         fi
+        check_binary_finite "$ice_path"
     done
 
     if ! (LC_ALL=C od -An -v -t f4 "${RUN_DIR}/rivicetmpsrf2000.bin"; \
@@ -561,7 +624,7 @@ if [ "$HEATLINK_ENABLED" -eq 1 ]; then
 fi
 
 CORE_RESTART_SHA256=$(shasum -a 256 "$FINAL_CORE_RESTART" | awk '{print $1}')
-COMPILER_VERSION=$(gfortran --version | head -n 1)
+COMPILER_VERSION=$("${TOOLCHAIN_ROOT}/bin/gfortran" --version | head -n 1)
 
 cat > "${RUN_DIR}/summary.txt" <<EOF
 run_mode=${RUN_MODE}
@@ -569,6 +632,8 @@ period_start=${START_YEAR}-$(printf '%02d' "${START_MONTH}")-$(printf '%02d' "${
 period_end=${END_YEAR}-$(printf '%02d' "${END_MONTH}")-$(printf '%02d' "${END_DAY}")T$(printf '%02d' "${END_HOUR}"):00:00
 lheatlink=${LHEATLINK_NML}
 lice=${LICE_NML}
+lpthout=${LPTHOUT_NML}
+lwevap=${LWEVAP_NML}
 nnewton_max_ice=${NNEWTON_MAX_ICE}
 restart_source_dir=${RESTART_SOURCE_DIR}
 omp_num_threads=${OMP_NUM_THREADS}

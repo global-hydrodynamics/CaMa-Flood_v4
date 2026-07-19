@@ -15,6 +15,7 @@ program test_river_ice_advection
     call test_total_outflow_is_limited_by_available_ice()
     call test_fully_frozen_cells_slow_surface_ice()
     call test_shallow_source_retains_surface_ice()
+    call test_threshold_source_transports_surface_ice()
     call test_dry_source_retains_surface_ice()
     call test_immobile_excess_ice_is_unchanged()
 
@@ -195,7 +196,9 @@ subroutine test_shallow_source_retains_surface_ice()
     call set_three_cell_topology()
     surface_ice_volume_m3(:) = [2.0_JPRB, 0.0_JPRB, 0.0_JPRB]
     surface_ice_fraction(:) = 0.0_JPRB
-    liquid_volume_before_m3(:) = [0.005_JPRD, 10.0_JPRD, 10.0_JPRD]
+    ! With unit river width and length, 0.05 m3 is an equivalent depth of
+    ! 0.05 m: above the old 0.01 m threshold but below TCHOIR RIVDMIN=0.1 m.
+    liquid_volume_before_m3(:) = [0.05_JPRD, 10.0_JPRD, 10.0_JPRD]
     normal_flow_m3s(:) = [0.001_JPRB, 0.0_JPRB, 0.0_JPRB]
 
     call advect_river_surface_ice( &
@@ -207,6 +210,29 @@ subroutine test_shallow_source_retains_surface_ice()
     call assert_close(surface_ice_volume_m3(2), 0.0_JPRB, &
     &   'TCHOIR shallow-water threshold exports no surface ice [m3]')
 end subroutine test_shallow_source_retains_surface_ice
+
+
+subroutine test_threshold_source_transports_surface_ice()
+    real(kind=JPRB) :: &
+    &   surface_ice_volume_m3(3), surface_ice_fraction(3), normal_flow_m3s(3)
+    real(kind=JPRD) :: &
+    &   liquid_volume_before_m3(3)
+
+    call set_three_cell_topology()
+    surface_ice_volume_m3(:) = [2.0_JPRB, 0.0_JPRB, 0.0_JPRB]
+    surface_ice_fraction(:) = 0.0_JPRB
+    liquid_volume_before_m3(:) = [0.1_JPRD, 10.0_JPRD, 10.0_JPRD]
+    normal_flow_m3s(:) = [0.01_JPRB, 0.0_JPRB, 0.0_JPRB]
+
+    call advect_river_surface_ice( &
+    &   surface_ice_volume_m3, surface_ice_fraction, &
+    &   liquid_volume_before_m3, normal_flow_m3s, 1.0_JPRB)
+
+    call assert_close(surface_ice_volume_m3(1), 1.8_JPRB, &
+    &   'TCHOIR threshold-depth source transports surface ice [m3]')
+    call assert_close(surface_ice_volume_m3(2), 0.2_JPRB, &
+    &   'TCHOIR threshold-depth receiver obtains surface ice [m3]')
+end subroutine test_threshold_source_transports_surface_ice
 
 
 subroutine test_dry_source_retains_surface_ice()

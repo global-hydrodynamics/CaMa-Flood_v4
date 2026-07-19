@@ -30,7 +30,8 @@ CONTAINS
 SUBROUTINE CMF_DRV_ADVANCE(KSTEPS)
 USE YOS_CMF_INPUT,           ONLY: LOUTPUT, LSEALEV, LUPSINF, LTRACE, IFRQ_OUT
 #ifdef heatlink
-USE YOS_CMF_INPUT,           ONLY: LHEATLINK
+use yos_cmf_input,           only: LHEATLINK
+use heatlink_river_mod,      only: prepare_heatlink_input
 #endif
 USE YOS_CMF_TIME,            ONLY: KSTEP, JYYYYMMDD, JHHMM, JHOUR, JMIN
 !
@@ -51,7 +52,7 @@ USE cmf_ctrl_sedout_mod,     ONLY: cmf_sed_output
 USE cmf_calc_sedflw_mod,     ONLY: cmf_calc_sedflw
 #endif
 !$ USE OMP_LIB
-IMPLICIT NONE 
+IMPLICIT NONE
 SAVE
 ! Input argument 
 INTEGER(KIND=JPIM)              :: KSTEPS             !! Number of timesteps to advance 
@@ -91,6 +92,12 @@ DO ISTEP=1,KSTEPS
 
   !============================
   !*** 2. Advance model integration 
+#ifdef heatlink
+  ! The stand-alone driver or coupler updates the heatlink input time first;
+  ! the public CaMa driver then guarantees that liquid inflow temperature is
+  ! available and no colder than the melting point before hydraulic advection.
+  if (LHEATLINK) call prepare_heatlink_input()
+#endif
   CALL CMF_PHYSICS_ADVANCE
 
 #ifdef sediment

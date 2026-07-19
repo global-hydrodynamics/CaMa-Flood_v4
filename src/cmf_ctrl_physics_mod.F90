@@ -37,20 +37,13 @@ USE YOS_CMF_ICI,           ONLY: LLAKEIN
 USE CMF_CALC_LAKEIN_MOD,   ONLY: CMF_CALC_LAKEIN, CMF_LAKEIN_AVE
 #endif
 #ifdef heatlink
-USE YOS_CMF_INPUT,         ONLY: LHEATLINK
+use yos_cmf_input,         only: LHEATLINK
+use heatlink_river_mod,    only: &
+&   capture_river_water_advection_state, advance_river_water_advection, &
+&   finalize_river_ice_advection_state
 #endif
 
 IMPLICIT NONE
-#ifdef heatlink
-INTERFACE
-  SUBROUTINE HEATLINK_CAPTURE_RIVER_WATER_ADVECTION_STATE
-  END SUBROUTINE HEATLINK_CAPTURE_RIVER_WATER_ADVECTION_STATE
-  SUBROUTINE HEATLINK_ADVANCE_RIVER_WATER_ADVECTION(DT_SECONDS)
-    USE PARKIND1, ONLY: JPRB
-    REAL(KIND=JPRB), INTENT(IN) :: DT_SECONDS
-  END SUBROUTINE HEATLINK_ADVANCE_RIVER_WATER_ADVECTION
-END INTERFACE
-#endif
 !! LOCAL
 INTEGER(KIND=JPIM)            ::  IT, NT
 REAL(KIND=JPRB)               ::  DT_DEF
@@ -114,11 +107,11 @@ DO IT=1, NT
 
 !=== 2.  Calculate the storage in the next time step in FTCS diff. eq.
 #ifdef heatlink
-  IF ( LHEATLINK ) CALL HEATLINK_CAPTURE_RIVER_WATER_ADVECTION_STATE
+  if (LHEATLINK) call capture_river_water_advection_state()
 #endif
   CALL CMF_CALC_STONXT
 #ifdef heatlink
-  IF ( LHEATLINK ) CALL HEATLINK_ADVANCE_RIVER_WATER_ADVECTION(DT)
+  if (LHEATLINK) call advance_river_water_advection(DT)
 #endif
 
 !=== option for ILS coupling
@@ -130,6 +123,9 @@ DO IT=1, NT
 
 !=== 3. calculate river and floodplain staging
   CALL CMF_PHYSICS_FLDSTG
+#ifdef heatlink
+  if (LHEATLINK) call finalize_river_ice_advection_state()
+#endif
 
 !=== 4.  write water balance monitoring to IOFILE
   CALL CALC_WATBAL(IT)

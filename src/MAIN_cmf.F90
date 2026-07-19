@@ -21,8 +21,8 @@ USE CMF_DRV_ADVANCE_MOD,     ONLY: CMF_DRV_ADVANCE
 USE CMF_CTRL_FORCING_MOD,    ONLY: CMF_FORCING_GET, CMF_FORCING_PUT
 USE CMF_CTRL_TRACER_MOD,     ONLY: CMF_TRACER_FORC_GET, CMF_TRACER_FORC_INTERP
 #ifdef heatlink
-USE CMF_CTRL_TRACER_MOD,     ONLY: CMF_TRACER_RESTART_WRITE
-USE CMF_CTRL_RESTART_MOD,    ONLY: CMF_RESTART_WRITE, restart_is_write_time
+use cmf_ctrl_tracer_mod,     only: CMF_TRACER_RESTART_WRITE
+use cmf_ctrl_restart_mod,    only: CMF_RESTART_WRITE, restart_is_write_time
 #endif
 !** parallelization options**
 !$ USE OMP_LIB
@@ -36,21 +36,21 @@ USE cmf_ctrl_sedinp_mod,     ONLY: cmf_sed_forcing
 #endif
 !** tracer options**
 #ifdef heatlink
-USE datetime_mod, only: &
+use datetime_mod, only: &
 &   date_hour2datetime
-USE dim_converter, only: &
+use dim_converter, only: &
 &   init_dim_converter
-USE input_mod, only: &
+use input_mod, only: &
 &   init_input_mod, update_input
-USE output_mod, only: &
+use output_mod, only: &
 &   init_output_mod, write_output, fin_output_mod
-USE restart_mod, only: &
+use restart_mod, only: &
 &   init_restart_mod
-USE heatlink_river_mod,      ONLY: &
-&   init_heatlink_river_mod, prepare_heatlink_input, calc_heatlink, &
+use heatlink_river_mod,      only: &
+&   init_heatlink_river_mod, calc_heatlink, &
 &   write_heatlink_restart, fin_heatlink_river_mod
 #endif
-use YOS_CMF_INPUT, only: &
+use yos_cmf_input, only: &
 &   LOGNAM
 !==========================================================
 !****************************
@@ -103,7 +103,6 @@ DO ISTEP=1,NSTEPS
 #ifdef heatlink
   if (LHEATLINK) then
     call update_input(int(DT) * (ISTEP - 1))
-    call prepare_heatlink_input()
   endif
 #endif
 

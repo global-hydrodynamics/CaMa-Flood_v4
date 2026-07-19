@@ -12,7 +12,7 @@ module river_ice_advection_mod
     &   advect_river_surface_ice, diagnose_surface_ice_transport_fraction
 
     real(kind=JPRD), parameter :: &
-    &   MINIMUM_MOBILE_WATER_DEPTH_M = 0.01_JPRD, & ! [m] TCHOIR river-ice mobility threshold.
+    &   MINIMUM_MOBILE_WATER_DEPTH_M = 0.1_JPRD, & ! [m] Default TCHOIR RIVDMIN mobility threshold.
     &   FULLY_FROZEN_ICE_VELOCITY_FRACTION = 0.5_JPRD ! [-] TCHOIR ice/water velocity ratio.
 
 contains

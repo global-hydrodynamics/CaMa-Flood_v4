@@ -11,6 +11,7 @@ program test_river_ice_advection_boundaries
 
     call test_river_mouth_outflow_and_reverse_flow()
     call test_bifurcation_forward_and_reverse_flow()
+    call test_bifurcation_shallow_water_threshold()
     call test_bifurcation_fully_frozen_velocity_factor()
     call test_normal_and_bifurcation_outflow_share_limiter()
     call test_mouth_and_bifurcation_outflow_share_limiter()
@@ -104,6 +105,43 @@ subroutine test_bifurcation_forward_and_reverse_flow()
     call assert_ice_conserved(initial_total_ice_m3, surface_ice_volume_m3, &
     &   'reverse bifurcation')
 end subroutine test_bifurcation_forward_and_reverse_flow
+
+
+subroutine test_bifurcation_shallow_water_threshold()
+    real(kind=JPRB) :: &
+    &   surface_ice_volume_m3(3), surface_ice_fraction(3), &
+    &   normal_flow_m3s(3), bifurcation_flow_m3s(1)
+    real(kind=JPRD) :: &
+    &   liquid_volume_before_m3(3)
+
+    call set_three_cell_topology(1_JPIM)
+    PTH_UPST(1) = 1_JPIM
+    PTH_DOWN(1) = 3_JPIM
+    surface_ice_volume_m3(:) = [2.0_JPRB, 0.0_JPRB, 0.0_JPRB]
+    surface_ice_fraction(:) = 0.0_JPRB
+    liquid_volume_before_m3(:) = [0.05_JPRD, 10.0_JPRD, 10.0_JPRD]
+    normal_flow_m3s(:) = 0.0_JPRB
+    bifurcation_flow_m3s(:) = 0.01_JPRB
+
+    call advect_river_surface_ice( &
+    &   surface_ice_volume_m3, surface_ice_fraction, &
+    &   liquid_volume_before_m3, normal_flow_m3s, 1.0_JPRB, &
+    &   bifurcation_flow_m3s=bifurcation_flow_m3s)
+    call assert_close(surface_ice_volume_m3(1), 2.0_JPRB, &
+    &   'sub-threshold bifurcation retains source surface ice [m3]')
+    call assert_close(surface_ice_volume_m3(3), 0.0_JPRB, &
+    &   'sub-threshold bifurcation transports no surface ice [m3]')
+
+    liquid_volume_before_m3(1) = 0.1_JPRD
+    call advect_river_surface_ice( &
+    &   surface_ice_volume_m3, surface_ice_fraction, &
+    &   liquid_volume_before_m3, normal_flow_m3s, 1.0_JPRB, &
+    &   bifurcation_flow_m3s=bifurcation_flow_m3s)
+    call assert_close(surface_ice_volume_m3(1), 1.8_JPRB, &
+    &   'threshold-depth bifurcation transports source surface ice [m3]')
+    call assert_close(surface_ice_volume_m3(3), 0.2_JPRB, &
+    &   'threshold-depth bifurcation receiver obtains surface ice [m3]')
+end subroutine test_bifurcation_shallow_water_threshold
 
 
 subroutine test_bifurcation_fully_frozen_velocity_factor()

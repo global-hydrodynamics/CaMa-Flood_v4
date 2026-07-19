@@ -3,7 +3,7 @@ module heatlink_river_mod
     use PARKIND1, only: &
     &   JPIM, JPRB, JPRD
     use YOS_CMF_INPUT, only: &
-    &   LOGNAM, LRESTART, LICE, LUPSINF, NNEWTON_MAX_ICE
+    &   LOGNAM, LRESTART, LICE, LUPSINF, LPTHOUT, NNEWTON_MAX_ICE
     use YOS_CMF_MAP, only: &
     &   NSEQMAX, NSEQALL, &
     &   D2GRAREA, D2RIVLEN, D2RIVWTH
@@ -27,8 +27,6 @@ module heatlink_river_mod
     &   water_ice_mass_kg, water_ice_energy_j
     use water_storage_adapter_mod, only: &
     &   apply_liquid_volume_delta_to_storage
-    use heatlink_input_adapter_mod, only: &
-    &   enforce_liquid_inflow_temperature
     use river_water_advection_mod, only: &
     &   advect_river_water_sensible_heat
     use river_ice_advection_mod, only: &
@@ -47,6 +45,7 @@ module heatlink_river_mod
     public :: &
     &   init_heatlink_river_mod, prepare_heatlink_input, &
     &   capture_river_water_advection_state, advance_river_water_advection, &
+    &   finalize_river_ice_advection_state, &
     &   calc_heatlink, &
     &   write_heatlink_restart, fin_heatlink_river_mod
 
@@ -232,6 +231,14 @@ subroutine prepare_heatlink_input()
 end subroutine prepare_heatlink_input
 
 
+subroutine enforce_liquid_inflow_temperature(temperature_k)
+    real(kind=JPRB), intent(inout) :: &
+    &   temperature_k(:) ! [K] Liquid-water inflow temperature; returned no colder than TMELT.
+
+    temperature_k(:) = max(temperature_k(:), TMELT)
+end subroutine enforce_liquid_inflow_temperature
+
+
 subroutine capture_river_water_advection_state()
     advection_initial_liquid_volume_m3(:) = P2RIVSTO(:,1) + P2FLDSTO(:,1)
     if (LICE) then
@@ -257,36 +264,58 @@ subroutine advance_river_water_advection(dt_seconds)
     advection_runoff_flow_m3s(:) = D2RUNOFF(:,1) + D2GDWRTN(:,1)
     advection_upstream_flow_m3s(:) = 0.0_JPRB
     if (LUPSINF) advection_upstream_flow_m3s(:) = D2UPSINF(:,1)
-    call advect_river_water_sensible_heat( &
-    &   water_temperature_k=wattmp(:NSEQALL), &
-    &   liquid_volume_before_m3=advection_initial_liquid_volume_m3(:NSEQALL), &
-    &   liquid_volume_after_m3=P2RIVSTO(:NSEQALL,1) + P2FLDSTO(:NSEQALL,1), &
-    &   normal_flow_m3s=D2OUTFLW(:NSEQALL,1), &
-    &   dt_seconds=dt_seconds, &
-    &   bifurcation_flow_m3s=D1PTHFLWSUM, &
-    &   runoff_flow_m3s=advection_runoff_flow_m3s(:NSEQALL), &
-    &   upstream_inflow_m3s=advection_upstream_flow_m3s(:NSEQALL), &
-    &   inflow_temperature_k=trof(:NSEQALL), &
-    &   heat_budget_error_j=advection_heat_budget_error_j(:NSEQALL), &
-    &   water_budget_error_m3=advection_water_budget_error_m3(:NSEQALL), &
-    &   unapplied_sensible_heat_j=advection_unapplied_sensible_heat_j(:NSEQALL), &
-    &   domain_heat_budget_error_j=advection_domain_heat_budget_error_j)
-
-    if (LICE) then
-        call advect_river_surface_ice( &
-        &   surface_ice_volume_m3=icevol(:NSEQALL), &
-        &   surface_ice_fraction=icefraction(:NSEQALL), &
+    if (LPTHOUT) then
+        call advect_river_water_sensible_heat( &
+        &   water_temperature_k=wattmp(:NSEQALL), &
         &   liquid_volume_before_m3=advection_initial_liquid_volume_m3(:NSEQALL), &
+        &   liquid_volume_after_m3=P2RIVSTO(:NSEQALL,1) + P2FLDSTO(:NSEQALL,1), &
         &   normal_flow_m3s=D2OUTFLW(:NSEQALL,1), &
         &   dt_seconds=dt_seconds, &
         &   bifurcation_flow_m3s=D1PTHFLWSUM, &
-        &   ice_budget_error_m3=advection_ice_budget_error_m3(:NSEQALL), &
-        &   domain_ice_budget_error_m3=advection_domain_ice_budget_error_m3)
-        ! Newly received ice is repartitioned against the local water-surface
-        ! capacity. Pre-existing icevol_excess is never passed to advection.
-        call enforce_river_ice_capacity()
-        call diagnose_river_ice_geometry()
+        &   runoff_flow_m3s=advection_runoff_flow_m3s(:NSEQALL), &
+        &   upstream_inflow_m3s=advection_upstream_flow_m3s(:NSEQALL), &
+        &   inflow_temperature_k=trof(:NSEQALL), &
+        &   heat_budget_error_j=advection_heat_budget_error_j(:NSEQALL), &
+        &   water_budget_error_m3=advection_water_budget_error_m3(:NSEQALL), &
+        &   unapplied_sensible_heat_j=advection_unapplied_sensible_heat_j(:NSEQALL), &
+        &   domain_heat_budget_error_j=advection_domain_heat_budget_error_j)
+    else
+        call advect_river_water_sensible_heat( &
+        &   water_temperature_k=wattmp(:NSEQALL), &
+        &   liquid_volume_before_m3=advection_initial_liquid_volume_m3(:NSEQALL), &
+        &   liquid_volume_after_m3=P2RIVSTO(:NSEQALL,1) + P2FLDSTO(:NSEQALL,1), &
+        &   normal_flow_m3s=D2OUTFLW(:NSEQALL,1), &
+        &   dt_seconds=dt_seconds, &
+        &   runoff_flow_m3s=advection_runoff_flow_m3s(:NSEQALL), &
+        &   upstream_inflow_m3s=advection_upstream_flow_m3s(:NSEQALL), &
+        &   inflow_temperature_k=trof(:NSEQALL), &
+        &   heat_budget_error_j=advection_heat_budget_error_j(:NSEQALL), &
+        &   water_budget_error_m3=advection_water_budget_error_m3(:NSEQALL), &
+        &   unapplied_sensible_heat_j=advection_unapplied_sensible_heat_j(:NSEQALL), &
+        &   domain_heat_budget_error_j=advection_domain_heat_budget_error_j)
+    endif
 
+    if (LICE) then
+        if (LPTHOUT) then
+            call advect_river_surface_ice( &
+            &   surface_ice_volume_m3=icevol(:NSEQALL), &
+            &   surface_ice_fraction=icefraction(:NSEQALL), &
+            &   liquid_volume_before_m3=advection_initial_liquid_volume_m3(:NSEQALL), &
+            &   normal_flow_m3s=D2OUTFLW(:NSEQALL,1), &
+            &   dt_seconds=dt_seconds, &
+            &   bifurcation_flow_m3s=D1PTHFLWSUM, &
+            &   ice_budget_error_m3=advection_ice_budget_error_m3(:NSEQALL), &
+            &   domain_ice_budget_error_m3=advection_domain_ice_budget_error_m3)
+        else
+            call advect_river_surface_ice( &
+            &   surface_ice_volume_m3=icevol(:NSEQALL), &
+            &   surface_ice_fraction=icefraction(:NSEQALL), &
+            &   liquid_volume_before_m3=advection_initial_liquid_volume_m3(:NSEQALL), &
+            &   normal_flow_m3s=D2OUTFLW(:NSEQALL,1), &
+            &   dt_seconds=dt_seconds, &
+            &   ice_budget_error_m3=advection_ice_budget_error_m3(:NSEQALL), &
+            &   domain_ice_budget_error_m3=advection_domain_ice_budget_error_m3)
+        endif
         advection_combined_energy_budget_error_j(:NSEQALL) = &
         &   advection_heat_budget_error_j(:NSEQALL) - &
         &   volumetric_ice_latent_energy_j_m3 * &
@@ -339,6 +368,18 @@ subroutine advance_river_water_advection(dt_seconds)
         &   max(domain_combined_energy_scale_j, 1.0_JPRD))
     endif
 end subroutine advance_river_water_advection
+
+
+subroutine finalize_river_ice_advection_state()
+    if (.not. LICE) return
+
+    ! CMF_PHYSICS_FLDSTG has already diagnosed the post-update hydraulic
+    ! geometry. Synchronize that state before repartitioning newly received
+    ! mobile ice; pre-existing icevol_excess remains immobile.
+    call get_water()
+    call enforce_river_ice_capacity()
+    call diagnose_river_ice_geometry()
+end subroutine finalize_river_ice_advection_state
 
 
 subroutine calc_heatlink(dt)
@@ -415,8 +456,8 @@ subroutine calc_heatlink(dt)
         call update_output('SWDN_TO_WATER', swdn_to_water)
 
         ! Conservation diagnostics describe the just-completed local update.
-        call update_output('RIVICE_MASS_ERROR', phase_mass_budget_error)
-        call update_output('RIVICE_ENERGY_ERROR', phase_energy_budget_error)
+        call update_output('RIVICE_MASS_RESIDUAL', phase_mass_budget_error)
+        call update_output('RIVICE_ENERGY_RESIDUAL', phase_energy_budget_error)
         call update_output('RIVICE_ENERGY_UNAPPLIED', phase_unapplied_energy)
     endif
     write(LOGNAM, *) minval(wattmp(:NSEQALL)), maxval(wattmp(:NSEQALL))
@@ -707,12 +748,12 @@ subroutine log_ice_budget()
     enddo
 
     write(LOGNAM, '(a,3(1x,es12.4))') &
-    &   '  ice budget max(abs): mass_error[kg], energy_error[J], unapplied_energy[J] =', &
+    &   '  ice budget max(abs): mass_residual[kg], energy_residual[J], unapplied_energy[J] =', &
     &   maxval(abs(phase_mass_budget_error(:NSEQALL))), &
     &   maxval(abs(phase_energy_budget_error(:NSEQALL))), &
     &   maxval(abs(phase_unapplied_energy(:NSEQALL)))
     write(LOGNAM, '(a,2(1x,es12.4))') &
-    &   '  ice budget max(relative): mass_error[-], energy_error[-] =', &
+    &   '  ice budget max(relative): mass_residual[-], energy_residual[-] =', &
     &   maximum_relative_mass_error, maximum_relative_energy_error
 end subroutine log_ice_budget
 

@@ -19,26 +19,26 @@ OBJS = \
 	topo_mod.o \
 	thermo_mod.o \
 	water_storage_adapter_mod.o \
-	heatlink_input_adapter_mod.o \
 	river_water_advection_mod.o \
 	river_ice_advection_mod.o \
-	heatlink_river_mod.o \
-	river_water_advection_coupler.o
+	heatlink_river_mod.o
 
 TESTS = \
 	test_water_storage_adapter \
-	test_heatlink_input_adapter \
 	test_river_water_advection \
 	test_river_water_advection_boundaries \
 	test_river_ice_advection \
 	test_river_ice_advection_boundaries \
 	test_river_water_ice_advection_energy
-TEST_EXES = $(TESTS)
+EXPECTED_FAILURE_TESTS = \
+	test_river_water_advection_cold_inflow
+TEST_EXES = $(TESTS) $(EXPECTED_FAILURE_TESTS)
 RIVER_WATER_TESTS = \
 	test_river_water_advection \
 	test_river_water_advection_boundaries
 TOPOLOGY_TESTS = \
 	$(RIVER_WATER_TESTS) \
+	$(EXPECTED_FAILURE_TESTS) \
 	test_river_ice_advection \
 	test_river_ice_advection_boundaries \
 	test_river_water_ice_advection_energy
@@ -55,9 +55,8 @@ $(LIBNAME): $(OBJS)
 	@rm -f $@
 	ar -rv $@ $(OBJS)
 
-heatlink_river_mod.o: water_storage_adapter_mod.o heatlink_input_adapter_mod.o \
+heatlink_river_mod.o: water_storage_adapter_mod.o \
 	river_water_advection_mod.o river_ice_advection_mod.o
-river_water_advection_coupler.o: heatlink_river_mod.o
 
 $(TOPOLOGY_TESTS): %: test/%.f90 $(LIBNAME) ../yos_cmf_map.o
 	$(FCMP) $(FFLAGS) $(INC) $(MODS) $(CFLAGS) $< ../yos_cmf_map.o \

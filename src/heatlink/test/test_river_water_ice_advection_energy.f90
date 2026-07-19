@@ -11,6 +11,8 @@ program test_river_water_ice_advection_energy
     &   advect_river_water_sensible_heat
     use river_ice_advection_mod, only: &
     &   advect_river_surface_ice
+    use ice_cover_mod, only: &
+    &   enforce_surface_ice_capacity
     implicit none
 
     real(kind=JPRB) :: &
@@ -74,10 +76,68 @@ program test_river_water_ice_advection_energy
     call assert_exact_array(immobile_excess_ice_volume_m3, &
     &   initial_immobile_excess_ice_volume_m3, &
     &   'immobile excess ice remains in its source cells')
+    call check_dry_receiver_uses_updated_surface_area()
+    call check_contracted_surface_capacity()
 
     write(*, '(a)') '[ALL TESTS PASSED] test_river_water_ice_advection_energy'
 
 contains
+
+subroutine check_dry_receiver_uses_updated_surface_area()
+    real(kind=JPRB) :: &
+    &   surface_ice_volume_m3(3), surface_ice_fraction(3), &
+    &   excess_ice_volume_m3(3), normal_flow_m3s(3), &
+    &   updated_water_surface_area_m2(3)
+    real(kind=JPRD) :: &
+    &   liquid_volume_before_m3(3)
+    integer(kind=JPIM) :: &
+    &   iseq
+
+    call set_three_cell_topology()
+    surface_ice_volume_m3(:) = [1.0_JPRB, 0.0_JPRB, 0.0_JPRB]
+    surface_ice_fraction(:) = 0.0_JPRB
+    excess_ice_volume_m3(:) = 0.0_JPRB
+    liquid_volume_before_m3(:) = [1.0_JPRD, 0.0_JPRD, 0.0_JPRD]
+    normal_flow_m3s(:) = [1.0_JPRB, 0.0_JPRB, 0.0_JPRB]
+
+    ! Production order: advect with pre-update storage, diagnose hydraulic
+    ! geometry, then enforce surface-ice capacity with the updated area.
+    call advect_river_surface_ice( &
+    &   surface_ice_volume_m3, surface_ice_fraction, &
+    &   liquid_volume_before_m3, normal_flow_m3s, 1.0_JPRB)
+    updated_water_surface_area_m2(:) = [0.0_JPRB, 1.0_JPRB, 0.0_JPRB]
+    do iseq = 1, 3
+        call enforce_surface_ice_capacity( &
+        &   surface_ice_volume_m3(iseq), excess_ice_volume_m3(iseq), &
+        &   updated_water_surface_area_m2(iseq), 20.0_JPRB)
+    enddo
+
+    call assert_exact_array(surface_ice_volume_m3, &
+    &   [0.0_JPRB, 1.0_JPRB, 0.0_JPRB], &
+    &   'dry receiver retains inflowing mobile ice on its updated water surface')
+    call assert_exact_array(excess_ice_volume_m3, &
+    &   [0.0_JPRB, 0.0_JPRB, 0.0_JPRB], &
+    &   'dry receiver does not create spurious excess ice')
+end subroutine check_dry_receiver_uses_updated_surface_area
+
+
+subroutine check_contracted_surface_capacity()
+    real(kind=JPRB) :: &
+    &   surface_ice_volume_m3, excess_ice_volume_m3, total_ice_volume_m3
+
+    surface_ice_volume_m3 = 50.0_JPRB
+    excess_ice_volume_m3 = 5.0_JPRB
+    total_ice_volume_m3 = surface_ice_volume_m3 + excess_ice_volume_m3
+    call enforce_surface_ice_capacity( &
+    &   surface_ice_volume_m3, excess_ice_volume_m3, 2.0_JPRB, 20.0_JPRB)
+
+    call assert_exact_array([surface_ice_volume_m3, excess_ice_volume_m3], &
+    &   [40.0_JPRB, 15.0_JPRB], &
+    &   'contracted surface transfers only above-capacity ice to excess')
+    call assert_exact_array([surface_ice_volume_m3 + excess_ice_volume_m3], &
+    &   [total_ice_volume_m3], &
+    &   'contracted surface capacity conserves total ice volume')
+end subroutine check_contracted_surface_capacity
 
 subroutine set_three_cell_topology()
     if (allocated(I1NEXT)) deallocate(I1NEXT)

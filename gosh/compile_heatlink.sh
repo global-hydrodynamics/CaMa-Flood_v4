@@ -99,7 +99,7 @@ make -C "${ROOT}/src/heatlink" \
     MKINCLUDE="${ROOT}/adm/Mkinclude_heatlink" \
     BUILD_MODE="${BUILD_MODE}" test
 
-for test_exe in test_water_storage_adapter test_heatlink_input_adapter \
+for test_exe in test_water_storage_adapter \
     test_river_water_advection test_river_water_advection_boundaries \
     test_river_ice_advection test_river_ice_advection_boundaries \
     test_river_water_ice_advection_energy
@@ -107,5 +107,11 @@ do
     echo "  ${test_exe}"
     "${ROOT}/src/heatlink/${test_exe}"
 done
+
+echo "  test_river_water_advection_cold_inflow (expected failure)"
+if "${ROOT}/src/heatlink/test_river_water_advection_cold_inflow"; then
+    echo "Cold liquid inflow was accepted unexpectedly." >&2
+    exit 1
+fi
 
 echo "All heatlink unit tests passed."
