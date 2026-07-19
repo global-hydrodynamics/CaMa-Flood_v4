@@ -24,7 +24,9 @@ subroutine test_runoff_and_upstream_inflow_to_dry_cell()
     &   water_temperature_k(3), normal_flow_m3s(3), &
     &   runoff_flow_m3s(3), upstream_inflow_m3s(3), inflow_temperature_k(3)
     real(kind=JPRD) :: &
-    &   liquid_volume_before_m3(3), liquid_volume_after_m3(3), expected_heat_j
+    &   liquid_volume_before_m3(3), liquid_volume_after_m3(3), expected_heat_j, &
+    &   heat_budget_error_j(3), water_budget_error_m3(3), &
+    &   unapplied_sensible_heat_j(3), domain_heat_budget_error_j
 
     call set_three_cell_topology(0_JPIM)
     water_temperature_k(:) = [TMELT, TMELT + 2.0_JPRB, TMELT]
@@ -43,12 +45,24 @@ subroutine test_runoff_and_upstream_inflow_to_dry_cell()
     &   normal_flow_m3s, 1.0_JPRB, &
     &   runoff_flow_m3s=runoff_flow_m3s, &
     &   upstream_inflow_m3s=upstream_inflow_m3s, &
-    &   inflow_temperature_k=inflow_temperature_k)
+    &   inflow_temperature_k=inflow_temperature_k, &
+    &   heat_budget_error_j=heat_budget_error_j, &
+    &   water_budget_error_m3=water_budget_error_m3, &
+    &   unapplied_sensible_heat_j=unapplied_sensible_heat_j, &
+    &   domain_heat_budget_error_j=domain_heat_budget_error_j)
 
     call assert_close(water_temperature_k(1), TMELT + 6.0_JPRB, &
     &   'runoff and upstream inflow temperature in dry cell [K]')
     call assert_heat(expected_heat_j, water_temperature_k, liquid_volume_after_m3, &
     &   'runoff and upstream inflow')
+    call assert_small(maxval(abs(heat_budget_error_j)), expected_heat_j, &
+    &   'runoff cell heat-budget error [J]')
+    call assert_small(maxval(abs(water_budget_error_m3)), 5.0_JPRD, &
+    &   'runoff cell water-budget error [m3]')
+    call assert_small(maxval(abs(unapplied_sensible_heat_j)), expected_heat_j, &
+    &   'runoff unapplied sensible heat [J]')
+    call assert_small(abs(domain_heat_budget_error_j), expected_heat_j, &
+    &   'runoff domain heat-budget error [J]')
 end subroutine test_runoff_and_upstream_inflow_to_dry_cell
 
 
@@ -279,5 +293,22 @@ subroutine assert_true(condition, label)
     write(*, '(a)') '[TEST FAILED] '//trim(label)
     error stop 1
 end subroutine assert_true
+
+
+subroutine assert_small(actual_value, reference_scale, label)
+    real(kind=JPRD), intent(in) :: &
+    &   actual_value, reference_scale
+    character(len=*), intent(in) :: &
+    &   label
+    real(kind=JPRD) :: &
+    &   tolerance
+
+    tolerance = 1.0e-12_JPRD * max(1.0_JPRD, abs(reference_scale))
+    if (abs(actual_value) <= tolerance) return
+    write(*, '(a)') '[TEST FAILED] '//trim(label)
+    write(*, '(a,es24.15)') '  actual    = ', actual_value
+    write(*, '(a,es24.15)') '  tolerance = ', tolerance
+    error stop 1
+end subroutine assert_small
 
 end program test_river_water_advection_boundaries

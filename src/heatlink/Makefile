@@ -21,7 +21,8 @@ OBJS = \
 	water_storage_adapter_mod.o \
 	heatlink_input_adapter_mod.o \
 	river_water_advection_mod.o \
-	heatlink_river_mod.o
+	heatlink_river_mod.o \
+	river_water_advection_coupler.o
 
 TESTS = \
 	test_water_storage_adapter \
@@ -45,7 +46,9 @@ $(LIBNAME): $(OBJS)
 	@rm -f $@
 	ar -rv $@ $(OBJS)
 
-heatlink_river_mod.o: water_storage_adapter_mod.o heatlink_input_adapter_mod.o
+heatlink_river_mod.o: water_storage_adapter_mod.o heatlink_input_adapter_mod.o \
+	river_water_advection_mod.o
+river_water_advection_coupler.o: heatlink_river_mod.o
 
 $(RIVER_WATER_TESTS): %: test/%.f90 $(LIBNAME) ../yos_cmf_map.o
 	$(FCMP) $(FFLAGS) $(INC) $(MODS) $(CFLAGS) $< ../yos_cmf_map.o \
