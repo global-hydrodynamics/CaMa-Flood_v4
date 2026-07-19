@@ -2,7 +2,7 @@ program test_river_water_advection
     use PARKIND1, only: &
     &   JPIM, JPRB, JPRD
     use YOS_CMF_MAP, only: &
-    &   I1NEXT, NSEQALL, NSEQRIV
+    &   I1NEXT, NSEQALL, NSEQRIV, NPTHOUT
     use phys_const_mod, only: &
     &   CW, RW, TMELT
     use river_water_advection_mod, only: &
@@ -199,6 +199,7 @@ subroutine set_three_cell_topology()
     if (allocated(I1NEXT)) deallocate(I1NEXT)
     NSEQALL = 3_JPIM
     NSEQRIV = 2_JPIM
+    NPTHOUT = 0_JPIM
     allocate(I1NEXT(NSEQALL))
     I1NEXT(:) = [2_JPIM, 3_JPIM, -9_JPIM]
 end subroutine set_three_cell_topology

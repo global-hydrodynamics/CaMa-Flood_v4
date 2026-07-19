@@ -26,8 +26,12 @@ OBJS = \
 TESTS = \
 	test_water_storage_adapter \
 	test_heatlink_input_adapter \
-	test_river_water_advection
+	test_river_water_advection \
+	test_river_water_advection_boundaries
 TEST_EXES = $(TESTS)
+RIVER_WATER_TESTS = \
+	test_river_water_advection \
+	test_river_water_advection_boundaries
 
 .SUFFIXES: .o .F90 .f90
 %.o: %.F90
@@ -43,7 +47,7 @@ $(LIBNAME): $(OBJS)
 
 heatlink_river_mod.o: water_storage_adapter_mod.o heatlink_input_adapter_mod.o
 
-test_river_water_advection: test/test_river_water_advection.f90 $(LIBNAME) ../yos_cmf_map.o
+$(RIVER_WATER_TESTS): %: test/%.f90 $(LIBNAME) ../yos_cmf_map.o
 	$(FCMP) $(FFLAGS) $(INC) $(MODS) $(CFLAGS) $< ../yos_cmf_map.o \
 	    -L. -lheatlink -L../phys -lphys -L../common -lcommon \
 	    $(LDFLAGS) $(LIBS) -o $@
