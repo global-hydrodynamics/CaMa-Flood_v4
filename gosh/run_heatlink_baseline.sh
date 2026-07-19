@@ -94,6 +94,7 @@ case "$RUN_MODE" in
         DEFAULT_END_HOUR=0
         DEFAULT_EXPECTED_STEPS=24
         DEFAULT_EXPECTED_RECORDS=1
+        STANDARD_OUTPUT_NML=.FALSE.
         ;;
     annual)
         DEFAULT_END_YEAR=2001
@@ -102,6 +103,7 @@ case "$RUN_MODE" in
         DEFAULT_END_HOUR=0
         DEFAULT_EXPECTED_STEPS=8784
         DEFAULT_EXPECTED_RECORDS=366
+        STANDARD_OUTPUT_NML=.TRUE.
         ;;
     *)
         echo "Usage: $0 [smoke|annual]" >&2
@@ -200,7 +202,7 @@ cat > "$NML" <<EOF
 LADPSTP   = .TRUE.                 ! Use the adaptive hydraulic time step.
 LPTHOUT   = .TRUE.                 ! Enable bifurcation flow.
 LDAMOUT   = .FALSE.                ! Disable reservoir operation.
-LOUTPUT   = .FALSE.                ! Disable standard output; heatlink output remains enabled.
+LOUTPUT   = ${STANDARD_OUTPUT_NML} ! Enable daily CaMa standard output for annual analysis runs.
 LRESTART  = ${LRESTART_NML}        ! Initialize from the requested restart source when true.
 LHEATLINK = ${LHEATLINK_NML}       ! Enable river water thermodynamics.
 LICE      = ${LICE_NML}            ! Enable river ice state and diagnostics.
@@ -256,6 +258,16 @@ DROFUNIT = 86400000                ! Convert runoff from [mm day-1] to [m s-1].
 CROFDIR  = "${RUNOFF_DIR}"
 CROFPRE  = "Roff____"
 CROFSUF  = ".one"
+/
+
+&NOUTPUT
+COUTDIR  = "./"
+CVARSOUT = "rivout,rivsto,rivdph,rivvel,fldout,fldsto,flddph,fldfrc,fldare,sfcelv,outflw,storge,pthflw,pthout,maxsto,maxflw,maxdph"
+COUTTAG  = "2000"
+LOUTVEC  = .FALSE.
+LOUTCDF  = .FALSE.
+NDLEVEL  = 0
+IFRQ_OUT = 24                      ! [hour] Daily standard-variable output interval.
 /
 
 &intrp_map
