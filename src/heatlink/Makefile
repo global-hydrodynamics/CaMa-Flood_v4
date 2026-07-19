@@ -20,11 +20,13 @@ OBJS = \
 	thermo_mod.o \
 	water_storage_adapter_mod.o \
 	heatlink_input_adapter_mod.o \
+	river_water_advection_mod.o \
 	heatlink_river_mod.o
 
 TESTS = \
 	test_water_storage_adapter \
-	test_heatlink_input_adapter
+	test_heatlink_input_adapter \
+	test_river_water_advection
 TEST_EXES = $(TESTS)
 
 .SUFFIXES: .o .F90 .f90
@@ -40,6 +42,12 @@ $(LIBNAME): $(OBJS)
 	ar -rv $@ $(OBJS)
 
 heatlink_river_mod.o: water_storage_adapter_mod.o heatlink_input_adapter_mod.o
+
+test_river_water_advection: test/test_river_water_advection.f90 $(LIBNAME) ../yos_cmf_map.o
+	$(FCMP) $(FFLAGS) $(INC) $(MODS) $(CFLAGS) $< ../yos_cmf_map.o \
+	    -L. -lheatlink -L../phys -lphys -L../common -lcommon \
+	    $(LDFLAGS) $(LIBS) -o $@
+	@install_name_tool -delete_rpath $(NETCDFDIR)/lib $@ 2>/dev/null || true
 
 test: $(TEST_EXES)
 
