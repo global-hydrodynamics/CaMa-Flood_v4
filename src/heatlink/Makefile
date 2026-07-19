@@ -31,7 +31,8 @@ TESTS = \
 	test_river_water_advection \
 	test_river_water_advection_boundaries \
 	test_river_ice_advection \
-	test_river_ice_advection_boundaries
+	test_river_ice_advection_boundaries \
+	test_river_water_ice_advection_energy
 TEST_EXES = $(TESTS)
 RIVER_WATER_TESTS = \
 	test_river_water_advection \
@@ -39,7 +40,8 @@ RIVER_WATER_TESTS = \
 TOPOLOGY_TESTS = \
 	$(RIVER_WATER_TESTS) \
 	test_river_ice_advection \
-	test_river_ice_advection_boundaries
+	test_river_ice_advection_boundaries \
+	test_river_water_ice_advection_energy
 
 .SUFFIXES: .o .F90 .f90
 %.o: %.F90

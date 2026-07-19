@@ -20,7 +20,8 @@ contains
 subroutine advect_river_surface_ice( &
     &   surface_ice_volume_m3, surface_ice_fraction, &
     &   liquid_volume_before_m3, normal_flow_m3s, dt_seconds, &
-    &   bifurcation_flow_m3s)
+    &   bifurcation_flow_m3s, ice_budget_error_m3, &
+    &   domain_ice_budget_error_m3)
     real(kind=JPRB), intent(inout) :: &
     &   surface_ice_volume_m3(NSEQALL) ! [m3] Mobile water-surface ice before and after advection.
     real(kind=JPRB), intent(in) :: &
@@ -32,15 +33,20 @@ subroutine advect_river_surface_ice( &
     &   dt_seconds ! [s] Hydraulic internal time step used for the water-balance update.
     real(kind=JPRB), intent(in), optional :: &
     &   bifurcation_flow_m3s(NPTHOUT) ! [m3 s-1] Final signed flow on each PTH_UPST-to-PTH_DOWN link.
+    real(kind=JPRD), intent(out), optional :: &
+    &   ice_budget_error_m3(NSEQALL), & ! [m3] Expected minus represented mobile surface-ice volume.
+    &   domain_ice_budget_error_m3 ! [m3] Boundary-aware domain surface-ice closure error.
     real(kind=JPRD) :: &
     &   surface_ice_storage_m3(NSEQALL), & ! [m3] Double-precision working copy of mobile surface ice.
+    &   expected_surface_ice_volume_m3(NSEQALL), & ! [m3] Surface ice reconstructed from applied link flows.
     &   d2iceout(NSEQALL), & ! [m3 s-1] Signed surface-ice flow on each normal link.
     &   d1pthiceout(NPTHOUT), & ! [m3 s-1] Signed surface-ice flow on each bifurcation link.
     &   sOut(NSEQALL), & ! [m3] Requested total outgoing surface ice from each source cell.
     &   srate(NSEQALL), & ! [-] Available-ice limiter applied to all outflows from a source cell.
     &   transport_fraction, & ! [-] Source surface-ice fraction requested by the current link.
     &   ice_velocity_fraction, & ! [-] TCHOIR ice velocity divided by water velocity.
-    &   minimum_mobile_liquid_volume_m3 ! [m3] Liquid volume below which TCHOIR keeps ice immobile.
+    &   minimum_mobile_liquid_volume_m3, & ! [m3] Liquid volume below which TCHOIR keeps ice immobile.
+    &   domain_expected_surface_ice_volume_m3 ! [m3] Initial ice minus river-mouth export.
     integer(kind=JPIM) :: &
     &   ipth, iseq
     integer(kind=JPIM), save :: &
@@ -50,6 +56,8 @@ subroutine advect_river_surface_ice( &
     ! Preconditions: surface ice, liquid volume, and dt_seconds are nonnegative,
     ! and I1NEXT(1:NSEQRIV) identifies valid normal-link destination cells.
     surface_ice_storage_m3(:) = real(max(surface_ice_volume_m3(:), 0.0_JPRB), kind=JPRD)
+    expected_surface_ice_volume_m3(:) = surface_ice_storage_m3(:)
+    domain_expected_surface_ice_volume_m3 = sum(surface_ice_storage_m3(:))
     d2iceout(:) = 0.0_JPRD
     d1pthiceout(:) = 0.0_JPRD
     sOut(:) = 0.0_JPRD
@@ -212,9 +220,15 @@ subroutine advect_river_surface_ice( &
             surface_ice_storage_m3(iseq0) = max( &
             &   surface_ice_storage_m3(iseq0) - abs(d2iceout(iseq)) * &
             &   real(dt_seconds, kind=JPRD), 0.0_JPRD)
+            expected_surface_ice_volume_m3(iseq0) = &
+            &   expected_surface_ice_volume_m3(iseq0) - &
+            &   abs(d2iceout(iseq)) * real(dt_seconds, kind=JPRD)
         endif
         if (iseq1 > 0) then
             surface_ice_storage_m3(iseq1) = surface_ice_storage_m3(iseq1) + &
+            &   abs(d2iceout(iseq)) * real(dt_seconds, kind=JPRD)
+            expected_surface_ice_volume_m3(iseq1) = &
+            &   expected_surface_ice_volume_m3(iseq1) + &
             &   abs(d2iceout(iseq)) * real(dt_seconds, kind=JPRD)
         endif
     enddo
@@ -225,6 +239,12 @@ subroutine advect_river_surface_ice( &
         surface_ice_storage_m3(iseq) = max( &
         &   surface_ice_storage_m3(iseq) - d2iceout(iseq) * &
         &   real(dt_seconds, kind=JPRD), 0.0_JPRD)
+        expected_surface_ice_volume_m3(iseq) = &
+        &   expected_surface_ice_volume_m3(iseq) - &
+        &   d2iceout(iseq) * real(dt_seconds, kind=JPRD)
+        domain_expected_surface_ice_volume_m3 = &
+        &   domain_expected_surface_ice_volume_m3 - &
+        &   d2iceout(iseq) * real(dt_seconds, kind=JPRD)
     enddo
 
     if (present(bifurcation_flow_m3s)) then
@@ -242,12 +262,26 @@ subroutine advect_river_surface_ice( &
             surface_ice_storage_m3(iseq0) = max( &
             &   surface_ice_storage_m3(iseq0) - abs(d1pthiceout(ipth)) * &
             &   real(dt_seconds, kind=JPRD), 0.0_JPRD)
+            expected_surface_ice_volume_m3(iseq0) = &
+            &   expected_surface_ice_volume_m3(iseq0) - &
+            &   abs(d1pthiceout(ipth)) * real(dt_seconds, kind=JPRD)
             surface_ice_storage_m3(iseq1) = surface_ice_storage_m3(iseq1) + &
+            &   abs(d1pthiceout(ipth)) * real(dt_seconds, kind=JPRD)
+            expected_surface_ice_volume_m3(iseq1) = &
+            &   expected_surface_ice_volume_m3(iseq1) + &
             &   abs(d1pthiceout(ipth)) * real(dt_seconds, kind=JPRD)
         enddo
     endif
 
     surface_ice_volume_m3(:) = real(surface_ice_storage_m3(:), kind=JPRB)
+    if (present(ice_budget_error_m3)) then
+        ice_budget_error_m3(:) = expected_surface_ice_volume_m3(:) - &
+        &   real(surface_ice_volume_m3(:), kind=JPRD)
+    endif
+    if (present(domain_ice_budget_error_m3)) then
+        domain_ice_budget_error_m3 = domain_expected_surface_ice_volume_m3 - &
+        &   sum(real(surface_ice_volume_m3(:), kind=JPRD))
+    endif
 end subroutine advect_river_surface_ice
 
 

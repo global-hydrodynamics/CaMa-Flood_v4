@@ -101,7 +101,8 @@ make -C "${ROOT}/src/heatlink" \
 
 for test_exe in test_water_storage_adapter test_heatlink_input_adapter \
     test_river_water_advection test_river_water_advection_boundaries \
-    test_river_ice_advection test_river_ice_advection_boundaries
+    test_river_ice_advection test_river_ice_advection_boundaries \
+    test_river_water_ice_advection_energy
 do
     echo "  ${test_exe}"
     "${ROOT}/src/heatlink/${test_exe}"

@@ -18,7 +18,7 @@ module heatlink_river_mod
     use const_mod, only: &
     &   STO_IGNORE
     use phys_const_mod, only: &
-    &   TMELT, RIVDPH_MIN, KI, RW, CW
+    &   TMELT, RIVDPH_MIN, KI, RW, CW, RI, HFUS
     use ice_cover_mod, only: &
     &   ICE_THICKNESS_MIN_M, diagnose_ice_geometry, enforce_surface_ice_capacity
     use heat_flux_mod, only: &
@@ -57,17 +57,26 @@ module heatlink_river_mod
     &   advection_initial_liquid_volume_m3(:), & ! [m3] Liquid storage before the current hydraulic update.
     &   advection_heat_budget_error_j(:), & ! [J] Cell sensible-heat reconstruction error.
     &   advection_water_budget_error_m3(:), & ! [m3] Cell water-balance difference for supplied flows.
-    &   advection_unapplied_sensible_heat_j(:) ! [J] Heat not representable in zero liquid volume.
+    &   advection_unapplied_sensible_heat_j(:), & ! [J] Heat not representable in zero liquid volume.
+    &   advection_ice_budget_error_m3(:), & ! [m3] Expected minus represented mobile surface ice.
+    &   advection_combined_energy_budget_error_j(:) ! [J] Water sensible plus ice latent-energy error.
     real(kind=JPRB), allocatable, save :: &
     &   advection_runoff_flow_m3s(:), & ! [m3 s-1] Runoff plus groundwater return flow.
     &   advection_upstream_flow_m3s(:) ! [m3 s-1] External upstream inflow or zero when disabled.
     real(kind=JPRD), save :: &
     &   advection_domain_heat_budget_error_j = 0.0_JPRD, & ! [J] Current internal-step domain closure error.
+    &   advection_domain_ice_budget_error_m3 = 0.0_JPRD, & ! [m3] Current boundary-aware ice closure error.
+    &   advection_domain_combined_energy_budget_error_j = 0.0_JPRD, & ! [J] Current water-plus-ice closure error.
     &   maximum_advection_heat_budget_error_j = 0.0_JPRD, & ! [J] Maximum cell error since the last local heat update.
     &   maximum_advection_water_budget_error_m3 = 0.0_JPRD, & ! [m3] Maximum cell water error since last update.
     &   maximum_advection_unapplied_heat_j = 0.0_JPRD, & ! [J] Maximum cell unapplied heat since last update.
     &   maximum_advection_domain_heat_budget_error_j = 0.0_JPRD, & ! [J] Maximum domain closure error since last update.
-    &   maximum_advection_relative_domain_heat_budget_error = 0.0_JPRD ! [-] Maximum normalized domain error.
+    &   maximum_advection_relative_domain_heat_budget_error = 0.0_JPRD, & ! [-] Maximum normalized heat error.
+    &   maximum_advection_ice_mass_budget_error_kg = 0.0_JPRD, & ! [kg] Maximum cell ice-mass closure error.
+    &   maximum_advection_combined_energy_budget_error_j = 0.0_JPRD, & ! [J] Maximum cell water-plus-ice error.
+    &   maximum_advection_domain_ice_mass_budget_error_kg = 0.0_JPRD, & ! [kg] Maximum domain ice-mass error.
+    &   maximum_advection_domain_combined_energy_budget_error_j = 0.0_JPRD, & ! [J] Maximum domain energy error.
+    &   maximum_advection_relative_domain_combined_energy_budget_error = 0.0_JPRD ! [-] Normalized domain energy error.
 
     ! River-ice state and diagnostics. Excess ice remains in the source cell,
     ! is reserved for local melting, and is excluded from future river transport.
@@ -157,6 +166,8 @@ subroutine init_heatlink_river_mod(dt)
     allocate(hflx_srf(NSEQMAX), source=0.0_JPRB)
     allocate(hflx_bdy(NSEQMAX), source=0.0_JPRB)
     if (LICE) then
+        allocate(advection_ice_budget_error_m3(NSEQMAX), source=0.0_JPRD)
+        allocate(advection_combined_energy_budget_error_j(NSEQMAX), source=0.0_JPRD)
         allocate(icevol(NSEQMAX), source=0.0_JPRB)
         allocate(icevol_excess(NSEQMAX), source=0.0_JPRB)
         allocate(icearea(NSEQMAX), source=0.0_JPRB)
@@ -237,7 +248,11 @@ subroutine advance_river_water_advection(dt_seconds)
     real(kind=JPRB), intent(in) :: &
     &   dt_seconds ! [s] Current adaptive hydraulic time step.
     real(kind=JPRD) :: &
-    &   domain_sensible_heat_scale_j ! [J] Sum of absolute represented cell sensible heat.
+    &   domain_sensible_heat_scale_j, & ! [J] Sum of absolute represented cell sensible heat.
+    &   domain_combined_energy_scale_j, & ! [J] Absolute water-sensible plus ice-latent energy scale.
+    &   volumetric_ice_latent_energy_j_m3 ! [J m-3] Magnitude of melting-point ice latent energy.
+
+    volumetric_ice_latent_energy_j_m3 = real(RI, kind=JPRD) * real(HFUS, kind=JPRD)
 
     advection_runoff_flow_m3s(:) = D2RUNOFF(:,1) + D2GDWRTN(:,1)
     advection_upstream_flow_m3s(:) = 0.0_JPRB
@@ -264,11 +279,35 @@ subroutine advance_river_water_advection(dt_seconds)
         &   liquid_volume_before_m3=advection_initial_liquid_volume_m3(:NSEQALL), &
         &   normal_flow_m3s=D2OUTFLW(:NSEQALL,1), &
         &   dt_seconds=dt_seconds, &
-        &   bifurcation_flow_m3s=D1PTHFLWSUM)
+        &   bifurcation_flow_m3s=D1PTHFLWSUM, &
+        &   ice_budget_error_m3=advection_ice_budget_error_m3(:NSEQALL), &
+        &   domain_ice_budget_error_m3=advection_domain_ice_budget_error_m3)
         ! Newly received ice is repartitioned against the local water-surface
         ! capacity. Pre-existing icevol_excess is never passed to advection.
         call enforce_river_ice_capacity()
         call diagnose_river_ice_geometry()
+
+        advection_combined_energy_budget_error_j(:NSEQALL) = &
+        &   advection_heat_budget_error_j(:NSEQALL) - &
+        &   volumetric_ice_latent_energy_j_m3 * &
+        &   advection_ice_budget_error_m3(:NSEQALL)
+        advection_domain_combined_energy_budget_error_j = &
+        &   advection_domain_heat_budget_error_j - &
+        &   volumetric_ice_latent_energy_j_m3 * &
+        &   advection_domain_ice_budget_error_m3
+        maximum_advection_ice_mass_budget_error_kg = max( &
+        &   maximum_advection_ice_mass_budget_error_kg, &
+        &   real(RI, kind=JPRD) * &
+        &   maxval(abs(advection_ice_budget_error_m3(:NSEQALL))))
+        maximum_advection_combined_energy_budget_error_j = max( &
+        &   maximum_advection_combined_energy_budget_error_j, &
+        &   maxval(abs(advection_combined_energy_budget_error_j(:NSEQALL))))
+        maximum_advection_domain_ice_mass_budget_error_kg = max( &
+        &   maximum_advection_domain_ice_mass_budget_error_kg, &
+        &   real(RI, kind=JPRD) * abs(advection_domain_ice_budget_error_m3))
+        maximum_advection_domain_combined_energy_budget_error_j = max( &
+        &   maximum_advection_domain_combined_energy_budget_error_j, &
+        &   abs(advection_domain_combined_energy_budget_error_j))
     endif
 
     maximum_advection_heat_budget_error_j = max( &
@@ -290,6 +329,15 @@ subroutine advance_river_water_advection(dt_seconds)
     &   maximum_advection_relative_domain_heat_budget_error, &
     &   abs(advection_domain_heat_budget_error_j) / &
     &   max(domain_sensible_heat_scale_j, 1.0_JPRD))
+    if (LICE) then
+        domain_combined_energy_scale_j = domain_sensible_heat_scale_j + &
+        &   volumetric_ice_latent_energy_j_m3 * sum(real( &
+        &   icevol(:NSEQALL) + icevol_excess(:NSEQALL), kind=JPRD))
+        maximum_advection_relative_domain_combined_energy_budget_error = max( &
+        &   maximum_advection_relative_domain_combined_energy_budget_error, &
+        &   abs(advection_domain_combined_energy_budget_error_j) / &
+        &   max(domain_combined_energy_scale_j, 1.0_JPRD))
+    endif
 end subroutine advance_river_water_advection
 
 
@@ -379,11 +427,25 @@ subroutine calc_heatlink(dt)
     &   maximum_advection_unapplied_heat_j, &
     &   maximum_advection_domain_heat_budget_error_j, &
     &   maximum_advection_relative_domain_heat_budget_error
+    if (LICE) then
+        write(LOGNAM, '(a,5(1x,es12.4))') &
+        &   '  ice advection budget max: cell_mass[kg], cell_energy[J], domain_mass[kg], domain_energy[J], domain_relative[-] =', &
+        &   maximum_advection_ice_mass_budget_error_kg, &
+        &   maximum_advection_combined_energy_budget_error_j, &
+        &   maximum_advection_domain_ice_mass_budget_error_kg, &
+        &   maximum_advection_domain_combined_energy_budget_error_j, &
+        &   maximum_advection_relative_domain_combined_energy_budget_error
+    endif
     maximum_advection_heat_budget_error_j = 0.0_JPRD
     maximum_advection_water_budget_error_m3 = 0.0_JPRD
     maximum_advection_unapplied_heat_j = 0.0_JPRD
     maximum_advection_domain_heat_budget_error_j = 0.0_JPRD
     maximum_advection_relative_domain_heat_budget_error = 0.0_JPRD
+    maximum_advection_ice_mass_budget_error_kg = 0.0_JPRD
+    maximum_advection_combined_energy_budget_error_j = 0.0_JPRD
+    maximum_advection_domain_ice_mass_budget_error_kg = 0.0_JPRD
+    maximum_advection_domain_combined_energy_budget_error_j = 0.0_JPRD
+    maximum_advection_relative_domain_combined_energy_budget_error = 0.0_JPRD
     if (LICE) then
         call log_ice_budget()
     endif
@@ -706,6 +768,8 @@ subroutine fin_heatlink_river_mod()
     if (allocated(advection_heat_budget_error_j)) deallocate(advection_heat_budget_error_j)
     if (allocated(advection_water_budget_error_m3)) deallocate(advection_water_budget_error_m3)
     if (allocated(advection_unapplied_sensible_heat_j)) deallocate(advection_unapplied_sensible_heat_j)
+    if (allocated(advection_ice_budget_error_m3)) deallocate(advection_ice_budget_error_m3)
+    if (allocated(advection_combined_energy_budget_error_j)) deallocate(advection_combined_energy_budget_error_j)
     if (allocated(advection_runoff_flow_m3s)) deallocate(advection_runoff_flow_m3s)
     if (allocated(advection_upstream_flow_m3s)) deallocate(advection_upstream_flow_m3s)
     if (allocated(hflx_srf)) deallocate(hflx_srf)

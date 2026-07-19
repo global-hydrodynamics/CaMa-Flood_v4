@@ -23,7 +23,8 @@ subroutine test_river_mouth_outflow_and_reverse_flow()
     real(kind=JPRB) :: &
     &   surface_ice_volume_m3(3), surface_ice_fraction(3), normal_flow_m3s(3)
     real(kind=JPRD) :: &
-    &   liquid_volume_before_m3(3)
+    &   liquid_volume_before_m3(3), ice_budget_error_m3(3), &
+    &   domain_ice_budget_error_m3
 
     call set_three_cell_topology(0_JPIM)
     surface_ice_volume_m3(:) = [0.0_JPRB, 0.0_JPRB, 5.0_JPRB]
@@ -33,19 +34,29 @@ subroutine test_river_mouth_outflow_and_reverse_flow()
 
     call advect_river_surface_ice( &
     &   surface_ice_volume_m3, surface_ice_fraction, &
-    &   liquid_volume_before_m3, normal_flow_m3s, 1.0_JPRB)
+    &   liquid_volume_before_m3, normal_flow_m3s, 1.0_JPRB, &
+    &   ice_budget_error_m3=ice_budget_error_m3, &
+    &   domain_ice_budget_error_m3=domain_ice_budget_error_m3)
 
     call assert_close(surface_ice_volume_m3(3), 4.0_JPRB, &
     &   'river-mouth positive flow exports source surface ice [m3]')
+    call assert_close_jprd(maxval(abs(ice_budget_error_m3)), 0.0_JPRD, &
+    &   'river-mouth cell ice-budget closure [m3]')
+    call assert_close_jprd(domain_ice_budget_error_m3, 0.0_JPRD, &
+    &   'river-mouth domain ice-budget closure [m3]')
 
     surface_ice_volume_m3(:) = [0.0_JPRB, 0.0_JPRB, 5.0_JPRB]
     normal_flow_m3s(3) = -2.0_JPRB
     call advect_river_surface_ice( &
     &   surface_ice_volume_m3, surface_ice_fraction, &
-    &   liquid_volume_before_m3, normal_flow_m3s, 1.0_JPRB)
+    &   liquid_volume_before_m3, normal_flow_m3s, 1.0_JPRB, &
+    &   ice_budget_error_m3=ice_budget_error_m3, &
+    &   domain_ice_budget_error_m3=domain_ice_budget_error_m3)
 
     call assert_close(surface_ice_volume_m3(3), 5.0_JPRB, &
     &   'TCHOIR river-mouth reverse flow imports no surface ice [m3]')
+    call assert_close_jprd(domain_ice_budget_error_m3, 0.0_JPRD, &
+    &   'river-mouth reverse-flow domain ice-budget closure [m3]')
 end subroutine test_river_mouth_outflow_and_reverse_flow
 
 
