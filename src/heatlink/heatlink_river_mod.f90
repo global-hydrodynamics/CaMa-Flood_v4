@@ -55,9 +55,8 @@ module heatlink_river_mod
     &   icefraction(:), &  ! [-] Fraction of the water surface covered by ice.
     &   icearea_excess(:), & ! [m2] Effective atmospheric-exchange area of immobile excess ice.
     &   icethickness_excess(:), & ! [m] Mean thickness over the effective excess-ice area.
-    &   ice_surface_temperature(:), & ! [K] Upper-surface temperature of water-surface ice.
-    &   ice_mean_temperature(:), & ! [K] Vertical-mean temperature of water-surface ice.
-    &   ice_upward_conductive_heat_flux(:), & ! [W m-2] Bottom-to-surface conductive flux within water-surface ice.
+    &   ice_surface_temperature(:), & ! [K] Temperature of the massless upper skin of water-surface ice.
+    &   ice_upward_conductive_heat_flux(:), & ! [W m-2] Melting-point bulk-to-skin effective heat flux.
     &   ice_excess_surface_temperature(:) ! [K] Surface temperature of insulated immobile excess ice.
 
     real(kind=JPRB), parameter :: &
@@ -136,7 +135,6 @@ subroutine init_heatlink_river_mod(dt)
         allocate(icearea_excess(NSEQMAX), source=0.0_JPRB)
         allocate(icethickness_excess(NSEQMAX), source=0.0_JPRB)
         allocate(ice_surface_temperature(NSEQMAX), source=TMELT)
-        allocate(ice_mean_temperature(NSEQMAX), source=TMELT)
         allocate(ice_upward_conductive_heat_flux(NSEQMAX), source=0.0_JPRB)
         allocate(ice_excess_surface_temperature(NSEQMAX), source=TMELT)
         allocate(hflx_ice_srf(NSEQMAX), source=0.0_JPRB)
@@ -255,7 +253,6 @@ subroutine calc_heatlink(dt)
         call update_output('RIVICE_EXCESS_ARE', icearea_excess)
         call update_output('RIVICE_EXCESS_THK', icethickness_excess)
         call update_output('RIVICE_SRF_TMP', ice_surface_temperature)
-        call update_output('RIVICE_MEAN_TMP', ice_mean_temperature)
         call update_output('RIVICE_EXCESS_TMP', ice_excess_surface_temperature)
 
         ! Flux diagnostics retain values used by the just-completed update.
@@ -357,7 +354,7 @@ subroutine evaluate_ice_surface_thermodynamics(store_applied_fluxes)
     &   excess_atmospheric_heat_flux_w_m2, & ! [W m-2] Atmospheric heat flux into immobile excess ice.
     &   excess_transmitted_shortwave_w_m2, & ! [W m-2] Shortwave transmitted through excess ice.
     &   excess_surface_temperature_k, & ! [K] Diagnosed upper temperature of immobile excess ice.
-    &   bottom_thermal_conductance_w_m2_k, & ! [W m-2 K-1] Ice conductance to a bottom boundary at TMELT.
+    &   bottom_thermal_conductance_w_m2_k, & ! [W m-2 K-1] Effective skin-to-bulk conductance; bulk ice is held at TMELT.
     &   excess_upward_conductive_heat_flux_w_m2, & ! [W m-2] Bottom-to-surface flux within excess ice.
     &   newton_residual_w_m2, &       ! [W m-2] Residual from one ice-surface Newton solve.
     &   maximum_newton_residual_w_m2  ! [W m-2] Maximum residual among all ice-surface solves.
@@ -403,12 +400,6 @@ subroutine evaluate_ice_surface_thermodynamics(store_applied_fluxes)
                 nonconverged_newton_solve_count = nonconverged_newton_solve_count + 1
             endif
             ice_surface_temperature(iseq) = surface_temperature_k
-            if (bottom_thermal_conductance_w_m2_k > 0.0_JPRB) then
-                ice_mean_temperature(iseq) = &
-                &   0.5_JPRB * (TMELT + surface_temperature_k)
-            else
-                ice_mean_temperature(iseq) = surface_temperature_k
-            endif
             if (store_applied_fluxes) then
                 hflx_ice_srf(iseq) = surface_atmospheric_heat_flux_w_m2
                 ice_upward_conductive_heat_flux(iseq) = &
@@ -418,7 +409,6 @@ subroutine evaluate_ice_surface_thermodynamics(store_applied_fluxes)
             endif
         else
             ice_surface_temperature(iseq) = TMELT
-            ice_mean_temperature(iseq) = TMELT
             if (store_applied_fluxes) then
                 hflx_ice_srf(iseq) = 0.0_JPRB
                 swdn_to_water(iseq) = swdn(iseq)
@@ -611,7 +601,6 @@ subroutine fin_heatlink_river_mod()
     if (allocated(icearea_excess)) deallocate(icearea_excess)
     if (allocated(icethickness_excess)) deallocate(icethickness_excess)
     if (allocated(ice_surface_temperature)) deallocate(ice_surface_temperature)
-    if (allocated(ice_mean_temperature)) deallocate(ice_mean_temperature)
     if (allocated(ice_upward_conductive_heat_flux)) deallocate(ice_upward_conductive_heat_flux)
     if (allocated(ice_excess_surface_temperature)) deallocate(ice_excess_surface_temperature)
     if (allocated(lwdn)) deallocate(lwdn)

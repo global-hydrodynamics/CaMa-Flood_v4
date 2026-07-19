@@ -298,7 +298,7 @@ dt = ${OUTPUT_DT}                   ! [s] Heatlink output interval.
 &nml_out item='RIVICE_EXCESS_ATM_FLX', path='./riviceexcessatmflx2000', is_mean=.true. &end
 &nml_out item='SWDN_TO_WATER', path='./swdntowater2000', is_mean=.true. &end
 
-! Prognostic states and state diagnostics retain the final time-step value.
+! Prognostic states and massless-skin diagnostics retain the final time-step value.
 &nml_out item='RIVWAT_TMP', path='./rivwattmp2000', is_mean=.false. &end
 &nml_out item='RIVICE_VOL', path='./rivicevol2000', is_mean=.false. &end
 &nml_out item='RIVICE_ARE', path='./riviceare2000', is_mean=.false. &end
@@ -308,7 +308,6 @@ dt = ${OUTPUT_DT}                   ! [s] Heatlink output interval.
 &nml_out item='RIVICE_EXCESS_ARE', path='./riviceexcessare2000', is_mean=.false. &end
 &nml_out item='RIVICE_EXCESS_THK', path='./riviceexcessthk2000', is_mean=.false. &end
 &nml_out item='RIVICE_SRF_TMP', path='./rivicetmpsrf2000', is_mean=.false. &end
-&nml_out item='RIVICE_MEAN_TMP', path='./rivicetmpmean2000', is_mean=.false. &end
 &nml_out item='RIVICE_EXCESS_TMP', path='./riviceexcesstmp2000', is_mean=.false. &end
 
 ! Conservation diagnostics retain the final local-update diagnostic value.
@@ -454,7 +453,6 @@ if [ "$ICE_ENABLED" -eq 1 ]; then
         riviceexcessare2000.bin \
         riviceexcessthk2000.bin \
         rivicetmpsrf2000.bin \
-        rivicetmpmean2000.bin \
         rivicecondflx2000.bin \
         riviceexcesstmp2000.bin
     do
@@ -501,7 +499,6 @@ if [ "$ICE_ENABLED" -eq 1 ]; then
     done
 
     if ! (LC_ALL=C od -An -v -t f4 "${RUN_DIR}/rivicetmpsrf2000.bin"; \
-          LC_ALL=C od -An -v -t f4 "${RUN_DIR}/rivicetmpmean2000.bin"; \
           LC_ALL=C od -An -v -t f4 "${RUN_DIR}/riviceexcesstmp2000.bin") | awk '
         {
             for (i = 1; i <= NF; i++) {

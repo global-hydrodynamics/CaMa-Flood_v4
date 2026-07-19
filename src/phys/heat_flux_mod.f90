@@ -204,7 +204,7 @@ pure elemental subroutine calc_ice_surface_heat_flux( &
     &   downward_longwave_w_m2, &        ! [W m-2] Downward longwave radiation above the ice.
     &   air_temperature_k, &             ! [K] Near-surface air temperature.
     &   ice_thickness_m, &                ! [m] Mean ice thickness over the ice-covered area.
-    &   bottom_thermal_conductance_w_m2_k ! [W m-2 K-1] Conductance to a bottom boundary held at TMELT; zero is insulated.
+    &   bottom_thermal_conductance_w_m2_k ! [W m-2 K-1] Effective conductance from melting-point bulk ice to the massless skin; zero is insulated.
     integer(kind=JPIM), intent(in) :: &
     &   maximum_newton_iterations         ! [-] Maximum Newton updates allowed for a cold ice surface.
     real(kind=JPRB) :: &
@@ -224,10 +224,11 @@ pure elemental subroutine calc_ice_surface_heat_flux( &
     absorbed_shortwave_in_ice_w_m2 = &
     &   absorbed_shortwave_before_attenuation_w_m2 - transmitted_shortwave_w_m2
 
-    ! This is the zero-layer approximation: ice in contact with liquid water
-    ! has a linear temperature profile between TMELT at the bottom and the
-    ! diagnosed surface temperature. With an insulated bottom, the same solver
-    ! diagnoses an isothermal profile. No ice sensible heat is stored in time.
+    ! This is a zero-layer, latent-heat-only approximation. The diagnosed upper
+    ! skin has no mass or heat capacity, while the bulk-ice energy stock remains
+    ! referenced to ice at TMELT. Ice thickness enters only through the supplied
+    ! effective thermal conductance; no internal temperature profile or ice
+    ! sensible heat is retained as a prognostic state.
     thermal_conductance_w_m2_k = max(bottom_thermal_conductance_w_m2_k, 0.0_JPRB)
     ice_surface_temperature_k = TMELT
     newton_iteration_count = 0
