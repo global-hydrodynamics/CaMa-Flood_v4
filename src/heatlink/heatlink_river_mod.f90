@@ -31,6 +31,8 @@ module heatlink_river_mod
     &   enforce_liquid_inflow_temperature
     use river_water_advection_mod, only: &
     &   advect_river_water_sensible_heat
+    use river_ice_advection_mod, only: &
+    &   advect_river_surface_ice
     use input_mod, only: &
     &   add_input, get_input
     use output_mod, only: &
@@ -207,9 +209,8 @@ subroutine init_heatlink_river_mod(dt)
             icevol_excess(:) = 0.0_JPRB
         endif
     endif
-    ! Defer the first water/ice geometry diagnosis to calc_heatlink, after
-    ! CaMa advances. Diagnosing here would add an extra irreversible transfer
-    ! from water-surface ice to immobile excess ice only on restart runs.
+    ! The first water/ice geometry diagnosis is performed immediately before
+    ! the first hydraulic advection step, after CaMa has diagnosed its stage.
     write(LOGNAM, *)
 end subroutine init_heatlink_river_mod
 
@@ -222,6 +223,13 @@ end subroutine prepare_heatlink_input
 
 subroutine capture_river_water_advection_state()
     advection_initial_liquid_volume_m3(:) = P2RIVSTO(:,1) + P2FLDSTO(:,1)
+    if (LICE) then
+        ! Refresh the mobile water-surface pool using the hydraulic geometry
+        ! that supplies the following internal-step discharge calculation.
+        call get_water()
+        call enforce_river_ice_capacity()
+        call diagnose_river_ice_geometry()
+    endif
 end subroutine capture_river_water_advection_state
 
 
@@ -248,6 +256,20 @@ subroutine advance_river_water_advection(dt_seconds)
     &   water_budget_error_m3=advection_water_budget_error_m3(:NSEQALL), &
     &   unapplied_sensible_heat_j=advection_unapplied_sensible_heat_j(:NSEQALL), &
     &   domain_heat_budget_error_j=advection_domain_heat_budget_error_j)
+
+    if (LICE) then
+        call advect_river_surface_ice( &
+        &   surface_ice_volume_m3=icevol(:NSEQALL), &
+        &   surface_ice_fraction=icefraction(:NSEQALL), &
+        &   liquid_volume_before_m3=advection_initial_liquid_volume_m3(:NSEQALL), &
+        &   normal_flow_m3s=D2OUTFLW(:NSEQALL,1), &
+        &   dt_seconds=dt_seconds, &
+        &   bifurcation_flow_m3s=D1PTHFLWSUM)
+        ! Newly received ice is repartitioned against the local water-surface
+        ! capacity. Pre-existing icevol_excess is never passed to advection.
+        call enforce_river_ice_capacity()
+        call diagnose_river_ice_geometry()
+    endif
 
     maximum_advection_heat_budget_error_j = max( &
     &   maximum_advection_heat_budget_error_j, &

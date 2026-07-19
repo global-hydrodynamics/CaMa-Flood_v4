@@ -3,7 +3,7 @@ program test_river_ice_advection
     &   JPIM, JPRB, JPRD
     use YOS_CMF_MAP, only: &
     &   I1NEXT, NSEQALL, NSEQRIV, &
-    &   D2RIVLEN, D2RIVWTH
+    &   D2RIVLEN, D2RIVWTH, NPTHOUT
     use river_ice_advection_mod, only: &
     &   advect_river_surface_ice, diagnose_surface_ice_transport_fraction
     implicit none
@@ -264,6 +264,7 @@ subroutine set_three_cell_topology()
     if (allocated(D2RIVWTH)) deallocate(D2RIVWTH)
     NSEQALL = 3_JPIM
     NSEQRIV = 2_JPIM
+    NPTHOUT = 0_JPIM
     allocate(I1NEXT(NSEQALL))
     allocate(D2RIVLEN(NSEQALL, 1), source=1.0_JPRB)
     allocate(D2RIVWTH(NSEQALL, 1), source=1.0_JPRB)

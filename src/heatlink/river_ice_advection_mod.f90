@@ -4,7 +4,8 @@ module river_ice_advection_mod
     &   JPIM, JPRB, JPRD
     use YOS_CMF_MAP, only: &
     &   I1NEXT, NSEQALL, NSEQRIV, &
-    &   D2RIVLEN, D2RIVWTH
+    &   D2RIVLEN, D2RIVWTH, &
+    &   NPTHOUT, PTH_UPST, PTH_DOWN
     implicit none
     private
     public :: &
@@ -18,7 +19,8 @@ contains
 
 subroutine advect_river_surface_ice( &
     &   surface_ice_volume_m3, surface_ice_fraction, &
-    &   liquid_volume_before_m3, normal_flow_m3s, dt_seconds)
+    &   liquid_volume_before_m3, normal_flow_m3s, dt_seconds, &
+    &   bifurcation_flow_m3s)
     real(kind=JPRB), intent(inout) :: &
     &   surface_ice_volume_m3(NSEQALL) ! [m3] Mobile water-surface ice before and after advection.
     real(kind=JPRB), intent(in) :: &
@@ -28,16 +30,19 @@ subroutine advect_river_surface_ice( &
     real(kind=JPRB), intent(in) :: &
     &   normal_flow_m3s(NSEQALL), & ! [m3 s-1] Final river-plus-floodplain flow on each normal link.
     &   dt_seconds ! [s] Hydraulic internal time step used for the water-balance update.
+    real(kind=JPRB), intent(in), optional :: &
+    &   bifurcation_flow_m3s(NPTHOUT) ! [m3 s-1] Final signed flow on each PTH_UPST-to-PTH_DOWN link.
     real(kind=JPRD) :: &
     &   surface_ice_storage_m3(NSEQALL), & ! [m3] Double-precision working copy of mobile surface ice.
     &   d2iceout(NSEQALL), & ! [m3 s-1] Signed surface-ice flow on each normal link.
+    &   d1pthiceout(NPTHOUT), & ! [m3 s-1] Signed surface-ice flow on each bifurcation link.
     &   sOut(NSEQALL), & ! [m3] Requested total outgoing surface ice from each source cell.
     &   srate(NSEQALL), & ! [-] Available-ice limiter applied to all outflows from a source cell.
     &   transport_fraction, & ! [-] Source surface-ice fraction requested by the current link.
     &   ice_velocity_fraction, & ! [-] TCHOIR ice velocity divided by water velocity.
     &   minimum_mobile_liquid_volume_m3 ! [m3] Liquid volume below which TCHOIR keeps ice immobile.
     integer(kind=JPIM) :: &
-    &   iseq
+    &   ipth, iseq
     integer(kind=JPIM), save :: &
     &   iseq0, iseq1
     !$omp threadprivate (iseq0, iseq1)
@@ -46,6 +51,7 @@ subroutine advect_river_surface_ice( &
     ! and I1NEXT(1:NSEQRIV) identifies valid normal-link destination cells.
     surface_ice_storage_m3(:) = real(max(surface_ice_volume_m3(:), 0.0_JPRB), kind=JPRD)
     d2iceout(:) = 0.0_JPRD
+    d1pthiceout(:) = 0.0_JPRD
     sOut(:) = 0.0_JPRD
 #ifndef NoAtom_CMF
     !$omp parallel do private(transport_fraction, ice_velocity_fraction, minimum_mobile_liquid_volume_m3)
@@ -64,7 +70,7 @@ subroutine advect_river_surface_ice( &
             cycle
         endif
 
-        if (iseq0 < 0) then
+        if (iseq0 <= 0) then
             d2iceout(iseq) = 0.0_JPRD
         else
             minimum_mobile_liquid_volume_m3 = MINIMUM_MOBILE_WATER_DEPTH_M * &
@@ -109,6 +115,78 @@ subroutine advect_river_surface_ice( &
     !$omp end parallel do
 #endif
 
+    ! River-mouth positive flow exports surface ice. As in TCHOIR, negative
+    ! mouth flow imports liquid water but no surface ice from the ocean.
+    !$omp parallel do private(transport_fraction, ice_velocity_fraction, minimum_mobile_liquid_volume_m3)
+    do iseq = NSEQRIV + 1, NSEQALL
+        if (normal_flow_m3s(iseq) <= 0.0_JPRB .or. dt_seconds <= 0.0_JPRB) cycle
+        minimum_mobile_liquid_volume_m3 = MINIMUM_MOBILE_WATER_DEPTH_M * &
+        &   real(D2RIVWTH(iseq, 1), kind=JPRD) * &
+        &   real(D2RIVLEN(iseq, 1), kind=JPRD)
+        if (liquid_volume_before_m3(iseq) < minimum_mobile_liquid_volume_m3) cycle
+
+        transport_fraction = diagnose_surface_ice_transport_fraction( &
+        &   liquid_volume_before_m3(iseq), &
+        &   real(normal_flow_m3s(iseq), kind=JPRD) * real(dt_seconds, kind=JPRD))
+        ice_velocity_fraction = 1.0_JPRD
+        if (surface_ice_fraction(iseq) == 1.0_JPRB) then
+            ice_velocity_fraction = min( &
+            &   FULLY_FROZEN_ICE_VELOCITY_FRACTION, ice_velocity_fraction)
+        endif
+        d2iceout(iseq) = surface_ice_storage_m3(iseq) * transport_fraction * &
+        &   ice_velocity_fraction / real(dt_seconds, kind=JPRD)
+        sOut(iseq) = sOut(iseq) + d2iceout(iseq) * real(dt_seconds, kind=JPRD)
+    enddo
+    !$omp end parallel do
+
+    if (present(bifurcation_flow_m3s)) then
+#ifndef NoAtom_CMF
+        !$omp parallel do private(transport_fraction, ice_velocity_fraction, minimum_mobile_liquid_volume_m3)
+#endif
+        do ipth = 1, NPTHOUT
+            if (bifurcation_flow_m3s(ipth) >= 0.0_JPRB) then
+                iseq0 = PTH_UPST(ipth)
+                iseq1 = PTH_DOWN(ipth)
+            else
+                iseq0 = PTH_DOWN(ipth)
+                iseq1 = PTH_UPST(ipth)
+            endif
+            if (bifurcation_flow_m3s(ipth) == 0.0_JPRB .or. dt_seconds <= 0.0_JPRB) cycle
+            if (iseq0 <= 0 .or. iseq1 <= 0) cycle
+
+            minimum_mobile_liquid_volume_m3 = MINIMUM_MOBILE_WATER_DEPTH_M * &
+            &   real(D2RIVWTH(iseq0, 1), kind=JPRD) * &
+            &   real(D2RIVLEN(iseq0, 1), kind=JPRD)
+            if (liquid_volume_before_m3(iseq0) < minimum_mobile_liquid_volume_m3) cycle
+
+            transport_fraction = diagnose_surface_ice_transport_fraction( &
+            &   liquid_volume_before_m3(iseq0), &
+            &   abs(real(bifurcation_flow_m3s(ipth), kind=JPRD)) * &
+            &   real(dt_seconds, kind=JPRD))
+            ice_velocity_fraction = 1.0_JPRD
+            if (surface_ice_fraction(iseq0) == 1.0_JPRB) then
+                ice_velocity_fraction = min( &
+                &   FULLY_FROZEN_ICE_VELOCITY_FRACTION, ice_velocity_fraction)
+            endif
+            if (surface_ice_fraction(iseq1) == 1.0_JPRB) then
+                ice_velocity_fraction = min( &
+                &   FULLY_FROZEN_ICE_VELOCITY_FRACTION, ice_velocity_fraction)
+            endif
+            d1pthiceout(ipth) = sign( &
+            &   surface_ice_storage_m3(iseq0) * transport_fraction * &
+            &   ice_velocity_fraction / real(dt_seconds, kind=JPRD), &
+            &   real(bifurcation_flow_m3s(ipth), kind=JPRD))
+#ifndef NoAtom_CMF
+            !$omp atomic
+#endif
+            sOut(iseq0) = sOut(iseq0) + &
+            &   abs(d1pthiceout(ipth)) * real(dt_seconds, kind=JPRD)
+        enddo
+#ifndef NoAtom_CMF
+        !$omp end parallel do
+#endif
+    endif
+
     ! Adjust all outflows from a cell by the same factor if their requested
     ! surface-ice volume is larger than the mobile ice available in that cell.
     srate(:) = 1.0_JPRD
@@ -140,6 +218,34 @@ subroutine advect_river_surface_ice( &
             &   abs(d2iceout(iseq)) * real(dt_seconds, kind=JPRD)
         endif
     enddo
+
+    do iseq = NSEQRIV + 1, NSEQALL
+        if (normal_flow_m3s(iseq) <= 0.0_JPRB) cycle
+        d2iceout(iseq) = d2iceout(iseq) * srate(iseq)
+        surface_ice_storage_m3(iseq) = max( &
+        &   surface_ice_storage_m3(iseq) - d2iceout(iseq) * &
+        &   real(dt_seconds, kind=JPRD), 0.0_JPRD)
+    enddo
+
+    if (present(bifurcation_flow_m3s)) then
+        do ipth = 1, NPTHOUT
+            if (bifurcation_flow_m3s(ipth) >= 0.0_JPRB) then
+                iseq0 = PTH_UPST(ipth)
+                iseq1 = PTH_DOWN(ipth)
+            else
+                iseq0 = PTH_DOWN(ipth)
+                iseq1 = PTH_UPST(ipth)
+            endif
+            if (iseq0 <= 0 .or. iseq1 <= 0) cycle
+
+            d1pthiceout(ipth) = d1pthiceout(ipth) * srate(iseq0)
+            surface_ice_storage_m3(iseq0) = max( &
+            &   surface_ice_storage_m3(iseq0) - abs(d1pthiceout(ipth)) * &
+            &   real(dt_seconds, kind=JPRD), 0.0_JPRD)
+            surface_ice_storage_m3(iseq1) = surface_ice_storage_m3(iseq1) + &
+            &   abs(d1pthiceout(ipth)) * real(dt_seconds, kind=JPRD)
+        enddo
+    endif
 
     surface_ice_volume_m3(:) = real(surface_ice_storage_m3(:), kind=JPRB)
 end subroutine advect_river_surface_ice
