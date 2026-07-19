@@ -47,7 +47,8 @@ USE output_mod, only: &
 USE restart_mod, only: &
 &   init_restart_mod
 USE heatlink_river_mod,      ONLY: &
-&   init_heatlink_river_mod, calc_heatlink, write_heatlink_restart, fin_heatlink_river_mod
+&   init_heatlink_river_mod, prepare_heatlink_input, calc_heatlink, &
+&   write_heatlink_restart, fin_heatlink_river_mod
 #endif
 use YOS_CMF_INPUT, only: &
 &   LOGNAM
@@ -100,7 +101,10 @@ DO ISTEP=1,NSTEPS
     ENDIF
   endif
 #ifdef heatlink
-  if (LHEATLINK) call update_input(int(DT) * (ISTEP - 1))
+  if (LHEATLINK) then
+    call update_input(int(DT) * (ISTEP - 1))
+    call prepare_heatlink_input()
+  endif
 #endif
 
   !*  2c  Advance CaMa-Flood model for ISTEPADV

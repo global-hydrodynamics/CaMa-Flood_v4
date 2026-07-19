@@ -27,6 +27,8 @@ module heatlink_river_mod
     &   water_ice_mass_kg, water_ice_energy_j
     use water_storage_adapter_mod, only: &
     &   apply_liquid_volume_delta_to_storage
+    use heatlink_input_adapter_mod, only: &
+    &   enforce_liquid_inflow_temperature
     use input_mod, only: &
     &   add_input, get_input
     use output_mod, only: &
@@ -39,7 +41,7 @@ module heatlink_river_mod
     implicit none
     private
     public :: &
-    &   init_heatlink_river_mod, calc_heatlink, &
+    &   init_heatlink_river_mod, prepare_heatlink_input, calc_heatlink, &
     &   write_heatlink_restart, fin_heatlink_river_mod
 
     real(kind=JPRB), allocatable, save :: &
@@ -69,7 +71,7 @@ module heatlink_river_mod
     &   qair(:), & ! [kg kg-1] specific humidity
     &   swdn(:), & ! [W m-2] downward shortwave radiation
     &   tair(:), & ! [K] air temperature
-    &   trof(:), & ! [K] tropopause temperature
+    &   trof(:), & ! [K] Liquid-water temperature of runoff and external upstream inflow.
     &   wind(:)  ! [m s-1] wind speed
 
     real(kind=JPRB), allocatable, save :: &
@@ -186,6 +188,12 @@ subroutine init_heatlink_river_mod(dt)
 end subroutine init_heatlink_river_mod
 
 
+subroutine prepare_heatlink_input()
+    call get_input('TROF', trof)
+    call enforce_liquid_inflow_temperature(trof)
+end subroutine prepare_heatlink_input
+
+
 subroutine calc_heatlink(dt)
     real(kind=JPRB), intent(in) :: dt ! time step (seconds)
 
@@ -195,9 +203,7 @@ subroutine calc_heatlink(dt)
     call get_input('QAIR', qair)
     call get_input('SWDN', swdn)
     call get_input('TAIR', tair)
-    call get_input('TROF', trof)
     call get_input('WIND', wind)
-    trof(:) = max(trof(:), TMELT)
 
     call update_output('LWDN', lwdn)
     call update_output('PSRF', psrf)

@@ -19,10 +19,12 @@ OBJS = \
 	topo_mod.o \
 	thermo_mod.o \
 	water_storage_adapter_mod.o \
+	heatlink_input_adapter_mod.o \
 	heatlink_river_mod.o
 
 TESTS = \
-	test_water_storage_adapter
+	test_water_storage_adapter \
+	test_heatlink_input_adapter
 TEST_EXES = $(TESTS)
 
 .SUFFIXES: .o .F90 .f90
@@ -37,7 +39,7 @@ $(LIBNAME): $(OBJS)
 	@rm -f $@
 	ar -rv $@ $(OBJS)
 
-heatlink_river_mod.o: water_storage_adapter_mod.o
+heatlink_river_mod.o: water_storage_adapter_mod.o heatlink_input_adapter_mod.o
 
 test: $(TEST_EXES)
 
