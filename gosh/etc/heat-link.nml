@@ -1,36 +1,166 @@
+! CaMa-Flood heatlink example: global 15-minute simulation for the year 2000.
+! Expected links in the run directory:
+!   ./input/map     -> CaMa-Flood global 15-minute map
+!   ./input/runoff  -> daily runoff files
+!   ./input/atm     -> 3-hourly GSWP3 atmospheric forcing files
+
+&NRUNVER
+LADPSTP  = .TRUE.
+LPTHOUT  = .TRUE.
+LDAMOUT  = .FALSE.
+LOUTPUT  = .TRUE.
+LRESTART = .FALSE.
+LHEATLINK = .TRUE.
+LICE      = .FALSE.
+LWEVAP    = .FALSE.
+/
+
+&NDIMTIME
+CDIMINFO = './input/map/diminfo_test-1deg.txt'
+DT       = 3600
+IFRQ_INP = 24
+/
+
+&NPARAM
+PMANRIV = 0.03D0
+PMANFLD = 0.10D0
+PDSTMTH = 10000.D0
+PCADP   = 0.7
+NNEWTON_MAX_ICE = 4
+/
+
+&NSIMTIME
+SYEAR = 2000
+SMON  = 1
+SDAY  = 1
+SHOUR = 0
+EYEAR = 2001
+EMON  = 1
+EDAY  = 1
+EHOUR = 0
+/
+
+&NMAP
+LMAPCDF = .FALSE.
+CNEXTXY = './input/map/nextxy.bin'
+CGRAREA = './input/map/ctmare.bin'
+CELEVTN = './input/map/elevtn.bin'
+CNXTDST = './input/map/nxtdst.bin'
+CRIVLEN = './input/map/rivlen.bin'
+CFLDHGT = './input/map/fldhgt.bin'
+CRIVWTH = './input/map/rivwth_gwdlr.bin'
+CRIVHGT = './input/map/rivhgt.bin'
+CRIVMAN = './input/map/rivman.bin'
+CPTHOUT = './input/map/bifprm.txt'
+/
+
+&NRESTART
+CRESTSTO = ''
+CRESTDIR = './'
+CVNREST  = 'restart'
+LRESTCDF = .FALSE.
+LRESTDBL = .TRUE.
+IFRQ_RST = 0
+/
+
+&NFORCE
+LINPCDF  = .FALSE.
+LINTERP  = .TRUE.
+CINPMAT  = './input/map/inpmat_test-1deg.bin'
+DROFUNIT = 86400000
+CROFDIR  = './input/runoff'
+CROFPRE  = 'Roff____'
+CROFSUF  = '.one'
+/
+
+&NOUTPUT
+COUTDIR  = './'
+CVARSOUT = 'rivout,rivsto,rivdph,rivvel,fldout,fldsto,flddph,fldfrc,fldare,sfcelv,outflw,storge,pthflw,pthout,maxsto,maxflw,maxdph'
+COUTTAG  = '2000'
+LOUTVEC  = .FALSE.
+LOUTCDF  = .FALSE.
+NDLEVEL  = 0
+IFRQ_OUT = 24
+/
+
 &intrp_map
 LINTRP = .TRUE.
 inpmat_names = '01', '02', '03', '04', '05', '06', '07', '08'
 /
 
-&nml_inpmat item='01', dir='/Users/dtokuda/work/data/flow/FLOW/out/glob_15min_nolake/inpmat', prefix='inpmat_01' &end
-&nml_inpmat item='02', dir='/Users/dtokuda/work/data/flow/FLOW/out/glob_15min_nolake/inpmat', prefix='inpmat_02' &end
-&nml_inpmat item='03', dir='/Users/dtokuda/work/data/flow/FLOW/out/glob_15min_nolake/inpmat', prefix='inpmat_03' &end
-&nml_inpmat item='04', dir='/Users/dtokuda/work/data/flow/FLOW/out/glob_15min_nolake/inpmat', prefix='inpmat_04' &end
-&nml_inpmat item='05', dir='/Users/dtokuda/work/data/flow/FLOW/out/glob_15min_nolake/inpmat', prefix='inpmat_05' &end
-&nml_inpmat item='06', dir='/Users/dtokuda/work/data/flow/FLOW/out/glob_15min_nolake/inpmat', prefix='inpmat_06' &end
-&nml_inpmat item='07', dir='/Users/dtokuda/work/data/flow/FLOW/out/glob_15min_nolake/inpmat', prefix='inpmat_07' &end
-&nml_inpmat item='08', dir='/Users/dtokuda/work/data/flow/FLOW/out/glob_15min_nolake/inpmat', prefix='inpmat_08' &end
+&nml_inpmat item='01', dir='./input/map/inpmat', prefix='inpmat_01' &end
+&nml_inpmat item='02', dir='./input/map/inpmat', prefix='inpmat_02' &end
+&nml_inpmat item='03', dir='./input/map/inpmat', prefix='inpmat_03' &end
+&nml_inpmat item='04', dir='./input/map/inpmat', prefix='inpmat_04' &end
+&nml_inpmat item='05', dir='./input/map/inpmat', prefix='inpmat_05' &end
+&nml_inpmat item='06', dir='./input/map/inpmat', prefix='inpmat_06' &end
+&nml_inpmat item='07', dir='./input/map/inpmat', prefix='inpmat_07' &end
+&nml_inpmat item='08', dir='./input/map/inpmat', prefix='inpmat_08' &end
 
-! === output ===
 &output_default
-    dt = 86400
+dt = 86400
 /
 
-! === initialization/restart ===
+! Atmospheric forcing is averaged over each output interval.
+&nml_out item='LWDN', path='./lwdn2000', is_mean=.true. &end
+&nml_out item='PSRF', path='./psrf2000', is_mean=.true. &end
+&nml_out item='QAIR', path='./qair2000', is_mean=.true. &end
+&nml_out item='SWDN', path='./swdn2000', is_mean=.true. &end
+&nml_out item='TAIR', path='./tair2000', is_mean=.true. &end
+&nml_out item='TROF', path='./trof2000', is_mean=.true. &end
+&nml_out item='WIND', path='./wind2000', is_mean=.true. &end
+
+! Applied heat fluxes are averaged over each output interval.
+&nml_out item='RAW_HFLX_LWD', path='./rawhflxlwd2000', is_mean=.true. &end
+&nml_out item='RAW_HFLX_LWU', path='./rawhflxlwu2000', is_mean=.true. &end
+&nml_out item='RAW_HFLX_SHF', path='./rawhflxshf2000', is_mean=.true. &end
+&nml_out item='RAW_HFLX_LHF', path='./rawhflxlhf2000', is_mean=.true. &end
+&nml_out item='RAW_HFLX_SRF', path='./rawhflxsrf2000', is_mean=.true. &end
+&nml_out item='RAW_HFLX_SWA', path='./rawhflxswa2000', is_mean=.true. &end
+&nml_out item='RAW_HFLX_FRC', path='./rawhflxfrc2000', is_mean=.true. &end
+&nml_out item='RAW_HFLX_BDY', path='./rawhflxbdy2000', is_mean=.true. &end
+&nml_out item='RIVICE_COND_FLX', path='./rivicecondflx2000', is_mean=.true. &end
+&nml_out item='RIVICE_ATM_FLX', path='./riviceatmflx2000', is_mean=.true. &end
+&nml_out item='RIVICE_EXCESS_ATM_FLX', path='./riviceexcessatmflx2000', is_mean=.true. &end
+&nml_out item='SWDN_TO_WATER', path='./swdntowater2000', is_mean=.true. &end
+
+! Prognostic states and skin temperatures retain the final time-step value.
+&nml_out item='RIVWAT_TMP', path='./rivwattmp2000', is_mean=.false. &end
+&nml_out item='RIVICE_VOL', path='./rivicevol2000', is_mean=.false. &end
+&nml_out item='RIVICE_ARE', path='./riviceare2000', is_mean=.false. &end
+&nml_out item='RIVICE_THK', path='./rivicethk2000', is_mean=.false. &end
+&nml_out item='RIVICE_FRC', path='./rivicefrc2000', is_mean=.false. &end
+&nml_out item='RIVICE_VOL_EXCESS', path='./rivicevolexcess2000', is_mean=.false. &end
+&nml_out item='RIVICE_EXCESS_ARE', path='./riviceexcessare2000', is_mean=.false. &end
+&nml_out item='RIVICE_EXCESS_THK', path='./riviceexcessthk2000', is_mean=.false. &end
+&nml_out item='RIVICE_SRF_TMP', path='./rivicetmpsrf2000', is_mean=.false. &end
+&nml_out item='RIVICE_EXCESS_TMP', path='./riviceexcesstmp2000', is_mean=.false. &end
+
+! Conservation diagnostics retain the final local-update value.
+&nml_out item='RIVICE_MASS_RESIDUAL', path='./rivicemassresidual2000', is_mean=.false. &end
+&nml_out item='RIVICE_ENERGY_RESIDUAL', path='./riviceenergyresidual2000', is_mean=.false. &end
+&nml_out item='RIVICE_ENERGY_UNAPPLIED', path='./riviceenergyunapplied2000', is_mean=.false. &end
+
 &restart_default
-    initial_state_is_dumped = .true.
+initial_state_is_dumped = .false.
 /
+
 &restart_config item='RIVWAT_TMP', file='.heatlink.bin', recnum=1, mapfmt=.true. &end
+&restart_config item='RIVICE_VOL', file='.heatlink.bin', recnum=2, mapfmt=.true. &end
+&restart_config item='RIVICE_VOL_EXCESS', file='.heatlink.bin', recnum=3, mapfmt=.true. &end
 
-! atmospheric forcing
-&nml_out item='LWDN', path='./lwdn2000' &end
-&nml_out item='PSRF', path='./psrf2000' &end
-&nml_out item='QAIR', path='./qair2000' &end
-&nml_out item='SWDN', path='./swdn2000' &end
-&nml_out item='TAIR', path='./tair2000' &end
-&nml_out item='TROF', path='./trof2000' &end
-&nml_out item='WIND', path='./wind2000' &end
+&input_item item='LWDN', fmt='nc', path='./input/atm/GSWP3.BC.LWdown.3hrMap.ILS.2000.nc' /
+&input_item item='PSRF', fmt='nc', path='./input/atm/GSWP3.BC.PSurf.3hrMap.ILS.2000.nc', scale=1.0e-2 /
+&input_item item='QAIR', fmt='nc', path='./input/atm/GSWP3.BC.Qair.3hrMap.ILS.2000.nc' /
+&input_item item='SWDN', fmt='nc', path='./input/atm/GSWP3.BC.SWdown.3hrMap.ILS.2000.nc' /
+&input_item item='TAIR', fmt='nc', path='./input/atm/GSWP3.BC.Tair.3hrMap.ILS.2000.nc' /
+&input_item item='TROF', fmt='nc', path='./input/atm/GSWP3.BC.Tair.3hrMap.ILS.2000.nc' /
+&input_item item='WIND', fmt='nc', path='./input/atm/GSWP3.BC.Wind.3hrMap.ILS.2000.nc' /
 
-! state variables
-&nml_out item='RIVWAT_TMP', path='./rivwattmp2000' &end
+&input_nc item='LWDN', var_name='LWdown' /
+&input_nc item='PSRF', var_name='PSurf' /
+&input_nc item='QAIR', var_name='Qair' /
+&input_nc item='SWDN', var_name='SWdown' /
+&input_nc item='TAIR', var_name='Tair' /
+&input_nc item='TROF', var_name='Tair' /
+&input_nc item='WIND', var_name='Wind' /
