@@ -3,7 +3,9 @@ module heatlink_river_mod
     use PARKIND1, only: &
     &   JPIM, JPRB, JPRD
     use YOS_CMF_INPUT, only: &
-    &   LOGNAM, LRESTART, LICE, LUPSINF, LPTHOUT, NNEWTON_MAX_ICE
+    &   LOGNAM, LRESTART, LUPSINF, LPTHOUT
+    use heatlink_config_mod, only: &
+    &   LICE, NNEWTON_MAX_ICE
     use YOS_CMF_MAP, only: &
     &   NSEQMAX, NSEQALL, &
     &   D2GRAREA, D2RIVLEN, D2RIVWTH

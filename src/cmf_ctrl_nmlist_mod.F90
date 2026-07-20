@@ -36,7 +36,7 @@ USE YOS_CMF_INPUT,      ONLY: LADPSTP,  LFPLAIN,  LKINE,    LFLDOUT,  LPTHOUT,  
                             & LROSPLIT, LGDWDLY,  LSLPMIX,  LMEANSL,  LSEALEV,  LOUTPUT,  &
                             & LRESTART, LSTOONLY, LGRIDMAP, LLEAPYR,  LMAPEND,  LBITSAFE, &
                             & LSTG_ES,  LLEVEE,   LOUTINS,  LOUTINI,  LSEDOUT,  LTRACE,   &
-                            & LHEATLINK, LICE,                                            &
+                            & LHEATLINK,                                                  &
                             & LSLOPEMOUTH,LWEVAP, LWEVAPFIX,LWEXTRACTRIV,       LSPAMAT,  &
                             & LUPSINF
 ! dimention & time
@@ -44,8 +44,7 @@ USE YOS_CMF_INPUT,      ONLY: CDIMINFO, DT,       NX,NY,    NLFP,     NXIN,NYIN,
                             & IFRQ_INP, DTIN,     WEST,EAST,NORTH,SOUTH
 ! parameters
 USE YOS_CMF_INPUT,      ONLY: PMANRIV,  PMANFLD,  PDSTMTH,  PMINSLP,  PGRV, PCADP, &
-                            & IMIS, RMIS, DMIS,   CSUFBIN,  CSUFVEC,  CSUFPTH,  CSUFCDF, &
-                            & NNEWTON_MAX_ICE
+                            & IMIS, RMIS, DMIS,   CSUFBIN,  CSUFVEC,  CSUFPTH,  CSUFCDF
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
 IMPLICIT NONE
 !* local
@@ -54,15 +53,14 @@ CHARACTER(LEN=8)              :: CREG                 !!
 NAMELIST/NRUNVER/  LADPSTP,  LFPLAIN,  LKINE,    LFLDOUT,  LPTHOUT,  LDAMOUT,      &
                    LROSPLIT, LGDWDLY,  LSLPMIX,  LMEANSL,  LSEALEV,  LOUTPUT,      &
                    LRESTART, LSTOONLY, LGRIDMAP, LLEAPYR,  LMAPEND,  LBITSAFE,     &
-                   LSTG_ES,  LLEVEE,   LSEDOUT,  LTRACE,   LHEATLINK, LICE, LOUTINS,  LSLOPEMOUTH,  &
+                   LSTG_ES,  LLEVEE,   LSEDOUT,  LTRACE,   LHEATLINK, LOUTINS,  LSLOPEMOUTH,  &
                    LWEVAP,   LWEVAPFIX,LWEXTRACTRIV,       LOUTINI,  LSPAMAT,      &
                    LUPSINF
 
 NAMELIST/NDIMTIME/ CDIMINFO, DT, IFRQ_INP
 
 NAMELIST/NPARAM/   PMANRIV, PMANFLD, PGRV,    PDSTMTH, PCADP,   PMINSLP, &
-                   IMIS, RMIS, DMIS, CSUFBIN, CSUFVEC, CSUFPTH, CSUFCDF, &
-                   NNEWTON_MAX_ICE
+                   IMIS, RMIS, DMIS, CSUFBIN, CSUFVEC, CSUFPTH, CSUFCDF
 !================================================
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "!--------------------"
@@ -86,7 +84,6 @@ LLEVEE   = .FALSE.           !! true: activate levee scheme  (under development)
 LSEDOUT  = .FALSE.           !! true: activate sediment transport (under development)
 LTRACE   = .FALSE.           !! true: activate tracer             (under development)
 LHEATLINK = .FALSE.          !! true: activate heatlink           (under development)
-LICE      = .FALSE.          !! true: activate river ice state and diagnostics
 LOUTINS  = .FALSE.           !! true: diagnose instantaneous discharge
 LSPAMAT  = .TRUE.            !! true: use quasi sparse matrix (fast but additional memory req)
 LUPSINF  = .FALSE.           !! true: use upstream inflow scheme
@@ -121,23 +118,6 @@ LSTG_ES  = .FALSE.           !! true: for Vector Processor optimization (CMF_OPT
 REWIND(NSETFILE)
 READ(NSETFILE,NML=NRUNVER)
 
-IF (LICE .AND. (.NOT. LHEATLINK)) THEN
-  WRITE(LOGNAM,*) "ERROR: LICE requires LHEATLINK=.TRUE."
-  ERROR STOP 1
-ENDIF
-
-if (LHEATLINK .and. LWEVAP) then
-  write(LOGNAM,*) "ERROR: LHEATLINK and LWEVAP cannot be enabled together."
-  write(LOGNAM,*) "       Heatlink does not yet include evaporation water, sensible-heat, and latent-heat losses."
-  error stop 1
-endif
-
-IF (LHEATLINK .AND. LLEVEE) THEN
-  WRITE(LOGNAM,*) "ERROR: LHEATLINK and LLEVEE cannot be enabled together."
-  WRITE(LOGNAM,*) "       Heatlink does not support levee storage in its local heat budget."
-  ERROR STOP 1
-ENDIF
-
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "=== NAMELIST, NRUNVER ==="
 WRITE(LOGNAM,*) "LADPSTP ",  LADPSTP
@@ -150,7 +130,6 @@ WRITE(LOGNAM,*) "LLEVEE  ",  LLEVEE
 WRITE(LOGNAM,*) "LSEDOUT ",  LSEDOUT
 WRITE(LOGNAM,*) "LTRACE  ",  LTRACE
 WRITE(LOGNAM,*) "LHEATLINK", LHEATLINK
-WRITE(LOGNAM,*) "LICE     ", LICE
 WRITE(LOGNAM,*) "LOUTINS ",  LOUTINS
 WRITE(LOGNAM,*) "LUPSINF ",  LUPSINF
 WRITE(LOGNAM,*) ""
@@ -260,16 +239,10 @@ CSUFBIN='.bin'
 CSUFVEC='.vec'
 CSUFPTH='.pth'
 CSUFCDF='.nc'
-NNEWTON_MAX_ICE=4                           !! maximum Newton iterations for river-ice surface temperature
 
 ! * change
 REWIND(NSETFILE)
 READ(NSETFILE,NML=NPARAM)
-
-IF (NNEWTON_MAX_ICE < 1) THEN
-  WRITE(LOGNAM,*) "ERROR: NNEWTON_MAX_ICE must be at least one."
-  ERROR STOP 1
-ENDIF
 
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "=== NAMELIST, NPARAM ==="
@@ -288,7 +261,6 @@ WRITE(LOGNAM,*) "CSUFBIN  ", TRIM(CSUFBIN)
 WRITE(LOGNAM,*) "CSUFVEC  ", TRIM(CSUFVEC)
 WRITE(LOGNAM,*) "CSUFPTH  ", TRIM(CSUFPTH)
 WRITE(LOGNAM,*) "CSUFCDF  ", TRIM(CSUFCDF)
-WRITE(LOGNAM,*) "NNEWTON_MAX_ICE", NNEWTON_MAX_ICE
 
 !===============================
 !*** CLOSE FILE 

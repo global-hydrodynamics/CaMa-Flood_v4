@@ -68,7 +68,6 @@ LOGICAL                         :: LSPAMAT                 !! true: quasi sparse
 LOGICAL                         :: LSEDOUT                 !! true: sediment scheme                 
 LOGICAL                         :: LTRACE                  !! true: tracer   scheme                 
 LOGICAL                         :: LHEATLINK               !! true: heatlink scheme
-LOGICAL                         :: LICE                    !! true: river ice state and diagnostics
 LOGICAL                         :: LUPSINF                 !! true: upstream inflow scheme
 
 !================================================
@@ -108,7 +107,6 @@ REAL(KIND=JPRB)                 :: PGRV                 !! gravity acceleration 
 REAL(KIND=JPRB)                 :: PDSTMTH              !! downstream distance at river mouth [m]
 REAL(KIND=JPRB)                 :: PCADP                !! CFL coefficient
 REAL(KIND=JPRB)                 :: PMINSLP              !! minimum topographic slope (kinematic wave) [m/m]
-INTEGER(KIND=JPIM)              :: NNEWTON_MAX_ICE      !! maximum Newton iterations for river-ice surface temperature
 !* missing values
 INTEGER(KIND=JPIM)              :: IMIS                !! integer undefined
 REAL(KIND=JPRM)                 :: RMIS                !! real    undefined

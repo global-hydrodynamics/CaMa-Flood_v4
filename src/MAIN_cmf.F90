@@ -23,6 +23,8 @@ USE CMF_CTRL_TRACER_MOD,     ONLY: CMF_TRACER_FORC_GET, CMF_TRACER_FORC_INTERP
 #ifdef heatlink
 use cmf_ctrl_tracer_mod,     only: CMF_TRACER_RESTART_WRITE
 use cmf_ctrl_restart_mod,    only: CMF_RESTART_WRITE, restart_is_write_time
+use heatlink_config_mod,     only: init_heatlink_config
+use yos_cmf_input,           only: CSETFILE, LWEVAP, LLEVEE
 #endif
 !** parallelization options**
 !$ USE OMP_LIB
@@ -68,6 +70,12 @@ CALL CMF_MPI_INIT
 
 !*** 1a. Namelist handling
 CALL CMF_DRV_INPUT
+
+#ifdef heatlink
+if (LHEATLINK) then
+  call init_heatlink_config(CSETFILE, LOGNAM, LWEVAP, LLEVEE)
+endif
+#endif
 
 !*** 1b. INITIALIZATION
 CALL CMF_DRV_INIT
