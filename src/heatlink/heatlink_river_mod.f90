@@ -11,9 +11,10 @@ module heatlink_river_mod
     &   D2GRAREA, D2RIVLEN, D2RIVWTH
     use YOS_CMF_DIAG, only: &
     &   D2STORGE, D2OUTFLW, D1PTHFLWSUM, &
-    &   D2RIVDPH, D2RIVVEL, D2FLDDPH, D2FLDVEL, D2FLDARE
+    &   D2RIVDPH, D2FLDDPH, D2FLDARE
     use YOS_CMF_PROG, only: &
-    &   P2RIVSTO, P2FLDSTO, D2RUNOFF, D2GDWRTN, D2UPSINF
+    &   P2RIVSTO, P2FLDSTO, D2RIVOUT, D2FLDOUT, &
+    &   D2RUNOFF, D2GDWRTN, D2UPSINF
     use datetime_mod, only: &
     &   DateTime
 
@@ -27,6 +28,8 @@ module heatlink_river_mod
     &   ICE_SURFACE_NEWTON_RESIDUAL_TOLERANCE_W_M2, calc_ice_surface_heat_flux
     use heat_budget_mod, only: &
     &   water_ice_mass_kg, water_ice_energy_j
+    use heatlink_velocity_mod, only: &
+    &   diagnose_flow_velocity, floodplain_flow_cross_section
     use water_storage_adapter_mod, only: &
     &   apply_liquid_volume_delta_to_storage
     use river_water_advection_mod, only: &
@@ -762,7 +765,9 @@ end subroutine log_ice_budget
 
 subroutine get_water
     real(kind=JPRB) :: &
-    &   dph_new, wth_new, sto_new, m
+    &   dph_new, wth_new, sto_new, m, &
+    &   river_flow_cross_section, &
+    &   floodplain_flow_cross_section_m2
     integer(kind=JPIM) :: &
     &   iseq
 
@@ -770,10 +775,10 @@ subroutine get_water
 
     rivdph(:) = D2RIVDPH(:, 1)
     rivare(:) = D2RIVLEN(:, 1) * D2RIVWTH(:, 1)
-    rivvel(:) = D2RIVVEL(:, 1)
     flddph(:) = D2FLDDPH(:, 1)
     fldare(:) = D2FLDARE(:, 1)
-    fldvel(:) = D2FLDVEL(:, 1)
+    rivvel(:) = 0.0_JPRB
+    fldvel(:) = 0.0_JPRB
 
     ! correct shallow flooded water
     !$omp simd private(m, sto_new)
@@ -784,7 +789,6 @@ subroutine get_water
 
         flddph(iseq) = (1.0_JPRB - m) * flddph(iseq)
         fldare(iseq) = (1.0_JPRB - m) * fldare(iseq)
-        fldvel(iseq) = (1.0_JPRB - m) * fldvel(iseq)
     end do
 
     ! correct shallow river water
@@ -798,6 +802,27 @@ subroutine get_water
         rivare(iseq) = D2RIVLEN(iseq,1) * wth_new
         rivdph(iseq) = dph_new
     end do
+
+    ! Diagnose heatlink-only velocities from the final, limiter-adjusted
+    ! CaMa discharges and the corrected local water geometry.
+    do iseq = 1, NSEQALL
+        river_flow_cross_section = 0.0_JPRB
+        if (D2RIVLEN(iseq,1) > 0.0_JPRB) then
+            river_flow_cross_section = &
+            &   rivare(iseq) / D2RIVLEN(iseq,1) * rivdph(iseq)
+        endif
+        rivvel(iseq) = diagnose_flow_velocity( &
+        &   D2RIVOUT(iseq,1), river_flow_cross_section)
+
+        floodplain_flow_cross_section_m2 = 0.0_JPRB
+        if (fldare(iseq) > 0.0_JPRB) then
+            floodplain_flow_cross_section_m2 = floodplain_flow_cross_section( &
+            &   real(P2FLDSTO(iseq,1), kind=JPRB), D2RIVLEN(iseq,1), &
+            &   flddph(iseq), D2RIVWTH(iseq,1))
+        endif
+        fldvel(iseq) = diagnose_flow_velocity( &
+        &   D2FLDOUT(iseq,1), floodplain_flow_cross_section_m2)
+    enddo
 end subroutine get_water
 
 

@@ -25,9 +25,6 @@ REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2RIVVEL(:,:)           !! flow ve
 
 REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2FLDINF(:,:)           !! floodplain inflow   [m3/s]
 REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2FLDDPH(:,:)           !! floodplain depth    [m]
-#ifdef heatlink
-REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2FLDVEL(:,:)           !! flow velocity       [m/s]
-#endif
 REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2FLDFRC(:,:)           !! flooded    fractipn [m2/m2]
 REAL(KIND=JPRB),ALLOCATABLE,TARGET         :: D2FLDARE(:,:)           !! flooded    area     [m2]
 

@@ -17,6 +17,7 @@ MODS += $(MODDIRS)
 
 OBJS = \
 	heatlink_config_mod.o \
+	heatlink_velocity_mod.o \
 	topo_mod.o \
 	thermo_mod.o \
 	water_storage_adapter_mod.o \
@@ -26,6 +27,7 @@ OBJS = \
 
 TESTS = \
 	test_heatlink_config \
+	test_heatlink_velocity \
 	test_water_storage_adapter \
 	test_river_water_advection \
 	test_river_water_advection_boundaries \
@@ -57,7 +59,8 @@ $(LIBNAME): $(OBJS)
 	@rm -f $@
 	ar -rv $@ $(OBJS)
 
-heatlink_river_mod.o: heatlink_config_mod.o water_storage_adapter_mod.o \
+heatlink_river_mod.o: heatlink_config_mod.o heatlink_velocity_mod.o \
+	water_storage_adapter_mod.o \
 	river_water_advection_mod.o river_ice_advection_mod.o
 
 $(TOPOLOGY_TESTS): %: test/%.f90 $(LIBNAME) ../yos_cmf_map.o
