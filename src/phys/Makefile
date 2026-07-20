@@ -15,11 +15,9 @@ MODS += $(MODDIRS)
 LIBOBJS = \
 	phys_const_mod.o \
 	water_mod.o \
-	channel_mod.o \
 	heat_flux_mod.o \
 	heat_budget_mod.o \
 	ice_cover_mod.o
-#eddy_mod.o
 #sed_mod
 
 TESTS = \

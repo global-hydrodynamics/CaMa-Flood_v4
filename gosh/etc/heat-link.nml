@@ -3,6 +3,7 @@
 !   ./input/map     -> CaMa-Flood global 15-minute map
 !   ./input/runoff  -> daily runoff files
 !   ./input/atm     -> 3-hourly GSWP3 atmospheric forcing files
+!   ./input/inpmat  -> atmospheric interpolation matrices
 
 &NRUNVER
 LADPSTP  = .TRUE.
@@ -91,14 +92,14 @@ LINTRP = .TRUE.
 inpmat_names = '01', '02', '03', '04', '05', '06', '07', '08'
 /
 
-&nml_inpmat item='01', dir='./input/map/inpmat', prefix='inpmat_01' &end
-&nml_inpmat item='02', dir='./input/map/inpmat', prefix='inpmat_02' &end
-&nml_inpmat item='03', dir='./input/map/inpmat', prefix='inpmat_03' &end
-&nml_inpmat item='04', dir='./input/map/inpmat', prefix='inpmat_04' &end
-&nml_inpmat item='05', dir='./input/map/inpmat', prefix='inpmat_05' &end
-&nml_inpmat item='06', dir='./input/map/inpmat', prefix='inpmat_06' &end
-&nml_inpmat item='07', dir='./input/map/inpmat', prefix='inpmat_07' &end
-&nml_inpmat item='08', dir='./input/map/inpmat', prefix='inpmat_08' &end
+&nml_inpmat item='01', dir='./input/inpmat', prefix='inpmat_01' &end
+&nml_inpmat item='02', dir='./input/inpmat', prefix='inpmat_02' &end
+&nml_inpmat item='03', dir='./input/inpmat', prefix='inpmat_03' &end
+&nml_inpmat item='04', dir='./input/inpmat', prefix='inpmat_04' &end
+&nml_inpmat item='05', dir='./input/inpmat', prefix='inpmat_05' &end
+&nml_inpmat item='06', dir='./input/inpmat', prefix='inpmat_06' &end
+&nml_inpmat item='07', dir='./input/inpmat', prefix='inpmat_07' &end
+&nml_inpmat item='08', dir='./input/inpmat', prefix='inpmat_08' &end
 
 &output_default
 dt = 86400

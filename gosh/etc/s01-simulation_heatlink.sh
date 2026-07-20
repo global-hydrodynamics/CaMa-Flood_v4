@@ -4,6 +4,7 @@ set -eu
 
 # Global 15-minute heatlink example for the year 2000.
 # Set ATM_DIR to the directory containing the GSWP3 *.2000.nc files.
+# Set INPMAT_DIR to the directory containing inpmat_01 ... inpmat_08.
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 RUN_DIR=${RUN_DIR:-${ROOT}/out/test1-heatlink}
@@ -11,6 +12,8 @@ MAP_DIR=$(CDPATH= cd -- "${MAP_DIR:-${ROOT}/map/glb_15min}" && pwd)
 RUNOFF_DIR=$(CDPATH= cd -- "${RUNOFF_DIR:-${ROOT}/inp/test_1deg/runoff}" && pwd)
 ATM_DIR=${ATM_DIR:?Set ATM_DIR to the GSWP3 atmospheric-forcing directory}
 ATM_DIR=$(CDPATH= cd -- "$ATM_DIR" && pwd)
+INPMAT_DIR=${INPMAT_DIR:?Set INPMAT_DIR to the atmospheric interpolation-matrix directory}
+INPMAT_DIR=$(CDPATH= cd -- "$INPMAT_DIR" && pwd)
 
 EXE=${ROOT}/src/MAIN_cmf
 NML_TEMPLATE=${ROOT}/gosh/etc/heat-link.nml
@@ -31,6 +34,7 @@ mkdir -p "${RUN_DIR}/input"
 ln -s "$MAP_DIR" "${RUN_DIR}/input/map"
 ln -s "$RUNOFF_DIR" "${RUN_DIR}/input/runoff"
 ln -s "$ATM_DIR" "${RUN_DIR}/input/atm"
+ln -s "$INPMAT_DIR" "${RUN_DIR}/input/inpmat"
 ln -s "$EXE" "${RUN_DIR}/MAIN_cmf"
 cat "$NML_TEMPLATE" > "$NML"
 
