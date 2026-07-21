@@ -13,8 +13,7 @@
 #==========================================================
 TOP := $(abspath ..)
 
-MKINCLUDE ?= ../adm/Mkinclude
-include   $(MKINCLUDE)
+include   ../adm/Mkinclude
 
 #=============================
 # These variables are optional.
