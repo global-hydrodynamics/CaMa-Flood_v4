@@ -109,7 +109,7 @@
 ! set levee list resolution
       if( trim(listres)=='3sec' )then
         lsize=1./1200.
-      elseif( trim(listres)=='1min' )then
+      elseif( trim(listres)=='1sec' )then
         lsize=1./3600.
       else
         stop
