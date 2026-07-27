@@ -28,6 +28,10 @@ contains
         call kt%append('Wind')
         call assert_int_equal(3, count_keys(kt), 'count after 3 appends')
         call assert_true(kt%has_key('Wind'), 'has_key(Wind) after append')
+
+        call kt%append('RIVICE_VOL_EXCESS')
+        call assert_int_equal(4, count_keys(kt), 'count after long item-name append')
+        call assert_true(kt%has_key('RIVICE_VOL_EXCESS'), 'has_key(RIVICE_VOL_EXCESS) after append')
     end subroutine test_append_and_has_key
 
 

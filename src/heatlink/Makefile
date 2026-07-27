@@ -3,14 +3,78 @@ include $(TOP)/adm/Mkinclude
 
 LIBNAME = libheatlink.a
 
+TOPDIR ?= ..
+MODDIRS = \
+	-I$(TOPDIR)/common \
+	-I$(TOPDIR)/mod \
+	-I$(TOPDIR)/phys \
+	-I$(TOPDIR)/io \
+	-I$(TOPDIR)
+
+INC  += $(MODDIRS)
+MODS += $(MODDIRS)
+
 OBJS = \
+	heatlink_config_mod.o \
+	heatlink_velocity_mod.o \
+	topo_mod.o \
+	thermo_mod.o \
+	water_storage_adapter_mod.o \
+	river_water_advection_mod.o \
+	river_ice_advection_mod.o \
 	heatlink_river_mod.o
 
-.PHONY: all clean
+TESTS = \
+	test_heatlink_config \
+	test_heatlink_velocity \
+	test_water_storage_adapter \
+	test_river_water_advection \
+	test_river_water_advection_boundaries \
+	test_river_ice_advection \
+	test_river_ice_advection_boundaries \
+	test_river_water_ice_advection_energy
+EXPECTED_FAILURE_TESTS = \
+	test_river_water_advection_cold_inflow
+TEST_EXES = $(TESTS) $(EXPECTED_FAILURE_TESTS)
+RIVER_WATER_TESTS = \
+	test_river_water_advection \
+	test_river_water_advection_boundaries
+TOPOLOGY_TESTS = \
+	$(RIVER_WATER_TESTS) \
+	$(EXPECTED_FAILURE_TESTS) \
+	test_river_ice_advection \
+	test_river_ice_advection_boundaries \
+	test_river_water_ice_advection_energy
+
+.SUFFIXES: .o .F90 .f90
+%.o: %.F90
+	$(FCMP) -c $(FFLAGS) $(INC) $(MODS) $(CFLAGS) $< -o $@
+%.o: %.f90
+	$(FCMP) -c $(FFLAGS) $(INC) $(MODS) $(CFLAGS) $< -o $@
+
+.PHONY: all clean test
 all: $(LIBNAME)
 $(LIBNAME): $(OBJS)
 	@rm -f $@
 	ar -rv $@ $(OBJS)
 
+heatlink_river_mod.o: heatlink_config_mod.o heatlink_velocity_mod.o \
+	water_storage_adapter_mod.o \
+	river_water_advection_mod.o river_ice_advection_mod.o
+
+$(TOPOLOGY_TESTS): %: test/%.f90 $(LIBNAME) ../yos_cmf_map.o
+	$(FCMP) $(FFLAGS) $(INC) $(MODS) $(CFLAGS) $< ../yos_cmf_map.o \
+	    -L. -lheatlink -L../phys -lphys -L../common -lcommon \
+	    $(LDFLAGS) $(LIBS) -o $@
+	@install_name_tool -delete_rpath $(NETCDFDIR)/lib $@ 2>/dev/null || true
+
+test: $(TEST_EXES)
+
+%: test/%.f90 $(LIBNAME)
+	$(FCMP) $(FFLAGS) $(INC) $(MODS) $(CFLAGS) $< \
+	    -L. -lheatlink -L../phys -lphys -L../common -lcommon \
+	    $(LDFLAGS) $(LIBS) -o $@
+	@install_name_tool -delete_rpath $(NETCDFDIR)/lib $@ 2>/dev/null || true
+
 clean:
-	${RM} -f *.o *.mod *.a *~ *.s *.optrpt *.dSYM
+	${RM} -rf *.o *.mod *.a *~ *.s *.optrpt *.dSYM $(TEST_EXES)

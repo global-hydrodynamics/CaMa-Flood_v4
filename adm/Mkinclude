@@ -10,14 +10,18 @@ CP = /bin/cp
 # DCDF=-DUseCDF_CMF        : activate netCDF, comment out when not needed
 # DSINGLE=-DSinglePrec_CMF : activate Single Precision Mode
 # DATM=-DNoAtom_CMF        : avoid OMP ATOMIC calculation (bit identical simulation)
+# DHEATLINK=-Dheatlink     : activate river water temperature calculation
 #======================================
 
 #DCDF=-DUseCDF_CMF
 #DMPI=-DUseMPI_CMF
 DSINGLE=-DSinglePrec_CMF
 #DATM=-DNoAtom_CMF
+#DHEATLINK=-Dheatlink
 
-CFLAGS=$(DMPI) $(DCDF) $(DATM) $(DSINGLE)
+CFLAGS=$(DMPI) $(DCDF) $(DATM) $(DSINGLE) $(DHEATLINK)
+
+#EXT_LIBS = common mod phys io heatlink
 
 #======================================
 # gfortran Linux

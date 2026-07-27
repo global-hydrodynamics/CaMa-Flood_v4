@@ -1,14 +1,14 @@
 module key_table_class
     use YOS_CMF_INPUT, only: &
     &   LOGNAM
-    use const_mod, only: CLEN_SHORT
+    use const_mod, only: CLEN_ITEM
     use array_mod, only: find_index
     implicit none
     private
     public :: KeyTable
     type :: KeyTable
-        integer :: key_len = CLEN_SHORT
-        character(len=CLEN_SHORT), allocatable :: keys(:)
+        integer :: key_len = CLEN_ITEM
+        character(len=CLEN_ITEM), allocatable :: keys(:)
     contains
         procedure :: init
         procedure :: clear
@@ -28,7 +28,7 @@ contains
     subroutine raise_key_length_error(key, key_len)
         character(len=*), intent(in) :: key
         integer,          intent(in) :: key_len
-        write(LOGNAM, '(6a)') '[KeyTable ERROR] key too long (len_trim(key)=', len_trim(key), &
+        write(LOGNAM, '(a,i0,a,i0,2a)') '[KeyTable ERROR] key too long (len_trim(key)=', len_trim(key), &
                     ', allowed<=', key_len, '): ', trim(key)
         stop 1
     end subroutine raise_key_length_error
@@ -88,7 +88,7 @@ contains
         class(KeyTable), intent(inout) :: self
         character(len=*), intent(in)   :: key
 
-        character(len=CLEN_SHORT), allocatable :: keys_new(:)
+        character(len=CLEN_ITEM), allocatable :: keys_new(:)
         integer :: n_old
 
         call check_key_length(key, self%key_len)

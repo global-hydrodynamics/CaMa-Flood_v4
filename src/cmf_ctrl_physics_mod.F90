@@ -36,6 +36,12 @@ USE CMF_CTRL_LEVEE_MOD,    ONLY: CMF_LEVEE_OPT_PTHOUT
 USE YOS_CMF_ICI,           ONLY: LLAKEIN
 USE CMF_CALC_LAKEIN_MOD,   ONLY: CMF_CALC_LAKEIN, CMF_LAKEIN_AVE
 #endif
+#ifdef heatlink
+use yos_cmf_input,         only: LHEATLINK
+use heatlink_river_mod,    only: &
+&   capture_river_water_advection_state, advance_river_water_advection, &
+&   finalize_river_ice_advection_state
+#endif
 
 IMPLICIT NONE
 !! LOCAL
@@ -100,7 +106,13 @@ DO IT=1, NT
   CALL CALC_VARS_PRE
 
 !=== 2.  Calculate the storage in the next time step in FTCS diff. eq.
+#ifdef heatlink
+  if (LHEATLINK) call capture_river_water_advection_state()
+#endif
   CALL CMF_CALC_STONXT
+#ifdef heatlink
+  if (LHEATLINK) call advance_river_water_advection(DT)
+#endif
 
 !=== option for ILS coupling
 #ifdef ILS
@@ -111,6 +123,9 @@ DO IT=1, NT
 
 !=== 3. calculate river and floodplain staging
   CALL CMF_PHYSICS_FLDSTG
+#ifdef heatlink
+  if (LHEATLINK) call finalize_river_ice_advection_state()
+#endif
 
 !=== 4.  write water balance monitoring to IOFILE
   CALL CALC_WATBAL(IT)

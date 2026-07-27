@@ -76,17 +76,19 @@ SUBLIBS := $(foreach d,$(EXT_LIBS),$(abspath $(d))/lib$(notdir $(d)).a)
 
 #=============================
 #*** build steps
-.PHONY: all ext-libs clean
+.PHONY: all yos calc pre-ext-ctrl ctrl ext-libs drv src clean
 yos: $(YOS_OBJS)
-calc: $(CALC_OBJS)
-ctrl: calc $(CTRL_OBJS)
-ext-libs: ctrl
+calc: yos $(CALC_OBJS)
+pre-ext-ctrl: calc cmf_ctrl_mpi_mod.o cmf_ctrl_restart_mod.o
+ctrl: calc ext-libs $(CTRL_OBJS)
+ext-libs: pre-ext-ctrl
 	@set -e; \
 	for d in $(EXT_LIBS); do \
 		echo "==> make -C $$d clean all"; \
 		$(MAKE) -C $$d clean all; \
 	done
-drv: ctrl ext-libs $(DRV_OBJS)
+drv: ctrl $(DRV_OBJS)
+cmf_ctrl_physics_mod.o: ext-libs
 $(DRV_OBJS): ext-libs
 src: drv
 	ar -rv libcama.a $(OBJECTS)
@@ -94,9 +96,10 @@ src: drv
 #*** for main program
 SRC_SUBLIBS := $(wildcard $(SRC_ROOT)/*/lib*.a)
 TARGET = MAIN_cmf
-$(TARGET): $(OBJECTS) src $(TARGET).o
+$(TARGET): src $(TARGET).o
 	$(FCMP) $(LFLAGS) $@.o $(OBJECTS) $(SUBLIBS) -o $@ $(LIBS)
 	@install_name_tool -delete_rpath $(NETCDFDIR)/lib $@ 2>/dev/null || true
+$(TARGET).o: drv
 # bug in MacOSX libcama.a does not work
 #	$(FCMP) $(FFLAGS) $(LFLAGS) $@.o libcama.a -o $@ $(LIB)
 

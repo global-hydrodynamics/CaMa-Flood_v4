@@ -11,6 +11,17 @@ So you can feel free to use/modify the code. (note: data is distributed under di
 If you need to cite CaMa-Flood based on versions (rather than published papers), please refer to Zenodo repository.
 https://zenodo.org/search?q=parent.id%3A4609654&f=allversions%3Atrue&l=list&p=1&s=10&sort=version
 
+## References
+
+Please cite the following papers when using CaMa-Flood:
+
+- Yamazaki, D., Kanae, S., Kim, H., & Oki, T. (2011). A physically based description of floodplain inundation dynamics in a global river routing model. *Water Resources Research*, *47*(4).
+- Yamazaki, D., de Almeida, G. A., & Bates, P. D. (2013). Improving computational efficiency in global river models by implementing the local inertial flow equation and a vector‐based river network map. *Water Resources Research*, *49*(11), 7221-7235.
+
+When using the river water temperature model, please also cite:
+
+- Tokuda, D., Kim, H., Yamazaki, D., & Oki, T. (2019). Development of a global river water temperature model considering fluvial dynamics and seasonal freeze‐thaw cycle. *Water Resources Research*, *55*(2), 1366-1383.
+
 We are also happy to collaborate with external contributers for further development of CaMa-Flood.
 
 ## Change log

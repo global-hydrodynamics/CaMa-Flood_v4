@@ -12,8 +12,6 @@ module input_mod
     &   KeyTable
     use YOS_CMF_MAP, only: &
     &   NSEQMAX
-    use glob_mod, only: &
-    &   LHEATLINK, LLAKE, CSHORT_DEF
     use ranked_array_class, only: &
     &   RankedArray, append_ranked_array
     use input_conf_class, only: &
