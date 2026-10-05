@@ -36,9 +36,10 @@ contains
 
     end function datetime2string
 
-    pure integer(kind=JPIM) function seconds_since_year_start(dt) result(seconds)
+    pure integer(kind=JPIM) function seconds_since_year_start(dt, lleapyr) result(seconds)
         type(DateTime), intent(in) :: &
-        &   dt                      ! [-] Calendar date and hour within a Gregorian year.
+        &   dt                      ! [-] Calendar date and hour within a year.
+        logical, optional, intent(in) :: lleapyr ! omitted: Gregorian (legacy behavior)
         integer(kind=JPIM), parameter :: &
         &   days_before_month(12) = [ &
         &   0_JPIM, 31_JPIM, 59_JPIM, 90_JPIM, 120_JPIM, 151_JPIM, &
@@ -56,6 +57,7 @@ contains
         day = mod(dt%yyyymmdd, 100_JPIM)
         is_leap_year = mod(year, 4_JPIM) == 0_JPIM .and. &
         &   (mod(year, 100_JPIM) /= 0_JPIM .or. mod(year, 400_JPIM) == 0_JPIM)
+        if (present(lleapyr)) is_leap_year = is_leap_year .and. lleapyr
 
         elapsed_days = days_before_month(month) + day - 1_JPIM
         if (is_leap_year .and. month > 2_JPIM) elapsed_days = elapsed_days + 1_JPIM

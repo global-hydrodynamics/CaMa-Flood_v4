@@ -32,6 +32,8 @@ module cmf_cf_time_mod
     public :: cf_find_time_record
     public :: cf_calendar_matches_lleapyr
     public :: cf_calendar_uses_leap_day
+    public :: cf_calendar_supports_model
+    public :: cf_find_noleap_record
 #ifdef UseCDF_CMF
     public :: cf_read_time_axis
     public :: cf_resolve_time_record
@@ -561,6 +563,60 @@ end subroutine nf90_check_dimension
 #endif
 
 !####################################################################
+subroutine cf_find_noleap_record(axis,start_date,hour,minute,elapsed_seconds,record,ierr,message)
+    ! Advance in the model's 365-day calendar, then look up the same civil
+    ! datetime in the input calendar. This also handles bounds and restarts.
+    type(cf_time_axis), intent(in) :: axis
+    integer(kind=JPIM), intent(in) :: start_date,hour,minute
+    integer(kind=JPIB), intent(in) :: elapsed_seconds
+    integer(kind=JPIM), intent(out) :: record,ierr
+    character(len=*), intent(out) :: message
+    integer(kind=JPIB) :: target,days
+    integer(kind=JPIM) :: year,month,day,h,m
+    integer(kind=JPIM), parameter :: month_days(12) = [31,28,31,30,31,30,31,31,30,31,30,31]
+
+    record=0
+    call cf_datetime_to_minutes('365_day',start_date,hour,minute,target,ierr,message)
+    if (ierr/=0) return
+    if (elapsed_seconds<0_JPIB .or. mod(elapsed_seconds,60_JPIB)/=0_JPIB) then
+        call set_error(ierr,message,'input update must align to a nonnegative whole-minute model time')
+        return
+    endif
+    target=target+elapsed_seconds/60_JPIB
+    days=target/1440_JPIB
+    year=int(days/365_JPIB,JPIM)+1
+    day=int(mod(days,365_JPIB),JPIM)+1
+    month=1
+    do while (day>month_days(month))
+        day=day-month_days(month)
+        month=month+1
+    enddo
+    h=int(mod(target,1440_JPIB)/60_JPIB,JPIM)
+    m=int(mod(target,60_JPIB),JPIM)
+    call cf_find_time_record(axis,year*10000+month*100+day,h,m,record,ierr,message,.true.)
+end subroutine cf_find_noleap_record
+!####################################################################
+
+!####################################################################
+pure integer function time_lower_bound(values,target) result(idx)
+    ! First coordinate >= target. Axes are validated as strictly increasing.
+    integer(kind=JPIB), intent(in) :: values(:),target
+    integer :: left,right,middle
+    left=1
+    right=size(values)+1
+    do while (left<right)
+        middle=left+(right-left)/2
+        if (values(middle)<target) then
+            left=middle+1
+        else
+            right=middle
+        endif
+    enddo
+    idx=left
+end function time_lower_bound
+!####################################################################
+
+!####################################################################
 subroutine cf_find_time_record(axis,yyyymmdd,hour,minute,record,ierr,message,require_interval_start)
     type(cf_time_axis), intent(in) :: axis
     integer(kind=JPIM), intent(in) :: yyyymmdd,hour,minute
@@ -581,21 +637,24 @@ subroutine cf_find_time_record(axis,yyyymmdd,hour,minute,record,ierr,message,req
         ! Prefer the lower edge when it is also the previous record's coordinate
         ! or upper edge. End-stamped averages then select the interval beginning
         ! at the simulation start rather than the interval that has just ended.
-        do i=1,axis%ntime
+        i=time_lower_bound(axis%lower_minutes,target)
+        if (i<=axis%ntime) then
             if ( target==axis%lower_minutes(i) ) then
                 record=i
                 return
             endif
-        enddo
+        endif
         ! A coordinate value is also a valid update anchor for centered data whose
         ! bounds do not start at the model start hour.
-        do i=1,axis%ntime
+        i=time_lower_bound(axis%center_minutes,target)
+        if (i<=axis%ntime) then
             if ( target==axis%center_minutes(i) ) then
                 record=i
                 return
             endif
-        enddo
-        do i=1,axis%ntime
+        endif
+        i=time_lower_bound(axis%lower_minutes,target)-1
+        if (i>=1) then
             if ( target>=axis%lower_minutes(i) .and. target<axis%upper_minutes(i) ) then
                 if ( require_start .and. target/=axis%lower_minutes(i) ) then
                     call set_error(ierr, message, &
@@ -605,14 +664,15 @@ subroutine cf_find_time_record(axis,yyyymmdd,hour,minute,record,ierr,message,req
                 record=i
                 return
             endif
-        enddo
+        endif
     else
-        do i=1,axis%ntime
+        i=time_lower_bound(axis%center_minutes,target)
+        if (i<=axis%ntime) then
             if ( target==axis%center_minutes(i) ) then
                 record=i
                 return
             endif
-        enddo
+        endif
     endif
     call set_error(ierr,message,'simulation start time does not match any NetCDF time record')
 end subroutine cf_find_time_record
@@ -642,7 +702,7 @@ subroutine cf_resolve_time_record(ncid, time_name, yyyymmdd, hour, minute, lleap
         call set_error(ierr, message, 'configured input interval differs from the NetCDF CF time interval')
         return
     endif
-    calendar_ok = cf_calendar_matches_lleapyr(axis%calendar, lleapyr, ierr, message)
+    calendar_ok = cf_calendar_supports_model(axis%calendar, lleapyr, ierr, message)
     if (ierr /= 0) return
     if (.not. calendar_ok) then
         call set_error(ierr, message, 'NetCDF calendar and LLEAPYR are inconsistent')
@@ -678,6 +738,21 @@ logical function cf_calendar_matches_lleapyr(calendar,lleapyr,ierr,message)
     uses_leap=cf_calendar_uses_leap_day(calendar,ierr,message)
     cf_calendar_matches_lleapyr=(ierr==0 .and. uses_leap .eqv. lleapyr)
 end function cf_calendar_matches_lleapyr
+!####################################################################
+
+!####################################################################
+logical function cf_calendar_supports_model(calendar,lleapyr,ierr,message) result(supported)
+    character(len=*), intent(in) :: calendar
+    logical, intent(in) :: lleapyr
+    integer(kind=JPIM), intent(out) :: ierr
+    character(len=*), intent(out) :: message
+    logical :: uses_leap
+
+    uses_leap=cf_calendar_uses_leap_day(calendar,ierr,message)
+    ! A noleap model may omit Gregorian input leap days. The reverse would
+    ! require inventing a February 29 value, so remains an error.
+    supported=ierr==0 .and. (uses_leap .or. .not. lleapyr)
+end function cf_calendar_supports_model
 !####################################################################
 
 end module cmf_cf_time_mod

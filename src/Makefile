@@ -115,6 +115,10 @@ $(TARGET).o: drv
 #=============================
 #*** general rule
 all: $(TARGET)
+PYTHON ?= python3
+.PHONY: test-calendar
+test-calendar:
+	$(PYTHON) test/run_noleap_calendar_tests.py --fc "$(FCMP)"
 test_cf_time: parkind1.o cmf_cf_time_mod.o
 	$(FCMP) $(FFLAGS) $(CFLAGS) $(INCDIRS) common/test/test_cf_time.F90 parkind1.o cmf_cf_time_mod.o -o $@ $(LIBS)
 	@if [ -n "$(NETCDFDIR)" ]; then install_name_tool -delete_rpath $(NETCDFDIR)/lib $@ 2>/dev/null || true; fi
