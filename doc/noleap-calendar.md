@@ -12,7 +12,9 @@ Set the calendar in the existing `NSIMTIME` namelist:
 
 `365_day` and `noleap` are case-insensitive aliases. `standard`, `gregorian`
 and `proleptic_gregorian` select the existing Gregorian leap-year rule.
-Unsupported calendars, including `360_day`, are rejected. As before, the
+Unsupported calendars, including `360_day`, are rejected. Invalid simulation
+dates, such as February 29 in a noleap run, terminate with exit code 9.
+As before, the
 Gregorian rule is applied to all years; this is not a historical Julian /
 Gregorian cutover implementation.
 

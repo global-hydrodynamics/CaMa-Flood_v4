@@ -32,6 +32,8 @@ def run(cmd, cwd, success=True):
     result = subprocess.run(cmd, cwd=cwd, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     if success and result.returncode:
         raise RuntimeError(shlex.join(cmd) + '\n' + result.stdout)
+    if not success and result.returncode == 0:
+        raise RuntimeError('Expected a nonzero error exit: ' + shlex.join(cmd) + '\n' + result.stdout)
     return result.stdout
 
 
