@@ -2,8 +2,8 @@ module topo_mod
 #ifdef heatlink
     use PARKIND1, only: &
     &   JPIM, JPRB
-    use YOS_CMF_INPUT, only: &
-    &   LOGNAM
+    use heatlink_log_mod, only: &
+    &   HEAT_LOG_UNIT
     implicit none
     private
     public :: &
@@ -18,7 +18,7 @@ module topo_mod
 contains
 
 subroutine init_topo_mod
-    write(LOGNAM, '(a)') '[heatlink/topo_mod/init_topo_mod] start'
+    write(HEAT_LOG_UNIT, '(a)') '[heatlink/topo_mod/init_topo_mod] start'
     call calc_rivslp
 
     contains

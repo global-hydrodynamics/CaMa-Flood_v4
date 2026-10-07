@@ -471,10 +471,10 @@ subroutine test_separate_large_ice_volume()
     &   'large-volume excess ice after partial melt [m3]')
     call assert_close(excess_melted_mass_kg, RI * 1.0e9_JPRB, 1.0e-13_JPRB, &
     &   'large-volume excess melted mass [kg]')
-    call assert_abs_le(mass_budget_error_kg, 1.0e-12_JPRB * initial_mass_kg, &
+    call assert_abs_le(mass_budget_error_kg, max(1.0e-12_JPRB,8.0_JPRB*epsilon(1.0_JPRB)) * initial_mass_kg, &
     &   'large-volume relative mass conservation [kg]')
     call assert_abs_le(energy_budget_error_j, &
-    &   1.0e-12_JPRB * max(abs(initial_energy_j), excess_melt_energy_j), &
+    &   max(1.0e-12_JPRB,16.0_JPRB*epsilon(1.0_JPRB)) * max(abs(initial_energy_j), excess_melt_energy_j), &
     &   'large-volume relative energy conservation [J]')
     call assert_finite(water_temperature_k, 'large-volume water temperature is finite')
     call assert_finite(excess_ice_volume_m3, 'large-volume excess ice is finite')
@@ -775,6 +775,12 @@ subroutine check_separate_update( &
     &   state_is_valid, &              ! [-] Local-state validation result.
     &   nonfinite_input_detected       ! [-] Nonfinite-input detection result.
 
+    real(kind=JPRB) :: mass_scale_kg, energy_scale_j
+
+    mass_scale_kg = water_ice_mass_kg(water_volume_m3,surface_ice_volume_m3+excess_ice_volume_m3)
+    energy_scale_j = max(abs(water_ice_energy_j(water_volume_m3,water_temperature_k, &
+    &   surface_ice_volume_m3+excess_ice_volume_m3,TMELT)), abs(water_added_energy_j), &
+    &   abs(surface_ice_added_energy_j), abs(excess_ice_added_energy_j))
     call update_local_water_ice_state( &
     &   liquid_water_volume_m3=water_volume_m3, &
     &   liquid_water_temperature_k=water_temperature_k, &
@@ -795,9 +801,9 @@ subroutine check_separate_update( &
 
     call assert_true(state_is_valid, 'separate-budget local state is valid')
     call assert_true(.not. nonfinite_input_detected, 'separate-budget inputs are finite')
-    call assert_close(mass_budget_error_kg, 0.0_JPRB, 1.0e-12_JPRB, &
+    call assert_close(mass_budget_error_kg, 0.0_JPRB, max(1.0e-12_JPRB,8.0_JPRB*epsilon(1.0_JPRB)*mass_scale_kg), &
     &   'separate-budget mass conservation [kg]')
-    call assert_close(energy_budget_error_j, 0.0_JPRB, 1.0e-6_JPRB, &
+    call assert_close(energy_budget_error_j, 0.0_JPRB, max(1.0e-6_JPRB,16.0_JPRB*epsilon(1.0_JPRB)*energy_scale_j), &
     &   'separate-budget energy conservation [J]')
 end subroutine check_separate_update
 
@@ -1064,9 +1070,11 @@ subroutine check_equilibration( &
 
     call assert_close(mass_after_kg, mass_before_kg, 1.0e-12_JPRB, &
     &   'phase-change mass conservation [kg]')
-    call assert_close(energy_after_j, &
-    &   energy_before_j + added_energy_j - residual_energy_j, 1.0e-12_JPRB, &
-    &   'phase-change energy conservation [J]')
+    ! Resolve cancellation and final temperature quantization in the selected kind.
+    call assert_abs_le(energy_after_j - (energy_before_j + added_energy_j - residual_energy_j), &
+    &   max(1.0e-6_JPRB, 8.0_JPRB*epsilon(1.0_JPRB)*(abs(energy_before_j)+abs(added_energy_j)) + &
+    &   2.0_JPRB*(CW*RW*liquid_water_volume_m3*spacing(liquid_water_temperature_k) + &
+    &   CI*RI*ice_volume_m3*spacing(ice_temperature_k))), 'phase-change energy conservation [J]')
     call assert_close(residual_energy_j, 0.0_JPRB, 0.0_JPRB, &
     &   'non-empty system residual energy [J]')
 end subroutine check_equilibration
@@ -1083,6 +1091,9 @@ subroutine assert_close(actual_value, expected_value, relative_tolerance, label)
     &   absolute_tolerance    ! [caller-defined unit] Scaled absolute tolerance.
 
     absolute_tolerance = relative_tolerance * max(1.0_JPRB, abs(expected_value))
+    ! Preserve exact assertions; nonzero tolerances respect the selected kind.
+    if (relative_tolerance > 0.0_JPRB) absolute_tolerance = &
+    &   max(absolute_tolerance,8.0_JPRB*epsilon(1.0_JPRB)*max(abs(actual_value),abs(expected_value)))
     if (abs(actual_value - expected_value) <= absolute_tolerance) return
 
     write(*, '(a)') '[TEST FAILED] '//trim(label)

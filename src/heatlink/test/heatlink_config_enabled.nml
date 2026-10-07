@@ -1,4 +1,6 @@
 &NHEATLINK
 LICE = .TRUE.
 NNEWTON_MAX_ICE = 7
+LHEAT_DIAG = .TRUE.
+HEAT_LOG_FILE = 'custom_heat.log'
 /

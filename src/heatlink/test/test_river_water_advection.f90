@@ -130,8 +130,8 @@ subroutine test_total_outflow_is_limited_by_available_heat()
 
     call assert_close(water_temperature_k(1), TMELT + 4.0_JPRB, &
     &   'limited reverse branch receiving temperature [K]')
-    call assert_close(water_temperature_k(2), TMELT, &
-    &   'limited source becomes dry at melting point [K]')
+    call assert_close(water_temperature_k(2), TMELT + 12.0_JPRB, &
+    &   'limited source retains previous dry temperature [K]')
     call assert_close(water_temperature_k(3), TMELT + 4.0_JPRB, &
     &   'limited forward branch receiving temperature [K]')
     call assert_heat_conserved( &
@@ -186,8 +186,8 @@ subroutine test_zero_and_tiny_liquid_volume()
     &   water_temperature_k, liquid_volume_before_m3, liquid_volume_after_m3, &
     &   normal_flow_m3s, 1.0_JPRB)
 
-    call assert_close(water_temperature_k(1), TMELT, &
-    &   'zero-volume cell is reset to melting point [K]')
+    call assert_close(water_temperature_k(1), TMELT + 1.0_JPRB, &
+    &   'zero-volume cell retains previous temperature [K]')
     call assert_close(water_temperature_k(2), TMELT + 3.0_JPRB, &
     &   'tiny-volume cell remains finite and unchanged [K]')
     call assert_close(water_temperature_k(3), TMELT, &
@@ -232,7 +232,10 @@ subroutine assert_heat_conserved( &
     &   actual_heat_j, tolerance_j
 
     actual_heat_j = total_sensible_heat_j(water_temperature_k, liquid_volume_m3)
-    tolerance_j = 1.0e-12_JPRD * max(1.0_JPRD, abs(expected_heat_j))
+    ! Allow at most two temperature ULPs when storing the mixed JPRB state.
+    tolerance_j = max(1.0e-12_JPRD * max(1.0_JPRD, abs(expected_heat_j)), &
+    &   2.0_JPRD * real(CW,JPRD) * real(RW,JPRD) * sum(abs(liquid_volume_m3)) * &
+    &   real(spacing(maxval(abs(water_temperature_k))),JPRD))
     if (abs(actual_heat_j - expected_heat_j) <= tolerance_j) return
     write(*, '(a)') '[TEST FAILED] '//trim(label)//' sensible-heat conservation [J]'
     write(*, '(a,es24.15)') '  actual   = ', actual_heat_j
@@ -249,7 +252,7 @@ subroutine assert_close(actual_value, expected_value, label)
     real(kind=JPRB) :: &
     &   tolerance
 
-    tolerance = 1.0e-12_JPRB * max(1.0_JPRB, abs(expected_value))
+    tolerance = max(1.0e-12_JPRB, 8.0_JPRB*epsilon(1.0_JPRB)) * max(1.0_JPRB, abs(expected_value))
     if (abs(actual_value - expected_value) <= tolerance) return
     write(*, '(a)') '[TEST FAILED] '//trim(label)
     write(*, '(a,es24.15)') '  actual   = ', actual_value

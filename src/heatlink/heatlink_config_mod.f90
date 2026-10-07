@@ -2,9 +2,11 @@ module heatlink_config_mod
     implicit none
     private
 
-    integer, parameter :: CONFIG_INTEGER_KIND = selected_int_kind(9)
-    logical, public, save :: LICE = .false.
-    integer(kind=CONFIG_INTEGER_KIND), public, save :: NNEWTON_MAX_ICE = 4
+    integer, parameter :: CONFIG_INTEGER_KIND = selected_int_kind(9) ! [-] Integer kind for configuration values.
+    logical, public, save :: LICE = .FALSE. ! [-] Enable water/ice phase changes.
+    logical, public, save :: LHEAT_DIAG = .FALSE. ! [-] Enable detailed heat-budget monitoring.
+    character(len=512), public, save :: HEAT_LOG_FILE = 'HEAT-LINK.log' ! [-] Heatlink log file path; relative paths use the run directory.
+    integer(kind=CONFIG_INTEGER_KIND), public, save :: NNEWTON_MAX_ICE = 4 ! [-] Maximum ice-surface Newton iterations.
 
     public :: init_heatlink_config
 
@@ -16,9 +18,11 @@ contains
         logical, intent(in) :: lwevap, llevee
 
         integer :: nml_unit, ios
-        namelist /NHEATLINK/ LICE, NNEWTON_MAX_ICE
+        namelist /NHEATLINK/ LICE, NNEWTON_MAX_ICE, LHEAT_DIAG, HEAT_LOG_FILE
 
-        LICE = .false.
+        LICE = .FALSE.
+        LHEAT_DIAG = .FALSE.
+        HEAT_LOG_FILE = 'HEAT-LINK.log'
         NNEWTON_MAX_ICE = 4
 
         open(newunit=nml_unit, file=trim(nml_path), status='old', &
@@ -37,6 +41,10 @@ contains
             error stop 1
         endif
 
+        if (len_trim(HEAT_LOG_FILE) == 0) then
+            write(log_unit, '(a)') 'ERROR: HEAT_LOG_FILE must not be empty.'
+            error stop 1
+        endif
         if (NNEWTON_MAX_ICE < 1) then
             write(log_unit, '(a)') &
             &   'ERROR: NNEWTON_MAX_ICE must be at least one.'
@@ -59,6 +67,8 @@ contains
 
         write(log_unit, '(a)') ''
         write(log_unit, '(a)') '=== NAMELIST, NHEATLINK ==='
+        write(log_unit, '(a,l2)') 'LHEAT_DIAG       ', LHEAT_DIAG
+        write(log_unit, '(a,a)') 'HEAT_LOG_FILE    ', trim(HEAT_LOG_FILE)
         write(log_unit, '(a,l2)') 'LICE             ', LICE
         write(log_unit, '(a,i0)') 'NNEWTON_MAX_ICE  ', NNEWTON_MAX_ICE
     end subroutine init_heatlink_config

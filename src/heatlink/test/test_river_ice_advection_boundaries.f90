@@ -274,7 +274,7 @@ subroutine assert_close(actual_value, expected_value, label)
     real(kind=JPRB) :: &
     &   tolerance
 
-    tolerance = 1.0e-12_JPRB * max(1.0_JPRB, abs(expected_value))
+    tolerance = max(1.0e-12_JPRB, 8.0_JPRB*epsilon(1.0_JPRB)) * max(1.0_JPRB, abs(expected_value))
     if (abs(actual_value - expected_value) <= tolerance) return
     write(*, '(a)') '[TEST FAILED] '//trim(label)
     write(*, '(a,es24.15)') '  actual   = ', actual_value

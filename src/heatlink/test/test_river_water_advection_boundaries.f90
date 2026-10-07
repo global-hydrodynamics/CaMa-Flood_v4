@@ -183,8 +183,8 @@ subroutine test_bifurcation_and_normal_outflow_share_limiter()
     &   normal_flow_m3s, 1.0_JPRB, &
     &   bifurcation_flow_m3s=bifurcation_flow_m3s)
 
-    call assert_close(water_temperature_k(1), TMELT, &
-    &   'shared-limiter source becomes dry [K]')
+    call assert_close(water_temperature_k(1), TMELT + 12.0_JPRB, &
+    &   'shared-limiter source retains previous dry temperature [K]')
     call assert_close(water_temperature_k(2), TMELT + 4.0_JPRB, &
     &   'shared-limiter normal-link temperature [K]')
     call assert_close(water_temperature_k(3), TMELT + 4.0_JPRB, &
@@ -198,7 +198,7 @@ subroutine test_cold_liquid_inflow_is_rejected_by_contract()
     real(kind=JPRB) :: &
     &   inflow_temperature_k(3)
 
-    inflow_temperature_k(:) = [TMELT, TMELT - 1.0e-6_JPRB, TMELT + 1.0_JPRB]
+    inflow_temperature_k(:) = [TMELT, nearest(TMELT, -1.0_JPRB), TMELT + 1.0_JPRB]
     call assert_true(.not. liquid_inflow_temperature_is_valid(inflow_temperature_k), &
     &   'cold liquid inflow violates the advection contract')
     inflow_temperature_k(2) = TMELT
@@ -257,7 +257,10 @@ subroutine assert_heat( &
     &   actual_heat_j, tolerance_j
 
     actual_heat_j = total_sensible_heat_j(water_temperature_k, liquid_volume_m3)
-    tolerance_j = 1.0e-12_JPRD * max(1.0_JPRD, abs(expected_heat_j))
+    ! Allow at most two temperature ULPs when storing the mixed JPRB state.
+    tolerance_j = max(1.0e-12_JPRD * max(1.0_JPRD, abs(expected_heat_j)), &
+    &   2.0_JPRD * real(CW,JPRD) * real(RW,JPRD) * sum(abs(liquid_volume_m3)) * &
+    &   real(spacing(maxval(abs(water_temperature_k))),JPRD))
     if (abs(actual_heat_j - expected_heat_j) <= tolerance_j) return
     write(*, '(a)') '[TEST FAILED] '//trim(label)//' sensible-heat budget [J]'
     write(*, '(a,es24.15)') '  actual   = ', actual_heat_j
@@ -274,7 +277,7 @@ subroutine assert_close(actual_value, expected_value, label)
     real(kind=JPRB) :: &
     &   tolerance
 
-    tolerance = 1.0e-12_JPRB * max(1.0_JPRB, abs(expected_value))
+    tolerance = max(1.0e-12_JPRB, 8.0_JPRB*epsilon(1.0_JPRB)) * max(1.0_JPRB, abs(expected_value))
     if (abs(actual_value - expected_value) <= tolerance) return
     write(*, '(a)') '[TEST FAILED] '//trim(label)
     write(*, '(a,es24.15)') '  actual   = ', actual_value

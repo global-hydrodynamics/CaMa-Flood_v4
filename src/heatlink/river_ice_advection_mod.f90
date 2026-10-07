@@ -2,6 +2,7 @@ module river_ice_advection_mod
 #ifdef heatlink
     use PARKIND1, only: &
     &   JPIM, JPRB, JPRD
+    use const_mod, only: STO_IGNORE
     use YOS_CMF_MAP, only: &
     &   I1NEXT, NSEQALL, NSEQRIV, &
     &   D2RIVLEN, D2RIVWTH, &
@@ -21,7 +22,7 @@ subroutine advect_river_surface_ice( &
     &   surface_ice_volume_m3, surface_ice_fraction, &
     &   liquid_volume_before_m3, normal_flow_m3s, dt_seconds, &
     &   bifurcation_flow_m3s, ice_budget_error_m3, &
-    &   domain_ice_budget_error_m3)
+    &   domain_ice_budget_error_m3, exported_ice_volume_m3)
     real(kind=JPRB), intent(inout) :: &
     &   surface_ice_volume_m3(NSEQALL) ! [m3] Mobile water-surface ice before and after advection.
     real(kind=JPRB), intent(in) :: &
@@ -36,6 +37,8 @@ subroutine advect_river_surface_ice( &
     real(kind=JPRD), intent(out), optional :: &
     &   ice_budget_error_m3(NSEQALL), & ! [m3] Expected minus represented mobile surface-ice volume.
     &   domain_ice_budget_error_m3 ! [m3] Boundary-aware domain surface-ice closure error.
+    real(kind=JPRD), intent(out), optional :: exported_ice_volume_m3 ! [m3] Final mouth export; no ocean ice import.
+    real(kind=JPRD) :: mouth_export_m3
     real(kind=JPRD) :: &
     &   surface_ice_storage_m3(NSEQALL), & ! [m3] Double-precision working copy of mobile surface ice.
     &   expected_surface_ice_volume_m3(NSEQALL), & ! [m3] Surface ice reconstructed from applied link flows.
@@ -55,6 +58,7 @@ subroutine advect_river_surface_ice( &
 
     ! Preconditions: surface ice, liquid volume, and dt_seconds are nonnegative,
     ! and I1NEXT(1:NSEQRIV) identifies valid normal-link destination cells.
+    mouth_export_m3 = 0.0_JPRD
     surface_ice_storage_m3(:) = real(max(surface_ice_volume_m3(:), 0.0_JPRB), kind=JPRD)
     expected_surface_ice_volume_m3(:) = surface_ice_storage_m3(:)
     domain_expected_surface_ice_volume_m3 = sum(surface_ice_storage_m3(:))
@@ -200,8 +204,9 @@ subroutine advect_river_surface_ice( &
     srate(:) = 1.0_JPRD
     !$omp parallel do
     do iseq = 1, NSEQALL
-        if (sOut(iseq) > 0.0_JPRD) then
-            srate(iseq) = min(surface_ice_storage_m3(iseq) / sOut(iseq), 1.0_JPRD)
+        ! Divide only when limiting; the quotient is then bounded by one.
+        if (sOut(iseq) > 0.0_JPRD .and. sOut(iseq) > surface_ice_storage_m3(iseq)) then
+            srate(iseq) = surface_ice_storage_m3(iseq) / sOut(iseq)
         endif
     enddo
     !$omp end parallel do
@@ -236,6 +241,7 @@ subroutine advect_river_surface_ice( &
     do iseq = NSEQRIV + 1, NSEQALL
         if (normal_flow_m3s(iseq) <= 0.0_JPRB) cycle
         d2iceout(iseq) = d2iceout(iseq) * srate(iseq)
+        mouth_export_m3 = mouth_export_m3 + d2iceout(iseq) * real(dt_seconds, JPRD)
         surface_ice_storage_m3(iseq) = max( &
         &   surface_ice_storage_m3(iseq) - d2iceout(iseq) * &
         &   real(dt_seconds, kind=JPRD), 0.0_JPRD)
@@ -273,6 +279,7 @@ subroutine advect_river_surface_ice( &
         enddo
     endif
 
+    if (present(exported_ice_volume_m3)) exported_ice_volume_m3 = mouth_export_m3
     surface_ice_volume_m3(:) = real(surface_ice_storage_m3(:), kind=JPRB)
     if (present(ice_budget_error_m3)) then
         ice_budget_error_m3(:) = expected_surface_ice_volume_m3(:) - &
@@ -294,7 +301,7 @@ pure elemental function diagnose_surface_ice_transport_fraction( &
     &   transport_fraction ! [-] Fraction of source surface ice requested before the total-outflow limiter.
 
     transport_fraction = 0.0_JPRD
-    if (liquid_volume_m3 <= 0.0_JPRD) return
+    if (liquid_volume_m3 <= STO_IGNORE) return
     if (transported_water_volume_m3 <= 0.0_JPRD) return
     ! Match TCHOIR's iceflow = icevol * waterflow / water-storage relation.
     ! This requested fraction may exceed one; srate subsequently limits the

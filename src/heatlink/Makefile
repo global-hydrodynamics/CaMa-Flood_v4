@@ -16,8 +16,12 @@ MODS += $(MODDIRS)
 
 OBJS = \
 	heatlink_config_mod.o \
+	heatlink_log_mod.o \
 	heatlink_velocity_mod.o \
 	topo_mod.o \
+	heat_residual_mod.o \
+	heat_step_monitor_mod.o \
+	heatlink_diagnostics_mod.o \
 	thermo_mod.o \
 	water_storage_adapter_mod.o \
 	river_water_advection_mod.o \
@@ -25,7 +29,12 @@ OBJS = \
 	heatlink_river_mod.o
 
 TESTS = \
+	test_heat_step_monitor \
+	test_transport_limiter \
+	test_thermo_dry_exchange \
+	test_temperature_dry_state \
 	test_heatlink_config \
+	test_heatlink_log \
 	test_heatlink_velocity \
 	test_water_storage_adapter \
 	test_river_water_advection \
@@ -40,6 +49,8 @@ RIVER_WATER_TESTS = \
 	test_river_water_advection \
 	test_river_water_advection_boundaries
 TOPOLOGY_TESTS = \
+	test_transport_limiter \
+	test_temperature_dry_state \
 	$(RIVER_WATER_TESTS) \
 	$(EXPECTED_FAILURE_TESTS) \
 	test_river_ice_advection \
@@ -58,11 +69,15 @@ $(LIBNAME): $(OBJS)
 	@rm -f $@
 	ar -rv $@ $(OBJS)
 
-heatlink_river_mod.o: heatlink_config_mod.o heatlink_velocity_mod.o \
+heatlink_log_mod.o: heatlink_config_mod.o
+thermo_mod.o topo_mod.o: heatlink_log_mod.o
+heatlink_diagnostics_mod.o: heat_step_monitor_mod.o heat_residual_mod.o heatlink_config_mod.o heatlink_log_mod.o
+
+heatlink_river_mod.o: heatlink_diagnostics_mod.o thermo_mod.o heatlink_config_mod.o heatlink_velocity_mod.o \
 	water_storage_adapter_mod.o \
 	river_water_advection_mod.o river_ice_advection_mod.o
 
-$(TOPOLOGY_TESTS): %: test/%.f90 $(LIBNAME) ../yos_cmf_map.o
+$(TOPOLOGY_TESTS): %: test/%.f90 $(LIBNAME) ../yos_cmf_map.o ../phys/libphys.a
 	$(FCMP) $(FFLAGS) $(INC) $(MODS) $(CFLAGS) $< ../yos_cmf_map.o \
 	    -L. -lheatlink -L../phys -lphys -L../common -lcommon \
 	    $(LDFLAGS) $(LIBS) -o $@
@@ -78,3 +93,10 @@ test: $(TEST_EXES)
 
 clean:
 	${RM} -rf *.o *.mod *.a *~ *.s *.optrpt *.dSYM $(TEST_EXES)
+
+# Link the production coupling path and its actual module dependencies.
+test_thermo_dry_exchange: test/test_thermo_dry_exchange.f90 $(LIBNAME) ../libcama.a ../phys/libphys.a
+	$(FCMP) $(FFLAGS) $(INC) $(MODS) $(CFLAGS) $< ../libcama.a \
+	    -L. -lheatlink -L../io -lio -L../mod -lmod -L../phys -lphys -L../common -lcommon \
+	    $(LDFLAGS) $(LIBS) -o $@
+	@install_name_tool -delete_rpath $(NETCDFDIR)/lib $@ 2>/dev/null || true

@@ -14,7 +14,7 @@ module heat_budget_mod
     &   NEGATIVE_VOLUME_TOLERANCE_M3, &
     &   liquid_water_energy_j, ice_energy_j, &
     &   water_ice_mass_kg, water_ice_energy_j, &
-    &   update_liquid_temperature_no_phase_change, &
+    &   update_liquid_temperature_no_phase_change, apply_liquid_temperature_floor, &
     &   update_local_water_ice_state, &
     &   equilibrate_water_ice
 
@@ -75,7 +75,7 @@ end function water_ice_energy_j
 
 
 pure elemental subroutine update_liquid_temperature_no_phase_change( &
-    &   liquid_water_temperature_k, liquid_water_volume_m3, added_energy_j)
+    &   liquid_water_temperature_k, liquid_water_volume_m3, added_energy_j, unapplied_energy_j)
     real(kind=JPRB), intent(inout) :: &
     &   liquid_water_temperature_k ! [K] Liquid-water temperature before and after heating.
     real(kind=JPRB), intent(in) :: &
@@ -83,12 +83,30 @@ pure elemental subroutine update_liquid_temperature_no_phase_change( &
     &   added_energy_j              ! [J] Energy added to liquid water; positive warms water.
     real(kind=JPRB) :: &
     &   temperature_change_k        ! [K] Temperature increment caused by added energy.
+    real(kind=JPRB), intent(out), optional :: unapplied_energy_j ! [J] Signed energy skipped in dry water.
 
-    if (liquid_water_volume_m3 < real(STO_IGNORE, kind=JPRB)) return
+    if (present(unapplied_energy_j)) unapplied_energy_j = 0.0_JPRB
+    if (liquid_water_volume_m3 <= real(STO_IGNORE, kind=JPRB)) then
+        if (present(unapplied_energy_j)) unapplied_energy_j = added_energy_j
+        return
+    endif
 
     temperature_change_k = added_energy_j / (CW * RW * liquid_water_volume_m3)
     liquid_water_temperature_k = liquid_water_temperature_k + temperature_change_k
 end subroutine update_liquid_temperature_no_phase_change
+
+
+pure elemental subroutine apply_liquid_temperature_floor(temperature_k, volume_m3, unapplied_energy_j)
+    real(kind=JPRB), intent(inout) :: temperature_k ! [K] Liquid temperature, retaining dry memory.
+    real(kind=JPRB), intent(in) :: volume_m3 ! [m3] Actual liquid volume.
+    real(kind=JPRB), intent(out), optional :: unapplied_energy_j ! [J] Negative cooling rejected by the no-ice floor.
+    if (present(unapplied_energy_j)) unapplied_energy_j = 0.0_JPRB
+    if (volume_m3 <= real(STO_IGNORE, JPRB)) return
+    if (temperature_k < TMELT) then
+        if (present(unapplied_energy_j)) unapplied_energy_j = liquid_water_energy_j(volume_m3, temperature_k)
+        temperature_k = TMELT
+    endif
+end subroutine apply_liquid_temperature_floor
 
 
 pure elemental subroutine update_local_water_ice_state( &
@@ -99,7 +117,7 @@ pure elemental subroutine update_local_water_ice_state( &
     &   frozen_water_mass_kg, surface_ice_melted_mass_kg, &
     &   excess_ice_melted_mass_kg, unapplied_energy_j, &
     &   mass_budget_error_kg, energy_budget_error_j, &
-    &   state_is_valid, nonfinite_input_detected, maximum_negative_volume_m3)
+    &   state_is_valid, nonfinite_input_detected, maximum_negative_volume_m3, dry_unapplied_energy_j)
     real(kind=JPRB), intent(inout) :: &
     &   liquid_water_volume_m3, &     ! [m3] Liquid-water volume before and after the local update.
     &   liquid_water_temperature_k, & ! [K] Liquid-water temperature before and after the local update.
@@ -120,6 +138,9 @@ pure elemental subroutine update_local_water_ice_state( &
     logical, intent(out) :: &
     &   state_is_valid, &               ! [-] True when all inputs are finite and volumes are within tolerance.
     &   nonfinite_input_detected        ! [-] True when any state or energy input is NaN or infinite.
+    real(kind=JPRB), intent(out), optional :: dry_unapplied_energy_j ! [J] Dry-memory part of unapplied_energy_j.
+    real(kind=JPRB) :: previous_temperature_k, liquid_sensible_energy_j, dry_residual_j
+    real(kind=JPRB) :: initial_liquid_energy_j, initial_liquid_volume_m3
     real(kind=JPRB) :: &
     &   initial_mass_kg, final_mass_kg, &       ! [kg] Total local water-plus-ice mass.
     &   initial_energy_j, final_energy_j, &     ! [J] Total local water-plus-ice energy.
@@ -135,6 +156,8 @@ pure elemental subroutine update_local_water_ice_state( &
     &   surface_unapplied_energy_j, &           ! [J] Surface-ice energy that cannot be applied.
     &   excess_unapplied_energy_j               ! [J] Excess-ice energy that cannot be applied.
 
+    if (present(dry_unapplied_energy_j)) dry_unapplied_energy_j = 0.0_JPRB
+    previous_temperature_k = liquid_water_temperature_k
     frozen_water_mass_kg = 0.0_JPRB
     surface_ice_melted_mass_kg = 0.0_JPRB
     excess_ice_melted_mass_kg = 0.0_JPRB
@@ -170,7 +193,7 @@ pure elemental subroutine update_local_water_ice_state( &
     call diagnose_ice_pool_response( &
     &   ice_volume_m3=surface_ice_volume_m3, &
     &   added_energy_j=surface_ice_added_energy_j, &
-    &   ice_growth_is_allowed=.true., &
+    &   ice_growth_is_allowed=.TRUE., &
     &   melted_ice_mass_kg=surface_ice_melted_mass_kg, &
     &   freeze_energy_demand_j=surface_freeze_energy_demand_j, &
     &   liquid_excess_energy_j=surface_liquid_excess_energy_j, &
@@ -178,7 +201,7 @@ pure elemental subroutine update_local_water_ice_state( &
     call diagnose_ice_pool_response( &
     &   ice_volume_m3=excess_ice_volume_m3, &
     &   added_energy_j=excess_ice_added_energy_j, &
-    &   ice_growth_is_allowed=.false., &
+    &   ice_growth_is_allowed=.FALSE., &
     &   melted_ice_mass_kg=excess_ice_melted_mass_kg, &
     &   freeze_energy_demand_j=excess_freeze_energy_demand_j, &
     &   liquid_excess_energy_j=excess_liquid_excess_energy_j, &
@@ -187,27 +210,46 @@ pure elemental subroutine update_local_water_ice_state( &
     &   surface_liquid_excess_energy_j + excess_liquid_excess_energy_j
     unapplied_energy_j = surface_unapplied_energy_j + excess_unapplied_energy_j
 
+    ! Carry sensible energy through all phase operations, even below STO_IGNORE.
+    ! Converting via the held temperature between melting and freezing would
+    ! attach fictitious sensible heat to the newly melted volume.
+    liquid_sensible_energy_j = liquid_water_energy_j(liquid_water_volume_m3, liquid_water_temperature_k)
+    initial_liquid_energy_j = liquid_sensible_energy_j
+    initial_liquid_volume_m3 = liquid_water_volume_m3
     call mix_meltwater_into_liquid( &
     &   liquid_water_volume_m3=liquid_water_volume_m3, &
-    &   liquid_water_temperature_k=liquid_water_temperature_k, &
     &   surface_ice_volume_m3=surface_ice_volume_m3, &
     &   excess_ice_volume_m3=excess_ice_volume_m3, &
     &   surface_ice_melted_mass_kg=surface_ice_melted_mass_kg, &
     &   excess_ice_melted_mass_kg=excess_ice_melted_mass_kg)
+    dry_residual_j = unapplied_energy_j
     call apply_liquid_energy( &
     &   liquid_water_volume_m3=liquid_water_volume_m3, &
-    &   liquid_water_temperature_k=liquid_water_temperature_k, &
+    &   liquid_sensible_energy_j=liquid_sensible_energy_j, &
     &   added_energy_j=pending_liquid_energy_j, &
     &   freeze_energy_demand_j=liquid_freeze_energy_demand_j, &
     &   unapplied_energy_j=unapplied_energy_j)
+    ! Direct heat rejected by an empty liquid pool belongs to the dry ledger.
+    if (present(dry_unapplied_energy_j)) dry_unapplied_energy_j = unapplied_energy_j - dry_residual_j
     call freeze_liquid_water( &
     &   liquid_water_volume_m3=liquid_water_volume_m3, &
-    &   liquid_water_temperature_k=liquid_water_temperature_k, &
+    &   liquid_sensible_energy_j=liquid_sensible_energy_j, &
     &   surface_ice_volume_m3=surface_ice_volume_m3, &
     &   freeze_energy_demand_j=surface_freeze_energy_demand_j + &
     &       liquid_freeze_energy_demand_j, &
     &   frozen_water_mass_kg=frozen_water_mass_kg, &
     &   unapplied_energy_j=unapplied_energy_j)
+
+    if (liquid_water_volume_m3 > real(STO_IGNORE, JPRB)) then
+        liquid_water_temperature_k = TMELT + liquid_sensible_energy_j / (CW * RW * liquid_water_volume_m3)
+    else
+        liquid_water_temperature_k = previous_temperature_k
+        ! Difference form makes an unchanged dry state exactly zero in the ledger.
+        dry_residual_j = (liquid_sensible_energy_j - initial_liquid_energy_j) - &
+        &   CW * RW * (liquid_water_volume_m3 - initial_liquid_volume_m3) * (previous_temperature_k - TMELT)
+        unapplied_energy_j = unapplied_energy_j + dry_residual_j
+        if (present(dry_unapplied_energy_j)) dry_unapplied_energy_j = dry_unapplied_energy_j + dry_residual_j
+    endif
 
     final_mass_kg = water_ice_mass_kg( &
     &   liquid_water_volume_m3, surface_ice_volume_m3 + excess_ice_volume_m3)
@@ -261,7 +303,7 @@ pure elemental subroutine validate_and_normalize_local_state( &
     normalization_mass_adjustment_kg = 0.0_JPRB
     normalization_energy_adjustment_j = 0.0_JPRB
     if (nonfinite_input_detected) then
-        state_is_valid = .false.
+        state_is_valid = .FALSE.
         return
     endif
 
@@ -269,7 +311,7 @@ pure elemental subroutine validate_and_normalize_local_state( &
     &   -liquid_water_volume_m3, -surface_ice_volume_m3, &
     &   -excess_ice_volume_m3, 0.0_JPRB)
     if (maximum_negative_volume_m3 > NEGATIVE_VOLUME_TOLERANCE_M3) then
-        state_is_valid = .false.
+        state_is_valid = .FALSE.
         return
     endif
 
@@ -288,7 +330,7 @@ pure elemental subroutine validate_and_normalize_local_state( &
     &   liquid_water_volume_m3, liquid_water_temperature_k, &
     &   surface_ice_volume_m3 + excess_ice_volume_m3, TMELT) - &
     &   energy_before_normalization_j
-    state_is_valid = .true.
+    state_is_valid = .TRUE.
 end subroutine validate_and_normalize_local_state
 
 
@@ -339,23 +381,19 @@ end subroutine diagnose_ice_pool_response
 
 
 pure elemental subroutine mix_meltwater_into_liquid( &
-    &   liquid_water_volume_m3, liquid_water_temperature_k, &
+    &   liquid_water_volume_m3, &
     &   surface_ice_volume_m3, excess_ice_volume_m3, &
     &   surface_ice_melted_mass_kg, excess_ice_melted_mass_kg)
     real(kind=JPRB), intent(inout) :: &
     &   liquid_water_volume_m3, &     ! [m3] Liquid-water volume before and after adding meltwater.
-    &   liquid_water_temperature_k, & ! [K] Liquid-water temperature before and after mixing.
     &   surface_ice_volume_m3, &      ! [m3] Water-surface ice volume before and after melting.
     &   excess_ice_volume_m3          ! [m3] Immobile excess-ice volume before and after melting.
     real(kind=JPRB), intent(in) :: &
     &   surface_ice_melted_mass_kg, & ! [kg] Melted water-surface ice mass.
     &   excess_ice_melted_mass_kg     ! [kg] Melted immobile excess-ice mass.
     real(kind=JPRB) :: &
-    &   liquid_sensible_energy_j, &   ! [J] Liquid sensible energy before adding meltwater at TMELT.
     &   total_melted_mass_kg          ! [kg] Total meltwater mass entering the liquid pool.
 
-    liquid_sensible_energy_j = liquid_water_energy_j( &
-    &   liquid_water_volume_m3, liquid_water_temperature_k)
     if (surface_ice_melted_mass_kg >= surface_ice_volume_m3 * RI) then
         surface_ice_volume_m3 = 0.0_JPRB
     else
@@ -370,39 +408,22 @@ pure elemental subroutine mix_meltwater_into_liquid( &
     endif
     total_melted_mass_kg = surface_ice_melted_mass_kg + excess_ice_melted_mass_kg
     liquid_water_volume_m3 = liquid_water_volume_m3 + total_melted_mass_kg / RW
-    if (liquid_water_volume_m3 > 0.0_JPRB) then
-        liquid_water_temperature_k = TMELT + liquid_sensible_energy_j / &
-        &   (CW * RW * liquid_water_volume_m3)
-    else
-        liquid_water_temperature_k = TMELT
-    endif
 end subroutine mix_meltwater_into_liquid
 
 
 pure elemental subroutine apply_liquid_energy( &
-    &   liquid_water_volume_m3, liquid_water_temperature_k, added_energy_j, &
+    &   liquid_water_volume_m3, liquid_sensible_energy_j, added_energy_j, &
     &   freeze_energy_demand_j, unapplied_energy_j)
-    real(kind=JPRB), intent(in) :: &
-    &   liquid_water_volume_m3, & ! [m3] Liquid-water volume receiving the energy increment.
-    &   added_energy_j            ! [J] Energy added to liquid water; positive warms water.
-    real(kind=JPRB), intent(inout) :: &
-    &   liquid_water_temperature_k, & ! [K] Liquid-water temperature before and after heating.
-    &   unapplied_energy_j             ! [J] Accumulated energy that cannot be applied.
-    real(kind=JPRB), intent(out) :: &
-    &   freeze_energy_demand_j         ! [J] Positive cooling demand available for freezing.
-    real(kind=JPRB) :: &
-    &   liquid_sensible_energy_j       ! [J] Liquid sensible energy after applying the increment.
+    real(kind=JPRB), intent(in) :: liquid_water_volume_m3, added_energy_j ! [m3], [J]
+    real(kind=JPRB), intent(inout) :: liquid_sensible_energy_j, unapplied_energy_j ! [J]
+    real(kind=JPRB), intent(out) :: freeze_energy_demand_j ! [J] Positive cooling for freezing.
 
     freeze_energy_demand_j = 0.0_JPRB
     if (liquid_water_volume_m3 > 0.0_JPRB) then
-        liquid_sensible_energy_j = liquid_water_energy_j( &
-        &   liquid_water_volume_m3, liquid_water_temperature_k) + added_energy_j
-        if (liquid_sensible_energy_j >= 0.0_JPRB) then
-            liquid_water_temperature_k = TMELT + liquid_sensible_energy_j / &
-            &   (CW * RW * liquid_water_volume_m3)
-        else
-            liquid_water_temperature_k = TMELT
+        liquid_sensible_energy_j = liquid_sensible_energy_j + added_energy_j
+        if (liquid_sensible_energy_j < 0.0_JPRB) then
             freeze_energy_demand_j = -liquid_sensible_energy_j
+            liquid_sensible_energy_j = 0.0_JPRB
         endif
     else
         unapplied_energy_j = unapplied_energy_j + added_energy_j
@@ -411,44 +432,33 @@ end subroutine apply_liquid_energy
 
 
 pure elemental subroutine freeze_liquid_water( &
-    &   liquid_water_volume_m3, liquid_water_temperature_k, &
+    &   liquid_water_volume_m3, liquid_sensible_energy_j, &
     &   surface_ice_volume_m3, freeze_energy_demand_j, &
     &   frozen_water_mass_kg, unapplied_energy_j)
-    real(kind=JPRB), intent(inout) :: &
-    &   liquid_water_volume_m3, &     ! [m3] Liquid-water volume before and after freezing.
-    &   liquid_water_temperature_k, & ! [K] Liquid-water temperature before and after freezing.
-    &   surface_ice_volume_m3, &      ! [m3] Water-surface ice volume before and after freezing.
-    &   unapplied_energy_j             ! [J] Accumulated energy that cannot be applied.
-    real(kind=JPRB), intent(in) :: &
-    &   freeze_energy_demand_j         ! [J] Positive cooling demand to satisfy by freezing water.
-    real(kind=JPRB), intent(out) :: &
-    &   frozen_water_mass_kg           ! [kg] Liquid-water mass converted to water-surface ice.
-    real(kind=JPRB) :: &
-    &   available_liquid_mass_kg, &    ! [kg] Liquid-water mass available for freezing.
-    &   freeze_energy_per_mass_j_kg, & ! [J kg-1] Energy removed when liquid becomes ice at TMELT.
-    &   remaining_freeze_energy_j      ! [J] Cooling demand left after all available water freezes.
+    real(kind=JPRB), intent(inout) :: liquid_water_volume_m3, surface_ice_volume_m3 ! [m3]
+    real(kind=JPRB), intent(inout) :: liquid_sensible_energy_j, unapplied_energy_j ! [J]
+    real(kind=JPRB), intent(in) :: freeze_energy_demand_j ! [J] Positive cooling demand.
+    real(kind=JPRB), intent(out) :: frozen_water_mass_kg ! [kg]
+    real(kind=JPRB) :: available_mass_kg, available_energy_j, frozen_fraction, remaining_energy_j
 
     frozen_water_mass_kg = 0.0_JPRB
     if (freeze_energy_demand_j <= 0.0_JPRB) return
-    available_liquid_mass_kg = RW * liquid_water_volume_m3
-    freeze_energy_per_mass_j_kg = HFUS + CW * &
-    &   max(liquid_water_temperature_k - TMELT, 0.0_JPRB)
-    if (freeze_energy_demand_j >= &
-    &   available_liquid_mass_kg * freeze_energy_per_mass_j_kg) then
-        frozen_water_mass_kg = available_liquid_mass_kg
-        liquid_water_volume_m3 = 0.0_JPRB
-    else
-        frozen_water_mass_kg = freeze_energy_demand_j / freeze_energy_per_mass_j_kg
-        liquid_water_volume_m3 = max( &
-        &   liquid_water_volume_m3 - frozen_water_mass_kg / RW, 0.0_JPRB)
+    available_mass_kg = RW * liquid_water_volume_m3
+    available_energy_j = available_mass_kg * HFUS + max(liquid_sensible_energy_j, 0.0_JPRB)
+    frozen_fraction = 0.0_JPRB
+    if (available_energy_j > 0.0_JPRB) then
+        if (freeze_energy_demand_j >= available_energy_j) then
+            frozen_fraction = 1.0_JPRB
+        else
+            frozen_fraction = freeze_energy_demand_j / available_energy_j
+        endif
     endif
+    frozen_water_mass_kg = available_mass_kg * frozen_fraction
+    liquid_water_volume_m3 = liquid_water_volume_m3 * (1.0_JPRB - frozen_fraction)
+    liquid_sensible_energy_j = liquid_sensible_energy_j * (1.0_JPRB - frozen_fraction)
     surface_ice_volume_m3 = surface_ice_volume_m3 + frozen_water_mass_kg / RI
-    if (liquid_water_volume_m3 <= 0.0_JPRB) liquid_water_temperature_k = TMELT
-    remaining_freeze_energy_j = freeze_energy_demand_j - &
-    &   frozen_water_mass_kg * freeze_energy_per_mass_j_kg
-    if (remaining_freeze_energy_j > 0.0_JPRB) then
-        unapplied_energy_j = unapplied_energy_j - remaining_freeze_energy_j
-    endif
+    remaining_energy_j = max(freeze_energy_demand_j - frozen_fraction * available_energy_j, 0.0_JPRB)
+    unapplied_energy_j = unapplied_energy_j - remaining_energy_j
 end subroutine freeze_liquid_water
 
 

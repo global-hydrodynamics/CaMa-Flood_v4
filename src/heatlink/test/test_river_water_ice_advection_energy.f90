@@ -201,7 +201,7 @@ subroutine assert_small(actual_error, scale, label)
     real(kind=JPRD) :: &
     &   tolerance
 
-    tolerance = 1.0e-12_JPRD * max(scale, 1.0_JPRD)
+    tolerance = max(1.0e-12_JPRD, 16.0_JPRD*real(epsilon(1.0_JPRB),JPRD)) * max(scale, 1.0_JPRD)
     if (actual_error <= tolerance) return
     write(*, '(a)') '[TEST FAILED] '//trim(label)
     write(*, '(a,es24.15)') '  error     = ', actual_error
