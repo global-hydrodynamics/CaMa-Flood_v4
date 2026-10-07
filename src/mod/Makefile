@@ -31,3 +31,8 @@ $(LIBNAME): $(OBJS)
 
 clean:
 	${RM} -f *.o *.mod *.a *~ *.s *.optrpt *.dSYM
+
+# Synthetic fixtures and compilation are isolated in a temporary directory.
+.PHONY: test-input-mapping
+test-input-mapping:
+	python3 test/run_input_mapping_tests.py --fc "$(FCMP)" $(INPUT_MAPPING_TEST_FLAGS)

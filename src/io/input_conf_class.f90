@@ -35,7 +35,7 @@ module input_conf_class
     !use intrp_time, only: &
     !&   LINTRP_TIME
     use dim_converter, only: &
-    &   map2vec, find_inpmat
+    &   map2vec, get_inpmat_index
     use io_namelist_mod, only: &
     &   read_nml_input_item, read_nml_input_domain, read_nml_input_shape, read_nml_input_tres, read_nml_input_nc, &
     &   raise_item_not_found_error
@@ -50,6 +50,7 @@ module input_conf_class
         character(len=CLEN_ITEM) :: item ! variable identifier for matching namelist e.g. 'Tair, 'Roff'
         character(len=CLEN_SHORT) :: fmt ! 'bin', 'nc' ('gt' is deprecated)
         character(len=CLEN_PATH) :: path ! file path
+        character(len=CLEN_PATH) :: diminfo_file, inpmat_file
         type(CaMaFrame)    :: map
         integer(kind=JPIM) :: &
         &   inpmat_idx, &   ! for interpolation
@@ -126,7 +127,7 @@ function init_InputConf(item_name, nml_unit, start_dt) result(obj)
     &   is_catm, is_fldstg, is_found, is_netcdf
 
     call read_nml_input_item(nml_unit, item_name, &
-    &   is_found, fmt, path, z_in, is_catm, is_fldstg, scale, offset, div_item)
+    &   is_found, fmt, path, z_in, is_catm, is_fldstg, scale, offset, div_item, obj%diminfo_file, obj%inpmat_file)
     if (.not. is_found) call raise_item_not_found_error('read_nml_input_item', 'input_item', item_name)
     obj%fmt    = fmt
     obj%path   = path
@@ -224,7 +225,19 @@ function init_InputConf(item_name, nml_unit, start_dt) result(obj)
     &   left, right, top, bottom, nx, ny, is_catm, is_fldstg)
 !write(LOGNAM, *) west, east, south, north
 !write(LOGNAM, *) nx, ny, is_n2s, catm, fldstg
-    obj%inpmat_idx = find_inpmat(obj%map)
+    if (obj%map%is_catm()) then
+        if (len_trim(obj%diminfo_file) > 0) then
+            write(LOGNAM, '(a)') '[init_InputConf ERROR] mapping files are not used for is_catm input'
+            stop 1
+        endif
+        obj%inpmat_idx = 0
+    else if (len_trim(obj%diminfo_file) > 0) then
+        obj%inpmat_idx = get_inpmat_index(obj%diminfo_file, obj%inpmat_file, nx, ny)
+    else
+        write(LOGNAM, '(2a)') &
+        &   '[init_InputConf ERROR] gridded input requires diminfo_file and inpmat_file: ', trim(item_name)
+        stop 1
+    endif
     obj%dt = dt2sec(dt_val, dt_unit)
 
     ! Binary annual inputs retain the legacy year-start convention. NetCDF

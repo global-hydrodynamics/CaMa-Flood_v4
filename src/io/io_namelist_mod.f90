@@ -32,7 +32,9 @@ end subroutine raise_item_not_found_error
 subroutine read_nml_input_item( &
 &   nml_unit, item_name, &
 &   is_found, &
-&   fmt, path, z_in, is_catm, is_fldstg, scale, offset, div_item)
+&   fmt, path, z_in, is_catm, is_fldstg, scale, offset, div_item, diminfo_file_out, inpmat_file_out)
+    character(len=*), optional, intent(out) :: diminfo_file_out, inpmat_file_out
+    character(len=CLEN_PATH) :: diminfo_file, inpmat_file
     integer(kind=JPIM), intent(in) :: &
     &   nml_unit
     character(len=*), intent(in) :: &
@@ -54,14 +56,19 @@ subroutine read_nml_input_item( &
     character(len=CLEN_ITEM) :: &
     &   item
     namelist /input_item/ &
-    &   item, fmt, path, z_in, is_catm, is_fldstg, scale, offset, div_item
+    &   item, fmt, path, z_in, is_catm, is_fldstg, scale, offset, div_item, diminfo_file, inpmat_file
     integer(kind=JPIM) :: &
     &   ios
 
+    if (present(diminfo_file_out)) diminfo_file_out = ''
+    if (present(inpmat_file_out)) inpmat_file_out = ''
     rewind(nml_unit)
     is_found = .FALSE.
     do
         ! default
+        item = ''
+        diminfo_file = ''
+        inpmat_file = ''
         fmt = ''
         path = ''
         z_in = 1
@@ -72,15 +79,27 @@ subroutine read_nml_input_item( &
         div_item = ''
         read(nml_unit, nml=input_item, iostat=ios)
         if (ios < 0) return
+        if (ios > 0) then
+            write(LOGNAM, '(a)') '[read_nml_input_item ERROR] invalid input_item namelist'
+            stop 1
+        endif
         if (trim(item) == trim(item_name)) then
             is_found = .TRUE.
             exit
         endif
     enddo
+    if ((len_trim(diminfo_file) == 0) .neqv. (len_trim(inpmat_file) == 0)) then
+        write(LOGNAM, '(2a)') '[read_nml_input_item ERROR] specify both diminfo_file and inpmat_file: ', trim(item)
+        stop 1
+    endif
+    if (present(diminfo_file_out)) diminfo_file_out = diminfo_file
+    if (present(inpmat_file_out)) inpmat_file_out = inpmat_file
     if (trim(fmt) == '') stop 'init_indata ERROR: fmt not specified'
     if (trim(path) == '') stop 'init_indata ERROR: path not specified'
     write(LOGNAM, '(2a)')   '    fmt       = ', trim(fmt)
     write(LOGNAM, '(2a)')   '    path      = ', trim(path)
+    write(LOGNAM, '(2a)') '    diminfo_file = ', trim(diminfo_file)
+    write(LOGNAM, '(2a)') '    inpmat_file  = ', trim(inpmat_file)
     write(LOGNAM, '(a,i0)') '    z_in      = ', z_in
     write(LOGNAM, '(a,L)')  '    is_catm   =', is_catm
     write(LOGNAM, '(a,L)')  '    is_fldstg =', is_fldstg

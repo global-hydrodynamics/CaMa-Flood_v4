@@ -1,10 +1,20 @@
-&input_item item='LWDN', fmt='nc', path='/Users/dtokuda/work/data/ils/ILS_data_20241118/test/frc/GSWP3.BC.LWdown.3hrMap.ILS.2000.nc' /
-&input_item item='PSRF', fmt='nc', path='/Users/dtokuda/work/data/ils/ILS_data_20241118/test/frc/GSWP3.BC.PSurf.3hrMap.ILS.2000.nc', scale=1.0e-2 /
-&input_item item='QAIR', fmt='nc', path='/Users/dtokuda/work/data/ils/ILS_data_20241118/test/frc/GSWP3.BC.Qair.3hrMap.ILS.2000.nc' /
-&input_item item='SWDN', fmt='nc', path='/Users/dtokuda/work/data/ils/ILS_data_20241118/test/frc/GSWP3.BC.SWdown.3hrMap.ILS.2000.nc' /
-&input_item item='TAIR', fmt='nc', path='/Users/dtokuda/work/data/ils/ILS_data_20241118/test/frc/GSWP3.BC.Tair.3hrMap.ILS.2000.nc' /
-&input_item item='TROF', fmt='nc', path='/Users/dtokuda/work/data/ils/ILS_data_20241118/test/frc/GSWP3.BC.Tair.3hrMap.ILS.2000.nc' /
-&input_item item='WIND', fmt='nc', path='/Users/dtokuda/work/data/ils/ILS_data_20241118/test/frc/GSWP3.BC.Wind.3hrMap.ILS.2000.nc' /
+! Expanded and appended by s01-simulation_heatlink.sh.
+! ATM_DIR locates forcing data; INPMAT_DIR_ATM locates mapping files.
+! Change filenames here for different mapping pairs in the same directory.
+&input_item item='LWDN', fmt='nc', path='@ATM_DIR@/GSWP3.BC.LWdown.3hrMap.ILS.2000.nc',
+  diminfo_file='@INPMAT_DIR_ATM@/diminfo.txt', inpmat_file='@INPMAT_DIR_ATM@/inpmat.bin' /
+&input_item item='PSRF', fmt='nc', path='@ATM_DIR@/GSWP3.BC.PSurf.3hrMap.ILS.2000.nc', scale=1.0e-2,
+  diminfo_file='@INPMAT_DIR_ATM@/diminfo.txt', inpmat_file='@INPMAT_DIR_ATM@/inpmat.bin' /
+&input_item item='QAIR', fmt='nc', path='@ATM_DIR@/GSWP3.BC.Qair.3hrMap.ILS.2000.nc',
+  diminfo_file='@INPMAT_DIR_ATM@/diminfo.txt', inpmat_file='@INPMAT_DIR_ATM@/inpmat.bin' /
+&input_item item='SWDN', fmt='nc', path='@ATM_DIR@/GSWP3.BC.SWdown.3hrMap.ILS.2000.nc',
+  diminfo_file='@INPMAT_DIR_ATM@/diminfo.txt', inpmat_file='@INPMAT_DIR_ATM@/inpmat.bin' /
+&input_item item='TAIR', fmt='nc', path='@ATM_DIR@/GSWP3.BC.Tair.3hrMap.ILS.2000.nc',
+  diminfo_file='@INPMAT_DIR_ATM@/diminfo.txt', inpmat_file='@INPMAT_DIR_ATM@/inpmat.bin' /
+&input_item item='TROF', fmt='nc', path='@ATM_DIR@/GSWP3.BC.Tair.3hrMap.ILS.2000.nc',
+  diminfo_file='@INPMAT_DIR_ATM@/diminfo.txt', inpmat_file='@INPMAT_DIR_ATM@/inpmat.bin' /
+&input_item item='WIND', fmt='nc', path='@ATM_DIR@/GSWP3.BC.Wind.3hrMap.ILS.2000.nc',
+  diminfo_file='@INPMAT_DIR_ATM@/diminfo.txt', inpmat_file='@INPMAT_DIR_ATM@/inpmat.bin' /
 
 &input_nc item='LWDN', var_name='LWdown' /
 &input_nc item='PSRF', var_name='PSurf' /
