@@ -60,14 +60,14 @@ def fixtures(path, mode):
     if mode == "partial": mapping = ", diminfo_file='a.info'"
     if mode == "partial-binary": mapping = ", inpmat_file='a.bin'"
     if mode == "catm-files": mapping += ", is_catm=.true."
-    item = f"&input_item item='TEST', fmt='bin', path='forcing.bin', z_in=2{mapping} /\n"
+    item = f"&input_item item='TEST', fmt='bin', path='forcing.bin', slice_index=2{mapping} /\n"
     if mode == "catm":
         item = "&input_item item='TEST', fmt='bin', path='catm.bin', is_catm=.true. /\n"
     if mode == "netcdf":
         item = f"&input_item item='TEST', fmt='nc', path='forcing.nc'{mapping} /\n&input_nc item='TEST', var_name='forcing' /\n"
     nml = item + "&input_domain item='TEST', left=0, right=2, top=2, bottom=0 /\n"
-    nml += "&input_shape item='TEST', nx=2, ny=2, nz=2 /\n"
-    if mode == "catm": nml = nml.replace("ny=2, nz=2", "ny=1, nz=1")
+    if mode != "netcdf": nml += "&input_shape item='TEST', nx=2, ny=2, slice_count=2 /\n"
+    if mode == "catm": nml = nml.replace("ny=2, slice_count=2", "ny=1, slice_count=1")
     nml += "&input_tres item='TEST', dt=1, dt_unit='hour' /\n"
     (path / "input.nml").write_text(nml)
     if mode == "missing": (path / "a.bin").unlink()

@@ -4,7 +4,7 @@ set -euo pipefail
 
 # Global 15-minute heatlink example for the year 2000.
 # ATM_DIR contains the GSWP3 *.2000.nc forcing files.
-# Mapping directories are expanded below; filenames belong to the namelists.
+# Only atmospheric paths are expanded; hydrology keeps its input/map and input/runoff links.
 ROOT=$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
 RUN_DIR=${RUN_DIR:-${ROOT}/out/test1-heatlink}
 MAP_DIR=$(CDPATH= cd -- "${MAP_DIR:-${ROOT}/map/glb_15min}" && pwd)
@@ -13,8 +13,6 @@ ATM_DIR=${ATM_DIR:?Set ATM_DIR to the GSWP3 atmospheric-forcing directory}
 ATM_DIR=$(CDPATH= cd -- "$ATM_DIR" && pwd)
 INPMAT_DIR_ATM=${INPMAT_DIR_ATM:-${MAP_DIR}/input_mappings/05deg_s-n_0e-360e/mean}
 INPMAT_DIR_ATM=$(CDPATH= cd -- "$INPMAT_DIR_ATM" && pwd)
-# Preserve the bundled binary-runoff example and its existing filenames.
-INPMAT_DIR_LSM=$(CDPATH= cd -- "${INPMAT_DIR_LSM:-${MAP_DIR}}" && pwd)
 
 EXE=${ROOT}/src/MAIN_cmf
 NML_COMMON=${NML_COMMON:-${ROOT}/gosh/etc/heat-link.nml}
@@ -51,25 +49,22 @@ escape_nml_path() {
     value=${value//|/\\|}
     printf '%s' "$value"
 }
-map_path=$(escape_nml_path "$MAP_DIR")
-runoff_path=$(escape_nml_path "$RUNOFF_DIR")
 atm_path=$(escape_nml_path "$ATM_DIR")
 inpmat_atm_path=$(escape_nml_path "$INPMAT_DIR_ATM")
-inpmat_lsm_path=$(escape_nml_path "$INPMAT_DIR_LSM")
 
 render_namelist() {
     sed \
-        -e "s|@MAP_DIR@|${map_path}|g" \
-        -e "s|@RUNOFF_DIR@|${runoff_path}|g" \
         -e "s|@ATM_DIR@|${atm_path}|g" \
         -e "s|@INPMAT_DIR_ATM@|${inpmat_atm_path}|g" \
-        -e "s|@INPMAT_DIR_LSM@|${inpmat_lsm_path}|g" \
         "$1"
     printf '\n'
 }
 
 mkdir -p "$RUN_DIR"
 RUN_DIR=$(CDPATH= cd -- "$RUN_DIR" && pwd)
+mkdir -p "${RUN_DIR}/input"
+ln -s "$MAP_DIR" "${RUN_DIR}/input/map"
+ln -s "$RUNOFF_DIR" "${RUN_DIR}/input/runoff"
 NML=${RUN_DIR}/input_cmf.nam
 {
     render_namelist "$NML_COMMON"
@@ -79,7 +74,6 @@ NML=${RUN_DIR}/input_cmf.nam
 echo "Run directory: ${RUN_DIR}"
 echo "Atmospheric forcing: ${ATM_DIR}"
 echo "Atmospheric mapping: ${INPMAT_DIR_ATM}"
-echo "Runoff mapping: ${INPMAT_DIR_LSM}"
 (
     cd "$RUN_DIR"
     { time -p "$EXE"; } > run_stdout.log 2> run_stderr.log

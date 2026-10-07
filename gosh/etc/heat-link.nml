@@ -1,5 +1,7 @@
 ! CaMa-Flood heatlink example: global 15-minute simulation for the year 2000.
-! Path placeholders are expanded by s01-simulation_heatlink.sh.
+! Expected hydrology links in the run directory:
+!   ./input/map     -> CaMa-Flood global 15-minute map
+!   ./input/runoff  -> daily runoff files
 ! Atmospheric input definitions are appended from atm_GSWP3.nml.
 
 &NRUNVER
@@ -13,7 +15,7 @@ LWEVAP    = .FALSE.
 /
 
 &NDIMTIME
-CDIMINFO = '@INPMAT_DIR_LSM@/diminfo_test-1deg.txt'
+CDIMINFO = './input/map/diminfo_test-1deg.txt'
 DT       = 3600
 IFRQ_INP = 24
 /
@@ -43,16 +45,16 @@ EHOUR = 0
 
 &NMAP
 LMAPCDF = .FALSE.
-CNEXTXY = '@MAP_DIR@/nextxy.bin'
-CGRAREA = '@MAP_DIR@/ctmare.bin'
-CELEVTN = '@MAP_DIR@/elevtn.bin'
-CNXTDST = '@MAP_DIR@/nxtdst.bin'
-CRIVLEN = '@MAP_DIR@/rivlen.bin'
-CFLDHGT = '@MAP_DIR@/fldhgt.bin'
-CRIVWTH = '@MAP_DIR@/rivwth_gwdlr.bin'
-CRIVHGT = '@MAP_DIR@/rivhgt.bin'
-CRIVMAN = '@MAP_DIR@/rivman.bin'
-CPTHOUT = '@MAP_DIR@/bifprm.txt'
+CNEXTXY = './input/map/nextxy.bin'
+CGRAREA = './input/map/ctmare.bin'
+CELEVTN = './input/map/elevtn.bin'
+CNXTDST = './input/map/nxtdst.bin'
+CRIVLEN = './input/map/rivlen.bin'
+CFLDHGT = './input/map/fldhgt.bin'
+CRIVWTH = './input/map/rivwth_gwdlr.bin'
+CRIVHGT = './input/map/rivhgt.bin'
+CRIVMAN = './input/map/rivman.bin'
+CPTHOUT = './input/map/bifprm.txt'
 /
 
 &NRESTART
@@ -67,9 +69,9 @@ IFRQ_RST = 0
 &NFORCE
 LINPCDF  = .FALSE.
 LINTERP  = .TRUE.
-CINPMAT  = '@INPMAT_DIR_LSM@/inpmat_test-1deg.bin'
+CINPMAT  = './input/map/inpmat_test-1deg.bin'
 DROFUNIT = 86400000
-CROFDIR  = '@RUNOFF_DIR@'
+CROFDIR  = './input/runoff'
 CROFPRE  = 'Roff____'
 CROFSUF  = '.one'
 /

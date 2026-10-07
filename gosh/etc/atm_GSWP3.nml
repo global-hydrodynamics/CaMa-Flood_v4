@@ -11,6 +11,7 @@
   diminfo_file='@INPMAT_DIR_ATM@/diminfo.txt', inpmat_file='@INPMAT_DIR_ATM@/inpmat.bin' /
 &input_item item='TAIR', fmt='nc', path='@ATM_DIR@/GSWP3.BC.Tair.3hrMap.ILS.2000.nc',
   diminfo_file='@INPMAT_DIR_ATM@/diminfo.txt', inpmat_file='@INPMAT_DIR_ATM@/inpmat.bin' /
+! For optional single-slice tsl input, replace this TROF pair; see trof_tsl.nml.
 &input_item item='TROF', fmt='nc', path='@ATM_DIR@/GSWP3.BC.Tair.3hrMap.ILS.2000.nc',
   diminfo_file='@INPMAT_DIR_ATM@/diminfo.txt', inpmat_file='@INPMAT_DIR_ATM@/inpmat.bin' /
 &input_item item='WIND', fmt='nc', path='@ATM_DIR@/GSWP3.BC.Wind.3hrMap.ILS.2000.nc',

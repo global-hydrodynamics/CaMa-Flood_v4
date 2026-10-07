@@ -24,7 +24,8 @@ module input_conf_class
     use nc_mod, only: &
     &   NCConfig, &
     &   init_ncconfig, get_nc_dt, get_nc_start_record, & !get_nc_scale_offset, &
-    &   read_nc, get_nc_domain
+    &   read_nc, get_nc_domain, handle_error, same_nc_horizontal_grid
+    use netcdf, only: nf90_close
 #endif
     use time_mod, only: &
     &   dt2sec
@@ -51,11 +52,13 @@ module input_conf_class
         character(len=CLEN_SHORT) :: fmt ! 'bin', 'nc' ('gt' is deprecated)
         character(len=CLEN_PATH) :: path ! file path
         character(len=CLEN_PATH) :: diminfo_file, inpmat_file
+        character(len=256) :: slice_dimname = '' ! requested extra dimension; empty means automatic
         type(CaMaFrame)    :: map
         integer(kind=JPIM) :: &
         &   inpmat_idx, &   ! for interpolation
         &   unit, &         ! file unit
-        &   nz, z_in, &     ! vertical index in file
+        &   slice_count = 1, & ! binary file shape only; NetCDF count belongs to ncconf
+        &   slice_index = 1, & ! requested index, including -1
         &   dt              ! temporal resolution [sec]
         character(len=CLEN_ITEM) :: div_item
         logical :: apply_scale, apply_offset
@@ -77,8 +80,12 @@ module input_conf_class
         procedure :: get_fmt        => get_fmt
         procedure :: get_path       => get_path
         procedure :: get_unit       => get_unit
-        procedure :: get_nz         => get_nz
-        procedure :: get_z_in       => get_z_in
+        procedure :: get_slice_count => get_slice_count
+        procedure :: get_slice_index => get_slice_index
+        procedure :: get_slice_index_resolved => get_slice_index_resolved
+#ifdef UseCDF_CMF
+        procedure :: open_next_file => open_next_file
+#endif
         procedure :: get_rec        => get_rec
         procedure :: get_map        => get_map
         procedure :: get_inpmat_idx => get_inpmat_idx
@@ -112,7 +119,7 @@ function init_InputConf(item_name, nml_unit, start_dt) result(obj)
     character(len=CLEN_PATH) :: &
     &   path
     integer(kind=JPIM) :: &
-    &   z_in, nx, ny, nz, unit, rec, dt_val
+    &   slice_index, nx, ny, slice_count, unit, rec, dt_val
 #ifdef UseCDF_CMF
     integer(kind=JPIM) :: &
     &   nc_dt_sec
@@ -127,11 +134,11 @@ function init_InputConf(item_name, nml_unit, start_dt) result(obj)
     &   is_catm, is_fldstg, is_found, is_netcdf
 
     call read_nml_input_item(nml_unit, item_name, &
-    &   is_found, fmt, path, z_in, is_catm, is_fldstg, scale, offset, div_item, obj%diminfo_file, obj%inpmat_file)
+    &   is_found, fmt, path, slice_index, is_catm, is_fldstg, scale, offset, div_item, obj%diminfo_file, obj%inpmat_file)
     if (.not. is_found) call raise_item_not_found_error('read_nml_input_item', 'input_item', item_name)
     obj%fmt    = fmt
     obj%path   = path
-    obj%z_in   = z_in
+    obj%slice_index   = slice_index
     obj%div_item = div_item
     obj%apply_scale  = .not. nearly_equal(scale,  1.0_JPRM)
     obj%apply_offset = .not. nearly_equal(offset, 0.0_JPRM)
@@ -148,25 +155,39 @@ function init_InputConf(item_name, nml_unit, start_dt) result(obj)
             if (.not. is_found) call raise_item_not_found_error('read_nml_input_domain', 'input_domain', item_name)
             call read_nml_input_shape( &
             &   nml_unit, item_name, &
-            &   is_found, nx, ny, nz)
+            &   is_found, nx, ny, slice_count)
             if (.not. is_found) call raise_item_not_found_error('read_nml_input_shape', 'input_shape', item_name)
             call read_nml_input_tres( &
             &   nml_unit, item_name, &
             &   is_found, dt_val, dt_unit)
             if (.not. is_found) call raise_item_not_found_error('read_nml_input_tres', 'input_tres', item_name)
  
+            obj%slice_count = slice_count
+            if (nx < 1 .or. ny < 1 .or. slice_count < 1 .or. slice_index == 0 .or. &
+            &   slice_index < -1 .or. slice_index > slice_count) then
+                write(LOGNAM, '(2a)') '[init_InputConf ERROR] invalid binary shape or slice_index: ', trim(path)
+                write(LOGNAM, '(a,i0,a,i0)') '    slice_index: ', slice_index, ', slice_count: ', slice_count
+                stop 9
+            endif
+
             unit = INQUIRE_FID()
             obj%unit = unit
-            call open_bin(unit, path, 4 * nx * ny * nz)
+            call open_bin(unit, path, 4 * nx * ny * slice_count)
 #ifdef UseCDF_CMF
         case ('netcdf', 'nc')
             is_netcdf = .TRUE.
             call read_nml_input_nc( &
             &   nml_unit, item_name, &
-            &   is_found, var_name)
+            &   is_found, var_name, obj%slice_dimname)
             if (.not. is_found) call raise_item_not_found_error('read_nml_input_nc', 'input_nc', item_name)
+            ! NetCDF shape is authoritative; also reject stale binary shape settings.
+            call read_nml_input_shape(nml_unit, item_name, is_found, nx, ny, slice_count)
+            if (is_found) then
+                write(LOGNAM, '(a)') '[init_InputConf ERROR] input_shape is only for binary; NetCDF shape comes from the variable'
+                stop 9
+            endif
             obj%ncconf = init_ncconfig( &
-            &   path, var_name)
+            &   path, var_name, obj%slice_dimname, obj%slice_index)
             call get_nc_domain( &
             &   obj%ncconf, &
             &   left, right, top, bottom)
@@ -205,13 +226,8 @@ function init_InputConf(item_name, nml_unit, start_dt) result(obj)
             !&   unit, var_id, &
             !&   scale, offset)
             !rec = 2 ! rec=1 is sYear-1/12/31/21:00-24:00, skipped in update_input
-            nx = obj%ncconf%shape(1)
-            ny = obj%ncconf%shape(2)
-            if (obj%ncconf%ndims >= 4) then
-                nz = obj%ncconf%shape(3)
-            else
-                nz = 1
-            endif
+            nx = obj%ncconf%shape(obj%ncconf%horizontal_dimpos(1))
+            ny = obj%ncconf%shape(obj%ncconf%horizontal_dimpos(2))
 #endif
         case default
             write(LOGNAM, '(a)') '[input_conf_class/init_InputConf InValidValueError]'
@@ -220,7 +236,6 @@ function init_InputConf(item_name, nml_unit, start_dt) result(obj)
     end select
     !call read_area(west, east, south, north)
     obj%item = item_name
-    obj%nz = nz
     obj%map = init_CaMaFrame( &
     &   left, right, top, bottom, nx, ny, is_catm, is_fldstg)
 !write(LOGNAM, *) west, east, south, north
@@ -251,7 +266,7 @@ function init_InputConf(item_name, nml_unit, start_dt) result(obj)
     write(LOGNAM, '(3a,i2,2a,i0)') '    shape: ', trim(obj%map%str())
     write(LOGNAM, '(a,i0,a)')      '    temporal resolution: ', dt_val, dt_unit
     write(LOGNAM, '(a,i0)')        '    inpmat_idx: ', obj%inpmat_idx
-    write(LOGNAM, '(a,i0)')        '    nz = ', nz
+    write(LOGNAM, '(a,i0)')        '    slice_count = ', obj%get_slice_count()
     write(LOGNAM, '(2a)')          '    start datetime: ', datetime2string(start_dt)
     write(LOGNAM, '(a,i0)')        '    start record: ', obj%rec
 #ifdef UseCDF_CMF
@@ -287,15 +302,29 @@ integer(kind=JPIM) function get_unit(self) result(unit)
     unit = self%unit
 end function get_unit
 
-integer(kind=JPIM) function get_nz(self) result(nz)
+integer(kind=JPIM) function get_slice_count(self) result(slice_count)
     class(InputConf), intent(in) :: self
-    nz = self%nz
-end function get_nz
+    slice_count = self%slice_count
+#ifdef UseCDF_CMF
+    if (trim(to_lowercase(self%fmt)) == 'nc' .or. trim(to_lowercase(self%fmt)) == 'netcdf') &
+    &   slice_count = self%ncconf%slice_count
+#endif
+end function get_slice_count
 
-integer(kind=JPIM) function get_z_in(self) result(z_in)
+integer(kind=JPIM) function get_slice_index(self) result(slice_index)
     class(InputConf), intent(in) :: self
-    z_in = self%z_in
-end function get_z_in
+    slice_index = self%slice_index
+end function get_slice_index
+
+integer(kind=JPIM) function get_slice_index_resolved(self) result(slice_index_resolved)
+    class(InputConf), intent(in) :: self
+    slice_index_resolved = self%slice_index
+    if (self%slice_index == -1) slice_index_resolved = self%get_slice_count()
+#ifdef UseCDF_CMF
+    if (trim(to_lowercase(self%fmt)) == 'nc' .or. trim(to_lowercase(self%fmt)) == 'netcdf') &
+    &   slice_index_resolved = self%ncconf%slice_index_resolved
+#endif
+end function get_slice_index_resolved
 
 integer(kind=JPIM) function get_rec(self) result(rec)
     class(InputConf), intent(in) :: self
@@ -339,13 +368,13 @@ end function get_div_item
 
 subroutine get_file_shape( &
 &   self, &
-&   nx, ny, nz)
+&   nx, ny, slice_count)
     class(InputConf), intent(in) :: &
     &   self
     integer(kind=JPIM), intent(out) :: &
-    &   nx, ny, nz
+    &   nx, ny, slice_count
     call self%map%shape(nx, ny)
-    nz = self%get_nz()
+    slice_count = self%get_slice_count()
 end subroutine get_file_shape
 
 subroutine set_next(self)
@@ -392,34 +421,30 @@ subroutine update_input(self, arr)
     real(kind=JPRB), intent(out) :: &
     &   arr(:)
     integer(kind=JPIM) :: &
-    &   nx, ny, nz
+    &   nx, ny, slice_count, idx
     logical :: &
     &   is_end
     real(kind=JPRM), allocatable :: &
     &   arr_file(:,:,:)
     select case (trim(to_lowercase(self%get_fmt())))
         case ('binary', 'bin')
-            call self%get_file_shape(nx, ny, nz)
-            allocate(arr_file(nx,ny,nz), source=0.0_JPRM)
+            call self%get_file_shape(nx, ny, slice_count)
+            allocate(arr_file(nx,ny,slice_count), source=0.0_JPRM)
             call read_bin(arr_file(:,:,:), self%get_path(), self%get_rec())
             is_end = .FALSE.
+            idx = self%get_slice_index_resolved()
 #ifdef UseCDF_CMF
         case ('netcdf', 'nc')
-            call self%get_file_shape(nx, ny, nz)
-            allocate(arr_file(nx,ny,nz), source=0.0_JPRM)
+            call self%get_file_shape(nx, ny, slice_count)
+            allocate(arr_file(nx,ny,1), source=0.0_JPRM)
+            idx = 1
             if (self%get_rec() > self%ncconf%time_len) then
                 write(LOGNAM, '(2a,i0,a,i0)') &
                 &   '[input_conf_class/update_input ERROR] ', trim(self%get_item()), &
                 &   ': requested record ', self%get_rec(), ' exceeds NetCDF time length ', self%ncconf%time_len
                 stop 9
             endif
-            if (self%ncconf%ndims == 3) then ! (lon, lat, time)
-                call read_nc( &
-                &   arr_file(:,:,1), is_end, self%ncconf, self%get_rec())
-            else
-                call read_nc( &
-                &   arr_file(:,:,:), is_end, self%ncconf, self%get_rec())
-            endif
+            call read_nc(arr_file(:,:,1), is_end, self%ncconf, self%get_rec())
 #endif
         case default
             write(LOGNAM, '(a)') '[input_conf_class/update_input InValidValueError]'
@@ -437,10 +462,50 @@ subroutine update_input(self, arr)
 
     ! Input files are read into JPRM buffers. Invalid file-side values are
     ! left untouched, while valid cells are adjusted before map2vec.
-    call map2vec(arr_file(:,:,self%get_z_in()), arr(:), self%get_map(), self%get_inpmat_idx())
+    call map2vec(arr_file(:,:,idx), arr(:), self%get_map(), self%get_inpmat_idx())
     deallocate(arr_file)
     call self%set_next()
 end subroutine update_input
+
+#ifdef UseCDF_CMF
+subroutine open_next_file(self, path, start_dt)
+    class(InputConf), intent(inout) :: self
+    character(len=*), intent(in) :: path
+    type(DateTime), intent(in) :: start_dt
+    type(NCConfig) :: next
+    integer :: nx, ny, slice_count, rec, nc_dt
+
+    if (trim(to_lowercase(self%fmt)) /= 'nc' .and. trim(to_lowercase(self%fmt)) /= 'netcdf') then
+        write(LOGNAM, '(a)') '[open_next_file ERROR] only NetCDF input supports explicit reopening'
+        stop 9
+    endif
+    next = init_ncconfig(path, trim(self%ncconf%varname), self%slice_dimname, self%slice_index)
+    call self%get_file_shape(nx, ny, slice_count)
+    if (any(next%shape(next%horizontal_dimpos) /= [nx,ny])) then
+        write(LOGNAM, '(2a)') '[open_next_file ERROR] horizontal shape changed: ', trim(path)
+        stop 9
+    endif
+    if (.not. same_nc_horizontal_grid(self%ncconf, next)) then
+        write(LOGNAM, '(2a)') '[open_next_file ERROR] horizontal coordinates changed: ', trim(path)
+        stop 9
+    endif
+    nc_dt = get_nc_dt(next)
+    if (nc_dt > 0 .and. nc_dt /= self%dt) then
+        write(LOGNAM, '(2a)') '[open_next_file ERROR] time interval changed: ', trim(path)
+        stop 9
+    endif
+    rec = get_nc_start_record(next, start_dt)
+    if (slice_count /= next%slice_count) then
+        write(LOGNAM, '(a,i0,a,i0)') '    slice_count changed: ', slice_count, ' -> ', next%slice_count
+    endif
+    call handle_error(nf90_close(self%ncconf%ncid))
+    self%ncconf = next
+    self%path = path
+    self%rec = rec
+    ! The next read is still due at nxt_t; preserve the model's elapsed-time schedule.
+    self%is_updated = .FALSE.
+end subroutine open_next_file
+#endif
 
 ! ===================================================================================================
 ! Array of InputConf

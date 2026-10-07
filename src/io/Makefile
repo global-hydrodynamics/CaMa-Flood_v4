@@ -38,3 +38,9 @@ all: $(libname)
 
 clean:
 	$(RM) -rf *.o *.mod *.a *~ *.s *.optrpt *.dSYM $(TEST_EXES)
+
+# Compile and run the production input path with disposable synthetic fixtures.
+PYTHON ?= python3
+.PHONY: test-input-slice
+test-input-slice:
+	$(PYTHON) test/run_input_slice_tests.py --fc "$(FCMP)" $(INPUT_SLICE_TEST_FLAGS)
