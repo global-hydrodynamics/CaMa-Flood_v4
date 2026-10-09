@@ -45,7 +45,6 @@ module cmf_cf_time_mod
 
 contains
 
-!####################################################################
 subroutine configure_simulation_calendar(calendar,lleapyr,log_unit)
     character(len=*), intent(inout) :: calendar
     logical, intent(inout) :: lleapyr
@@ -68,9 +67,7 @@ subroutine configure_simulation_calendar(calendar,lleapyr,log_unit)
         calendar='365_day'
     endif
 end subroutine configure_simulation_calendar
-!####################################################################
 
-!####################################################################
 subroutine check_runoff_time_coverage(axis,lleapyr,start_date,hour,minute,nrequired,dt,log_unit)
     type(cf_time_axis), intent(in) :: axis
     logical, intent(in) :: lleapyr
@@ -89,9 +86,7 @@ subroutine check_runoff_time_coverage(axis,lleapyr,start_date,hour,minute,nrequi
         stop 9
     endif
 end subroutine check_runoff_time_coverage
-!####################################################################
 
-!####################################################################
 integer(kind=JPIM) function runoff_time_record(axis,lleapyr,date,hour,minute,legacy_record,log_unit) result(record)
     type(cf_time_axis), intent(in) :: axis
     logical, intent(in) :: lleapyr
@@ -110,10 +105,8 @@ integer(kind=JPIM) function runoff_time_record(axis,lleapyr,date,hour,minute,leg
         stop 9
     endif
 end function runoff_time_record
-!####################################################################
 
 #ifdef UseCDF_CMF
-!####################################################################
 subroutine check_restart_calendar(ncid,lleapyr,log_unit)
     integer, intent(in) :: ncid,log_unit
     logical, intent(in) :: lleapyr
@@ -137,7 +130,6 @@ subroutine check_restart_calendar(ncid,lleapyr,log_unit)
         stop 9
     endif
 end subroutine check_restart_calendar
-!####################################################################
 #endif
 
 !####################################################################
@@ -661,7 +653,6 @@ end subroutine nf90_check_dimension
 !####################################################################
 #endif
 
-!####################################################################
 subroutine cf_find_noleap_record(axis,start_date,hour,minute,elapsed_seconds,record,ierr,message)
     ! Advance in the model's 365-day calendar, then look up the same civil
     ! datetime in the input calendar. This also handles bounds and restarts.
@@ -694,9 +685,7 @@ subroutine cf_find_noleap_record(axis,start_date,hour,minute,elapsed_seconds,rec
     m=int(mod(target,60_JPIB),JPIM)
     call cf_find_time_record(axis,year*10000+month*100+day,h,m,record,ierr,message,.true.)
 end subroutine cf_find_noleap_record
-!####################################################################
 
-!####################################################################
 pure integer function time_lower_bound(values,target) result(idx)
     ! First coordinate >= target. Axes are validated as strictly increasing.
     integer(kind=JPIB), intent(in) :: values(:),target
@@ -713,7 +702,6 @@ pure integer function time_lower_bound(values,target) result(idx)
     enddo
     idx=left
 end function time_lower_bound
-!####################################################################
 
 !####################################################################
 subroutine cf_find_time_record(axis,yyyymmdd,hour,minute,record,ierr,message,require_interval_start)
@@ -839,7 +827,6 @@ logical function cf_calendar_matches_lleapyr(calendar,lleapyr,ierr,message)
 end function cf_calendar_matches_lleapyr
 !####################################################################
 
-!####################################################################
 logical function cf_calendar_supports_model(calendar,lleapyr,ierr,message) result(supported)
     character(len=*), intent(in) :: calendar
     logical, intent(in) :: lleapyr
@@ -852,6 +839,5 @@ logical function cf_calendar_supports_model(calendar,lleapyr,ierr,message) resul
     ! require inventing a February 29 value, so remains an error.
     supported=ierr==0 .and. (uses_leap .or. .not. lleapyr)
 end function cf_calendar_supports_model
-!####################################################################
 
 end module cmf_cf_time_mod
