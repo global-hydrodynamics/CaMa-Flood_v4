@@ -1,6 +1,6 @@
 module cmf_cf_time_mod
 !==========================================================
-    !* PURPOSE: Read and validate CF-compliant NetCDF time axes.
+    !* PURPOSE: Configure model calendars and validate CF NetCDF time axes.
     !*
     !* The top-level Makefile compiles this source directly so the legacy
     !* reader can share it with src/common + src/io without making the
@@ -28,6 +28,9 @@ module cmf_cf_time_mod
         integer(kind=JPIB), allocatable :: upper_minutes(:)
     end type cf_time_axis
 
+    public :: configure_simulation_calendar
+    public :: check_runoff_time_coverage
+    public :: runoff_time_record
     public :: cf_datetime_to_minutes
     public :: cf_find_time_record
     public :: cf_calendar_matches_lleapyr
@@ -35,11 +38,107 @@ module cmf_cf_time_mod
     public :: cf_calendar_supports_model
     public :: cf_find_noleap_record
 #ifdef UseCDF_CMF
+    public :: check_restart_calendar
     public :: cf_read_time_axis
     public :: cf_resolve_time_record
 #endif
 
 contains
+
+!####################################################################
+subroutine configure_simulation_calendar(calendar,lleapyr,log_unit)
+    character(len=*), intent(inout) :: calendar
+    logical, intent(inout) :: lleapyr
+    integer, intent(in) :: log_unit
+    integer(kind=JPIM) :: ierr
+    character(len=CF_STRLEN) :: message
+
+    ! An omitted setting retains the legacy switch, including .false.
+    calendar=lowercase(adjustl(calendar))
+    if (len_trim(calendar)>0) then
+        lleapyr=cf_calendar_uses_leap_day(calendar,ierr,message)
+        if (ierr/=0) then
+            write(log_unit,*) 'Unsupported simulation CALENDAR: ',trim(calendar)
+            stop 9
+        endif
+    endif
+    if (lleapyr) then
+        calendar='standard'
+    else
+        calendar='365_day'
+    endif
+end subroutine configure_simulation_calendar
+!####################################################################
+
+!####################################################################
+subroutine check_runoff_time_coverage(axis,lleapyr,start_date,hour,minute,nrequired,dt,log_unit)
+    type(cf_time_axis), intent(in) :: axis
+    logical, intent(in) :: lleapyr
+    integer(kind=JPIM), intent(in) :: start_date,hour,minute,nrequired,dt
+    integer, intent(in) :: log_unit
+    integer(kind=JPIM) :: record,ierr
+    character(len=CF_STRLEN) :: message
+
+    ! Only mixed-calendar runs need the extra February 29 coverage check.
+    if (lleapyr .or. nrequired<=0) return
+    if (.not.cf_calendar_uses_leap_day(axis%calendar,ierr,message)) return
+    call cf_find_noleap_record(axis,start_date,hour,minute, &
+    &   int(nrequired-1,JPIB)*int(dt,JPIB),record,ierr,message)
+    if (ierr/=0) then
+        write(log_unit,*) 'Run end later than forcing data: ',trim(message)
+        stop 9
+    endif
+end subroutine check_runoff_time_coverage
+!####################################################################
+
+!####################################################################
+integer(kind=JPIM) function runoff_time_record(axis,lleapyr,date,hour,minute,legacy_record,log_unit) result(record)
+    type(cf_time_axis), intent(in) :: axis
+    logical, intent(in) :: lleapyr
+    integer(kind=JPIM), intent(in) :: date,hour,minute,legacy_record
+    integer, intent(in) :: log_unit
+    integer(kind=JPIM) :: ierr
+    character(len=CF_STRLEN) :: message
+
+    ! Preserve the original record arithmetic for matching calendars.
+    record=legacy_record
+    if (lleapyr) return
+    if (.not.cf_calendar_uses_leap_day(axis%calendar,ierr,message)) return
+    call cf_find_time_record(axis,date,hour,minute,record,ierr,message,.true.)
+    if (ierr/=0) then
+        write(log_unit,*) 'Cannot resolve runoff record: ',trim(message)
+        stop 9
+    endif
+end function runoff_time_record
+!####################################################################
+
+#ifdef UseCDF_CMF
+!####################################################################
+subroutine check_restart_calendar(ncid,lleapyr,log_unit)
+    integer, intent(in) :: ncid,log_unit
+    logical, intent(in) :: lleapyr
+    integer :: status,varid
+    integer(kind=JPIM) :: ierr
+    character(len=CF_STRLEN) :: calendar,message
+    logical :: calendar_ok
+
+    ! Old restart files without calendar metadata retain their behavior.
+    status=nf90_inq_varid(ncid,'time',varid)
+    if (status/=nf90_noerr) return
+    status=nf90_get_att(ncid,varid,'calendar',calendar)
+    if (status==nf90_enotatt) return
+    if (status/=nf90_noerr) then
+        write(log_unit,*) 'Cannot read restart calendar: ',trim(nf90_strerror(status))
+        stop 9
+    endif
+    calendar_ok=cf_calendar_matches_lleapyr(calendar,lleapyr,ierr,message)
+    if (ierr/=0 .or. .not.calendar_ok) then
+        write(log_unit,*) 'Restart calendar differs from simulation calendar: ',trim(calendar)
+        stop 9
+    endif
+end subroutine check_restart_calendar
+!####################################################################
+#endif
 
 !####################################################################
 pure function lowercase(text) result(lower)

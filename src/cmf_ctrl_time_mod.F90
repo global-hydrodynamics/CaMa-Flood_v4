@@ -52,10 +52,10 @@ SUBROUTINE CMF_TIME_NMLIST
 !================================================
 USE YOS_CMF_INPUT,      ONLY: CSETFILE,NSETFILE
 USE YOS_CMF_INPUT,      ONLY: LLEAPYR
+USE cmf_cf_time_mod,    ONLY: configure_simulation_calendar
 USE YOS_CMF_TIME,       ONLY: YYYY0, MM0, DD0
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
 IMPLICIT NONE
-INTEGER :: IC, CODE
 !================================================
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "!---------------------!"
@@ -80,27 +80,7 @@ CALENDAR=''
 REWIND(NSETFILE)
 READ(NSETFILE,NML=NSIMTIME)
 
-! An explicit calendar overrides the legacy switch; omission preserves it.
-CALENDAR=ADJUSTL(CALENDAR)
-DO IC=1,LEN_TRIM(CALENDAR)
-  CODE=IACHAR(CALENDAR(IC:IC))
-  IF (CODE>=IACHAR('A') .AND. CODE<=IACHAR('Z')) CALENDAR(IC:IC)=ACHAR(CODE+32)
-ENDDO
-SELECT CASE (TRIM(CALENDAR))
-CASE ('')
-CASE ('standard','gregorian','proleptic_gregorian')
-  LLEAPYR=.TRUE.
-CASE ('365_day','noleap')
-  LLEAPYR=.FALSE.
-CASE DEFAULT
-  WRITE(LOGNAM,*) 'Unsupported simulation CALENDAR: ',TRIM(CALENDAR)
-  STOP 9
-END SELECT
-IF (LLEAPYR) THEN
-  CALENDAR='standard'
-ELSE
-  CALENDAR='365_day'
-ENDIF
+CALL configure_simulation_calendar(CALENDAR,LLEAPYR,LOGNAM)
 
 WRITE(LOGNAM,*) "=== NAMELIST, NSIMTIME ==="
 WRITE(LOGNAM,*) "SYEAR,SMON,SDAY,SHOUR:", SYEAR,SMON,SDAY,SHOUR

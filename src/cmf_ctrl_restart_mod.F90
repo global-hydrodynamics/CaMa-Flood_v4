@@ -248,16 +248,14 @@ SUBROUTINE READ_REST_CDF
 #ifdef UseCDF_CMF
 USE NETCDF
 USE YOS_CMF_INPUT,    ONLY: NX, NY, LLEAPYR
-USE cmf_cf_time_mod,  ONLY: cf_calendar_matches_lleapyr
+USE cmf_cf_time_mod,  ONLY: check_restart_calendar
 USE YOS_CMF_MAP,      ONLY: NPTHOUT, NPTHLEV, PTH_UPST, PTH_DOWN
 USE CMF_UTILS_MOD,    ONLY: NCERROR, mapP2vecP, mapP2vecD
 IMPLICIT NONE
 ! local variables
 INTEGER(KIND=JPIM)    ::  NCID,VARID
-INTEGER(KIND=JPIM)    ::  IPTH, STATUS, IERR
+INTEGER(KIND=JPIM)    ::  IPTH
 CHARACTER(LEN=256)    ::  CFILE
-CHARACTER(LEN=256)    ::  RESTART_CALENDAR, MESSAGE
-LOGICAL              ::  CALENDAR_OK
 REAL(KIND=JPRD)       ::  P2TEMP(NX,NY), P1PTH(NPTHOUT,NPTHLEV)  !! NetCDF restart is in Double Precision
 !================================================
 CFILE=TRIM(CRESTSTO)
@@ -265,20 +263,7 @@ WRITE(LOGNAM,*)'READ_REST: read restart netcdf: ', TRIM(CFILE)
 
 CALL NCERROR( NF90_OPEN(CFILE,NF90_NOWRITE,NCID), 'OPENING '//CFILE)
 
-! Old restart files without calendar metadata retain their existing behavior.
-STATUS=NF90_INQ_VARID(NCID,'time',VARID)
-IF (STATUS==NF90_NOERR) THEN
-  STATUS=NF90_GET_ATT(NCID,VARID,'calendar',RESTART_CALENDAR)
-  IF (STATUS==NF90_NOERR) THEN
-    CALENDAR_OK=cf_calendar_matches_lleapyr(RESTART_CALENDAR,LLEAPYR,IERR,MESSAGE)
-    IF (IERR/=0 .OR. .NOT.CALENDAR_OK) THEN
-      WRITE(LOGNAM,*) 'Restart calendar differs from simulation calendar: ',TRIM(RESTART_CALENDAR)
-      STOP 9
-    ENDIF
-  ELSEIF (STATUS/=NF90_ENOTATT) THEN
-    CALL NCERROR(STATUS,'READING RESTART CALENDAR')
-  ENDIF
-ENDIF
+CALL check_restart_calendar(NCID,LLEAPYR,LOGNAM)
 
 CALL NCERROR( NF90_INQ_VARID(NCID,'rivsto',VARID))
 CALL NCERROR( NF90_GET_VAR(NCID,VARID,P2TEMP,(/1,1,1/),(/NX,NY,1/) ) )

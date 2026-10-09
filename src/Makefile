@@ -28,9 +28,7 @@ LIBS    ?= $(LIB)
 #*** module
 YOS_OBJS = \
 	parkind1.o
-ifneq ($(findstring -DUseCDF_CMF,$(CFLAGS)),)
 YOS_OBJS += cmf_cf_time_mod.o
-endif
 YOS_OBJS += \
 	yos_cmf_input.o \
 	yos_cmf_time.o  \
@@ -78,8 +76,8 @@ SUBLIBS := $(foreach d,$(EXT_LIBS),$(abspath $(d))/lib$(notdir $(d)).a)
 .f90.o:
 	$(FCMP) $(FFLAGS) -c $(INCDIRS) $(MODS) $(CFLAGS) $< -o $@
 
-# Compile the shared CF-time source directly. This keeps the standard
-# executable independent of the optional libcommon archive.
+# Compile the calendar helpers directly, also without NetCDF. The standard
+# executable remains independent of the optional libcommon archive.
 cmf_cf_time_mod.o: common/cmf_cf_time_mod.F90 parkind1.o
 	$(FCMP) $(FFLAGS) -c $(INCDIRS) $(MODS) $(CFLAGS) $< -o $@
 
