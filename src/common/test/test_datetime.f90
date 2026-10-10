@@ -16,6 +16,11 @@ program test_datetime
     call assert_equal(seconds_since_year_start(date_hour2datetime(20000301_JPIM, 0_JPIM)), &
     &   60_JPIM * 86400_JPIM, 'March in leap year [s]')
 
+    call assert_equal(seconds_since_year_start(date_hour2datetime(20000301_JPIM, 3_JPIM), .false.), &
+    &   (59_JPIM * 24_JPIM + 3_JPIM) * 3600_JPIM, 'March in noleap year [s]')
+    call assert_equal(seconds_since_year_start(date_hour2datetime(20010101_JPIM, 0_JPIM), .false.), &
+    &   0_JPIM, 'new noleap year [s]')
+
     write(*, '(a)') '[ALL TESTS PASSED] test_datetime'
 
 contains

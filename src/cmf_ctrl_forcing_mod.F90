@@ -25,7 +25,8 @@ USE PARKIND1,                ONLY: JPIM, JPIB, JPRB, JPRM
 USE YOS_CMF_INPUT,           ONLY: LOGNAM
 USE YOS_CMF_MAP,             ONLY: INPX, INPY, INPA, INPXI, INPYI, INPAI, INPNI
 #ifdef UseCDF_CMF
-USE cmf_cf_time_mod,         ONLY: cf_time_axis, cf_resolve_time_record
+USE cmf_cf_time_mod,         ONLY: cf_time_axis, cf_resolve_time_record, &
+                            & check_runoff_time_coverage, runoff_time_record
 #endif
 !============================
 IMPLICIT NONE
@@ -78,6 +79,7 @@ INTEGER(KIND=JPIM)              :: NRECSTART   !! record corresponding to simula
 LOGICAL                         :: LAUTOTIME    !! true: use the NetCDF CF time axis
 END TYPE TYPEROF
 TYPE(TYPEROF)                   :: ROFCDF      !! Derived type for Runoff input 
+TYPE(cf_time_axis)              :: ROF_TIME_AXIS
 #endif
 
 CONTAINS
@@ -254,7 +256,6 @@ INTEGER(KIND=JPIM)              :: NTIMEID,NCDFSTP
 INTEGER(KIND=JPIM)              :: KMINENDIN
 INTEGER(KIND=JPIM)              :: IERR,NREQUIRED
 CHARACTER(LEN=256)              :: CMESSAGE
-TYPE(cf_time_axis)              :: ROF_TIME_AXIS
 !================================================
 IF( .not. LINPDAY ) THEN !! only one input file during simulation period
 
@@ -302,6 +303,8 @@ IF( .not. LINPDAY ) THEN !! only one input file during simulation period
     ROFCDF%NSTART=KMINSTART
     NREQUIRED=INT((INT(KMINEND-KMINSTART,KIND=JPIB)*60_JPIB+INT(DTIN,KIND=JPIB)-1_JPIB) &
                  & /INT(DTIN,KIND=JPIB),KIND=JPIM)
+    CALL check_runoff_time_coverage(ROF_TIME_AXIS,LLEAPYR,ISYYYYMMDD,ISHOUR,ISMIN, &
+                                  & NREQUIRED,INT(DTIN,JPIM),LOGNAM)
     IF ( ROFCDF%NRECSTART+NREQUIRED-1>NCDFSTP ) THEN
       WRITE(LOGNAM,*) "Run end later than forcing data",ROFCDF%NRECSTART,NREQUIRED,NCDFSTP
       STOP 9
@@ -604,7 +607,7 @@ SUBROUTINE CMF_FORCING_GET_CDF(PBUFF)
 ! Read forcing data from netcdf
 ! -- call from CMF_FORCING_GET
 USE YOS_CMF_TIME,            ONLY: KMIN, KMINSTART, IYYYYMMDD, IHHMM, IYYYY, IMM, IDD, IHOUR, IMIN
-USE YOS_CMF_INPUT,           ONLY: DTIN, NXIN, NYIN
+USE YOS_CMF_INPUT,           ONLY: DTIN, NXIN, NYIN, LLEAPYR
 USE CMF_UTILS_MOD,           ONLY: NCERROR,   DATE2MIN
 USE NETCDF
 IMPLICIT NONE
@@ -665,6 +668,7 @@ ELSE !! LINPDAY=.false. : one runoff input file during simulation period
   !*** 1. calculate irec
   IF ( ROFCDF%LAUTOTIME ) THEN
     IRECINP=ROFCDF%NRECSTART+INT((KMIN-KMINSTART)*60_JPIM,JPIM)/INT(DTIN,JPIM)
+    IRECINP=runoff_time_record(ROF_TIME_AXIS,LLEAPYR,IYYYYMMDD,IHOUR,IMIN,IRECINP,LOGNAM)
   ELSE
     IRECINP=INT((KMIN-ROFCDF%NSTART)*60_JPIM,JPIM)/INT(DTIN,JPIM)+1
   ENDIF
