@@ -1,27 +1,25 @@
-# Sample script for comparison
+# Comparison with observations
 
-NOTE: all sample observation data is dummy, as we cannot redistribute observation datasets.
+These scripts compare CaMa-Flood discharge (`outflw`), water-surface elevation (`sfcelv`, WSE), and flood-water extent (`fldare`, FWE) outputs with observation data. Observation examples supplied with a distribution package are dummy data because the original observation datasets cannot be redistributed. Replace them with appropriately licensed observations for scientific validation. A GitHub clone does not include the package's `obs_sample/` directory.
 
-## 1. Discharge validation
-Simulated total discharge (outflw) is comapred with observed discharge values in daily scale.
+## Setup and execution
 
-```bash
-sh s01-discharge_validation.sh
+Run from `etc/validation/`. Starting at the model root (a GitHub checkout or extracted package):
+
+```sh
+cd etc/validation
 ```
-The above program will run ```bash src/discharge_validation.py``` which compares the simulated and observed dicharge. The above program will output discarge comaprison figures (```fig_{tag}/discharge```) and data files (```txt_{tag}/discharge```) for each observation locations. This program will output the Nash-Sutcliffe efficiency and Kling-Gupta efficiency.
 
-## 2. Water surface elevation validation
-Simulated water surface elevation [WSE] (sfcelv) is comapred with observed WSE values in daily scale.
+Before execution, edit the selected shell script's map, simulation-output, observation, period, and output-format settings. Discharge and WSE also use station lists allocated to the selected river map; WSE requires the observation reference-geoid setting. FWE uses a selected geographical domain. Provide the files expected by the corresponding Python reader.
 
-```bash
-sh s02-wse_validation.sh
-```
-The above program will run ```src/wse_validation.py``` which compares the simulated and observed WSE. The above program will output discarge comaprison figures (```fig_{tag}/wse```) and data files (```txt_{tag}/wse```) for each observation locations. This program will output the Root Mean Square Error.
+The wrappers invoke `python` and require NumPy, Matplotlib, and netCDF4 in that environment. They create `map`, `out`, and `obs` links and replace the selected figure/text output directories; check existing outputs before running.
 
-## 3. Flood water extent validation
-Simulated flood water extent [FWE] (fldare) is comapred with observed FWE values in monthly scale.
+## Examples
 
-```bash
-sh s02-flood_extent_validation.sh
-```
-The above program will run ```src/flood_extent_validation.py``` which compares the simulated and observed FWE. The above program will output monthly averaged FWE time series figures (```fig_{tag}/fwe```) and data files (```txt_{tag}/fwe```) for the region choose. This program will output the correlation coeffient for FWE comaprison.
+| Comparison | Command | Python implementation | Outputs |
+| --- | --- | --- | --- |
+| Daily discharge | `sh s01-discharge_validation.sh` | [`src/discharge_validation.py`](src/discharge_validation.py) | Figures and paired data under `fig_<TAG>/discharge/` and `txt_<TAG>/discharge/`; Nash–Sutcliffe and Kling–Gupta efficiency statistics. |
+| Daily WSE | `sh s02-wse_validation.sh` | [`src/wse_validation.py`](src/wse_validation.py) | Figures and paired data under `fig_<TAG>/wse/` and `txt_<TAG>/wse/`; root mean square error. |
+| Monthly FWE | `sh s03-flood_extent_validation.sh` | [`src/flood_extent_validation.py`](src/flood_extent_validation.py) | Time-series figures and paired data under `fig_<TAG>/fwe/` and `txt_<TAG>/fwe/`; correlation coefficient. |
+
+The wrappers call the Python programs with their configured arguments. Run the shell commands above after adapting their settings. For the model experiments that provide simulation outputs, see the [sample execution guide](../../gosh/README.md).

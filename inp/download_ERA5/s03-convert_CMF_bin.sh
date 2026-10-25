@@ -9,7 +9,7 @@
 #       runoff.ctl with tdef 1dy
 #
 #   sub-daily:
-#       runoff_YYYYMMDDHH.bin
+#       runoff_YYYYMMDD.bin (multiple timestep records in each daily file)
 #       runoff.ctl with tdef 1hr, 3hr, 6hr, 12hr, etc.
 #
 # Downloaded input file unit:
@@ -29,12 +29,12 @@ PYTHON_SCRIPT="./convert_CMF_bin.py"
 
 # (1) Downloaded NetCDF files
 #INDIR="./ori_global"
-INDIR="./ori_jpn"
+INDIR="./ori_japan"
 INPUT_FILE_UNIT="monthly"
 
 # Downloaded data timestep in hours.
 # If this is 24, output is daily runoff_YYYYMMDD.bin.
-# If this is 1, 3, 6, or 12, output is sub-daily runoff_YYYYMMDDHH.bin.
+# If this is 1, 3, 6, or 12, each daily file contains sub-daily records.
 TIMESTEP_HOURS=24 
 
 if [ "${INPUT_FILE_UNIT}" = "daily" ]; then

@@ -1,12 +1,10 @@
 # Options for High Performance Computing
 
-Brief introductions for CaMa-Flood HPC uses. 
+This guide covers MPI partitioning, vector-processor calculations, and floating-point reproducibility. For compiler and library setup, see the [build guide](../../adm/README.md); for run configurations, see the [sample execution guide](../../gosh/README.md).
 
 1. MPI parallelization
 2. Vector-processor code
-3. Bit-idential simulation
-
-Below is a tentative idea.
+3. Floating-point reproducibility
 
 ## MPI parallelization
 
@@ -25,39 +23,41 @@ MPI parallelization in CaMa-Flood v4.03 is designed for:
 
 Basially, grids in one river basin are assigned to a same MPI region to reduce commnication cost. As **some river basins are inter-connected by bifurcation channel**, river basin ID should be updated, and these inter-connected basins should be merged when MPI regionalization data is prepared. 
 
-Codes for MPI regionalization (considering inter-basin connectivity) are prepared in map/src_param/ directory.
+Reusable MPI map-preparation tools are in [`map/src/src_param/`](../../map/src/src_param/README.md). Copy the component into the target map directory, build it, and run the workflow from the copied `src_param/` directory. A GitHub clone requires separate map data; a distribution package may include a matching map and prepared MPI partitions.
 
-#### s03-bifucation_mpi.sh
+#### `s03-mpi_map_setup.sh`
 Shell script to prepare MPI regionalization map. Please edit the script if you want to generate MPI regionalization map with a setting different from the defaults in this script.
 
 #### set_bifparam.F90
 Code to set river bifurcation parameters. (Note: this code is also used in s01-channel_params.sh).
 Bifurcation channel parameters (bifprm.txt) is generated, by modifying the original bifurcation parameter file (bifori.txt)
 
-#### set_bif_basin.F90
-Code to analyze bifucation channel parameter data bifprm.txt), and integrate river basins inter-connected by bifurcation channels.
+#### `set_bif_basin_mpi.F90`
+The MPI workflow uses this program to analyze `bifprm.txt` and group basins connected by bifurcation channels. A separate `set_bif_basin.F90` provides basin-analysis utilities; use the program selected by the MPI workflow for partition preparation.
 
-<Output files>
-- bifbsn.bin = basin ID file, ypdated by considering inter-basin bifurcation channel connectivity
-- bifcol.bin = basin color file for visualization, corresponding to bifbsn.bin
-- bifmod.bin = supplemental map. 1= Basins absorbed by merging. 2= Basins expanded by merging
-- bpoint.bin = point of inter-basin connectivity. 3= River bifurcation connectivity, 2=overland bifurcation connectivity, 1=not connected in bifbsn.bin
+Outputs are written to the parent map directory:
+
+- `bifbsn_mpi.bin`: basin IDs updated for inter-basin bifurcation connectivity; read by `set_mpi_region`.
+- `bifcol_mpi.bin`: visualization colors for the updated basins.
+- `bifmod_mpi.bin`: indicators for basins absorbed or expanded during merging.
+- `bpoint_mpi.bin`: inter-basin connection markers.
+- `bifprm_mpi.txt`: bifurcation parameters retained for MPI partition preparation.
 
 <Note / Options>
 In order to avoid the generation of very big integrated basins, some inter-basin bifurcation channels are excluded when merging basins.
 In a default setting, inter-basinchannels are excluded when the size (grid number) of the two basins to be merged is larger than a threshold (6% of global land grids).
-As a result, **reccomended MPI regions are up to 16 in default setting**.
+The sample workflow comments suggest up to 16 partitions with the default setting; the useful partition count depends on the selected river map and its basin connectivity.
 
-If you want to increase the MPI regions, please use 'MaxMPI' option ( % ./set_bif_basin MaxMPI).
-Then, the threshold is "3% of global land grids", and **reccomended MPI regions increased to 30**.
+If you want to increase the MPI regions, run `./set_bif_basin_mpi MaxMPI`, or set `TAG='MaxMPI'` in `s03-mpi_map_setup.sh`.
+This changes the merging threshold to 3% of the active land cells. The sample comments suggest up to 30 partitions in this mode. Some inter-basin connections can be neglected; inspect this trade-off for the intended map and simulation.
 
 #### set_mpi_region.F90
-Allocate grids to MPI regions, following the updated basin ID file bifbsn.bin. MPI region file (mpireg.bin) is generated.
+Allocate grids to MPI regions using `bifbsn_mpi.bin`. For a requested process count `<N>`, the program writes `mpireg-<N>.bin` and the corresponding `bifprm-<N>.txt` in the parent map directory.
 Grids are allocated in order to equalize the grid numbers in each MPI region.
 
 Please use the MPI region number (MPI_NP) as an argument (e.g. ./set_mpi_region 16).
 
-In the sample s03.sh script, MPI region files for MPI_NP=4,8,16 are generated.
+The sample `s03-mpi_map_setup.sh` generates `mpireg-4.bin`, `mpireg-8.bin`, and `mpireg-16.bin`, then copies `mpireg-16.bin` to `mpireg.bin`. Set `CMPIREG` and the MPI launch process count to match the selected partition file.
 
 
 ### (2) MPI functions in CaMa-Flood main codes.
@@ -72,7 +72,7 @@ MPI process number is stored as REGIONTHIS, while number of MPI process is srote
 CaMa-Flood converts river network data (nextxy.bin) from 2D map to 1D vector in initialization. Using MPI region file (mpireg.bin), only grids corresponding to REGINTHIS are converted to 1D vector in each node.
 
 ### (3) Sample script:
-mpi_test.sh, mpi_netcfd_test.sh, and 1min_challenge.sh are prepared.
+[`mpi_test.sh`](mpi_test.sh), [`mpi_netcdf_test.sh`](mpi_netcdf_test.sh), and [`1min_challenge.sh`](1min_challenge.sh) are example scripts in this directory. Review their compiler/library paths, launch commands, map paths, and forcing requirements for your system before running them. The main [`gosh/test5_mpi.sh`](../../gosh/test5_mpi.sh) is another MPI execution example.
 Please specify MPI region file (CMPIREG) in the shell script. Other settings are same as the default setting.
 
 Please use MPI related configulations for your server/system.
@@ -81,18 +81,16 @@ Please use MPI related configulations for your server/system.
 
 ## Vector-processor Optimization
 
-The subroutine to calculate flood stage (CMF_CALC_FLDSTG in cmf_calc_fldstg_mod.F90 ) needs a special care when using in a vector-processor machine (such as Earth Simulator).
+The current source provides the default flood-stage routine `CMF_CALC_FLDSTG_DEF` and an alternate routine `CMF_OPT_FLDSTG_ES` in `src/cmf_calc_fldstg_mod.F90`. `src/cmf_ctrl_physics_mod.F90` selects the alternate routine when the runtime namelist setting `LSTG_ES = .TRUE.` is enabled. It was designed for vector-processor systems such as the Earth Simulator; actual performance depends on processor and compiler, so compare the two paths on the target system rather than treating the historical scalar-performance warning as a general benchmark.
 
-This subroutine contains a loop to decide the current flood stage, which is difficult to parallelize for vector-processors.
+## Floating-point reproducibility
 
-Thus, another subroutine with optimization for vector-processor is prepared (CMF_OPT_FLDSTG_ES in cmf_calc_fldstg_mod.F90 ).
-This code can be activated by speficing option: "LSTG_ES = .TRUE"
+To disable the guarded OpenMP atomic-update paths, set the following in the active `adm/Mkinclude`, then clean and rebuild:
 
-NOTE: The subroutine (CMF_OPT_FLDSTG_ES) is significantly slower when used for scaler-processor machine. 
+```make
+DATM=-DNoAtom_CMF
+```
 
-## Bit-idential simulation
+The source tests the preprocessor macro `NoAtom_CMF`; `DATM` is the Make variable that passes the definition into `CFLAGS`. The historical `LBITSAFE` runtime switch is not the control for these paths.
 
-If you need to get bit-identical results (i.e. exactly same value, even considering rounding error in double precision), please specify activate DATM=-DNoAtom option in MkInclude
-When this option is turned on, OMP_ATOMIC parallelization is avoided (no parallelization for loops with OMP_ATOMIC function).
-
-Note: OMP_ATMIC used to be controlled by LBITSAFE option, but it was switched to #ifdef DNoAtom in order to avoid complex way of coding
+Disabling these atomic updates addresses one source of floating-point ordering differences. It does not establish bitwise identity across compilers, optimization flags, precision modes, thread/process counts, or other reduction orders. Assess reproducibility with an identified baseline, input data, and build/run configuration; see the [numerical and parallel behavior notes](../../src/README.md#numerical-and-parallel-behavior).

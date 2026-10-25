@@ -12,21 +12,25 @@ Supported outputs:
 
 ## 1. Prerequisites
 
+Run the commands below from `inp/download_ERA5/`. Starting at the root of a GitHub checkout or extracted distribution package:
+
+```bash
+cd inp/download_ERA5
+```
+
+### Python environment
+
+Use a Python environment with the downloader and conversion dependencies:
+
+```bash
+python3 -m pip install cdsapi numpy pandas xarray netCDF4
+```
+
+Set `PYTHON_CMD="python3"` in each shell wrapper, or select the Python command for that same environment. The wrappers locate their Python tools and input/output directories relative to the working directory.
+
 ### CDS API setup
 
-Install the CDS API client:
-
-```bash
-pip install cdsapi
-```
-
-Create your CDS API configuration file:
-
-```bash
-~/.cdsapirc
-```
-
-Example:
+Create `~/.cdsapirc` in your home directory with your CDS API settings:
 
 ```yaml
 url: https://cds.climate.copernicus.eu/api
@@ -80,7 +84,7 @@ Key settings:
 
 ```bash
 DOWNLOAD_UNIT="monthly"   # daily or monthly
-OUTDIR="./ori_monthly"
+OUTDIR="./ori_japan"
 TSTEP=24                  # 24=daily, 12, 6, 3, or 1 hour
 ```
 
@@ -92,11 +96,20 @@ SMONTH=1
 SDAY=1
 
 EYEAR=2000
-EMONTH=12
+EMONTH=1
 EDAY=31
 ```
 
-Set the download area as north, south, west, east:
+Set the download area as north, south, west, east. This example uses Japan:
+
+```bash
+NORTH=46.0
+SOUTH=24.0
+WEST=122.0
+EAST=154.0
+```
+
+For a global download, use a separate output directory, for example `OUTDIR="./ori_global"`, and set:
 
 ```bash
 NORTH=90.0
@@ -105,14 +118,7 @@ WEST=-180.0
 EAST=180.0
 ```
 
-For a regional download, for example Japan:
-
-```bash
-NORTH=46.0
-SOUTH=24.0
-WEST=122.0
-EAST=154.0
-```
+The examples below use the monthly Japan source files for January 2000. If you change the download directory, period, or time step, make the corresponding changes in both conversion wrappers.
 
 Run:
 
@@ -152,19 +158,19 @@ s02-convert_CMF_nc.sh
 Key settings:
 
 ```bash
-INDIR="./ori_monthly"
+INDIR="./ori_japan"
 INPUT_FILE_UNIT="monthly"     # daily or monthly
 TIMESTEP_HOURS=24             # should match TSTEP in s01-download.sh
 
-OUTDIR="./runoff_year_nc"
-MERGE_UNIT="yearly"           # yearly or monthly
+OUTDIR="./runoff_japan_nc"
+MERGE_UNIT="monthly"          # yearly or monthly
 ```
 
 Set the conversion period:
 
 ```bash
 START_DATE="2000-01-01"
-END_DATE="2000-12-31"
+END_DATE="2000-01-31"
 ```
 
 Run:
@@ -177,8 +183,8 @@ chmod +x s02-convert_CMF_nc.sh
 Output examples:
 
 ```text
-runoff_year_nc/runoff_2000.nc
-runoff_year_nc/runoff_info_CaMaFlood.txt
+runoff_japan_nc/runoff_200001.nc
+runoff_japan_nc/runoff_info_CaMaFlood.txt
 ```
 
 The converted runoff variable is accumulated runoff over each input timestep:
@@ -206,15 +212,17 @@ s03-convert_CMF_bin.sh
 Key settings:
 
 ```bash
-INDIR="./ori_monthly"
+INDIR="./ori_japan"          # matches the sample OUTDIR in s01-download.sh
 INPUT_FILE_UNIT="monthly"
-TIMESTEP_HOURS=24             # timestep of downloaded NetCDF data
-OUTPUT_TIMESTEP_HOURS=24      # timestep of output binary forcing
+TIMESTEP_HOURS=24             # input and output timestep in the current shell wrapper
 
-OUTDIR="./runoff_bin"
+OUTDIR="./runoff_japan_bin"
 BINARY_PREFIX="runoff_"
 BINARY_SUFFIX=".bin"
 CTL_FILE="${OUTDIR}/runoff.ctl"
+
+START_DATE="2000-01-01"
+END_DATE="2000-01-31"
 ```
 
 Run:
@@ -227,10 +235,10 @@ chmod +x s03-convert_CMF_bin.sh
 Output examples:
 
 ```text
-runoff_bin/runoff_20000101.bin
-runoff_bin/runoff_20000102.bin
-runoff_bin/runoff.ctl
-runoff_bin/runoff_info_CaMaFlood.txt
+runoff_japan_bin/runoff_20000101.bin
+runoff_japan_bin/runoff_20000102.bin
+runoff_japan_bin/runoff.ctl
+runoff_japan_bin/runoff_info_CaMaFlood.txt
 ```
 
 ### Binary file convention
@@ -245,7 +253,7 @@ For sub-daily forcing, each daily file contains multiple records.
 
 Examples:
 
-| `OUTPUT_TIMESTEP_HOURS` | File name | Records per daily file |
+| Output timestep (hours) | File name | Records per daily file |
 |---:|---|---:|
 | 24 | `runoff_YYYYMMDD.bin` | 1 |
 | 12 | `runoff_YYYYMMDD.bin` | 2 |
@@ -267,23 +275,9 @@ tdef ... linear 00Z01jan2000 3hr
 
 ### Temporal aggregation
 
-The binary converter can aggregate from a finer input timestep to a coarser output timestep.
+The Python converter supports aggregating from a finer input timestep to a coarser output timestep through its `--output-timestep-hours` command-line option. For example, pass `--timestep-hours 1 --output-timestep-hours 3` to aggregate 1-hour input records into 3-hour output records. It cannot create finer data than the downloaded timestep.
 
-Examples:
-
-```bash
-TIMESTEP_HOURS=1
-OUTPUT_TIMESTEP_HOURS=3
-```
-
-or:
-
-```bash
-TIMESTEP_HOURS=3
-OUTPUT_TIMESTEP_HOURS=24
-```
-
-It cannot create finer data than the downloaded timestep.
+The current `s03-convert_CMF_bin.sh` wrapper does not expose a separate output-timestep setting: it passes `TIMESTEP_HOURS` to both `--timestep-hours` and `--output-timestep-hours`, so its output interval equals its input interval. To use aggregation, invoke the Python converter with the two options or deliberately adapt a local wrapper.
 
 ---
 
@@ -337,7 +331,7 @@ Examples:
 | 12 hours | 43200000 |
 | 24 hours | 86400000 |
 
-For binary output, `IFRQ_INP` and `DROFUNIT` should follow `OUTPUT_TIMESTEP_HOURS`.
+For binary output, set `IFRQ_INP` and `DROFUNIT` to match the actual output record interval and runoff units. With the current shell wrapper, the output interval equals `TIMESTEP_HOURS`; if using the Python converter with aggregation, use its `--output-timestep-hours` value.
 
 ### NetCDF forcing settings
 
