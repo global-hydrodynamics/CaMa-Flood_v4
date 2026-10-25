@@ -1,22 +1,24 @@
 # Runoff input data and preparation
 
-The `inp/` directory contains tools for preparing runoff forcing used by CaMa-Flood. Runoff supplies water per unit land area over time; CaMa-Flood converts it to a flow rate for routing through the river network. This checkout includes an ERA5-Land download and conversion workflow with small Japan examples. It is not a catalog of all supported forcing products, and most forcing data used by the `gosh/` examples must be obtained or prepared separately.
+The `inp/` directory contains tools for preparing runoff forcing used by CaMa-Flood. Runoff supplies water per unit land area over time; CaMa-Flood converts it to a flow rate for routing through the river network. The GitHub repository includes an ERA5-Land download and conversion workflow with small Japan examples. Distribution packages also include sample forcing for selected `gosh/` runs. Obtain or prepare additional forcing when the chosen experiment requires data beyond those supplied with the package.
 
 ## Directory organization
 
 | Path | Purpose and contents |
 | --- | --- |
 | `download_ERA5/` | Shell and Python tools to download ERA5-Land runoff from the Copernicus Climate Data Store (CDS), convert it to CaMa-Flood NetCDF or plain binary, and write a configuration summary. See the [detailed ERA5-Land guide](download_ERA5/ReadMe.md). |
-|  |
 
+### Sample forcing in the v4.30 distribution package
+
+The following examples describe the v4.30 package. Other releases may include different periods or files; check the actual forcing coverage before selecting simulation dates. These sample datasets are distributed with the package and are not included in a GitHub clone.
 
 | Package directory | Format and grid/time coverage | Unit evidence and relevant example |
 | --- | --- | --- |
-| `test_1deg/` | Plain binary (`Roff____YYYYMMDD.one`) plus `runoff.ctl`; global 1-degree grid (360 × 180); daily files from 2000-01-01 through 2001-12-31. | The `.ctl` declares runoff in `mm/day`. `gosh/test1-glb_15min.sh` uses `IFRQ_INP=24` and `DROFUNIT=86400000`. |
-| `test_15min_nc/` | NetCDF files for 2000 and 2001; `Runoff(time, lat, lon)` on a 0.25-degree global grid (1440 × 600), daily time coordinate. | The sample NetCDF metadata declares `units="mm day-1"`. `gosh/test2-conus_06min_netcdf.sh` uses `IFRQ_INP=24` and `DROFUNIT=86400000`. |
-| `test_jpn_1hr/` | Plain binary daily files (`runoff_YYYYMMDD.bin`) plus `runoff.ctl`; Japan grid at 1/60 degree (1500 × 1320), 1-hour records for 2007-09-03 through 2007-09-09. | The `.ctl` declares runoff in `mm/hr`, matching `gosh/test3-jpn_fcast.sh` (`IFRQ_INP=1`, `DROFUNIT=3600000`). |
+| `test_1deg/` | Plain binary (`Roff____YYYYMMDD.one`) plus `runoff.ctl`; global 1-degree grid (360 × 180; edges 180°W–180°E, 90°S–90°N); daily files from 2000-01-01 through 2001-12-31. | The `.ctl` declares runoff in `mm/day`. `gosh/test1-glb_15min.sh` uses `IFRQ_INP=24` and `DROFUNIT=86400000`. |
+| `test_15min_nc/` | NetCDF files for 2000 and 2001; `Runoff(time, lat, lon)` on a 0.25-degree grid (1440 × 600; edges 180°W–180°E, 60°S–90°N), daily time coordinate. | The sample NetCDF metadata declares `units="mm day-1"`. `gosh/test2-conus_06min_netcdf.sh` uses `IFRQ_INP=24` and `DROFUNIT=86400000`. |
+| `test_jpn_1hr/` | Plain binary daily files (`runoff_YYYYMMDD.bin`) plus `runoff.ctl`; Japan grid at 1/60 degree (1500 × 1320), 1-hour records for 2007-09-03 through 2007-09-09. | Runoff values are in `mm/hr`, matching `gosh/test3-jpn_fcast.sh` (`IFRQ_INP=1`, `DROFUNIT=3600000`). |
 
-These sample files are supplied in the data-rich package, not this source checkout. Obtain the package or prepare equivalent inputs before running scripts that reference these paths. The [sample execution guide](../gosh/README.md) describes the workflows; the package `gosh/` scripts show the specific forcing configuration used by each example. File spacing alone does not establish the physical units or whether values are rates or accumulated depths; see [Choosing `DROFUNIT`](#choosing-drofunit).
+For a GitHub clone, obtain the distribution package or prepare equivalent inputs at the configured paths. For an extracted package, check the included files against the selected run script. The [sample execution guide](../gosh/README.md) describes the workflows; the `gosh/` scripts show the specific forcing configuration used by each example. File spacing alone does not establish the physical units or whether values are rates or accumulated depths; see [Choosing `DROFUNIT`](#choosing-drofunit).
 
 ## Runoff forcing and units
 

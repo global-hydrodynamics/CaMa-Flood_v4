@@ -16,20 +16,20 @@ OpenMP is configured separately from MPI. The checked-in configurations enable i
 
 Makefiles include the fixed path `adm/Mkinclude`, including `src/Makefile`, the utility and map Makefiles, and several optional component Makefiles. The compiler-specific files in this directory are templates; `make` does not automatically select one based on the host.
 
-To try another configuration, first keep a copy of your active file, then copy the chosen template to `adm/Mkinclude`:
+From the model root (a GitHub checkout or extracted package), first keep a copy of your active file, then copy the chosen template to `adm/Mkinclude`:
 
 ```sh
 cp adm/Mkinclude adm/Mkinclude.backup
 cp adm/Mkinclude_linux_ifx adm/Mkinclude
 ```
 
-Restore the backup or copy another template to switch back. This local selection does not change the repository's default configuration. After changing compiler, preprocessor definitions, or precision mode, do a clean build so modules and objects are rebuilt consistently. From `gosh/`, `./compile.sh` cleans and rebuilds by default; `./compile.sh no` requests a forced build and `./compile.sh clean` only cleans. See [`gosh/README.md`](../gosh/README.md) for the sample execution workflow.
+Restore the backup or copy another template to switch back. This makes the selected template the active configuration for this installation. After changing compiler, preprocessor definitions, or precision mode, do a clean build so modules and objects are rebuilt consistently. From `gosh/`, `./compile.sh` cleans and rebuilds by default; `./compile.sh no` requests a forced build and `./compile.sh clean` only cleans. See [`gosh/README.md`](../gosh/README.md) for the sample execution workflow.
 
 The Makefiles use `FFLAGS` for compilation, `LFLAGS` for executable linking, `INC` for include paths, and `LIB` for libraries. `CFLAGS` is the existing variable name for Fortran preprocessor definitions; it is not a C-only flag variable in this build. Do not confuse a definition such as `-DUseCDF_CMF` with compiler options such as `-O3` or link options such as `-lnetcdff`.
 
 ## Compiler selection and `FC` / `FCMP`
 
-The checked-in configurations provide GNU and Intel ifort variants for macOS/Linux, plus debug variants and a Heatlink-specific configuration. The new [`Mkinclude_linux_ifx`](Mkinclude_linux_ifx) adds an Intel ifx option; it does not replace ifort or change the active default. Compiler paths and flags may need adjustment for the local installation.
+The checked-in configurations provide GNU and Intel ifort variants for macOS/Linux, plus debug variants and a Heatlink-specific configuration. [`Mkinclude_linux_ifx`](Mkinclude_linux_ifx) provides an Intel ifx template. Inspect the active `adm/Mkinclude` before building; package releases may supply a different active configuration. Compiler paths and flags may need adjustment for the local installation.
 
 `FC` and `FCMP` are used in different parts of the existing build:
 
@@ -42,9 +42,10 @@ The standard GNU include sets `FC=gfortran` and `FCMP=gfortran -fopenmp`; the Li
 
 ### NetCDF
 
-NetCDF support is optional compile-time code guarded by `UseCDF_CMF`. Enable `DCDF=-DUseCDF_CMF` in the active include and provide the NetCDF-Fortran module include directory and libraries. The new ifx template supports a configurable `NETCDF_ROOT`; when set, it enables the macro and supplies `INC` and `LIB` for the usual `include/` and `lib/` layout:
+NetCDF support is optional compile-time code guarded by `UseCDF_CMF`. Enable `DCDF=-DUseCDF_CMF` in the active include and provide the NetCDF-Fortran module include directory and libraries. The ifx template supports a configurable `NETCDF_ROOT`; when set, it enables the macro and supplies `INC` and `LIB` for the usual `include/` and `lib/` layout:
 
 ```sh
+cd gosh
 NETCDF_ROOT=/path/to/netcdf ./compile.sh
 ```
 
@@ -88,7 +89,7 @@ The active include combines optional preprocessor definitions in `CFLAGS`, inclu
 
 For MPI, install/configure Intel MPI for the same oneAPI compiler, enable `DMPI`, and change `FCMP` to `mpiifx -qopenmp`. For NetCDF, set `NETCDF_ROOT` to an installation built for a compatible compiler/runtime. Keep `FC=ifx` unless utility/map programs also need a wrapper. The repository's standard build does not automatically select MPI, NetCDF, or ifx based on the runtime script.
 
-The ifx configuration has not been compiled in this environment because `ifx` and Intel MPI are unavailable. Treat it as an additional template that needs validation on a system with Intel oneAPI; it does not claim tested compatibility for every compiler or library version.
+The ifx file is a compiler-configuration template. Verify compilation and the required model workflows with your Intel oneAPI, MPI, and NetCDF versions before using that configuration for production simulations.
 
 ## Troubleshooting
 

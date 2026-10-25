@@ -1,6 +1,6 @@
 # River maps and map-preparation tools
 
-The `map/` directory connects CaMa-Flood's river and floodplain representation to the datasets and preprocessing tools used to prepare it. This source checkout contains map-processing code and documentation, but it does not contain the downloadable global or regional map datasets. Obtain map data separately before running a simulation.
+The `map/` directory connects CaMa-Flood's river and floodplain representation to the datasets and preprocessing tools used to prepare it. The GitHub source repository supplies map-processing code and documentation. Distribution packages also supply selected map datasets and prepared examples. Check the map files included with your package and obtain any additional datasets required by the simulation.
 
 For model setup and example runs, see the [sample execution guide](../gosh/README.md). This page is an overview; tool-specific details remain in the component documentation linked below.
 
@@ -18,7 +18,7 @@ Use the [official CaMa-Flood website](https://global-hydrodynamics.github.io/CaM
 
 The official page describes basic map datasets under CC BY 4.0 and notes that some advanced high-resolution data have separate access conditions. Dataset terms can differ. Check the current website and the license or agreement supplied with the exact dataset you use; the source-code license does not automatically apply to map data.
 
-This repository and a downloadable package are not necessarily identical. In the current checkout, `map/` contains source tools but not folders such as `glb_15min/`, `conus_06min/`, or the associated binary map files. A package may include some basic maps and sample inputs; verify the contents of the package rather than assuming it matches this Git checkout.
+Cloning the GitHub repository provides the source tools under `map/src/`; it does not provide the map datasets used by the standard simulations. A distribution package combines code with selected maps and sample inputs. Package contents depend on the release; check its included files and release documentation before downloading additional data or preparing new products.
 
 ## Directory organization
 
@@ -29,8 +29,8 @@ This repository and a downloadable package are not necessarily identical. In the
 | `map/src/src_region/` | Reusable source template for extracting a regional domain from a global map and preparing regional products. | See the [regional-map preparation guide](src/src_region/README.md). |
 | `map/src/src_dam/` | Reusable source template for preparing dam/reservoir locations and parameters for a target map. | Has an existing [reservoir-preparation README](src/src_dam/ReadMe.md). |
 | `map/src/` | Source templates for map-local workflows. | Contains `src_param/`, `src_region/`, and `src_dam/`; this is separate from the model's numerical `src/`. |
-| `map/<map-tag>/` | A map instance: downloaded map data, metadata, derived products, and any map-local processing copies needed for that workflow. | Examples include `glb_15min` and `conus_06min`; map data directories are not included in this source checkout. |
-| `map/data/` | Optional supporting datasets in some data-rich packages. | The inspected package sample includes GRSAD, ReGeom, and levee-related data; availability and terms are package-specific. |
+| `map/<map-tag>/` | A map instance: downloaded map data, metadata, derived products, and any map-local processing copies needed for that workflow. | Examples include `glb_15min` and `conus_06min`; these datasets are supplied through distribution packages or separate map downloads. |
+| `map/data/` | Optional supporting datasets in some data-rich packages. | Some reservoir and levee workflows use supporting data here, including GRSAD and ReGeom. Availability and terms depend on the dataset and package release. |
 
 ### Reusable sources and map-local working copies
 
@@ -38,9 +38,9 @@ The directories `map/src/src_param/`, `map/src/src_region/`, and `map/src/src_da
 
 Keep the distinction clear: `map/src/` holds source templates, while paths such as `map/glb_15min/src_param/` are working copies associated with an individual map. Copying creates a separate working copy; edits to a template do not automatically update copies already placed in map directories. These map tools operate on map data; they are not the model's numerical source tree at repository `src/`.
 
-In the inspected data-rich package sample, the map root contains global and regional map-tag directories (including `glb_15min/`, `conus_06min/`, `mekong_15min/`, and `tej_01min/`) plus a `data/` directory with optional supporting datasets. Some other map-tag entries are symbolic links, so a directory entry alone does not prove that its data are present locally.
+The v4.30 package-preparation workflow assembles `glb_15min/`, `conus_06min/`, and `tej_01min/` for the standard examples. Other maps require the corresponding downloads or regional preparation. If a map directory is a symbolic link, check that its target is accessible before running the model or preprocessing tools.
 
-`glb_15min/` is the global 15-minute map. Its `params.txt` describes a 0.25-degree grid covering the globe, and it contains a nested `1min/` directory with higher-resolution supporting files. That nested support data does not change the base river-map resolution indicated by `glb_15min`. The package sample also contains a map-specific copy at `glb_15min/src_param/` and regional workflow directories under selected regional maps. Contents vary by map and package.
+`glb_15min/` is the global 15-minute (0.25-degree) river map; `params.txt` records its dimensions and geographical coverage. Higher-resolution supporting files, such as those under `glb_15min/1min/`, are used by selected preprocessing and downscaling workflows. They do not change the base river-map resolution. Packages may also include prepared working copies such as `glb_15min/src_param/`; check which components and supporting layers are included with your map release.
 
 The map-processing Makefiles use the repository's active build configuration in [`adm/`](../adm/README.md). Their programs are separate from the numerical model executable in `src/`.
 
@@ -57,9 +57,9 @@ A successful build of the map tools does not supply external source datasets or 
 
 ## Global and regional maps
 
-A **global map** supplies a connected network and parameters over its published global domain at a selected grid spacing; `glb_15min/` is the global 15-minute example confirmed by the inspected package. A **regional map** is derived for a smaller domain, usually by starting from a compatible global map and selecting region bounds. The regional tools adjust the network and related arrays to the regional grid and can combine available higher-resolution map information.
+A **global map** supplies a connected network and parameters over its published global domain at a selected grid spacing; `glb_15min/` is the global 15-minute example used by the standard runs. A **regional map** is derived for a smaller domain, usually by starting from a compatible global map and selecting region bounds. The regional tools adjust the network and related arrays to the regional grid and can combine available higher-resolution map information.
 
-The sample regional script, `src/src_region/s01-regional_map.sh`, reads a source map and west/east/south/north bounds from its settings, then calls `cut_domain`, `cut_bifway`, and `set_map`. It may combine high-resolution layers when those source layers are present, generate a regional input matrix, and write map-control metadata. The exact outputs depend on the source map and available high-resolution data; this overview does not claim that the sample has been run.
+The sample regional script, `src/src_region/s01-regional_map.sh`, reads a source map and west/east/south/north bounds from its settings, then calls `cut_domain`, `cut_bifway`, and `set_map`. It may combine high-resolution layers when those source layers are present, generate a regional input matrix, and write map-control metadata. The exact outputs depend on the source map and available high-resolution data.
 
 Examples of maps used by sample runs are listed in [`gosh/README.md`](../gosh/README.md). A regional map must remain consistent with its source resolution and extent, downstream connectivity, metadata, and parameter files. Do not substitute files from a different map tag merely because their filenames match.
 
@@ -139,7 +139,7 @@ When combining or generating map products, keep dimensions, grid spacing, geogra
 | [`src/`](../src/README.md) | Reads the configured network and map parameters and uses them during model initialization and simulation. |
 | [`gosh/`](../gosh/README.md) | Provides sample build/run scripts that point to prepared maps and forcing data. |
 | [`adm/`](../adm/README.md) | Supplies compiler and build configuration for the map tools and model. |
-| [`inp/`](../inp/download_ERA5/ReadMe.md) | Prepares runoff forcing; map input matrices connect that forcing grid to the selected river map. |
+| [`inp/`](../inp/README.md) | Prepares runoff forcing; map input matrices connect that forcing grid to the selected river map. |
 | `etc/` | Contains specialized workflows, some of which consume or prepare additional map-related data. |
 | [`doc/`](../doc/CaMa-Flood_Guideline.md) | Holds user guidance and scientific/technical manuals. |
 

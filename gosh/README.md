@@ -2,7 +2,7 @@
 
 `gosh/` contains shell examples for building and running selected CaMa-Flood configurations. The six `test*` scripts demonstrate particular maps, forcing formats, and applications; they are not a catalogue of every supported scheme. Some specialized workflows live under [`etc/`](../etc/).
 
-These scripts expect external map and forcing data and may remove prior outputs in their experiment directory when `SPINUP=0`. Review paths and cleanup behavior before running them. No sample is claimed to have been executed as part of this documentation update.
+These scripts require matching map and forcing data, supplied with selected distribution packages or obtained separately. They may remove prior outputs in their experiment directory when `SPINUP=0`. Review paths and cleanup behavior before running them.
 
 ## Directory contents
 
@@ -18,7 +18,7 @@ These scripts expect external map and forcing data and may remove prior outputs 
 
 ## Quick start
 
-From the repository's `gosh/` directory, select an `adm/Mkinclude*` configuration, build, then launch a sample:
+From the `gosh/` directory in a GitHub checkout or extracted distribution package, select an `adm/Mkinclude*` configuration, build, then launch a sample:
 
 ```sh
 cd /path/to/CaMa-Flood_v4/gosh
@@ -32,7 +32,7 @@ The `test*` scripts do not compile the model. They expect an existing `src/MAIN_
 
 ## Sample experiments: test1–test6
 
-The table summarizes settings read from the scripts. All six need map data beyond the source files; the runoff and map datasets are not generally included in a source-only checkout. The configured `map/` and `inp/` paths must exist and contain the matching files.
+The table summarizes settings read from the scripts. All six need map and runoff data. A GitHub clone supplies the source and scripts; a distribution package supplies selected datasets for its sample runs. The configured `map/` and `inp/` paths must exist and contain the matching files.
 
 | Example | Purpose and configuration | Main data and options | Outputs and dependencies |
 | --- | --- | --- | --- |
@@ -59,7 +59,7 @@ Avoid enabling multiple alternative flow formulations together. In particular, `
 
 The examples refer to binary or NetCDF maps, dimension-info text, runoff input matrices, forcing files, optional region maps, and reservoir tables by path. They are not interchangeable across map resolutions or grids. The configured paths show what each example expects; locate or prepare matching data before running it.
 
-Test4 currently reads daily E2O WRR2 runoff NetCDF files with variable `Runoff` from `inp/E2O/`; its name and files are a legacy data workflow, not a statement about the status of the model physics. A newer [`ERA5-Land download/conversion workflow`](../inp/download_ERA5/ReadMe.md) provides `s01-download.sh` and separate NetCDF/binary conversion steps (`s02-convert_CMF_nc.sh`, `s03-convert_CMF_bin.sh`). Migration would require producing the intended CaMa grid, time step and units, setting the input matrix/dimension metadata, matching the actual NetCDF variable and time coordinate (or selecting the binary file pattern), and updating `NFORCE`/time settings in a future test4 change. ERA5 is not a drop-in replacement until those interfaces and sample paths are verified. No forcing was downloaded or substituted here.
+Test4 currently reads daily E2O WRR2 runoff NetCDF files with variable `Runoff` from `inp/E2O/`; its name and files are a legacy data workflow, not a statement about the status of the model physics. A newer [`ERA5-Land download/conversion workflow`](../inp/download_ERA5/ReadMe.md) provides `s01-download.sh` and separate NetCDF/binary conversion steps (`s02-convert_CMF_nc.sh`, `s03-convert_CMF_bin.sh`). To use ERA5-Land instead, prepare forcing at the required time step and units, prepare an input matrix and dimension metadata for its grid and the selected river map, match the actual NetCDF variable and time coordinate (or binary file pattern), and update the run script's `NFORCE` and time settings. Verify that all settings refer to the prepared forcing before running.
 
 ## Additional examples under `etc/`
 
@@ -77,9 +77,9 @@ The presence or absence of a `gosh/test*` example does not establish whether a s
 
 ## Known limitations and future updates
 
-- The test4 E2O forcing workflow is legacy. Replacing its data requires the ERA5-Land grid/time/unit/interface checks above; this task does not rewrite test4.
+- The test4 E2O forcing workflow is legacy. Replacing its data requires the grid, time, unit, and interface checks described above.
 - The six scripts encode particular historical compiler/library paths and data layouts. Review them for your platform and dataset.
-- `options_full.sh` is a practical example, not an exhaustive model-option catalogue. Important source options not demonstrated include levee, tracer, Heatlink, sediment, upstream inflow, sea-level boundary, water-evaporation extraction, and vector-processor stage calculation. Some require additional compile-time macros or dedicated input groups/files. A separate reference can be considered later if maintainers need one.
+- `options_full.sh` is a practical example, not an exhaustive model-option catalogue. Important source options not demonstrated include levee, tracer, Heatlink, sediment, upstream inflow, sea-level boundary, water-evaporation extraction, and vector-processor stage calculation. Some require additional compile-time macros or dedicated input groups/files. Consult the relevant component documentation and namelist-reading controllers for these options.
 
 ## Related documentation
 

@@ -74,7 +74,7 @@ The log header defines both temperature groups, whether detailed monitoring is e
 | `YYYY/MM/DD HH:MM  step = ...  begin/end` | Model calendar and CaMa outer step counter, before advection and after the completed local update |
 | `[advection]` | Every internal advection interval, dry/reconstruction unapplied heat and transport closure summaries |
 | `[local heat budget]` | Each local (vertical heat exchange and phase-change) update, dry/ice/floor unapplied heat and wet/dry water temperatures |
-| `[combined step]` | Combined advection and local budget over one outer update; one hour in the validation runs |
+| `[combined step]` | Combined advection and local budget over one outer update; duration follows the configured outer model time step |
 | `[cumulative heat budget]` | Domain ledger since this run started; supporting information, not the primary conservation test |
 | `extrema over this run` | Per-process minimum/maximum of each metric, interval index and the complete corresponding record at shutdown |
 | `closure since run start` | Auxiliary process closure; overlaps the domain residual and must not be added to it |
