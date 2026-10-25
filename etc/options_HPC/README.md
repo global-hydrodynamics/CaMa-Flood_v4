@@ -81,14 +81,7 @@ Please use MPI related configulations for your server/system.
 
 ## Vector-processor Optimization
 
-The subroutine to calculate flood stage (CMF_CALC_FLDSTG in cmf_calc_fldstg_mod.F90 ) needs a special care when using in a vector-processor machine (such as Earth Simulator).
-
-This subroutine contains a loop to decide the current flood stage, which is difficult to parallelize for vector-processors.
-
-Thus, another subroutine with optimization for vector-processor is prepared (CMF_OPT_FLDSTG_ES in cmf_calc_fldstg_mod.F90 ).
-This code can be activated by speficing option: "LSTG_ES = .TRUE"
-
-NOTE: The subroutine (CMF_OPT_FLDSTG_ES) is significantly slower when used for scaler-processor machine. 
+The current source provides the default flood-stage routine `CMF_CALC_FLDSTG_DEF` and an alternate routine `CMF_OPT_FLDSTG_ES` in `src/cmf_calc_fldstg_mod.F90`. `src/cmf_ctrl_physics_mod.F90` selects the alternate routine when the runtime namelist setting `LSTG_ES = .TRUE.` is enabled. It was designed for vector-processor systems such as the Earth Simulator; actual performance depends on processor and compiler, so compare the two paths on the target system rather than treating the historical scalar-performance warning as a general benchmark.
 
 ## Floating-point reproducibility
 
