@@ -19,7 +19,6 @@
 
 cd ..
 
-#######################
 # Specify filename, input gridsize, input domain edge, input north-south order, diminfo & inpmat name
 
 DIMINFO="diminfo_test-15min_nc.txt"
@@ -64,6 +63,57 @@ fi
 
 ./src_param/generate_inpmat $TAG $GRSIZEIN $WESTIN $EASTIN $NORTHIN $SOUTHIN $OLAT $DIMINFO $INPMAT
 
+
+
+#######################
+# NOTE: INPUT GRID AND CaMa-Flood MAP ARE DIFFERENT GRIDS
+#
+# The CaMa-Flood map defines the river network and unit-catchment structure.
+# The runoff input grid defines where the supplied runoff data are located.
+# Their resolution, extent, and dimensions do not have to be the same.
+# The map grid is read separately from this map directory's params.txt.
+#
+# generate_inpmat uses the map's high-resolution catchment lookup (selected by
+# TAG below): it assigns each high-resolution pixel center to a runoff-grid
+# cell, then accumulates that pixel's area for the corresponding CaMa
+# catchment and runoff cell. This produces area-based map-to-runoff weights;
+# it is not a requirement that the two grids align or have equal dimensions.
+# Pixels outside the configured runoff-grid extent are skipped.
+#
+# The settings below describe the RUNOFF INPUT GRID, not the CaMa-Flood map:
+#   GRSIZEIN  regular input-grid spacing in degrees.
+#   WESTIN/EASTIN and SOUTHIN/NORTHIN give its longitude/latitude limits in
+#             degrees. The code calculates nxin and nyin by rounding the
+#             limit span divided by GRSIZEIN. Set limits that span an integer
+#             number of grid cells and match the runoff data metadata.
+#             The first cell center is half a grid spacing east of WESTIN
+#             and half a spacing south of NORTHIN.
+#   OLAT      order of runoff rows: NtoS (north row first) or StoN (south row
+#             first). The Fortran code reverses the row index for StoN.
+# Longitude values may use a -180..180 or 0..360 convention, but choose
+# limits consistent with the runoff data. The implementation shifts each map
+# pixel longitude by at most one full turn to fit the configured limits.
+#
+# WARNING: Do not copy the CaMa-Flood map boundaries or resolution into these
+# settings unless those values also describe the runoff dataset. If the input
+# grid does not cover the map area you need, map pixels outside it are omitted.
+# Check the runoff file's coordinate arrays/metadata, cell spacing, dimensions,
+# longitude convention, and latitude row order before generating the matrix.
+#
+# Example only (regular 0.1-degree runoff grid with 0..360 longitudes):
+# GRSIZEIN=0.1
+# WESTIN=-0.05; EASTIN=359.95
+# NORTHIN=90.05; SOUTHIN=-90.05
+# OLAT="NtoS"
+# These limits imply 3600 columns and 1801 rows. They are an example input
+# grid and should not be used unless they match the runoff dataset.
+#
+# TAG below selects the map's high-resolution catchment data (location.txt and
+# catmxy files); it does not select or describe the runoff grid. DIMINFO and
+# INPMAT name the generated dimension metadata and input-matrix files. DIMINFO
+# records input dimensions and map bounds, but not the runoff bounds, spacing,
+# or row order; keep those settings with the runoff-grid metadata.
+#######################
 
 
 

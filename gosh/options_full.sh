@@ -25,6 +25,17 @@
 #================================================
 # (0) Basic Setting (for workstation)
 
+# Compile-time choices are made before running, in adm/Mkinclude (or the
+# platform-specific include used by the build), then gosh/compile.sh rebuilds
+# the executable. These are Make/preprocessor settings, not namelist values:
+#   DMPI=-DUseMPI_CMF          # MPI code; requires an MPI compiler/runtime
+#   DCDF=-DUseCDF_CMF          # NetCDF code; requires NetCDF libraries
+#   DSINGLE=-DSinglePrec_CMF   # JPRB single precision
+#   DATM=-DNoAtom_CMF          # alternate atomic-update path
+#   DHEATLINK=-Dheatlink       # Heatlink hooks; configure its libraries too
+# This script configures and runs an already-built executable; it does not
+# select or rebuild these options.
+
 #*** 0a. Set CaMa-Flood base directory
 BASE=`pwd`/..
 # BASE="/home/yamadai/work/CaMa_v430/cmf_v430_pkg"  # setting for PBS in cluster
@@ -38,6 +49,7 @@ export DYLD_LIBRARY_PATH="${HDF5LIB}:${IFORTLIB}:${DYLD_LIBRARY_PATH}"
 
 #*** 0c. OpenMP thread number
 export OMP_NUM_THREADS=16                    # OpenMP cpu num
+# Shell environment setting; it needs an OpenMP-enabled executable.
 
 #================================================
 # (1) Experiment setting
@@ -55,6 +67,8 @@ LOGOUT="./log_CaMa.txt"                     # standard log output
 
 #============================
 #*** 1b. Model physics option
+# The following assignments are Shell variables. The generated namelist below
+# copies selected values into NRUNVER/NRESTART/NFORCE/NOUTPUT/NDAMOUT groups.
 DT=86400                                    # base DT (modified in physics loop by LADPSTP)
 LADPSTP=".TRUE."                            # .TRUE. for adaptive time step
 
@@ -88,13 +102,14 @@ LSTOONLY=".FALSE."                          # .TRUE. for storage only restart (f
 CRESTDIR="./"                               # output restart file directory
 CVNREST="restart"                           # output restart file prefix
 LRESTCDF=".FALSE."                          # .TRUE. to use netCDF restart file
-LRESTDBL=".FALSE."                           # .TRUE. for binary restart double precision
+LRESTDBL=".FALSE."                           # binary restart precision: true=double, false=single
 IFRQ_RST="0"                                # output restat frequency.
                                             # [0]: only at last time, [1,2,3,...,24] hourly restart, [30]: monthly restart
 
 #============================
 #*** 1e. river map & topography
 FMAP="${BASE}/map/glb_15min"                # map directory
+CDAMFILE="${FMAP}/dam_param.csv"            # dam table used by the active reservoir example
 
 #----- for plain binary map input
 #** basic topography
@@ -115,8 +130,8 @@ CRIVMAN="${FMAP}/rivman.bin"                # manning coefficient river (The one
 #** bifurcation channel info
 CPTHOUT="${FMAP}/bifprm.txt"                #   bifurcation channel list
 
-###** groundwater delay (not available in plain binary runoff/map)
-LGDWDLY=".FALSE."                           # .TRUE. to actuvate groundwater delay
+###** Optional groundwater delay (requires its parameter map)
+LGDWDLY=".FALSE."                           # runtime namelist option
 #CGDWDLY=""                                 # ground water delay map
 
 ###** mean sea level
@@ -142,13 +157,19 @@ DROFUNIT="86400000"   # [mm/day->m/s]       # runoff unit conversion
 #----- for plain binary runoff forcing
 LINPCDF=".FALSE."                           # true for netCDF runoff
 LINTERP=".TRUE."                            # .TRUE. to interporlate with input matrix
-LINTERPCDF=".FALSE."                        # .TRUE. to use netCDF input matrix
+LITRPCDF=".FALSE."                           # runtime namelist option: NetCDF input matrix
 CROFDIR="${BASE}/inp/test_1deg/runoff/"     # runoff directory
 CROFPRE="Roff____"                          # runoff prefix/suffix  
 CROFSUF=".one"                              #   $(CROFPRE)YYYYMMDD$(CROFSUF)
 
-###** sub-surface runoff scheme (not available with plain binary runoff)
-LROSPLIT=".FALSE."                          # .TRUE. for sub-surface runoff
+# Values used by the alternative NetCDF forcing branch below. The annual
+# filename and starting date are filled from the current simulation year.
+CROFCDF=""
+CVNROF="Runoff"
+CVNSUB=""
+
+###** Optional split surface/sub-surface runoff (requires both input streams)
+LROSPLIT=".FALSE."                           # runtime namelist option
 ###CSUBDIR="NONE"                              # sub-surface runoff directory
 ###CSUBPRE="NONE"                              # sub-surface runoff prefix/suffix  
 ###CSUBSUF="NONE"                              #   $(PREFIX)YYYYMMDD$(SUFFIX)
@@ -156,7 +177,7 @@ LROSPLIT=".FALSE."                          # .TRUE. for sub-surface runoff
 #----- for netCDF runoff forcing ###
 ###LINPCDF=".TRUE."                              # true for netCDF runoff
 ###LINTERP=".TRUE."                              # .TRUE. to interporlate with input matrix
-###LINTERPCDF=".FALSE."                          # .TRUE. to use netCDF input matrix
+###LITRPCDF=".FALSE."                            # true Fortran namelist option: NetCDF input matrix
 ###CROFDIR="${BASE}/inp/test_15min_nc/"          # runoff directory
 ###CROFPRE="e2o_ecmwf_wrr2_glob15_day_Runoff_"   # runoff prefix/suffix  
 ###CROFCDF=""     # see (3) set each year        # netCDF runoff file
@@ -171,6 +192,9 @@ LROSPLIT=".FALSE."                          # .TRUE. for sub-surface runoff
 
 #============================
 #*** 1g. Dynamic Boundary Sea Level (not default)
+# Other optional runtime switches (for example LLEVEE, LTRACE, LHEATLINK,
+# LSEDOUT, LUPSINF, LWEVAP, and LOUTINS) have dedicated namelist groups,
+# input data, or build requirements. Enable only after configuring them.
 LSEALEV=".FALSE."                           # .TRUE. to activate dynamic sea level 
 ###LSEALEVCDF=".FALSE."
 ###CSEALEVDIR="NONE"                        # Sea level boundary DIRECTORY
@@ -266,6 +290,13 @@ do
   #*** 3c. update input / output file data
   CSYEAR=`printf %04d ${SYEAR}`
   COUTTAG=${CSYEAR}                  # output file tag
+  if [ "${LINPCDF}" = ".TRUE." ]; then
+    CROFCDF="${CROFDIR}/${CROFPRE}${CSYEAR}.nc"
+    SYEARIN=${SYEAR}
+    SMONIN=${SMON}
+    SDAYIN=${SDAY}
+    SHOURIN=${SHOUR}
+  fi
 
   #CROFCDF="${CROFDIR}/${CROFPRE}${CSYEAR}.nc"  # input netCDF runoff file
   #SYEARIN=$IYR
@@ -299,7 +330,7 @@ LRESTART = ${LRESTART}                 ! true: initial condition from restart fi
 LSTOONLY = ${LSTOONLY}                 ! true: storage only restart (mainly for data assimilation)
 LOUTPUT  = ${LOUTPUT}                  ! true: use standard output (to file)
 LGRIDMAP = .TRUE.                      ! true: for standard XY gridded 2D map
-LLEAPYR  = .TRUE.                      ! true: neglect leap year (Feb29 skipped)
+LLEAPYR  = .TRUE.                      ! true: include Gregorian leap days (Feb 29)
 LMAPEND  = .FALSE.                     ! true: for map data endian conversion
 LSTG_ES  = .FALSE.                     ! true: for Vector Processor optimization (CMF_OPT_FLDSTG_ES) 
 /
@@ -397,7 +428,7 @@ cat >> ${NMLIST} << EOF
 LINPCDF  = ${LINPCDF}                  ! true for netCDF runoff
 LINTERP  = ${LINTERP}                  ! true for runoff interpolation using input matrix
 LINPEND  = .FALSE.                     ! true for runoff endian conversion
-LITRPCDF = ${LINTERPCDF}               ! * true for netCDF input matrix
+LITRPCDF = ${LITRPCDF}                 ! true: use NetCDF input matrix
 CINPMAT  = "${CINPMAT}"                ! input matrix file name
 DROFUNIT = ${DROFUNIT}                 ! runoff unit conversion
 CROFCDF  = "${CROFCDF}"                ! * netCDF input runoff file name
@@ -418,7 +449,7 @@ cat >> ${NMLIST} << EOF
 COUTDIR  = "${COUTDIR}"                ! OUTPUT DIRECTORY
 CVARSOUT = "${CVARSOUT}"               ! Comma-separated list of output variables to save 
 COUTTAG  = "${COUTTAG}"                ! Output Tag Name for each experiment
-LOUTVEC  = .FALSE                      ! TRUE FOR VECTORIAL OUTPUT, FALSE FOR NX,NY OUTPUT
+LOUTVEC  = .FALSE.                     ! true: vector output; false: gridded output
 LOUTCDF  = ${LOUTCDF}                  ! * true for netcdf outptu false for binary
 NDLEVEL  = 0                           ! * NETCDF DEFLATION LEVEL 
 IFRQ_OUT = ${IFRQ_OUT}                 ! output data write frequency (hour)
@@ -448,10 +479,10 @@ EOF
 cat >> ${NMLIST} << EOF
 &NDAMOUT
 CDAMFILE = "${CDAMFILE}"               ! Reservoir Parameter File
-LDAMTXT  = ".TRUE."                    ! True for text-based reservoir data output
-LDAMH22  = ".FALSE."                   ! True to use Hanazaki 2022 dam scheme. (False for Yamazaki&Funato scheme)
-LDAMYBY  = "${LDAMYBY}"                ! .TRUE. to use Year-By-Year dam activation scheme. .False. for All-reservoirs-in scheme
-LiVnorm  = "${LiVnorm}"                ! .TRUE. to use Noemal Volume as initial reservoir storage. False for zero-additional storage.
+LDAMTXT  = .TRUE.                      ! true: write reservoir text diagnostics
+LDAMH22  = .FALSE.                     ! true: select Hanazaki 2022 dam scheme
+LDAMYBY  = ${LDAMYBY}                  ! true: activate reservoirs by year
+LiVnorm  = ${LiVnorm}                  ! true: initialize dam storage to normal volume
 /
 EOF
 

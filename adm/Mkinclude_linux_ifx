@@ -1,0 +1,51 @@
+#==========================================================
+# CaMa-Flood Mkinclude (Linux, Intel oneAPI ifx)
+#==========================================================
+RM = /bin/rm -f
+CP = /bin/cp
+
+#======================================
+# Preprocessor definitions
+# Uncomment options as required by the build and available dependencies.
+# DMPI enables MPI code; FCMP must also be changed to the matching MPI wrapper.
+# DCDF enables NetCDF code; configure the Fortran NetCDF include/library paths.
+# DSINGLE selects SinglePrecisionMode (JPRB becomes 4-byte).
+# DATM selects the alternate atomic-update path.
+# DHEATLINK enables Heatlink hooks and needs the corresponding component setup.
+#======================================
+#DMPI=-DUseMPI_CMF
+#DCDF=-DUseCDF_CMF
+DSINGLE=-DSinglePrec_CMF
+#DATM=-DNoAtom_CMF
+#DHEATLINK=-Dheatlink
+
+CFLAGS=$(DMPI) $(DCDF) $(DATM) $(DSINGLE) $(DHEATLINK)
+
+#======================================
+# Optional NetCDF-Fortran installation.
+# Setting NETCDF_ROOT enables NetCDF support for the conventional prefix
+# layout: include/ and lib/. For other layouts, set DCDF, INC and LIB below.
+# Example: NETCDF_ROOT=/software/netcdf-fortran
+#======================================
+NETCDF_ROOT ?=
+ifneq ($(strip $(NETCDF_ROOT)),)
+  DCDF=-DUseCDF_CMF
+  CFLAGS=$(DMPI) $(DCDF) $(DATM) $(DSINGLE) $(DHEATLINK)
+  INC=-I$(NETCDF_ROOT)/include
+  LIB=-L$(NETCDF_ROOT)/lib -lnetcdff -lnetcdf
+endif
+
+#======================================
+# Compiler commands
+# FC builds utility/map preprocessing tools; FCMP builds and links model code.
+# For MPI, use: FCMP = mpiifx -qopenmp and enable DMPI above.
+#======================================
+FCMP = ifx -qopenmp
+FC = ifx
+
+# Compiler flags: preprocessing is required for the source #ifdef options.
+LFLAGS =
+FFLAGS = -O3 -warn all -fpp -free -assume byterecl -heap-arrays
+
+# Debugging example (replace the optimization line when debugging):
+#FFLAGS = -g -warn all -fpp -free -check all -traceback -fpe0
