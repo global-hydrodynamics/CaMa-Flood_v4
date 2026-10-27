@@ -25,4 +25,4 @@ The documentation reorganization project was completed and merged to `master` in
 
 ## Approved updates awaiting publication
 
-Map data and tools project registration and plan above are proposals on `feature/map-data-tools`, awaiting maintainer review and publication to `origin/master`. Issue [#122](https://github.com/global-hydrodynamics/CaMa-Flood_v4/issues/122) tracks the project proposal. No implementation changes, push, PR, or merge were performed for this task.
+Map data and tools project registration and plan above are proposals on `feature/map-data-tools`, awaiting maintainer review and publication to `origin/master`. Issue [#122](https://github.com/global-hydrodynamics/CaMa-Flood_v4/issues/122) tracks the project proposal. No implementation changes, PR, or merge were performed. The documentation commit is local; push is pending GitHub authentication.
