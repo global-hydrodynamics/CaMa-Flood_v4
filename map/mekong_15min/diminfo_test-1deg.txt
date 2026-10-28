@@ -1,0 +1,11 @@
+        80     !! nXX
+       120     !! nYY
+        10     !! floodplain layer
+       360     !! input nXX 
+       180     !! input nYY 
+         4     !! input num
+inpmat_test-1deg.bin
+      90.000     !! west  edge
+     110.000     !! east  edge
+      35.000     !! north edge
+       5.000     !! south edge

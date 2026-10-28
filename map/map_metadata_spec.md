@@ -14,11 +14,31 @@ The CSV uses UTF-8, a header row, and one row per logical variable or traceable 
 
 Dimensions use symbolic names and Fortran array order where verified, such as `NX,NY` or `NX,NY,NLFP`. Blank cells mean “not specified in this inventory,” not zero, dimensionless, or absent. Use `unknown` or `not established` where a value is known to be unresolved. Evidence paths are repository-relative; citations may be URLs.
 
+### Categories and sorting
+
+`category_id` is the first column and numeric sorting key. The descriptive `category` value is retained. Current assignments are:
+
+| ID | Category | Meaning |
+| ---: | --- | --- |
+| 11 | `river_network` | Core downstream topology, catchment, channel-topography, and floodplain-profile products. This is the initial CTL/NetCDF conversion scope. |
+| 12 | `river_parameter` | Main channel width, depth, and roughness parameters, including alternate source products for the same variable. |
+| 21 | `input_matrix` | Runoff-grid to map-cell mapping products. |
+| 31 | `network_analysis` | Basin, sequence, upstream lookup, and diagnostic analysis products. |
+| 32 | `grid_variant` | Alternate or derived grid/network views, including MPI region assignments. |
+| 41 | `bifurcation` | Bifurcation maps and parameter tables. |
+| 42 | `dam_reservoir` | Dam and reservoir parameter products. |
+| 43 | `optional_parameter` | Optional model/preprocessing parameters not in the core network set. |
+| 81 | `auxiliary` | Supporting data, intermediates, and other workflow inputs. `outclm.bin` is an intermediate discharge estimate, not a final runtime channel parameter. |
+| 99 | `unclassified` | A source-backed/package-observed product whose functional role is not established yet. |
+
+Sort rows by ascending numeric `category_id`, then `binary_filename` (case-insensitive), then numeric `record_index` with blank indices last. Preserve all evidence and verification-status fields during recategorization. Use ID 99 until a role is supported by source or documentation; do not classify from a filename alone.
+
 ### Columns
 
 | Column | Meaning |
 | --- | --- |
-| `category` | Functional group. Controlled examples: `river_network`, `channel_geometry`, `runoff_mapping`, `network_analysis`, `grid_variant`, `auxiliary`, `specialized`, `unclassified`. |
+| `category_id` | Numeric functional sort key from the table above; it is the first CSV column. |
+| `category` | Descriptive functional group matching `category_id`. |
 | `product_kind` | `binary_variable_or_product`, `nonbinary_or_generated_product`, or a brief product-kind value when a source format is known. |
 | `binary_filename` | Primary filename or logical output filename; it may be a pattern such as `bifprm-<N>.txt`. |
 | `alternative_binary_filename` | Alternate file carrying the same variable/product, when applicable. Blank means no alternative is registered. |
@@ -28,7 +48,9 @@ Dimensions use symbolic names and Fortran array order where verified, such as `N
 | `units` | Verified or proposed unit string. Blank does not imply dimensionless. |
 | `dtype` | Verified binary primitive/layout, e.g. `int32`, `float32`, `mixed`, `formatted text`, `NetCDF`, or `unknown`. |
 | `dimensions` | Symbolic data shape or a descriptive configuration-dependent value; do not hardcode one map's concrete dimensions here. |
-| `record_layout` | Verified record indexing/order, or `not established` if unresolved. |
+| `record_index` | One-based numeric record for a row representing one field in a multi-variable file. Blank for products whose record cannot be established. |
+| `record_count` | Total records in the binary file for the row's product (`1`, `2`, or symbolic `NLFP` when variable by dataset). |
+| `record_layout` | Human-readable record indexing/order, or `not established` if unresolved. |
 | `missing_value_convention` | Existing binary/file sentinel conventions only. This is not a decision about future NetCDF `_FillValue` or `missing_value`. |
 | `usage` | Short workflow role, such as runtime input, preprocessing input/output, visualization, or analysis. |
 | `runtime_requirement` | Whether runtime use is core, feature-conditional, MPI-conditional, preprocessing-only, or unknown. |
@@ -63,7 +85,7 @@ When changing a map reader, writer, producer, or map-related model interface:
 4. Update the responsible module README for workflows or assumptions a human user needs. Keep detailed variable metadata in the CSV rather than copying the entire inventory into README files.
 5. Check `map/README.md` and `docs/map_data_inventory.md` for references that became inaccurate. Run the CSV parser and verify changed links.
 
-The CSV is an evolving source-linked inventory, not yet a conversion-ready contract. Its columns are a starting metadata model; adding a future converter may require explicit decisions for byte order, row orientation, coordinate variables, missing-value translation, dimension naming, and richer source/version metadata.
+The CSV is an evolving source-linked inventory. Category 11 now has the machine-readable record metadata used by the initial CTL and NetCDF tools. Other categories remain an inventory, not a promise that every field is complete enough for conversion. Dataset-specific byte order, row orientation, sentinel values, coordinate interpretation, and file paths belong in a separate dataset config, not the shared variable rows.
 
 ## Common binary conventions
 
@@ -76,6 +98,26 @@ The current model binary readers use unformatted, direct-access records of `4 ×
 - The inspected package stores `-9999` in real map cells outside the network. Model constants also include `RMIS=1.E20`, which is not automatically substituted for the binary sentinel by the map reader.
 
 Byte order and row orientation are dataset properties, not properties of a variable. The inspected `glb_15min` CTLs specify `little_endian` and `yrev`; the model's `LMAPEND` controls byte conversion and defaults to false. `params.txt` does not encode either setting. Do not assume every regional or future dataset shares the reference package's binary byte order or orientation.
+
+## Core conversion contract and dataset configuration
+
+The tools in [`src/map_data_tools/`](src/map_data_tools/README.md) select category ID 11 and require the six core files `nextxy.bin`, `ctmare.bin`, `elevtn.bin`, `nxtdst.bin`, `rivlen.bin`, and `fldhgt.bin`. They read this CSV for names, types, record indices/counts, long names, units, and datum metadata. They validate the binary byte count using `NX`, `NY`, and `NLFP` from the map's `params.txt` before writing output.
+
+The CaMa-Flood v4 reader contract is verified in `src/cmf_ctrl_maps_mod.F90`:
+
+- `READ_MAP_CDF` reads `nextx`, `nexty`, `lon`, and `lat` from the `CRIVCLINC` file.
+- `READ_TOPO_CDF` reads `ctmare`, `elevtn`, `nxtdst`, `rivlen`, and `fldhgt` from that same file.
+- Horizontal variables have Fortran array bounds `(NX,NY)`; `fldhgt` is read one layer at a time into `(NX,NY)` for each `1..NLFP`.
+- The Python NetCDF file uses on-disk dimensions `(lat,lon)` for horizontal variables and `(lfp,lat,lon)` for `fldhgt`. A synthetic test reads these variables using the same NetCDF-Fortran API calls and array extents used by the model. This verifies the file's shape/order contract, not a full model simulation.
+- The 1-D `lon` and `lat` coordinate variables are required by `READ_MAP_CDF`; coordinates are cell centers derived from the dataset bounds in `params.txt`.
+
+Dataset-level settings are explicit in `map_metadata.json` (see [`the portable example`](src/map_data_tools/examples/map_metadata.example.json)). `byte_order`, `row_order`, `coordinate_mode`, file paths, and each core binary's missing-value sentinel are not inferred from the filename or hard-coded as universal dataset properties. The tools reject missing or unsupported values. Relative paths in `files` are resolved from the target map directory. The inspected global 15-minute sample uses little-endian binary records, north-to-south rows, regular longitude/latitude cells, and `-9999` sentinels; other maps must be checked and configured individually.
+
+For this first NetCDF output, binary numeric values and 1-based `nextx`/`nexty` indices are preserved exactly. The configured binary sentinel is also written as NetCDF `_FillValue` and `missing_value`; it is not translated to the model's `RMIS=1.E20`. Negative `nextxy` endpoint codes such as `-9` and `-10` remain data values. `elevtn` carries `vertical_datum=EGM96`. No variable `standard_name` is added beyond the verified coordinate names.
+
+Each generated CTL describes one category-11 binary file. The `nextxy.ctl` variable order follows records `nextx`, then `nexty`; `fldhgt.ctl` defines `NLFP` levels. The configured endian option and row order determine `little_endian`/`big_endian` and `yrev`. Generation refuses to replace an existing CTL unless `--overwrite` is given.
+
+The converter emits only the core `CRIVCLINC` map. It does not create `CRIVPARNC` channel parameter inputs; the model still needs those separately when configured. Optional schemes, parameter products, and non-core CSV rows are outside this first conversion implementation.
 
 ## Confirmed facts and proposed attributes
 
@@ -140,7 +182,7 @@ CTL files are read by GrADS to describe a binary dataset. The CaMa-Flood binary 
 - `undef` documents the value GrADS treats as missing.
 - `title`, variable names, and comments/descriptions are descriptive. They do not establish correct physical meaning or units. The inspected package uses the generic title `Flow Direction` even for scalar variables, and has `rivman.bin` without a same-directory `rivman.ctl`.
 
-The CSV supplies variable names, proposed long names/units, data types, symbolic dimensions, and binary record layouts. `params.txt` supplies dataset-specific grid size and bounds. Neither currently provides dataset byte order/row orientation or every CTL choice. A future CTL generator will also need an explicit source for those dataset-level settings and must check that the selected binary files match the specified record layout.
+The CSV supplies variable names, proposed long names/units, data types, symbolic dimensions, and binary record layouts. `params.txt` supplies dataset-specific grid size and bounds. Neither currently provides dataset byte order/row orientation or every CTL choice. The current generator requires the dataset config for those settings and checks that the selected binary files match the category-11 record layout.
 
 ## Channel-parameter generation workflow
 
@@ -178,7 +220,7 @@ Current `params.txt` does not store endianness or row orientation. Existing CTLs
 
 The CSV contributes variable names, descriptions, units, types, dimensions, vertical datum, missing sentinels, and current model-reader variable names. Dataset-specific grid coordinates come from map geometry. The tool must preserve 1-based `nextx`/`nexty` indices unless an explicit transformation is specified.
 
-This document and CSV do not settle NetCDF container grouping, on-disk dimension order, coordinate variable conventions, fill-value translation, masking, or behavior for real maps that use different sentinels. The `netcdf_variable` column records the model reader's existing lookup names only.
+For category 11, the initial converter uses one `CRIVCLINC`-compatible file, disk dimensions `(lat,lon)` and `(lfp,lat,lon)`, 1-D longitude/latitude coordinates, and the dataset-configured sentinel as both `_FillValue` and `missing_value`. These choices are checked against the existing Fortran reader interface and a synthetic smoke test. Other categories, `CRIVPARNC`, optional schemes, and maps requiring non-regular coordinates remain outside the implementation. The `netcdf_variable` column records existing model-reader lookup names only.
 
 ## Open Questions
 

@@ -28,7 +28,8 @@ Cloning the GitHub repository provides the source tools under `map/src/`; it doe
 | `map/src/src_param/native_inpmat/` | Optional native-grid remapping workflow associated with `src_param`. | Compose a native-grid remapping operator with an existing CaMa input matrix and validate results; see its [README](src/src_param/native_inpmat/README.md). |
 | `map/src/src_region/` | Reusable source template for extracting a regional domain from a global map and preparing regional products. | See the [regional-map preparation guide](src/src_region/README.md). |
 | `map/src/src_dam/` | Reusable source template for preparing dam/reservoir locations and parameters for a target map. | Has an existing [reservoir-preparation README](src/src_dam/ReadMe.md). |
-| `map/src/` | Source templates for map-local workflows. | Contains `src_param/`, `src_region/`, and `src_dam/`; this is separate from the model's numerical `src/`. |
+| `map/src/map_data_tools/` | Shared metadata validation plus standalone CTL and NetCDF conversion CLIs for core category-11 maps. | See its [tool guide](src/map_data_tools/README.md); the current converter supports only the core river-network group. |
+| `map/src/` | Reusable source templates and standalone map-data tools. | Contains `src_param/`, `src_region/`, `src_dam/`, and `map_data_tools/`; this is separate from the model's numerical `src/`. |
 | `map/<map-tag>/` | A map instance: downloaded map data, metadata, derived products, and any map-local processing copies needed for that workflow. | Examples include `glb_15min` and `conus_06min`; these datasets are supplied through distribution packages or separate map downloads. |
 | `map/data/` | Optional supporting datasets in some data-rich packages. | Some reservoir and levee workflows use supporting data here, including GRSAD and ReGeom. Availability and terms depend on the dataset and package release. |
 
@@ -70,6 +71,22 @@ Examples of maps used by sample runs are listed in [`gosh/README.md`](../gosh/RE
 [`map_metadata_spec.md`](map_metadata_spec.md) explains the CSV schema and how it relates to per-map `params.txt`, `mapdim.txt`, run-specific `diminfo*.txt`, and GrADS CTL files. The CSV defines common variable-level metadata; each map's files supply its actual dimensions, bounds, spacing, and dataset-specific binary settings. Runoff-grid configuration belongs to `diminfo` and the paired input matrix.
 
 The channel-parameter entries describe products users generate or verify for a target map. Data-rich packages may include prepared examples; check the actual package contents before generating replacements. The CSV distinguishes empirical `rivwth.bin` from the alternative GWD-LR merged width product `rivwth_gwdlr.bin`.
+
+### Core map metadata and conversion tools
+
+`map/src/map_data_tools/` contains a GrADS CTL generator and a binary-to-NetCDF converter for category 11 only. Both read the CSV and validate category-11 record sizes against the map's `params.txt`. A portable per-map JSON configuration supplies byte order, row order, missing sentinels, coordinate mode, and any non-default file paths; these dataset-specific settings are not inferred automatically.
+
+Install the Python requirements and copy/edit the example config for the selected map before running:
+
+```sh
+python3 -m pip install -r map/src/map_data_tools/requirements.txt
+cp map/src/map_data_tools/examples/map_metadata.example.json map/glb_15min/map_metadata.json
+# Edit dataset_id and verify byte_order, row_order, missing_values, and files.
+python3 map/src/map_data_tools/generate_ctl.py --map-dir map/glb_15min --config map/glb_15min/map_metadata.json
+python3 map/src/map_data_tools/binary_to_netcdf.py --map-dir map/glb_15min --config map/glb_15min/map_metadata.json
+```
+
+The NetCDF output is a `CRIVCLINC`-compatible core river map; it does not contain channel parameters for `CRIVPARNC`. Existing CTLs and output NetCDF files are not overwritten unless `--overwrite` is supplied. See the [tool guide](src/map_data_tools/README.md) and [metadata conversion contract](map_metadata_spec.md#core-conversion-contract-and-dataset-configuration) for supported formats, validation, and limitations.
 
 ## Map parameters and preprocessing
 
