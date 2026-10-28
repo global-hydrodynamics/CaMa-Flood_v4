@@ -87,6 +87,14 @@ When changing a map reader, writer, producer, or map-related model interface:
 
 The CSV is an evolving source-linked inventory. Category 11 now has the machine-readable record metadata used by the initial CTL and NetCDF tools. Other categories remain an inventory, not a promise that every field is complete enough for conversion. Dataset-specific byte order, row orientation, sentinel values, coordinate interpretation, and file paths belong in a separate dataset config, not the shared variable rows.
 
+## Official repository sample
+
+`map/mekong_15min/` is an officially distributed, Git-tracked sample dataset, not only a private test fixture. It includes the complete 1-minute high-resolution subdirectory and its prepared channel, input-matrix, bifurcation, auxiliary, and MPI-preparation products. Its dimensions and geometry are dataset-specific (`NX=80`, `NY=120`, `NLFP=10`, 0.25°, 90–110°E, 5–35°N); they do not define the general map format.
+
+The sample-local `map_metadata.json` explicitly records its byte order, row order, coordinate interpretation, six category-11 input paths, and binary missing values for CTL/NetCDF tools. All paths are relative. The lightweight validator at `map/tests/validate_mekong_sample.py` checks file availability, record sizes, core indices, 1-minute layers, CTL references, and the GitHub blob-size bound. GitHub Actions runs the same validation without downloading map data or running the model.
+
+The package-preparation workflow copies the source archive into the user package, so the tracked `map/mekong_15min/` directory is inherited once; it must not be copied into a second package location.
+
 ## Common binary conventions
 
 The current model binary readers use unformatted, direct-access records of `4 × NX × NY` bytes. `JPIM` is a signed 4-byte integer and `JPRM` is a 4-byte real; these are the kinds used by the inventoried map fields. `JPRB` is switchable: 4-byte under `SinglePrec_CMF`, otherwise 8-byte. Arrays are shaped `(NX,NY)` in Fortran, so x is the first and fastest-varying index. Multi-variable/profile files place each field or profile layer in its own record.

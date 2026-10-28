@@ -12,6 +12,8 @@ The repository includes adaptive time stepping, river bifurcations, reservoir op
 
 **New users who want to run CaMa-Flood should start with the distribution package.** It includes model code, basic river-map datasets, sample runoff forcing, and example experiment configurations.
 
+The repository and downloadable distribution also include the official `map/mekong_15min/` sample, including its complete 1-minute high-resolution layers. See the [map guide](map/README.md) and [sample inventory](map/mekong_15min/README.md).
+
 Visit the [official CaMa-Flood website](https://global-hydrodynamics.github.io/CaMa-Flood/) for downloads and current package information:
 
 1. Complete the [registration and license-agreement form](https://forms.gle/bhq1qWqybeAk157v9).

@@ -4,6 +4,10 @@ The `map/` directory connects CaMa-Flood's river and floodplain representation t
 
 For model setup and example runs, see the [sample execution guide](../gosh/README.md). This page is an overview; tool-specific details remain in the component documentation linked below.
 
+## Official sample dataset
+
+The repository and downloadable distribution include the complete [`mekong_15min` sample](mekong_15min/README.md), including core maps, channel parameters, input and bifurcation data, metadata, and the full `1min/` high-resolution dataset. It is the standard local and GitHub Actions fixture for map-data tools; no map downloads are needed for its structural checks.
+
 ## What is a CaMa-Flood river map?
 
 CaMa-Flood represents a river network as **unit catchments**: drainage areas associated with cells on a regular longitude/latitude grid. A map records how those cells connect downstream and supplies the geographical and hydraulic information needed to route water and diagnose river and floodplain conditions.

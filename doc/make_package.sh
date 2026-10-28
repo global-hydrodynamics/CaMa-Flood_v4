@@ -17,6 +17,13 @@ sleep 3
 rm -rf $PKG
 cp -r  $SRC $PKG
 
+# The official Mekong sample is inherited from the source archive; do not duplicate it.
+if [ ! -f "${PKG}/map/mekong_15min/params.txt" ]; then
+  echo "ERROR: source archive does not include map/mekong_15min" >&2
+  exit 1
+fi
+python3 "${PKG}/map/tests/validate_mekong_sample.py" || exit 1
+
 ########## copy sample input ##########
 echo "copy sample input data"
 cd ${BASE}/${PKG}/
