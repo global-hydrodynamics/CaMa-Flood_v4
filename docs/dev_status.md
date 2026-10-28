@@ -3,26 +3,27 @@
 Development policy: [AGENTS.md](../AGENTS.md).
 
 Authoritative registry and dashboard snapshot: `origin/master:docs/dev_status.md`.
-Latest progress and work claims: each project's linked GitHub issue.
+Latest progress and work claims: a linked GitHub Issue when one is used; otherwise the project status and plan.
 
-Snapshot: project-branch registration proposal, 2026-10-25. Publication to `origin/master`: pending maintainer publication.
+Snapshot: branch-local project status proposal, 2026-10-28. Project scope reflects maintainer instructions in the Codex chat and awaits reconciliation/publication to `origin/master`.
 
 ## Registered active projects
 
-The documentation project below is approved in the maintainer's instructions in the Codex chat on 2026-10-25. This row is a local registration proposal awaiting publication to the authoritative registry on `origin/master`; a GitHub coordination issue has not yet been linked. Historical projects are not inventoried here.
+The documentation reorganization project was completed and merged to `master` in PR #121; it is no longer active. Map modernization continues under Issue #122. Research logging is a separate, cross-project case-study activity; its current framework edits use `feature/map-data-tools` by maintainer instruction, but the research activity is not tied to that feature branch and has no dedicated Issue. Historical work is not reconstructed in this status table.
 
-| Project / scope and approval issue | Owner | Persistent working branch | Main modules or files | Current progress | Potential conflicts | Next actions |
+| Project / scope and coordination record | Owner | Persistent working branch | Main modules or files | Current progress | Potential conflicts | Next actions |
 | --- | --- | --- | --- | --- | --- | --- |
-| Documentation reorganization — root README, directory-level READMEs, and existing manuals. Approval: maintainer instructions in the Codex chat, 2026-10-25; GitHub issue pending. | Dai Yamazaki (maintainer); Codex implements assigned tasks | `docs/reorganization` | Project scope: `README.md`, component READMEs, and manuals in `doc/` and component directories. Current task: `README.md` and this registration only. | Root README rewritten; internal links and scope checked; local commit authorized. No push or PR authorized. | README and manuals may overlap other documentation work; no other project claims are recorded in the current registry. | Maintainer reviews the local commit, links a coordination issue, and publishes the registration when authorized. Reuse this branch for subsequent approved documentation tasks. |
+| Map data/tools modernization ([Issue #122](https://github.com/global-hydrodynamics/CaMa-Flood_v4/issues/122)) — map metadata, conversion, and processing tools. | Dai Yamazaki (maintainer); Codex implements assigned tasks | `feature/map-data-tools` | Map project plan: `docs/map_data_tools_plan.md`; map metadata and conversion files under `map/`. | Official `map/mekong_15min/` sample and category-11 conversion tools are implemented. | Map preparation, core readers, optional-scheme readers, and format contracts may overlap; no new map task is claimed here. | Continue map project work under Issue #122; reconcile the branch-local status with the authoritative dashboard when publishing. |
+| CaMa-Flood v4-to-v5 research case study (cross-project activity; no dedicated Issue) — evidence-linked record of discussions through validation across successive projects. | Dai Yamazaki (maintainer; primary framework user); Codex assists with record maintenance | No research-specific branch. Current framework update: `feature/map-data-tools`, by explicit maintainer instruction. | Canonical record set: `research/`; policy: `AGENTS.md`; protocol: `research/study_protocol.md`. | Framework approved. Git-based documentation and map-tools stage narratives are recorded; the pre-documentation parent commit is tagged. `EV-0001` and the current task are in the event log. Earlier ChatGPT discussion details remain queued for maintainer-supplied sources. | Research records span project boundaries; preserve the same `research/` history when branches change or merge. Initial use is single-maintainer, with ordinary Git handling and no locking system. | Continue significant event logging across projects. Review the pending stage/branch-name caveat and discussion summaries; specify concrete v4/v5 task comparisons and resolve package-baseline identity and human-participant ethics before formal evaluation. The map-tools project remains ongoing. |
 
 ## Coordination requiring maintainer decisions
 
 | Decision | Current state | Next action |
 | --- | --- | --- |
-| Documentation project publication | Branch and scope approved in chat; registration is local to `docs/reorganization` | Link a GitHub coordination issue and publish the approved row to `master` through the existing status workflow |
+| Comparative study protocol | Four evaluation dimensions are maintainer-approved; concrete comparable tasks, rubrics, and v4 package identity remain to be specified | Define task-based evidence and baseline before comparative claims or participant evaluation |
 | Dashboard publisher | Maintainer responsibility; named publisher not yet assigned | Assign the person responsible for reconciling and publishing rows to `master` |
-| Supported validation configurations | Baseline version, compiler matrix, and required datasets not yet agreed | Record acceptance checks in the first relevant project issue |
+| Supported validation configurations | Baseline version, compiler matrix, and required datasets not yet agreed | Record acceptance checks in the project plan and status, or in an Issue if one is used |
 
 ## Approved updates awaiting publication
 
-Documentation reorganization registration above awaits maintainer publication. Approval is recorded in the Codex chat; no issue, push, PR, or merge was performed for this task.
+Map data/tool work is tracked by Issue [#122](https://github.com/global-hydrodynamics/CaMa-Flood_v4/issues/122). Research logging is a cross-project activity with no dedicated Issue; the current edits were explicitly authorized on `feature/map-data-tools`. This dashboard copy is branch-local until reconciled on `origin/master`. This update changes research documentation and records only; no model algorithms, PR, or merge were changed.

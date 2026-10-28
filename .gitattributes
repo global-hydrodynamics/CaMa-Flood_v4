@@ -1,0 +1,2 @@
+# CaMa-Flood map products are raw binary records, not text files.
+*.bin binary

@@ -1,0 +1,22 @@
+name: Map sample validation
+
+on:
+  push:
+    paths:
+      - "map/mekong_15min/**"
+      - "map/tests/validate_mekong_sample.py"
+      - ".github/workflows/map-sample-validation.yml"
+  pull_request:
+    paths:
+      - "map/mekong_15min/**"
+      - "map/tests/validate_mekong_sample.py"
+      - ".github/workflows/map-sample-validation.yml"
+  workflow_dispatch:
+
+jobs:
+  mekong-sample:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate the tracked reference dataset
+        run: python3 map/tests/validate_mekong_sample.py

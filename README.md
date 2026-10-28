@@ -12,6 +12,8 @@ The repository includes adaptive time stepping, river bifurcations, reservoir op
 
 **New users who want to run CaMa-Flood should start with the distribution package.** It includes model code, basic river-map datasets, sample runoff forcing, and example experiment configurations.
 
+The repository and downloadable distribution also include the official `map/mekong_15min/` sample, including its complete 1-minute high-resolution layers. See the [map guide](map/README.md) and [sample inventory](map/mekong_15min/README.md).
+
 Visit the [official CaMa-Flood website](https://global-hydrodynamics.github.io/CaMa-Flood/) for downloads and current package information:
 
 1. Complete the [registration and license-agreement form](https://forms.gle/bhq1qWqybeAk157v9).
@@ -25,6 +27,17 @@ Start with the [main manual](doc/Manual_CaMa-Flood_v420.docx) and [user guidelin
 This repository provides source code, build configurations, execution scripts, and preprocessing and analysis tools for development, customization, and source-code access. **Cloning it alone does not supply all the river-map and forcing datasets needed for the standard simulations.** Obtain the required data separately through the official distribution.
 
 Build settings are in [adm/Mkinclude](adm/Mkinclude), with compiler-specific examples in [adm/](adm/). The [compilation script](gosh/compile.sh) and [sample experiments](gosh/) provide execution entry points. Configure paths, libraries, and options for your environment before building or running; the presence of a configuration example does not establish that it has been tested on your system.
+
+### Python utilities
+
+Use Python 3.10 or newer on macOS or Linux. The repository setup creates an isolated `.venv/` and installs the shared dependencies for supported Python utilities; it does not change system Python or an existing Conda environment. Some specialist workflows have separate requirements, noted in their component guides.
+
+```bash
+bash s00-python_setup.sh
+source .venv/bin/activate
+```
+
+The optional ERA5-Land downloader also requires CDS account credentials and dataset terms acceptance. The legacy N-year flood-depth scripts and the GTSM preprocessing notebook use additional dependencies not included in the shared environment. Windows is not supported by this shell setup script.
 
 ## Repository Structure
 

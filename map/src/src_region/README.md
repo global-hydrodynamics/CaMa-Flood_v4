@@ -2,7 +2,13 @@
 
 `src_region/` contains Fortran programs and sample shell scripts for deriving a regional map from an existing source map. The repository copy at `map/src/src_region/` is a reusable template. Copy it into the target map directory and run the workflow from that map-local `src_region/` working directory; its programs use relative paths to read a source map and write regional products in the parent map directory. Review those paths and settings for the actual source and target maps before execution.
 
-This is a data-processing workflow, not a ready-made regional dataset. It requires a compatible source map and, for high-resolution products, the corresponding source high-resolution layers. The supplied scripts contain sample domains and assumptions; they do not establish universal coverage or compatibility.
+The repository provides the processing workflow, and [`map/mekong_15min/`](../../mekong_15min/README.md) is the official ready-to-use regional sample. Creating or regenerating a regional map still requires a compatible source map and, for high-resolution products, the corresponding source high-resolution layers. The supplied scripts contain sample domains and assumptions; they do not establish universal coverage or compatibility.
+
+## Official Mekong sample settings
+
+The sample-specific region and source settings are preserved in `map/mekong_15min/src_region/region_info.txt` and `s01-regional_map.sh` (source `../../glb_15min/`, bounds 90–110°E and 5–35°N). In the Git repository, the sample directory's `.F90` entries are relative links to this common `map/src/src_region/` implementation, so the regional Fortran code has one maintained copy. The source archive command may materialize those links into files for the downloaded package. The sample-local Makefile and scripts preserve its settings and output location.
+
+The sample is already distributed with its regional products; users do not need the parent map to run against those products. The parent map and compatible high-resolution source layers are needed only to regenerate it.
 
 ## Main workflow
 
@@ -32,6 +38,10 @@ The main map outputs include the cropped network/topography arrays and derived f
 | `s02-wrte_ctl_map.sh`, `s03-wrte_ctl_hires.sh` | Call `gradsinfo`, `wrte_ctl_map`, and `wrte_ctl_hires` to write visualization control files for available products. |
 
 Build targets are listed in this directory's `Makefile`; it includes the repository's active `adm/Mkinclude` configuration. Compile in the map-local copy using the compiler configuration appropriate for the project. No regionalization executable or dataset is built by the model's main `src/` Makefile.
+
+## Product metadata
+
+Regional readers and writers may crop core map files and derive products such as `rivseq.bin`, `uparea_grid.bin`, `upgrid.bin`, `nxtdst_grid.bin`, `rivlen_grid.bin`, `basin.bin`, and `bsncol.bin`. Their verified roles, symbolic layouts, and confidence states are tracked in [`map/map_variables.csv`](../../map_variables.csv), with schema notes in [`map/map_metadata_spec.md`](../../map_metadata_spec.md). Do not treat these regional/diagnostic outputs as original global-map generators or as universally required simulation inputs.
 
 ## Practical checks and limitations
 

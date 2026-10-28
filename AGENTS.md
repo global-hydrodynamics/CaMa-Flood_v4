@@ -4,7 +4,7 @@ This file is the authoritative development policy for human developers and AI co
 
 ## 1. Approval and autonomous execution
 
-Before implementation, a maintainer must approve the project, its persistent working branch, and its scope. Record that approval in the project's GitHub issue or pull request and register the project in `docs/dev_status.md`. Approval should identify the intended outcome, boundaries, owner, main files/modules, and acceptance checks. An approved scope can contain many tasks and commits.
+Before implementation, a maintainer must approve the project, its persistent working branch, and its scope. Record that approval and its boundaries in the linked GitHub Issue/PR when one is used, or in the project plan and `docs/dev_status.md` when it is not. The record should identify the intended outcome, owner, main files/modules, and acceptance checks. An approved scope can contain many tasks and commits.
 
 Once approved, agents may inspect files and dependencies, implement changes, run appropriate tests, fix issues found within scope, make logically organized commits, push to the designated project branch, and update development status. Do not ask again for each routine step. A task-specific restriction, such as “documentation only” or “do not commit or push,” still applies.
 
@@ -19,7 +19,7 @@ Obtain explicit maintainer approval before:
 - Breaking backward compatibility.
 - Changing a public interface or distribution format.
 
-State the concrete proposed change and its compatibility or numerical consequences when requesting approval. Continue independent work already within scope while a decision is pending. Testing does not authorize an intentional numerical change or a scope expansion. Report out-of-scope findings in the project issue; do not silently fix them.
+State the concrete proposed change and its compatibility or numerical consequences when requesting approval. Continue independent work already within scope while a decision is pending. Testing does not authorize an intentional numerical change or a scope expansion. Report out-of-scope findings in the project issue when one exists, or in the project status/completion report; do not silently fix them.
 
 ## 2. One project, one persistent working branch
 
@@ -28,9 +28,9 @@ Use one registered working branch per project across tasks, commits, developers,
 Before making changes:
 
 1. Inspect the repository root, current branch, worktree changes, and remotes.
-2. Read the current authoritative registry from `origin/master:docs/dev_status.md`, the approved project issue, and the relevant source files. Fetch `origin` when available to refresh remote-tracking refs; fetching must not switch branches or alter working files.
+2. Read the current authoritative registry from `origin/master:docs/dev_status.md`, the linked project issue if one exists, and the relevant source files. For substantial development, check existing GitHub Issues and open Pull Requests for overlapping work. Fetch `origin` when available to refresh remote-tracking refs; fetching must not switch branches or alter working files.
 3. Confirm the current branch exactly matches the project's registered working branch and that the assignment is within approved scope.
-4. Check overlapping file/module ownership and current work claims in the project issue.
+4. Check overlapping file/module ownership and current work claims in the project issue if one exists, or in the project status record and maintainer coordination.
 
 If the branch does not match, registration/approval is missing, or records disagree, ask for clarification before edits. Do not automatically create or switch branches, even when the expected branch already exists. If the remote cannot be checked, disclose the limitation and resolve coordination uncertainty before edits to shared or overlapping work.
 
@@ -43,27 +43,49 @@ Preserve other contributors' work. Never reset, clean, stash, overwrite, or comm
 ### Authority
 
 - The copy of `docs/dev_status.md` on `origin/master` is the authoritative project registry and coordination-dashboard snapshot. Copies on project branches are proposals or snapshots, not independent authorities.
-- Each registered project has one GitHub issue, linked from its row. The issue holds scope approval, current assignments, active work claims, blockers, conflicts, and the latest progress between dashboard publications.
-- The issue supplements current progress; it cannot silently override an approved branch or expand scope. Registry changes require maintainer approval and publication.
+- An Issue supplements coordination; it cannot silently override an approved branch or expand scope. Registry changes require maintainer approval and publication.
 
-Use the existing GitHub issue/PR workflow. Do not introduce a custom coordination service, bot, or separate branch for status management.
+### GitHub Issues for Major Development Tasks
+
+Creating a GitHub Issue is recommended but optional for substantial development tasks. When created, briefly describe the purpose and scope, planned changes and potentially affected components, responsible developer and working branch if known, and dependencies or potential conflicts. Link it from the project row and use it for assignments, blockers, and progress.
+
+Before substantial development, check existing Issues and open Pull Requests for overlapping work. Use Issues for coordination and progress tracking; maintain technical specifications and implementation details in repository documentation. The project, branch, and scope still require maintainer approval. Record that approval in an Issue/PR when used, or in the repository project plan and `docs/dev_status.md` when no Issue/PR is created.
+
+Do not introduce a custom coordination service, bot, or separate branch for status management.
 
 ### Updating and publishing status
 
-1. For a material change in progress, ownership, affected modules, conflicts, or next actions, update the project issue. Keep a concise current summary in the issue body; use comments for work claims and decisions. Do not log every command or coding session.
-2. If the dashboard row needs changing, propose a minimal row update on the already approved project branch or provide the exact proposed row in the issue when a file change is inappropriate. Check the current `origin/master` row first. Do not replace the dashboard with a stale branch copy.
+1. For a material change in progress, ownership, affected modules, conflicts, or next actions, update the project issue if one exists. Keep a concise current summary there; use comments for work claims and decisions. If no issue exists, update the branch-local project status proposal or appropriate project document. Do not log every command or coding session.
+2. If the dashboard row needs changing, propose a minimal row update on the already approved project branch or provide the exact proposed row in the issue, when one exists, if a file change is inappropriate. Check the current `origin/master` row first. Do not replace the dashboard with a stale branch copy.
 3. The maintainer reconciles proposals against current rows and publishes approved dashboard updates to `master`. This can be a maintainer-authored documentation-only commit, or part of an explicitly approved PR merge from the existing project branch. A status update must not pull unfinished implementation into `master`. Agents do not directly push to `master` or create coordination branches.
-4. The maintainer records the publication commit in the project issue. Subsequent sessions read the registry from `origin/master` even if the local project-branch copy is older. Never merge or cherry-pick another project's implementation just to obtain status Markdown.
+4. The maintainer records the publication commit in the project issue when one exists; otherwise the published dashboard is the record. Subsequent sessions read the registry from `origin/master` even if the local project-branch copy is older. Never merge or cherry-pick another project's implementation just to obtain status Markdown.
 
-Publish when a project is registered, ownership/branch/scope boundaries change, a significant conflict or blocker appears, or a project reaches a milestone or completion. Between publications, the issue is the latest progress source. Branch and owner changes are not effective merely because they appear in an unmerged proposal.
+Publish when a project is registered, ownership/branch/scope boundaries change, a significant conflict or blocker appears, or a project reaches a milestone or completion. Between publications, the issue is the latest progress source when used; otherwise consult the current project status and plan. Branch and owner changes are not effective merely because they appear in an unmerged proposal.
 
 ### Parallel work
 
-The project owner coordinates task assignments. Before editing, identify the task, assigned files/modules, and any overlap in the issue; check for an existing claim. Resolve overlaps with the owner before editing the same files. GitHub comments are coordination records, not an atomic lock, so conflicting or simultaneous claims need explicit resolution.
+The project owner coordinates task assignments. Before editing, identify the task, assigned files/modules, and any overlap in the project issue if one exists, or in the status/plan otherwise; check for an existing claim. Resolve overlaps with the owner before editing the same files. GitHub comments are coordination records, not an atomic lock, so conflicting or simultaneous claims need explicit resolution.
 
 Use separate checkouts/worktrees of the same approved branch when concurrent work requires isolation, subject to the execution environment's permissions. Do not share one mutable checkout between concurrent writers. Worktree creation must not create another branch. Coordinate commits and pushes so each writer incorporates the published branch head before publishing. A separate project that needs its own branch requires explicit approval and registration.
 
-## 4. Technical boundaries for CaMa-Flood
+## 4. Preserve development knowledge
+
+When a maintainer confirms an important technical specification, record the confirmed decision, rationale, and constraints in the appropriate technical documentation. Distinguish verified facts, confirmed design decisions, assumptions, and unresolved questions. Link relevant source, tests, Issues, or Pull Requests where useful. Update an existing authoritative document instead of creating duplicate or contradictory explanations. Keep this policy and `docs/dev_status.md` concise; link to detailed technical documentation.
+
+Do not treat informal discussion as a permanent design decision unless the maintainer confirms it. Before asking a technical question, consult the relevant documentation and source code. Ask only when the answer cannot be reliably established there or a new design decision is required.
+
+
+### Maintainer questions and decision management
+
+Investigate technical questions using documentation, source code, and available test data first. Do not spend excessive time investigating undocumented scientific knowledge or design decisions. Classify unresolved questions as:
+
+- **Blocking:** needed to proceed safely, affects architecture, or could cause substantial rework. Ask promptly before affected work proceeds; explain the decision and consequences.
+- **Important:** affects a specification or design choice, while independent work can continue. Record and raise at the next appropriate milestone.
+- **Documentation:** background, provenance, or clarification that does not affect current implementation. Group for review at the end of the task or phase.
+
+Record non-blocking questions in the relevant technical document under **Open Questions**, explaining why each answer matters and what work can continue. Group related questions and avoid repeated interruptions. Continue unrelated work while a blocking decision is pending. When the maintainer answers, record confirmed facts and rationale, update or remove resolved questions, and do not ask again unless new evidence reveals a contradiction.
+
+## 5. Technical boundaries for CaMa-Flood
 
 Preserve the existing architecture unless the approved task justifies changing it:
 
@@ -82,7 +104,15 @@ For optional schemes, identify initialization, state ownership, outer/adaptive t
 
 Preserve the separation between source development and downloadable data-rich distribution packages. Do not add large datasets, generated model outputs, build products, credentials, or local environment paths to commits. New test fixtures need a clear purpose, size, provenance, and redistribution permission.
 
-## 5. Validation and completion
+## Map metadata maintenance
+
+When adding or changing map-related readers, writers, preprocessing products, or model map interfaces, inspect and update [`map/map_variables.csv`](map/map_variables.csv) and the responsible module README. Keep verified facts distinct from provisional fields, and record distribution role separately from packages where a product was observed; see [`map/map_metadata_spec.md`](map/map_metadata_spec.md).
+
+## Cross-project research logging for the v5 case study
+
+Research logging is a long-term activity across the v4-to-v5 transition, not a feature owned by one project or branch. Preserve the common [`research/`](research/README.md) history across projects and branch transitions; no dedicated research Issue is required. Record significant discussions, approvals, instructions, implementations, knowledge discoveries, human interventions, failures, and validations, distinguishing each stage. The study's approved v5 dimensions are knowledge accessibility, reproducibility, extensibility, and governance; see [`research/study_protocol.md`](research/study_protocol.md). Do not log routine commands or every AI turn, invent unavailable history/metrics, commit raw private transcripts, or claim scientific correctness from execution alone. Have the maintainer review AI-generated discussion summaries, and run `python3 research/validate_records.py` after changing the record tables.
+
+## 6. Validation and completion
 
 Choose checks proportionate to the change. Inspect test recipes: some existing `test` targets compile executables without running them. Do not report compilation as test execution.
 
