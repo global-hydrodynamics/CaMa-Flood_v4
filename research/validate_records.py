@@ -81,6 +81,11 @@ def main() -> None:
     event_ids = {row["event_id"] for row in tables["events.csv"]}
     task_ids = {row["task_id"] for row in tables["development_tasks.csv"]}
     validation_ids = {row["validation_id"] for row in tables["validation_runs.csv"]}
+    discussion_ids = {row["discussion_id"] for row in tables["discussions.csv"]}
+    gap_ids = {row["gap_id"] for row in tables["knowledge_gaps.csv"]}
+    intervention_ids = {row["intervention_id"] for row in tables["human_interventions.csv"]}
+    decision_ids = {path.stem for path in (ROOT / "decisions").glob("ADR-*.md")}
+    record_ids = task_ids | validation_ids | discussion_ids | gap_ids | intervention_ids | decision_ids
 
     for lineno, row in enumerate(tables["events.csv"], start=2):
         validate_timestamp(row, lineno)
@@ -94,6 +99,14 @@ def main() -> None:
             fail(f"events.csv:{lineno}: unknown privacy_status {row['privacy_status']!r}")
         if row["task_id"] and row["task_id"] not in task_ids:
             fail(f"events.csv:{lineno}: unknown task_id {row['task_id']!r}")
+        for record_id in (item.strip() for item in row["record_refs"].split(";") if item.strip()):
+            if record_id not in record_ids:
+                fail(f"events.csv:{lineno}: record_refs references unknown ID {record_id!r}")
+
+    for lineno, row in enumerate(tables["discussions.csv"], start=2):
+        summary_path = ROOT.parent / row["summary_path"]
+        if not summary_path.is_file():
+            fail(f"discussions.csv:{lineno}: missing summary_path {row['summary_path']!r}")
 
     check_refs(tables["development_tasks.csv"], "start_event_id", event_ids, "development_tasks.csv")
     check_refs(tables["development_tasks.csv"], "end_event_id", event_ids, "development_tasks.csv")

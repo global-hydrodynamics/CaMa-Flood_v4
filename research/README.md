@@ -1,6 +1,6 @@
 # CaMa-Flood v5 research records
 
-**Status: initial framework draft.** The records support a research case study of CaMa-Flood modernization. They are not a project-management system and do not replace GitHub Issues, pull requests, commits, `AGENTS.md`, or `docs/dev_status.md`. Maintainer approval, implementation, and validation are recorded as distinct observable events.
+**Status: approved framework; evaluation protocol remains partly proposed.** These records support a long-term case study of the full transition from CaMa-Flood v4 toward v5. Research logging is cross-project work: it is not owned by map modernization, a single feature, or a particular development branch. The records complement (and do not replace) GitHub Issues, pull requests, commits, `AGENTS.md`, and `docs/dev_status.md`. Maintainer approval, implementation, and validation are distinct observable events.
 
 ## Record layers
 
@@ -8,6 +8,10 @@
 2. The companion CSVs contain analysis-oriented fields for development tasks and validation runs. Individual Markdown records in `records/` preserve the context needed to understand important discussions, tacit knowledge, human interventions, and longer validations. They do not copy full GitHub discussions or private chat transcripts.
 
 `development_tasks.csv` and `validation_runs.csv` are the structured task/validation tables. Discussions, knowledge gaps, interventions, and decisions have stable IDs and concise Markdown records; their shared chronology is in `events.csv`. Companion tables link to event IDs instead of repeating event dates and actors. Use the templates under [`templates/`](templates/) and the field definitions in [`study_protocol.md`](study_protocol.md).
+
+## Continuity across projects and branches
+
+Keep this one `research/` directory and its record history across successive development projects, branches, and merges. Do not start a new log when a feature branch changes or a project ends. Link events to whichever project, issue, PR, commit, or discussion supplies the evidence. No dedicated research Issue is required. Initially the maintainer is the primary recorder; use ordinary Git review and merge practices, without a separate locking or coordination system. Before adding records on a later branch, ensure it includes the latest merged research history so IDs and chronology continue rather than fork.
 
 ## When to record
 
@@ -25,7 +29,7 @@ For a substantial task, record its objective, approved scope, owner, branch, sta
 6. Have the human maintainer review AI-generated discussion summaries before treating them as research records. Do not include hidden reasoning or infer missing conversation content.
 7. Run `python3 research/validate_records.py` after editing record tables. Commit the record update with the work it documents or in a follow-up commit that points to the completed work.
 
-The CSV tables in this initial draft contain headers only. No October 2026 history has been reconstructed. [`examples/illustrative_records.md`](examples/illustrative_records.md) contains fictional examples clearly separated from actual research data.
+The structured tables contain the maintainer's current framework decision and otherwise do not reconstruct earlier October 2026 work. [`examples/illustrative_records.md`](examples/illustrative_records.md) contains fictional examples clearly separated from actual research data.
 
 ## Evidence archive and privacy
 
@@ -35,7 +39,7 @@ Public repository records should contain public metadata and reviewed summaries 
 
 ## Layout
 
-- [`study_protocol.md`](study_protocol.md): research questions, proposed methods, evidence categories, evaluation ideas, and limitations.
+- [`study_protocol.md`](study_protocol.md): confirmed v5 principles, primary evaluation dimensions, proposed task-based comparison, evidence categories, and limitations.
 - [`development_tasks.csv`](development_tasks.csv), [`validation_runs.csv`](validation_runs.csv): structured task and validation data.
 - [`records/`](records/): detailed discussion, knowledge-gap, human-intervention, and decision records.
 - [`templates/`](templates/): reusable record formats.

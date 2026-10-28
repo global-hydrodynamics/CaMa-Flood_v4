@@ -1,1 +1,2 @@
 discussion_id,event_id,source_type,source_reference,summary_path,review_status,source_access
+DR-0001,EV-0001,Codex conversation,"Maintainer instructions in active Codex conversation, 2026-10-28; no stable archive ID",research/records/discussions/DR-0001.md,pending,restricted

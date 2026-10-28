@@ -1,1 +1,2 @@
 event_id,timestamp,timestamp_precision,event_type,actor,actor_type,summary,outcome_status,evidence_class,task_id,record_refs,evidence_refs,privacy_status
+EV-0001,2026-10-28,date,maintainer_decision,Dai Yamazaki,maintainer,Approved cross-project v4-to-v5 research logging and four primary evaluation dimensions.,approved,prospective,,DR-0001,Maintainer instructions in active Codex conversation; no stable archive ID; initial framework commit 3db9873,unavailable

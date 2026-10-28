@@ -2,11 +2,16 @@
 
 ## Purpose and status
 
-This protocol proposes a lightweight, evidence-linked case study of the transition of CaMa-Flood from a mature, developer-dependent scientific model toward a more documented, reproducible, testable, and community-maintainable research software platform, including human–AI collaboration. It is a research plan, not a report of demonstrated outcomes.
+This protocol supports a long-term, cross-project case study of how the publicly available CaMa-Flood model can evolve from v4 into a reproducible, extensible, and community-maintainable modeling platform. The study includes AI-assisted development, but is not limited to documenting AI-assisted refactoring. It is a research plan, not a report of demonstrated outcomes.
 
-The research questions are: **RQ1 Knowledge externalization** — how tacit knowledge becomes explicit and reusable; **RQ2 Reproducibility and maintainability** — whether users and developers can install, execute, understand, modify, and validate the model with less dependence on original developers; and **RQ3 Human–AI collaboration** — which tasks agents complete, where they lack context, and which human interventions and governance controls are required.
+The maintainer-approved conceptual foundation and primary evaluation dimensions for v5 are:
 
-The central hypothesis is that AI-assisted modernization can externalize and preserve technical knowledge rather than only generate code. This remains a hypothesis; no causal productivity or quality claim is made here.
+1. **Knowledge accessibility:** scientific and technical knowledge can be found and understood through documentation, specifications, and code.
+2. **Reproducibility:** users and developers can reproduce calculations and verify the consequences of changes.
+3. **Extensibility:** new functionality can be implemented without comprehensive knowledge of, or unnecessary changes to, the entire model.
+4. **Governance:** contribution, scientific review, approval, and integration procedures are transparent and clearly defined.
+
+These dimensions refine the study's questions: how knowledge becomes accessible and reusable; whether calculations and changes can be reproduced; whether scoped extensions can be developed safely; and how human, scientific, and AI-assisted contributions are governed. Human–AI collaboration remains a cross-cutting question about task performance, missing context, human interventions, and effective controls. The central hypothesis is that modernization can preserve and externalize knowledge while improving these platform properties; this remains a hypothesis, with no causal productivity or quality claim made here.
 
 ## Unit of observation and evidence
 
@@ -22,9 +27,20 @@ Keep source facts, maintainer-confirmed explanations, AI interpretations, and un
 
 ## Proposed outcomes and evaluation
 
-Future analysis may count or classify: documented assumptions and their verification; successful and failed task outcomes; validation coverage and reproducibility; environment setup and example execution; task completion with and without agent assistance; human intervention types; and changes in access to model knowledge. Numerical comparisons must state source revisions, compiler/library/precision settings, datasets, comparison method, and agreed variable-specific tolerances. Bitwise identity and numerical agreement are different outcomes.
+Evaluate change from a documented v4 baseline toward evolving v5 states through concrete, repeatable development and use tasks, not by counting README files, lines of code, commits, or tests alone. For each task, record the starting revision and environment, task prompt and scope, allowed assistance, observable completion criteria, evidence artifacts, failures, interventions, and limitations. Where possible, use comparable tasks and input data on the v4 and v5 states; explain when model capability or setup differences make a direct comparison invalid.
 
-Before formal comparison, publish a task protocol defining participant population, tasks, starting state, allowed assistance, success criteria, timing/effort measures, data handling, and analysis. Prospective evaluation suggestions are not results. Do not infer that AI or documentation caused improvement from descriptive counts alone.
+A proposed evaluation matrix is:
+
+| Dimension | Example task evidence (to be specified before formal comparison) |
+| --- | --- |
+| Knowledge accessibility | A user or agent answers a defined question about a scientific variable, workflow, or module interface using cited repository sources; record correctness, unresolved gaps, and maintainer intervention. |
+| Reproducibility | A developer follows a clean-environment recipe, runs a named sample calculation, and compares outputs using recorded inputs, environment, and pre-agreed checks or tolerances. |
+| Extensibility | A developer implements a bounded feature or scheme change; record affected modules/interfaces, required context, compatibility checks, and whether unrelated core changes were necessary. |
+| Governance | A contributor follows a scoped change from proposal through scientific review, approval, validation, and integration; inspect whether authority, rationale, and outcome are traceable in repository records. |
+
+These are examples for protocol development, not finalized tasks, acceptance criteria, or results. Counts and timing may supplement task evidence, but must not stand in for correctness, user understanding, scientific validity, or maintainability. Numerical comparisons must state source revisions, compiler/library/precision settings, datasets, comparison method, and agreed variable-specific tolerances. Bitwise identity and numerical agreement are different outcomes.
+
+Before formal comparison, approve a protocol defining participant population (if any), tasks, starting states, allowed assistance, success criteria, effort measures, data handling, and analysis. Prospective evaluation suggestions are not results. Do not infer that AI, documentation, or a particular code change caused improvement from descriptive observations alone.
 
 ## Data quality and bias controls
 
@@ -42,9 +58,9 @@ If future evaluation recruits or analyzes human participants or external contrib
 
 ## Historical baseline and scope
 
-Systematic logging begins prospectively after this framework is established. Earlier work may be reconstructed later only from surviving evidence and must be labeled retrospective. The Git `v4.30` tag is a candidate source-code baseline; its target commit is recorded in [`baseline/v4_baseline.md`](baseline/v4_baseline.md). The tag alone does not prove identity with a separately distributed package.
+Systematic logging is continuous across development projects and branches. Earlier work may be reconstructed later only from surviving evidence and must be labeled retrospective. The Git `v4.30` tag is a candidate source-code baseline; its target commit is recorded in [`baseline/v4_baseline.md`](baseline/v4_baseline.md). The tag alone does not prove identity with a separately distributed package.
 
-Phase 1 establishes schemas and procedures. It does not reconstruct the October 2026 modernization history, freeze a complete runtime environment, conduct human-participant evaluation, or claim a validated scientific comparison.
+The framework records the maintainer-approved v5 principles, but concrete comparative tasks, rubrics, exact v4 package identity, and participant procedures still require specification. It does not reconstruct the October 2026 modernization history, freeze a complete runtime environment, conduct human-participant evaluation, or claim a validated scientific comparison.
 
 ## Decisions still open
 
