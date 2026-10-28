@@ -1,1 +1,4 @@
 gap_id,event_id,category,evidence_basis,status,record_path,formalized_in,verification_ref
+KG-0001,EV-0002,development history / branch provenance,Git refs and PR metadata; maintainer-provided stage label,open,research/records/knowledge_gaps/KG-0001.md,,PR #121; Git history at 680bf13
+KG-0002,EV-0006,scientific workflow / provenance,Maintainer-confirmed provenance and public methods paper,partially_formalized,research/records/knowledge_gaps/KG-0002.md,docs/map_data_inventory.md; map/map_metadata_spec.md,Yamazaki et al. (2011); maintainer confirmation recorded in map inventory
+KG-0003,EV-0006,NetCDF producer contract,Fortran reader source plus maintainer-confirmed ECMWF generation context,partially_verified,research/records/knowledge_gaps/KG-0003.md,docs/map_data_inventory.md; map/map_metadata_spec.md,CRIVCLINC/CRIVPARNC reader and converter docs

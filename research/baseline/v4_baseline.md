@@ -10,6 +10,8 @@
 
 This is a reproducible source-code reference. It is not proof that every separately distributed v4.30 package has identical code or data. The tag is a candidate source baseline; formal baseline status remains open until maintainers identify the exact package artifact and provenance.
 
+This release-source candidate is distinct from the [`research-baseline-pre-document` snapshot](pre_documentation.md), which records the repository state immediately before the 2026 documentation modernization. The latter is intended for pre/post-documentation comparisons; it is not the original v4.30 release state.
+
 ## Not the original baseline
 
 `origin/master` currently points to `11d3fcdfe99885b689a0930b12c2bd24136f87b9` (documentation reorganization merge, 2026-10-25). It is a later development state and must not be described as the unmodified v4.30 baseline. Subsequent development branches may contain unmerged work and must be identified separately.

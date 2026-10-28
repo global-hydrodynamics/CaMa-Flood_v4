@@ -29,7 +29,7 @@ For a substantial task, record its objective, approved scope, owner, branch, sta
 6. Have the human maintainer review AI-generated discussion summaries before treating them as research records. Do not include hidden reasoning or infer missing conversation content.
 7. Run `python3 research/validate_records.py` after editing record tables. Commit the record update with the work it documents or in a follow-up commit that points to the completed work.
 
-The structured tables contain the maintainer's current framework decision and otherwise do not reconstruct earlier October 2026 work. [`examples/illustrative_records.md`](examples/illustrative_records.md) contains fictional examples clearly separated from actual research data.
+The structured tables now include verified Git stage events, the current task, the annotated baseline milestone, and audit reruns. They do not reconstruct unavailable historical discussions. [`stages/`](stages/README.md) contains the stage narratives; [`baseline/pre_documentation.md`](baseline/pre_documentation.md) describes the selected pre-documentation state. [`examples/illustrative_records.md`](examples/illustrative_records.md) remains fictional and separate from actual research data.
 
 ## Evidence archive and privacy
 
@@ -43,5 +43,6 @@ Public repository records should contain public metadata and reviewed summaries 
 - [`development_tasks.csv`](development_tasks.csv), [`validation_runs.csv`](validation_runs.csv): structured task and validation data.
 - [`records/`](records/): detailed discussion, knowledge-gap, human-intervention, and decision records.
 - [`templates/`](templates/): reusable record formats.
-- [`baseline/`](baseline/): release-reference and environment inventory; candidate baselines are clearly marked.
-- [`analysis/`](analysis/): later analysis guidance; no study results are claimed.
+- [`baseline/`](baseline/): release and pre-documentation baselines, comparison procedure, and recorded audit environment.
+- [`stages/`](stages/README.md): evidence-based development-stage narratives.
+- [`analysis/`](analysis/): later analysis guidance; no comparative study results are claimed.

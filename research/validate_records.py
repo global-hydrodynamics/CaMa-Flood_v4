@@ -120,7 +120,7 @@ def main() -> None:
 
     print("Research record schemas and IDs are valid.")
     print("Rows:", ", ".join(f"{name}={len(rows)}" for name, rows in tables.items()))
-    print("An empty table is valid; no historical records are implied by this check.")
+    print("Empty tables are valid for categories with no verified records; the check does not imply missing history.")
 
 if __name__ == "__main__":
     main()
