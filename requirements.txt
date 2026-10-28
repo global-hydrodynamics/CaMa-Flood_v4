@@ -1,0 +1,21 @@
+# Shared numerical, NetCDF, and runoff-processing tools.
+numpy>=1.24
+netCDF4>=1.6
+pandas>=1.5
+xarray>=2023.1
+scipy>=1.10
+cftime>=1.6
+
+# Plotting; rasterio is used by the optional FLOPROS conversion workflow.
+matplotlib>=3.7
+rasterio>=1.3
+tifffile>=2023.7
+tqdm>=4.65
+# L-moment fitting used by the maintained levee-height workflow.
+lmoments3>=1.0
+
+# Native-grid remapping configuration.
+PyYAML>=6.0
+
+# Optional ERA5-Land download client (also requires CDS credentials and terms acceptance).
+cdsapi>=0.7

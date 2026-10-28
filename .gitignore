@@ -11,3 +11,4 @@
 *.dSYM
 *.mod
 out/
+/.venv/
