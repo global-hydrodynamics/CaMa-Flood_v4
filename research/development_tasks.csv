@@ -1,0 +1,1 @@
+task_id,objective,branch,owner,start_event_id,start_commit,issue_url,pr_url,agent,model_version,outcome,end_event_id,end_commit,validation_ids,elapsed_seconds,elapsed_basis,human_effort_minutes,effort_basis,tokens,token_basis,cost_usd,cost_basis

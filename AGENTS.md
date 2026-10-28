@@ -108,6 +108,10 @@ Preserve the separation between source development and downloadable data-rich di
 
 When adding or changing map-related readers, writers, preprocessing products, or model map interfaces, inspect and update [`map/map_variables.csv`](map/map_variables.csv) and the responsible module README. Keep verified facts distinct from provisional fields, and record distribution role separately from packages where a product was observed; see [`map/map_metadata_spec.md`](map/map_metadata_spec.md).
 
+## Research logging for v5 case-study work
+
+For approved work covered by the CaMa-Flood v5 case study, record only significant discussions, approvals, instructions, implementations, knowledge discoveries, human interventions, failures, and validations in [`research/`](research/README.md). Follow its ID schemas and evidence classes; distinguish proposal, approval, instruction, implementation, and validation. Do not log routine commands or every AI turn, invent unavailable history/metrics, commit raw private transcripts, or claim scientific correctness from execution alone. Have the maintainer review AI-generated discussion summaries, and run `python3 research/validate_records.py` after changing the record tables.
+
 ## 6. Validation and completion
 
 Choose checks proportionate to the change. Inspect test recipes: some existing `test` targets compile executables without running them. Do not report compilation as test execution.
