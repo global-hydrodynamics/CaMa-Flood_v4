@@ -68,7 +68,24 @@ The project owner coordinates task assignments. Before editing, identify the tas
 
 Use separate checkouts/worktrees of the same approved branch when concurrent work requires isolation, subject to the execution environment's permissions. Do not share one mutable checkout between concurrent writers. Worktree creation must not create another branch. Coordinate commits and pushes so each writer incorporates the published branch head before publishing. A separate project that needs its own branch requires explicit approval and registration.
 
-## 4. Technical boundaries for CaMa-Flood
+## 4. Preserve development knowledge
+
+When a maintainer confirms an important technical specification, record the confirmed decision, rationale, and constraints in the appropriate technical documentation. Distinguish verified facts, confirmed design decisions, assumptions, and unresolved questions. Link relevant source, tests, Issues, or Pull Requests where useful. Update an existing authoritative document instead of creating duplicate or contradictory explanations. Keep this policy and `docs/dev_status.md` concise; link to detailed technical documentation.
+
+Do not treat informal discussion as a permanent design decision unless the maintainer confirms it. Before asking a technical question, consult the relevant documentation and source code. Ask only when the answer cannot be reliably established there or a new design decision is required.
+
+
+### Maintainer questions and decision management
+
+Investigate technical questions using documentation, source code, and available test data first. Do not spend excessive time investigating undocumented scientific knowledge or design decisions. Classify unresolved questions as:
+
+- **Blocking:** needed to proceed safely, affects architecture, or could cause substantial rework. Ask promptly before affected work proceeds; explain the decision and consequences.
+- **Important:** affects a specification or design choice, while independent work can continue. Record and raise at the next appropriate milestone.
+- **Documentation:** background, provenance, or clarification that does not affect current implementation. Group for review at the end of the task or phase.
+
+Record non-blocking questions in the relevant technical document under **Open Questions**, explaining why each answer matters and what work can continue. Group related questions and avoid repeated interruptions. Continue unrelated work while a blocking decision is pending. When the maintainer answers, record confirmed facts and rationale, update or remove resolved questions, and do not ask again unless new evidence reveals a contradiction.
+
+## 5. Technical boundaries for CaMa-Flood
 
 Preserve the existing architecture unless the approved task justifies changing it:
 
@@ -87,7 +104,11 @@ For optional schemes, identify initialization, state ownership, outer/adaptive t
 
 Preserve the separation between source development and downloadable data-rich distribution packages. Do not add large datasets, generated model outputs, build products, credentials, or local environment paths to commits. New test fixtures need a clear purpose, size, provenance, and redistribution permission.
 
-## 5. Validation and completion
+## Map metadata maintenance
+
+When adding or changing map-related readers, writers, preprocessing products, or model map interfaces, inspect and update [`map/map_variables.csv`](map/map_variables.csv) and the responsible module README. Keep verified facts distinct from provisional fields, and record distribution role separately from packages where a product was observed; see [`map/map_metadata_spec.md`](map/map_metadata_spec.md).
+
+## 6. Validation and completion
 
 Choose checks proportionate to the change. Inspect test recipes: some existing `test` targets compile executables without running them. Do not report compilation as test execution.
 

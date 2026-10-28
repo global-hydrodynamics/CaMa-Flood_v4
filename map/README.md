@@ -63,6 +63,14 @@ The sample regional script, `src/src_region/s01-regional_map.sh`, reads a source
 
 Examples of maps used by sample runs are listed in [`gosh/README.md`](../gosh/README.md). A regional map must remain consistent with its source resolution and extent, downstream connectivity, metadata, and parameter files. Do not substitute files from a different map tag merely because their filenames match.
 
+## Shared map-product registry
+
+[`map_variables.csv`](map_variables.csv) is the source-linked variable and data-product registry for CaMa-Flood maps. It uses symbolic dimensions such as `NX`, `NY`, and `NLFP`, so the definitions apply across map resolutions and regional domains. It is the primary source for variable names, proposed long names and units, data types, record layouts, missing-value conventions, product variants, distribution roles, and current model-reader mappings.
+
+[`map_metadata_spec.md`](map_metadata_spec.md) explains the CSV schema and how it relates to per-map `params.txt`, `mapdim.txt`, run-specific `diminfo*.txt`, and GrADS CTL files. The CSV defines common variable-level metadata; each map's files supply its actual dimensions, bounds, spacing, and dataset-specific binary settings. Runoff-grid configuration belongs to `diminfo` and the paired input matrix.
+
+The channel-parameter entries describe products users generate or verify for a target map. Data-rich packages may include prepared examples; check the actual package contents before generating replacements. The CSV distinguishes empirical `rivwth.bin` from the alternative GWD-LR merged width product `rivwth_gwdlr.bin`.
+
 ## Map parameters and preprocessing
 
 `src/src_param/` supports several kinds of preparation:

@@ -20,6 +20,12 @@ The component `Makefile` builds the listed utilities using the active configurat
 
 The script names describe sample workflows, not a requirement to run every workflow in sequence. For example, MPI partitions, gauge allocations, and dam allocations are only needed for configurations that use them.
 
+## Map-product inventory and channel outputs
+
+The complete, source-linked variable/product registry is [`map/map_variables.csv`](../../map_variables.csv); its field and status definitions are in [`map/map_metadata_spec.md`](../../map_metadata_spec.md). The registry distinguishes products observed in packaged examples from products generated for a specific map. It is not a checklist that every workflow must run.
+
+For the channel workflow, `s01-channel_params.sh` first produces `outclm.bin` from runoff and the selected `inpmat`; `calc_rivwth.F90` then writes empirical `rivwth.bin`, `rivhgt.bin`, `rivman.bin`, and `rivhgt_inf.bin`. `set_gwdlr.F90` can combine `rivwth.bin` with satellite-derived `width.bin` to create the alternative width product `rivwth_gwdlr.bin`; it does not replace depth or roughness. These map-specific outputs should be generated or checked for the target map even when a package includes example copies. Consult the scripts and source for the selected coefficients and data prerequisites.
+
 ## Input-matrix paths
 
 The `s02-generate_inpmat.sh` sample sets input-grid spacing, bounds, latitude ordering, and output names in the script. The Fortran implementation is for a regular linear grid; a curvilinear or otherwise different coordinate system may need a different implementation. An input matrix belongs to a particular map and forcing-grid definition, so dimensions, bounds, orientation, and file format must match the forcing used by the model.

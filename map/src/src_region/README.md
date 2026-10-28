@@ -33,6 +33,10 @@ The main map outputs include the cropped network/topography arrays and derived f
 
 Build targets are listed in this directory's `Makefile`; it includes the repository's active `adm/Mkinclude` configuration. Compile in the map-local copy using the compiler configuration appropriate for the project. No regionalization executable or dataset is built by the model's main `src/` Makefile.
 
+## Product metadata
+
+Regional readers and writers may crop core map files and derive products such as `rivseq.bin`, `uparea_grid.bin`, `upgrid.bin`, `nxtdst_grid.bin`, `rivlen_grid.bin`, `basin.bin`, and `bsncol.bin`. Their verified roles, symbolic layouts, and confidence states are tracked in [`map/map_variables.csv`](../../map_variables.csv), with schema notes in [`map/map_metadata_spec.md`](../../map_metadata_spec.md). Do not treat these regional/diagnostic outputs as original global-map generators or as universally required simulation inputs.
+
 ## Practical checks and limitations
 
 - Preserve the source map's resolution, grid alignment, and required metadata. The output bounds must be compatible with the source grid and downstream network.
