@@ -1,1 +1,2 @@
 intervention_id,event_id,task_id,category,trigger,impact,record_path,review_status
+HI-0001,EV-0017,DT-0002,manual workflow execution and provenance confirmation,Maintainer reported manually executing map/mekong_15min/src_region/s01-regional_map.sh and confirming regional products had been generated.,"Allowed the registry to mark only currently observed products as workflow_stage=src_region; this records stage provenance and file presence, not scientific validation.",research/records/human_interventions/HI-0001.md,pending

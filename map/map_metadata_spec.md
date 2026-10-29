@@ -12,11 +12,11 @@ Dataset-specific dimensions, bounds, and spacing remain in each map dataset's me
 
 The CSV uses UTF-8, a header row, and one row per logical variable or traceable data product. Multi-record files such as `nextxy.bin` have one row per logical variable. A single row may link alternative files that implement the same variable, as for `rivwth.bin` and `rivwth_gwdlr.bin`; the latter is width only. Non-raster tables and source-generated outputs may also be recorded, with their real layout stated rather than forced into `NX × NY`.
 
-Dimensions use symbolic names and Fortran array order where verified, such as `NX,NY` or `NX,NY,NLFP`. Blank cells mean “not specified in this inventory,” not zero, dimensionless, or absent. Use `unknown` or `not established` where a value is known to be unresolved. Evidence paths are repository-relative; citations may be URLs.
+Dimensions use symbolic names and Fortran array order where verified, such as `NX,NY` or `NX,NY,NLFP`. Use `N/A` when a product is non-spatial and has no map-grid dimensions (for example, text configuration files, tables, or GrADS CTLs); put its record structure in `record_layout` and `record_count`. Blank cells mean “not specified in this inventory,” not zero, dimensionless, or absent. Use `unknown` or `not established` where a value is known to be unresolved. Evidence paths are repository-relative; citations may be URLs.
 
 ### Categories and sorting
 
-`category_id` is the first column and numeric sorting key. The descriptive `category` value is retained. Current assignments are:
+`category_id` is the first column and numeric sorting key. The temporary `workflow_stage` column follows it; it records only a provisional, manually confirmed workflow stage for files observed after execution, and is not an intrinsic property of a map variable or reusable product. Leave it blank until a maintainer confirms that stage from an actual run; do not infer it from filenames or source code. Apply the same value to every row describing a multi-record file. The descriptive `category` value is retained. Current assignments are:
 
 | ID | Category | Meaning |
 | ---: | --- | --- |
@@ -31,13 +31,14 @@ Dimensions use symbolic names and Fortran array order where verified, such as `N
 | 81 | `auxiliary` | Supporting data, intermediates, and other workflow inputs. `outclm.bin` is an intermediate discharge estimate, not a final runtime channel parameter. |
 | 99 | `unclassified` | A source-backed/package-observed product whose functional role is not established yet. |
 
-Sort rows by ascending numeric `category_id`, then `binary_filename` (case-insensitive), then numeric `record_index` with blank indices last. Preserve all evidence and verification-status fields during recategorization. Use ID 99 until a role is supported by source or documentation; do not classify from a filename alone.
+Sort rows by ascending numeric `category_id`, then `binary_filename` (case-insensitive), then numeric `record_index` with blank indices last. Preserve all evidence and verification-status fields during recategorization. Use ID 99 until a role is supported by source or documentation; do not classify from a filename alone. Treat `workflow_stage` as a temporary manual execution annotation that may be progressively filled as stages are verified; never use it to define the product or general workflow.
 
 ### Columns
 
 | Column | Meaning |
 | --- | --- |
 | `category_id` | Numeric functional sort key from the table above; it is the first CSV column. |
+| `workflow_stage` | Provisional manual-verification field immediately after `category_id`; currently `src_region` only for files confirmed by a maintainer to have been produced by that stage in an observed execution. Blank means no stage has been manually confirmed. This describes execution provenance for a sample, not an intrinsic property of the reusable product. Keep it consistent across rows for one multi-record file. |
 | `category` | Descriptive functional group matching `category_id`. |
 | `product_kind` | `binary_variable_or_product`, `nonbinary_or_generated_product`, or a brief product-kind value when a source format is known. |
 | `binary_filename` | Primary filename or logical output filename; it may be a pattern such as `bifprm-<N>.txt`. |
@@ -47,7 +48,7 @@ Sort rows by ascending numeric `category_id`, then `binary_filename` (case-insen
 | `physical_description` | Meaning, assumptions, or explicit uncertainty. Do not infer from a filename alone. |
 | `units` | Verified or proposed unit string. Blank does not imply dimensionless. |
 | `dtype` | Verified binary primitive/layout, e.g. `int32`, `float32`, `mixed`, `formatted text`, `NetCDF`, or `unknown`. |
-| `dimensions` | Symbolic data shape or a descriptive configuration-dependent value; do not hardcode one map's concrete dimensions here. |
+| `dimensions` | Symbolic map/data shape or a descriptive configuration-dependent value; use `N/A` for non-spatial text/configuration products with no map-grid dimensions, and do not hardcode one map's concrete dimensions here. |
 | `record_index` | One-based numeric record for a row representing one field in a multi-variable file. Blank for products whose record cannot be established. |
 | `record_count` | Total records in the binary file for the row's product (`1`, `2`, or symbolic `NLFP` when variable by dataset). |
 | `record_layout` | Human-readable record indexing/order, or `not established` if unresolved. |
@@ -71,7 +72,7 @@ Sort rows by ascending numeric `category_id`, then `binary_filename` (case-insen
 - `source_only_generated`: traceable source output not found in the inspected v4.30 map packages.
 - `package_example_or_specialized`: observed package product whose distribution as a general standard is not established.
 
-`verification_status` values in this draft are `verified_source_and_sample`, `verified_source`, `package_observed`, and `provisional_semantics`. The last means package presence is confirmed but producer, meaning, format, or use is not. Blank/unknown semantic fields remain intentionally unresolved.
+`verification_status` values in this draft are `verified_source_and_sample`, `verified_source`, `package_observed`, and `provisional_semantics`. `verified_source_and_sample` means the source-derived definition and sample presence have both been checked; it does not mean scientific suitability or correctness has been validated. The `workflow_stage` field separately captures maintainer-confirmed execution stage for the current manually checked sample. `provisional_semantics` means product presence or structure may be known while producer, meaning, format, or use remains unresolved. Blank/unknown semantic fields remain intentionally unresolved.
 
 The fields deliberately separate two questions: `distribution_status` describes the product's role in the workflow, while `sample_availability` records where it was actually observed. Package observations do not prove universal distribution. A source program that writes a file does not establish that a corresponding product is shipped. These distinctions should be preserved when adding entries.
 
