@@ -16,30 +16,31 @@ Dimensions use symbolic names and Fortran array order where verified, such as `N
 
 ### Categories and sorting
 
-`category_id` is the first column and numeric sorting key. The temporary `workflow_stage` column follows it; it records only a provisional, manually confirmed workflow stage for files observed after execution, and is not an intrinsic property of a map variable or reusable product. Leave it blank until a maintainer confirms that stage from an actual run; do not infer it from filenames or source code. Apply the same value to every row describing a multi-record file. The descriptive `category` value is retained. Current assignments are:
+`category_id` is the first column and numeric sorting key. The ID scheme is provisional and may change as the inventory develops; it groups products by broad function and is not an intrinsic property of a map variable. The descriptive `category` value can identify a more specific product group within an ID. The current grouping is:
 
-| ID | Category | Meaning |
+| ID | Group / current category labels | Meaning |
 | ---: | --- | --- |
-| 11 | `river_network` | Core downstream topology, catchment, channel-topography, and floodplain-profile products. This is the initial CTL/NetCDF conversion scope. |
-| 12 | `river_parameter` | Main channel width, depth, and roughness parameters, including alternate source products for the same variable. |
-| 21 | `input_matrix` | Runoff-grid to map-cell mapping products. |
-| 31 | `network_analysis` | Basin, sequence, upstream lookup, and diagnostic analysis products. |
-| 32 | `grid_variant` | Alternate or derived grid/network views, including MPI region assignments. |
-| 41 | `bifurcation` | Bifurcation maps and parameter tables. |
-| 42 | `dam_reservoir` | Dam and reservoir parameter products. |
-| 43 | `optional_parameter` | Optional model/preprocessing parameters not in the core network set. |
-| 81 | `auxiliary` | Supporting data, intermediates, and other workflow inputs. `outclm.bin` is an intermediate discharge estimate, not a final runtime channel parameter. |
-| 99 | `unclassified` | A source-backed/package-observed product whose functional role is not established yet. |
+| 11 | Map (`river_map_default`, `river_map_region`) | Base map layers and their regional-map variants. |
+| 12 | Cross-section parameters (`river_parameter`) | Channel width, depth, and roughness parameters. |
+| 16 | Derived map layers (`river_map_grid`) | Map-grid products derived from the base map or river network. |
+| 20–29 | Optional products; current labels: `MPI` (21), `bifurcation` (22), `inflow_scheme` (23), `dam_reservoir` (24) | Optional model features and their preprocessing products. The remaining IDs in this range are not assigned yet. |
+| 41 | Input matrices (`input_matrix`) | Mapping products and paired configuration files connecting map cells to input-grid cells. |
+| 51 | Supplementary maps (`river_map_supplement`) | Supporting, diagnostic, or otherwise non-core map layers. |
+| 71 | High-resolution data (`high-res_data`) | High-resolution source layers, regional extracts, and their area metadata. |
+| 81 | Verification data (currently `gauge_alloc`) | Data used to check or support map allocation and verification. |
+| 91 | Metadata (`metadata`) | Map dimensions, bounds, and other non-raster map metadata. |
 
-Sort rows by ascending numeric `category_id`, then `binary_filename` (case-insensitive), then numeric `record_index` with blank indices last. Preserve all evidence and verification-status fields during recategorization. Use ID 99 until a role is supported by source or documentation; do not classify from a filename alone. Treat `workflow_stage` as a temporary manual execution annotation that may be progressively filled as stages are verified; never use it to define the product or general workflow.
+The temporary `workflow_stage` column follows `category_id`; it records only a provisional, manually confirmed workflow stage for files observed after execution, and is not an intrinsic property of a map variable or reusable product. Leave it blank until a maintainer confirms that stage from an actual run; do not infer it from filenames or source code. Apply the same value to every row describing a multi-record file.
+
+Sort rows by ascending numeric `category_id`, then `binary_filename` (case-insensitive), then numeric `record_index` with blank indices last. Preserve all evidence and verification-status fields during recategorization. Use the functional descriptions and evidence to select a group; do not classify from a filename alone. Treat `workflow_stage` as a temporary manual execution annotation that may be progressively filled as stages are verified; never use it to define the product or general workflow.
 
 ### Columns
 
 | Column | Meaning |
 | --- | --- |
-| `category_id` | Numeric functional sort key from the table above; it is the first CSV column. |
+| `category_id` | Provisional numeric grouping/sort key from the table above; it is the first CSV column and may be revised as the inventory develops. |
 | `workflow_stage` | Provisional manual-verification field immediately after `category_id`; currently `src_region` only for files confirmed by a maintainer to have been produced by that stage in an observed execution. Blank means no stage has been manually confirmed. This describes execution provenance for a sample, not an intrinsic property of the reusable product. Keep it consistent across rows for one multi-record file. |
-| `category` | Descriptive functional group matching `category_id`. |
+| `category` | Descriptive product subgroup within the broad functional group identified by `category_id`. |
 | `product_kind` | `binary_variable_or_product`, `nonbinary_or_generated_product`, or a brief product-kind value when a source format is known. |
 | `binary_filename` | Primary filename or logical output filename; it may be a pattern such as `bifprm-<N>.txt`. |
 | `alternative_binary_filename` | Alternate file carrying the same variable/product, when applicable. Blank means no alternative is registered. |
