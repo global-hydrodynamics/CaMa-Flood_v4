@@ -201,7 +201,7 @@ DO IDAM = 1, NDAM
 
   IF( LDAMH22 )THEN    !! Hanazaki 2022 scheme 
     NorVol(IDAM)   = ConVol(IDAM) * 0.5_JPRB    ! normal storage
-    R_VolUpa(NDAM) = FldVol(IDAM) * 1.E-6 / upreal(IDAM)
+    R_VolUpa(IDAM) = FldVol(IDAM) * 1.E-6 / upreal(IDAM)
 
   ELSE  !! Yamazaki&Funato scheme (paper in prep)
     Vyr =Qn(IDAM)*(365.*24.*60.*60.)                    !! Annual inflow -> assume dry period inflow is 1/8 of annual flow 
