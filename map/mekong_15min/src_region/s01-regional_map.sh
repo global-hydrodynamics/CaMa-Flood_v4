@@ -13,6 +13,8 @@ echo "$EAST"       >> region_info.txt
 echo "$SOUTH"      >> region_info.txt
 echo "$NORTH"      >> region_info.txt
 
+exit
+
 # Please edit "region_info.txt" to make a regional map
 
 ./cut_domain
