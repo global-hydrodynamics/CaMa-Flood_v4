@@ -26,6 +26,7 @@
       character*256          ::  cfmt, clen
 
 ! ===============================================
+! Read the crop offsets and dimensions produced by cut_domain.
       rfile1='./dim_change.txt'
       open(11,file=rfile1,form='formatted')
       read(11,'(a)') global_dir
@@ -55,6 +56,8 @@
       
 ! ====================
 
+! Count source bifurcation paths whose two endpoints remain inside the region.
+! The second pass writes those paths with their indices shifted to regional grid.
       rfile1=trim(global_dir)//'/bifori.txt'
       wfile1='../bifori.txt'
       open(11,file=rfile1,form='formatted')

@@ -55,6 +55,8 @@
       parameter             (wfile6='../basin.bin')
       parameter             (wfile7='../bsncol.bin')
 ! ===============================================
+! Build derived regional lookup maps from params.txt, nextxy.bin, and grdare.bin.
+! Outputs are written one binary record per map in the parent regional directory.
       open(11,file=params,form='formatted')
       read(11,*) nXX
       read(11,*) nYY
@@ -96,7 +98,7 @@ print *, 'SET_MAP longitude, latitude and grid area'
         s_lat=max(lat(iYY)-0.5*gsize,-90.0)
       end do
 ! ===============================================
-! clac river sequence
+! Assign an upstream-to-downstream sequence number to connected river cells.
 ! ===============================================
 print *, 'SET_MAP calc river sequence'
       rivseq=1
@@ -153,7 +155,7 @@ print *, '  nseqmax=', nseq_max
       write(21,rec=1) rivseq
       close(21)
 ! ===============================================
-! clac upa drainage area
+! Accumulate source grid area and upstream-cell counts along downstream paths.
 ! ===============================================
 print *, 'SET_MAP calc upa drainage area'
       do iYY=1, nYY
@@ -201,7 +203,7 @@ print *, 'SET_MAP calc upa drainage area'
       write(24,rec=1) upgrid
       close(24)
 ! ===============================================
-! clac distance to next grid
+! Calculate center-to-center distance to the next cell for each river cell.
 ! ===============================================
 print *, 'SET_MAP calc distance to next grid'
       do iYY=1, nYY
@@ -229,10 +231,12 @@ print *, 'SET_MAP calc distance to next grid'
       close(25)
 
       open(25, file=wfile5a, form='unformatted', access='direct', recl=4*nXX*nYY)
+! The same downstream distances are also written for simulations that use
+! rectangular grid cells instead of catchment areas.
       write(25,rec=1) nxtdst
       close(25)
 ! ===============================================
-! clac basin
+! Label river basins, then derive basin display colors in the following section.
 ! ===============================================
 print *, 'SET_MAP calc basin'
       basin=0

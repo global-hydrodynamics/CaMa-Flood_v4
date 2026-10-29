@@ -73,6 +73,8 @@
 ! function
       character*256          ::  buf
 ! ===============================================
+! Build a sparse overlap table between regional map cells and input-grid cells.
+! This version uses the fixed global 1-degree N-to-S input grid below.
 print *, 'CALC_INPMAT:'
 
       call getarg(1,tag)
@@ -109,6 +111,7 @@ print *, 'CALC_INPMAT:'
       inpy(:,:,:)=0
       inpa(:,:,:)=0
 
+! Read regional high-resolution pixel locations and their catchment indices.
       list_loc=trim(hires)//'/location.txt'
       open(11,file=list_loc,form='formatted')
       read(11,*) narea
@@ -138,6 +141,8 @@ print *, 'CALC_INPMAT:'
           if( lon(ix)>=180. ) lon(ix)=lon(ix)-360.
           if( lon(ix)<-180. ) lon(ix)=lon(ix)+360.
         end do
+! Estimate each high-resolution pixel area; use the supplied grdare layer when
+! available (its positive values are treated as km2 and converted to m2).
         do iy=1, ny
           lat(iy) =lat_ori-(real(iy)-0.5)*csize
           do ix=1, nx
@@ -161,6 +166,8 @@ print *, 'CALC_INPMAT:'
 
         endif
 
+! Map each valid high-resolution pixel center to the configured input grid,
+! then accumulate its area by regional map cell and input-grid cell pair.
         do iy=1, ny
           do ix=1, nx
             if( catmxx(ix,iy)>0 )then
@@ -209,6 +216,7 @@ print *, 'CALC_INPMAT:'
               endif
               if( new==1 )then
                 inum=inpn(iXX,iYY)+1
+! The table allows at most nmax distinct input cells per regional cell.
                 if( inum>nmax )then
                   print *, '*** error: nmax overflow **********'
                   stop
@@ -240,6 +248,8 @@ print *, 'CALC_INPMAT:'
       end do
       print *, 'input_num_max: ', mmax, 'lon lat: ', west+real(nXX-1)*gsize, north-real(nYY-1)*gsize, 'ix, iy: ', iXX0, iYY0
 
+! Write dimensions and the sparse matrix: input X indices, Y indices, then
+! overlap areas, each as a separate direct-access record.
       open(11,file=diminfo,form='formatted')
       write(11,'(i10,5x,a)') nXX,          '!! nXX'
       write(11,'(i10,5x,a)') nYY,          '!! nYY'
