@@ -89,9 +89,9 @@ When changing a map reader, writer, producer, or map-related model interface:
 
 The CSV is an evolving source-linked inventory. Category 11 now has the machine-readable record metadata used by the initial CTL and NetCDF tools. Other categories remain an inventory, not a promise that every field is complete enough for conversion. Dataset-specific byte order, row orientation, sentinel values, coordinate interpretation, and file paths belong in a separate dataset config, not the shared variable rows.
 
-## Official repository sample
+## Development/test repository sample
 
-`map/mekong_15min/` is an officially distributed, Git-tracked sample dataset, not only a private test fixture. It includes the complete 1-minute high-resolution subdirectory and its prepared channel, input-matrix, bifurcation, auxiliary, and MPI-preparation products. Its dimensions and geometry are dataset-specific (`NX=80`, `NY=120`, `NLFP=10`, 0.25°, 90–110°E, 5–35°N); they do not define the general map format.
+`map/mekong_15min/` is a Git-tracked development/test example used for GitHub-based map-tool development, testing, and validation. Its presence does not establish that the dataset is fully validated or an official production map. It includes the 1-minute high-resolution subdirectory and prepared channel, input-matrix, bifurcation, auxiliary, and MPI-preparation products. Its dimensions and geometry are dataset-specific (`NX=80`, `NY=120`, `NLFP=10`, 0.25°, 90–110°E, 5–35°N); they do not define the general map format.
 
 The sample-local `map_metadata.json` explicitly records its byte order, row order, coordinate interpretation, six category-11 input paths, and binary missing values for CTL/NetCDF tools. All paths are relative. The lightweight validator at `map/tests/validate_mekong_sample.py` checks file availability, record sizes, core indices, 1-minute layers, CTL references, and the GitHub blob-size bound. GitHub Actions runs the same validation without downloading map data or running the model.
 
@@ -192,7 +192,11 @@ CTL files are read by GrADS to describe a binary dataset. The CaMa-Flood binary 
 - `undef` documents the value GrADS treats as missing.
 - `title`, variable names, and comments/descriptions are descriptive. They do not establish correct physical meaning or units. The inspected package uses the generic title `Flow Direction` even for scalar variables, and has `rivman.bin` without a same-directory `rivman.ctl`.
 
-The CSV supplies variable names, proposed long names/units, data types, symbolic dimensions, and binary record layouts. `params.txt` supplies dataset-specific grid size and bounds. Neither currently provides dataset byte order/row orientation or every CTL choice. The current generator requires the dataset config for those settings and checks that the selected binary files match the category-11 record layout.
+The CSV supplies variable names, proposed long names/units, data types, symbolic dimensions, missing-value conventions, and binary record layouts. Dataset geometry is read from `params.txt` for base-map files and from the selected high-resolution directory's `location.txt` for its files. Neither geometry file is duplicated in the CSV.
+
+The legacy `wrte_ctl_map.F90` and `wrte_ctl_hires.F90` writers both emit `options yrev little_endian`; both start `xdef` and `ydef` at the southwest cell center (`west + spacing/2`, `south + spacing/2`). `yrev` accounts for the north-to-south row order of the Fortran direct-access arrays. The v5 generator follows this established convention for current CaMa-Flood workflow products and does not detect other byte orders or row conventions.
+
+The existing v4-era `map/src/map_data_tools/generate_ctl.py` remains category-11-only and requires its dataset JSON. Its shared parser currently requires exactly six category-11 core files, so an additional category-11 product such as `nextxy_noedge.bin` makes that legacy converter test suite reject the current registry. The separate v5 `map/tools/code/generate_ctl.py` is independent: it reads the common CSV, scans only the selected directory, validates registry layout and exact binary size, and writes CTLs beside supported binaries. For high-resolution files it reads `location.txt`, whose first record is the area count, second is the field-name header, and following rows give `iarea`, `carea`, bounds, `nx`, `ny`, and `csize`; `<AREA>` in a registry path is matched to `carea`. It uses only recognized record-layout forms and requires one numeric missing sentinel consistent across all logical variables in a file.
 
 ## Channel-parameter generation workflow
 
@@ -216,15 +220,9 @@ The maintainer confirmed that the module-level files were previously generated a
 
 ### GrADS CTL generation
 
-A CTL generator can combine:
+The v5 generator is implemented at `map/tools/code/generate_ctl.py`. It combines variable metadata from `map_variables.csv` with dataset-specific geometry read from `params.txt` or `location.txt`. The CSV describes reusable products and record layouts, not sample-map dimensions. It accepts explicit independent-record layouts (including one row per variable with record indices), the documented `NLFP` layered-variable layout, and the regionalization input matrix paired with its dimension description. In an input-matrix filename pair, the shared suffix (for example `_test-1deg`) identifies the runoff-data/configuration variant: `inpmat_<TAG>.bin` pairs with `diminfo_<TAG>.txt`, as written by the current Fortran program. The description supplies `NX`, `NY`, `INPN`, bounds, and the paired binary filename; map dimensions and bounds are checked against `params.txt`. A same-basename `.txt` is also accepted. Unknown dimensions/types, missing numeric sentinels, and unrecognized record descriptions are skipped; a size/layout mismatch is reported as a failure. It scans one selected directory at a time and does not recurse.
 
-- common variable/product metadata from `map_variables.csv`;
-- dimensions, regular geographic spacing, and domain bounds from the map's `params.txt`;
-- concrete file paths, selected primary/alternative product, and actual `NX`, `NY`, and `NLFP` values;
-- dataset byte order and row orientation from verified metadata or an explicit user setting;
-- the selected CTL convention for axes, undefined values, record/layer structure, title, and variable descriptions.
-
-Current `params.txt` does not store endianness or row orientation. Existing CTLs may be generic or misleading, so they can evidence storage options but should not be trusted for variable semantics without corroboration.
+The v5 tool follows the existing legacy CTL convention `yrev little_endian` and cell-center coordinates. The regional input matrix has three logical variables (`inpx`, `inpy`, `inpa`) with `INPN` levels, matching the two integer-index records and one floating-point overlap-area record written by `generate_inpmat.F90`; unused slots initialized to zero are represented by `undef 0`. For `lsmask.bin`, the registry declares `-9999` as the CTL missing value. The tool is intended for current workflow products that follow the legacy convention; it does not infer or validate alternative endianness or row order. The separate `map/src/map_data_tools/generate_ctl.py` remains the earlier category-11 generator and still uses an explicit dataset JSON configuration.
 
 ### NetCDF conversion
 
@@ -235,7 +233,7 @@ For category 11, the initial converter uses one `CRIVCLINC`-compatible file, dis
 ## Open Questions
 
 1. **Blocking before implementing the ECMWF-equivalent NetCDF generator:** confirm the expected contents of `CRIVCLINC`/`CRIVPARNC`, variable types/dimensions/order, coordinates, and attributes. Proceeding without this contract risks incompatibility. The binary inventory, CSV, and existing reader analysis can proceed independently.
-2. **Important for automatic CTL generation:** how should dataset-specific byte order and row orientation be supplied when the dataset has no reliable CTL? The variable CSV and `params.txt` do not encode these fields. This task documents the gap; future generator design can proceed after choosing a configuration source.
+2. **Important for non-legacy binary datasets:** the v5 CTL generator follows the `little_endian` and north-to-south storage convention confirmed in legacy CTL writers. If a future map source uses another byte order or row orientation, the format must be established and represented explicitly before that dataset can be supported; the current generator cannot detect it from file size.
 3. **Documentation-level provenance:** the external algorithm that consumes `mapdim.txt` is not present in the repository. Its purpose and role are confirmed, so this does not block the CSV or metadata specification; details can be added if the algorithm becomes available.
 
 ## Evidence and source references

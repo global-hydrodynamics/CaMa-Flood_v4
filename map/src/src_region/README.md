@@ -2,7 +2,7 @@
 
 This guide explains how to create a regional CaMa-Flood river map from an existing global map using the reusable tools in `map/src/src_region/`. The normal user workflow is to configure and run `s01-regional_map.sh` once. The script calls the Fortran map-preparation programs and generates GrADS CTL metadata for the regional map and available high-resolution maps at the end.
 
-The source code repository provides these processing tools; it does not contain every global map dataset. Obtain a compatible map dataset separately and follow its access and data-use terms. The [Mekong example](../../mekong_15min/README.md) records one specific domain and its development status.
+The source code repository provides these processing tools; it does not contain every global map dataset. Obtain a compatible map dataset separately and follow its access and data-use terms. The [Mekong development/test example](../../README.md#development-and-test-sample) is described in the map overview.
 
 ## Prerequisites and source data
 

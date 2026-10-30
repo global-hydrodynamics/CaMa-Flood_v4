@@ -4,9 +4,9 @@ The `map/` directory connects CaMa-Flood's river and floodplain representation t
 
 For model setup and example runs, see the [sample execution guide](../gosh/README.md). This page is an overview; tool-specific details remain in the component documentation linked below.
 
-## Official sample dataset
+## Development and test sample
 
-The repository and downloadable distribution include the complete [`mekong_15min` sample](mekong_15min/README.md), including core maps, channel parameters, input and bifurcation data, metadata, and the full `1min/` high-resolution dataset. It is the standard local and GitHub Actions fixture for map-data tools; no map downloads are needed for its structural checks.
+`map/mekong_15min/` is a sample regional map used for GitHub-based development, testing, and validation of CaMa-Flood map tools. It is a development/test example; its presence does not establish that the dataset is fully validated or an official production map.
 
 ## What is a CaMa-Flood river map?
 

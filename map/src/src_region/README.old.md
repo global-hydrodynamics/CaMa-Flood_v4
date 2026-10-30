@@ -2,9 +2,9 @@
 
 `src_region/` contains Fortran programs and sample shell scripts for deriving a regional map from an existing source map. The repository copy at `map/src/src_region/` is a reusable template. Copy it into the target map directory and run the workflow from that map-local `src_region/` working directory; its programs use relative paths to read a source map and write regional products in the parent map directory. Review those paths and settings for the actual source and target maps before execution.
 
-The repository provides the processing workflow, and [`map/mekong_15min/`](../../mekong_15min/README.md) is the official ready-to-use regional sample. Creating or regenerating a regional map still requires a compatible source map and, for high-resolution products, the corresponding source high-resolution layers. The supplied scripts contain sample domains and assumptions; they do not establish universal coverage or compatibility.
+The repository provides the processing workflow, and [`map/mekong_15min/`](../../README.md) is a regional development/test example. Creating or regenerating a regional map still requires a compatible source map and, for high-resolution products, the corresponding source high-resolution layers. The supplied scripts contain sample domains and assumptions; they do not establish universal coverage or compatibility.
 
-## Official Mekong sample settings
+## Mekong sample settings
 
 The sample-specific region and source settings are preserved in `map/mekong_15min/src_region/region_info.txt` and `s01-regional_map.sh` (source `../../glb_15min/`, bounds 90–110°E and 5–35°N). In the Git repository, the sample directory's `.F90` entries are relative links to this common `map/src/src_region/` implementation, so the regional Fortran code has one maintained copy. The source archive command may materialize those links into files for the downloaded package. The sample-local Makefile and scripts preserve its settings and output location.
 

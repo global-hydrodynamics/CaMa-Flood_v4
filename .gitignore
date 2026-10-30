@@ -62,3 +62,16 @@ map/mekong_15min/src_param/set_bifparam
 map/mekong_15min/src_param/set_gwdlr
 map/mekong_15min/src_param/set_mpi_region
 map/mekong_15min/src_param/wrte_ctl_map
+# Shared v5 map-tool executables (keep prefixed Fortran sources tracked).
+map/tools/code/region_*
+!map/tools/code/region_*.F90
+map/tools/code/param_*
+!map/tools/code/param_*.F90
+map/tools/code/*.o
+map/tools/code/*.mod
+map/tools/code/*.pyc
+map/tools/code/*.d
+map/tools/code/*.s
+map/tools/code/__pycache__/
+map/tools/**/__pycache__/
+map/tools/**/*.pyc
