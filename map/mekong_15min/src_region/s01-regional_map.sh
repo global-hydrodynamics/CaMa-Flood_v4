@@ -68,16 +68,15 @@ elif [ -f ../3sec/location.txt ]; then
   ./generate_inpmat 3sec
 fi
 
-# CTL generation is intentionally disabled in s01 and will be handled separately.
 # Write GrADS control files for the regional map binaries (metadata only).
-#./s02-wrte_ctl_map.sh
+./s02-wrte_ctl_map.sh
 
 # Write GrADS control files for each available regional high-resolution map.
-#HIRES="1min 30sec 15sec 3sec"
-#for RES in $HIRES
-#do
-#  if [ -f ../${RES}/location.txt ]; then
-#    ./s03-wrte_ctl_hires.sh ${RES}
-#  fi
-#done
+HIRES="1min 30sec 15sec 3sec"
+for RES in $HIRES
+do
+  if [ -f ../${RES}/location.txt ]; then
+    ./s03-wrte_ctl_hires.sh ${RES}
+  fi
+done
 

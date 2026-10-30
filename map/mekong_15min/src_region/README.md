@@ -1,6 +1,6 @@
 # Regional map preparation
 
-This guide explains how to create a regional CaMa-Flood river map from an existing global map using the reusable tools in `map/src/src_region/`. The normal user workflow is to configure and run `s01-regional_map.sh` once. The script calls the Fortran map-preparation programs; CTL-generation calls are currently commented out.
+This guide explains how to create a regional CaMa-Flood river map from an existing global map using the reusable tools in `map/src/src_region/`. The normal user workflow is to configure and run `s01-regional_map.sh` once. The script calls the Fortran map-preparation programs and generates GrADS CTL metadata for the regional map and available high-resolution maps at the end.
 
 The source code repository provides these processing tools; it does not contain every global map dataset. Obtain a compatible map dataset separately and follow its access and data-use terms. The [Mekong example](../../mekong_15min/README.md) records one specific domain and its development status.
 
@@ -47,7 +47,7 @@ make
 ./s01-regional_map.sh
 ```
 
-Inspect the generated `../params.txt`, map binaries, optional high-resolution directories, `../bifori.txt`, and parameterization input-matrix files. CTL generation is commented out in the current `s01-regional_map.sh` and must be handled separately if needed. The script does not validate scientific suitability or guarantee that every internal command succeeded; use the checks below.
+Inspect the generated `../params.txt`, map binaries, optional high-resolution directories, `../bifori.txt`, parameterization input-matrix files, and CTLs. The final workflow steps generate map CTLs and CTLs for each available high-resolution directory. The script does not validate scientific suitability or guarantee that every internal command succeeded; use the checks below.
 
 ## Prepare the regional working directory
 
@@ -101,7 +101,7 @@ From the copied map-local `src_region/`, run the orchestration script once:
 ./s01-regional_map.sh
 ```
 
-The script writes `region_info.txt` and then runs the base-domain extraction, bifurcation adjustment, and derived river-network setup. It next processes each available high-resolution tag in its configured list and selects the first available tag from its parameterization-matrix priority list. The map and high-resolution CTL calls are currently commented out.
+The script writes `region_info.txt`, runs base-domain extraction, bifurcation adjustment, and derived river-network setup, processes each available high-resolution tag in its configured list, and selects the first available tag from its parameterization-matrix priority list. It then generates base-map CTLs and CTLs for each available high-resolution map.
 
 The parameterization input matrix is conditional. In the current script, the generation priority is `1min`, `30sec`, `15sec`, then `3sec`. `generate_inpmat` writes `inpmat_test-1deg.bin` and `diminfo_test-1deg.txt`; source inspection shows that it maps the regional high-resolution pixels to a regular 1-degree grid. This matrix is used alongside the sample annual-mean runoff data in `map/data` during the later channel width/depth parameter calculation. It is not the runoff input matrix used by a simulation; that matrix is expected to be prepared later in `src_param`.
 
@@ -117,7 +117,7 @@ The current source code writes products mainly under the regional map root:
 - `bifori.txt`: region-adjusted bifurcation pathways. The current script runs this step unconditionally.
 - `<tag>/` directories: high-resolution products and `location.txt` for tags whose source `location.txt` is found and whose inputs can be processed.
 - `inpmat_test-1deg.bin` and `diminfo_test-1deg.txt`: parameterization input matrix and metadata, generated when the script finds a supported high-resolution tag in its priority list. These are not the simulation runoff input matrix.
-- `.ctl` files: GrADS descriptions for the base map and high-resolution maps. Their generation calls are commented out in the current script; run separately if needed. They are metadata, not map data.
+- `.ctl` files: GrADS descriptions for the base map and high-resolution maps, generated at the end of `s01-regional_map.sh`. They are metadata, not map data.
 - In the working `src_region/`: `region_info.txt`, `dim_change.txt`, `nextxy_noedge.bin`, and local executables/build files.
 
 The CTL writer creates descriptions for a fixed list of filenames and does not first confirm that every corresponding binary exists. A CTL file can therefore refer to an optional or absent binary. Check its `dset` entry and confirm that the target file exists.
@@ -141,7 +141,7 @@ done
 test -s ../bifori.txt || echo "Missing or empty: ../bifori.txt"
 ```
 
-If a high-resolution source was available, check the corresponding regional `location.txt` and listed binary layers. If the parameterization input matrix was generated, check both the matrix and its `diminfo` file. If CTLs were generated separately, confirm that each points to an existing binary and describes the dimensions and resolution in `params.txt` or the high-resolution `location.txt`.
+If a high-resolution source was available, check the corresponding regional `location.txt` and listed binary layers. If the parameterization input matrix was generated, check both the matrix and its `diminfo` file. Confirm that each generated CTL points to an existing binary and describes the dimensions and resolution in `params.txt` or the high-resolution `location.txt`.
 
 These checks confirm file presence and basic metadata consistency only. They do not establish river-network correctness, conservation, or scientific suitability. The tools do not provide a complete automated validation of those properties.
 
