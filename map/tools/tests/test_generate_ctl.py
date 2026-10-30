@@ -10,17 +10,17 @@ from map.tools.code.generate_ctl import CtlError, generate_directory, missing_se
 FIELDS = [
     "category_id", "workflow_stage", "category", "product_kind", "binary_filename",
     "alternative_binary_filename", "name", "long_name", "units", "dtype",
-    "dimensions", "record_layout", "missing_value_convention", "record_index",
+    "dimensions", "record_layout", "missing_value", "special_values", "record_index",
     "record_count",
 ]
 
 
 def row(filename: str, name: str, dtype: str, dimensions: str = "NX,NY", *,
         record_layout: str = "record 1", record_index: str = "1", record_count: str = "1",
-        missing: str = "-9999 outside mapped cells") -> dict[str, str]:
+        missing: str = "-9999", special: str = "") -> dict[str, str]:
     return dict(zip(FIELDS, ["11", "", "map", "binary", filename, "", name,
                              f"{name} test layer", "m", dtype, dimensions, record_layout,
-                             missing, record_index, record_count]))
+                             missing, special, record_index, record_count]))
 
 
 def write_registry(path: Path, rows: list[dict[str, str]]) -> None:
@@ -62,7 +62,7 @@ class GenerateCtlTests(unittest.TestCase):
         self.assertIn("elevtn 1 99", ctl)
         self.assertIn("elevtn test layer [m]", ctl)
         basin = (self.map_dir / "basin.ctl").read_text()
-        self.assertIn("basin 1 -1,40,4,-1", basin)
+        self.assertIn("basin 1 -1,40,4", basin)
 
     def test_independent_variables_and_multiple_layers(self):
         rows = [
@@ -99,6 +99,8 @@ class GenerateCtlTests(unittest.TestCase):
         ctl = (hires / "testarea.elevtn.ctl").read_text()
         self.assertIn("xdef 4 linear 10.25 0.5", ctl)
         self.assertIn("ydef 2 linear 20.25 0.5", ctl)
+        self.assertIn("elevtn 1 99", ctl)
+        self.assertNotRegex(ctl, r"(?m)^elevtn_hires\s")
         self.assertNotIn("xdef 3 linear", ctl)
 
     def test_unknown_files_are_skipped_and_size_mismatch_is_not_written(self):
@@ -115,7 +117,7 @@ class GenerateCtlTests(unittest.TestCase):
             record_layout=("record 1: INPN x-index fields; record 2: INPN y-index fields; "
                            "record 3: INPN overlap-area fields (each record shape NX,NY,INPN)"),
             record_index="", record_count="",
-            missing="Unused mapping slots are initialized to zero",
+            missing="0", special="Unused mapping slots are initialized to zero",
         )
         write_registry(self.registry, [matrix])
         (self.map_dir / "diminfo_test-1deg.txt").write_text(
@@ -131,9 +133,14 @@ class GenerateCtlTests(unittest.TestCase):
         self.assertIn("undef 0", ctl)
         self.assertIn("zdef 4 linear 1 1", ctl)
         self.assertIn("vars 3", ctl)
-        self.assertIn("inpx 4 -1,40,4,-1", ctl)
-        self.assertIn("inpy 4 -1,40,4,-1", ctl)
+        self.assertIn("inpx 4 -1,40,4", ctl)
+        self.assertIn("inpy 4 -1,40,4", ctl)
         self.assertIn("inpa 4 99", ctl)
+        matrix["missing_value"] = "-7"
+        write_registry(self.registry, [matrix])
+        (self.map_dir / "inpmat_test-1deg.ctl").unlink()
+        self.assertEqual(self.run_generator().generated, 1)
+        self.assertIn("undef -7", (self.map_dir / "inpmat_test-1deg.ctl").read_text())
 
     def test_unknown_registry_dimensions_are_skipped_not_reported_as_grid_mismatch(self):
         write_registry(self.registry, [row("width.bin", "width", "float32", "dataset-dependent")])
@@ -141,13 +148,13 @@ class GenerateCtlTests(unittest.TestCase):
         result = self.run_generator()
         self.assertEqual((result.generated, result.skipped, result.failed), (0, 1, 0))
 
-    def test_missing_metadata_is_skipped_and_overwrite_is_protected(self):
+    def test_missing_metadata_uses_fallback_and_overwrite_is_protected(self):
         write_registry(self.registry, [row("elevtn.bin", "elevtn", "float32", missing="")])
         (self.map_dir / "elevtn.bin").write_bytes(b"\0" * 24)
         result = self.run_generator()
-        self.assertEqual(result.skipped, 1)
-        self.assertFalse((self.map_dir / "elevtn.ctl").exists())
-        write_registry(self.registry, [row("elevtn.bin", "elevtn", "float32")])
+        self.assertEqual((result.generated, result.fallback_files), (1, 1))
+        self.assertTrue((self.map_dir / "elevtn.ctl").is_file())
+        (self.map_dir / "elevtn.ctl").unlink()
         self.assertEqual(self.run_generator(dry_run=True).generated, 1)
         self.assertFalse((self.map_dir / "elevtn.ctl").exists())
         self.assertEqual(self.run_generator().generated, 1)
@@ -161,16 +168,92 @@ class GenerateCtlTests(unittest.TestCase):
         result = self.run_generator()
         self.assertEqual((result.generated, result.skipped, result.failed), (0, 1, 0))
 
-    def test_csv_missing_convention_extracts_the_declared_grid_sentinel(self):
-        self.assertEqual(missing_sentinel({"missing_value_convention": "-9999 for non-network cells and paths masked at the edge"}, "int32"), -9999)
-        self.assertEqual(missing_sentinel({"missing_value_convention": "-9999 for cells where nextx is -9999"}, "int32"), -9999)
+    def test_explicit_numeric_missing_value_and_type_defaults(self):
+        self.assertEqual(missing_sentinel({"missing_value": "-123"}, "int32"), (-123, False))
+        self.assertEqual(missing_sentinel({"missing_value": ""}, "float32"), (-9999.0, True))
+        self.assertEqual(missing_sentinel({"missing_value": ""}, "int32"), (-9999, True))
+        self.assertEqual(missing_sentinel({"missing_value": ""}, "int16"), (-9999, True))
+        self.assertEqual(missing_sentinel({"missing_value": ""}, "int8"), (-9, True))
+        with self.assertRaisesRegex(CtlError, "invalid numeric"):
+            missing_sentinel({"missing_value": "not-a-number"}, "int32")
         with self.assertRaisesRegex(CtlError, "outside the range of int8"):
-            missing_sentinel({"missing_value_convention": "-9999 fill value"}, "int8")
+            missing_sentinel({"missing_value": "-9999"}, "int8")
+        with self.assertRaisesRegex(CtlError, "non-integer"):
+            missing_sentinel({"missing_value": "-9.5"}, "int16")
+
+    def test_sample_registry_missing_sentinels_are_parseable_without_prose_artifacts(self):
+        registry = Path(__file__).resolve().parents[2] / "map_variables.csv"
+        with registry.open(newline="", encoding="utf-8") as stream:
+            rows = list(csv.DictReader(stream))
+        expected = {
+            "<HIRES>/<AREA>.catmz100.bin": (-9, "int8"),
+            "<HIRES>/<AREA>.catmzz.bin": (-9, "int8"),
+            "<HIRES>/<AREA>.flwdir.bin": (-9, "int8"),
+            "<HIRES>/<AREA>.visual.bin": (-9, "int8"),
+            "<HIRES>/<AREA>.downxy.bin": (-9999, "int16"),
+        }
+        for pattern, (sentinel, dtype) in expected.items():
+            row = next(row for row in rows if row["binary_filename"] == pattern)
+            with self.subTest(pattern=pattern):
+                self.assertEqual(missing_sentinel(row, dtype), (sentinel, False))
+
+    def test_signed_int8_uses_unsigned_grads_undef_without_rewriting_codes(self):
+        write_registry(self.registry, [row("visual.bin", "visual", "int8", missing="-9",
+                                            special="0: sea; -1: sink")])
+        (self.map_dir / "visual.bin").write_bytes(b"\0" * 6)
+        result = self.run_generator()
+        ctl = (self.map_dir / "visual.ctl").read_text()
+        self.assertEqual(result.generated, 1)
+        self.assertIn("undef 247", ctl)
+        self.assertIn("visual 1 -1,40,1 ", ctl)
+        self.assertNotIn("[-1", ctl)
+
+    def test_meaningful_endpoint_codes_remain_special_not_missing(self):
+        registry = Path(__file__).resolve().parents[2] / "map_variables.csv"
+        with registry.open(newline="", encoding="utf-8") as stream:
+            nextx = next(row for row in csv.DictReader(stream)
+                         if row["binary_filename"] == "nextxy.bin" and row["name"] == "nextx")
+        self.assertEqual(missing_sentinel(nextx, "int32"), (-9999, False))
+        self.assertIn("-9", nextx["special_values"])
+        self.assertIn("-10", nextx["special_values"])
+
+        expected = {
+            ("downxy.bin", "downxy"): ("-9999", ("-1000",)),
+            ("<HIRES>/<AREA>.downxy.bin", "downxy_hires"): ("-9999", ("-999", "-1000")),
+            ("<HIRES>/<AREA>.flwdir.bin", "flwdir"): ("-9", ("0", "-1")),
+        }
+        with registry.open(newline="", encoding="utf-8") as stream:
+            rows = list(csv.DictReader(stream))
+        for (filename, name), (missing, special_codes) in expected.items():
+            item = next(row for row in rows if row["binary_filename"] == filename and row["name"] == name)
+            self.assertEqual(item["missing_value"], missing)
+            for code in special_codes:
+                with self.subTest(variable=name, code=code):
+                    self.assertIn(code, item["special_values"])
+
+    def test_signed_int16_ctl_format_and_sentinel(self):
+        write_registry(self.registry, [row("catmxy.bin", "catmxy", "int16", missing="-9999")])
+        (self.map_dir / "catmxy.bin").write_bytes(b"\0" * 12)
+        self.assertEqual(self.run_generator().generated, 1)
+        ctl = (self.map_dir / "catmxy.ctl").read_text()
+        self.assertIn("undef -9999", ctl)
+        self.assertIn("catmxy 1 -1,40,2,-1", ctl)
+
+    def test_conflicting_missing_values_in_multi_variable_file_are_rejected(self):
+        rows = [
+            row("nextxy.bin", "nextx", "int32", record_index="1", record_count="2", missing="-9999"),
+            row("nextxy.bin", "nexty", "int32", record_index="2", record_count="2", missing="-999"),
+        ]
+        write_registry(self.registry, rows)
+        (self.map_dir / "nextxy.bin").write_bytes(b"\0" * 48)
+        result = self.run_generator()
+        self.assertEqual(result.failed, 1)
+        self.assertFalse((self.map_dir / "nextxy.ctl").exists())
 
     def test_lsmask_ctl_uses_the_declared_minus9999_missing_value(self):
         write_registry(self.registry, [row(
             "lsmask.bin", "lsmask", "int32",
-            missing="Missing value: -9999 for unfilled output",
+            missing="-9999",
         )])
         (self.map_dir / "lsmask.bin").write_bytes(b"\0" * 24)
         result = self.run_generator()
@@ -180,9 +263,9 @@ class GenerateCtlTests(unittest.TestCase):
     def test_lonlat_records_have_distinct_outlet_names_descriptions_and_units(self):
         rows = [
             row("lonlat.bin", "outlon", "float32", record_layout="record 1",
-                record_index="1", record_count="2", missing="-9999 outside mapped river cells"),
+                record_index="1", record_count="2", missing="-9999"),
             row("lonlat.bin", "outlat", "float32", record_layout="record 2",
-                record_index="2", record_count="2", missing="-9999 outside mapped river cells"),
+                record_index="2", record_count="2", missing="-9999"),
         ]
         rows[0].update(long_name="Unit-catchment outlet longitude", units="degrees_east")
         rows[1].update(long_name="Unit-catchment outlet latitude", units="degrees_north")
@@ -202,8 +285,8 @@ class GenerateCtlTests(unittest.TestCase):
         self.assertEqual(self.run_generator().generated, 1)
         ctl = (self.map_dir / "downxy.ctl").read_text()
         self.assertIn("vars 2", ctl)
-        self.assertIn("downx 1 -1,40,4,-1", ctl)
-        self.assertIn("downy 1 -1,40,4,-1", ctl)
+        self.assertIn("downx 1 -1,40,4", ctl)
+        self.assertIn("downy 1 -1,40,4", ctl)
 
 
 if __name__ == "__main__":

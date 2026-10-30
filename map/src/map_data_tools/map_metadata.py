@@ -31,7 +31,7 @@ def read_registry(path: Path | str | None = None) -> list[dict[str, str]]:
             reader = csv.DictReader(stream)
             required = {"category_id", "category", "binary_filename", "name", "dtype",
                         "dimensions", "record_index", "record_count", "long_name", "units",
-                        "missing_value_convention", "vertical_datum"}
+                        "missing_value", "special_values", "vertical_datum"}
             missing = required - set(reader.fieldnames or [])
             if missing:
                 raise MapDataError(f"Registry {registry} is missing columns: {', '.join(sorted(missing))}")

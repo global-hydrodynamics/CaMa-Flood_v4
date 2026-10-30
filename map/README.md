@@ -1,12 +1,12 @@
 # River maps and map-preparation tools
 
-The `map/` directory connects CaMa-Flood's river and floodplain representation to the datasets and preprocessing tools used to prepare it. The GitHub source repository supplies map-processing code and documentation. Distribution packages also supply selected map datasets and prepared examples. Check the map files included with your package and obtain any additional datasets required by the simulation.
+The `map/` directory connects CaMa-Flood's river and floodplain representation to the datasets and preprocessing tools used to prepare it. The GitHub source repository supplies map-processing code and documentation, plus the official `mekong_15min` development/test sample. Global source maps such as `glb_15min` are distributed separately in CaMa-Flood data packages. Check the map files included with your package and obtain any additional datasets required by the simulation.
 
 For model setup and example runs, see the [sample execution guide](../gosh/README.md). This page is an overview; tool-specific details remain in the component documentation linked below.
 
 ## Development and test sample
 
-`map/mekong_15min/` is a sample regional map used for GitHub-based development, testing, and validation of CaMa-Flood map tools. It is a development/test example; its presence does not establish that the dataset is fully validated or an official production map.
+`map/mekong_15min/` is the official GitHub development/test sample. The scripts retained in its map-local preparation directory are maintainer-operated tools to create or refresh this distributed sample from source data in the separate CaMa-Flood distribution package. They are not automated tests; the dataset's presence does not establish scientific validation or production suitability.
 
 ## What is a CaMa-Flood river map?
 
@@ -64,15 +64,17 @@ A successful build of the map tools does not supply external source datasets or 
 
 ## Global and regional maps
 
-A **global map** supplies a connected network and parameters over its published global domain at a selected grid spacing; `glb_15min/` is the global 15-minute example used by the standard runs. A **regional map** is derived for a smaller domain, usually by starting from a compatible global map and selecting region bounds. The regional tools adjust the network and related arrays to the regional grid and can combine available higher-resolution map information.
+A **global map** supplies a connected network and parameters over its published global domain at a selected grid spacing; `glb_15min/` is the global 15-minute example used by the standard runs. A **regional map** is derived for a smaller domain, usually by starting from a compatible global map and selecting region bounds. The regional tools adjust the network and related arrays to the regional grid and can combine available higher-resolution map information. Source global maps used for preparation are package data, not GitHub fixtures.
 
-Two workflows are available. The legacy v4 regionalization template is under `map/src/src_region/`. The v5 workflow is under `map/tools/script_region/`: build the shared programs once, copy the template into a target map directory, configure the source map and bounds, and run `s01-regional_map.sh` from that map's `script_region/` directory. It crops the base map, filters bifurcation paths, derives network-analysis products, crops available high-resolution data, and may make a sample-runoff input matrix for channel parameterization. `s02-write_ctl.sh` is a separate, manual CTL-generation step. See the [v5 regional workflow guide](tools/script_region/README.md) and [v5 tools overview](tools/README.md) for commands and limitations.
+The legacy v4 regionalization template is under `map/src/src_region/`; the reusable v5 template is under `map/tools/script_region/`. These are map-preparation workflows, not automated tests. The v5 template can be copied to another target map directory, configured with a compatible source map and bounds, and run from its map-local `script_region/` directory. `s02-write_ctl.sh` is a separate CTL-generation step. See the [v5 regional workflow guide](tools/script_region/README.md) and [v5 tools overview](tools/README.md) for commands and limitations.
+
+GitHub-only map-tools checks validate metadata, source functionality, and CTL generation using synthetic fixtures and the committed Mekong binary sample. They do not execute regionalization or require the distribution package's global data. See [GitHub-only automated tests](tools/README.md#github-only-automated-tests).
 
 Examples of maps used by sample runs are listed in [`gosh/README.md`](../gosh/README.md). A regional map must remain consistent with its source resolution and extent, downstream connectivity, metadata, and parameter files. Do not substitute files from a different map tag merely because their filenames match.
 
 ## Shared map-product registry
 
-[`map_variables.csv`](map_variables.csv) is the source-linked variable and data-product registry for CaMa-Flood maps. It uses symbolic dimensions such as `NX`, `NY`, and `NLFP`, so the definitions apply across map resolutions and regional domains. It is the primary source for variable names, proposed long names and units, data types, record layouts, missing-value conventions, product variants, distribution roles, and current model-reader mappings.
+[`map_variables.csv`](map_variables.csv) is the source-linked variable and data-product registry for CaMa-Flood maps. It uses symbolic dimensions such as `NX`, `NY`, and `NLFP`, so the definitions apply across map resolutions and regional domains. It is the primary source for variable names, proposed long names and units, data types, record layouts, numeric stored missing values, meaningful special codes, product variants, distribution roles, and current model-reader mappings.
 
 [`map_metadata_spec.md`](map_metadata_spec.md) explains the CSV schema and how it relates to per-map `params.txt`, `mapdim.txt`, run-specific `diminfo*.txt`, and GrADS CTL files. The CSV defines common variable-level metadata; each map's files supply its actual dimensions, bounds, spacing, and dataset-specific binary settings. Runoff-grid configuration belongs to `diminfo` and the paired input matrix.
 
@@ -162,7 +164,7 @@ The standard binary map path uses files such as `nextxy.bin` (downstream grid in
 
 Many legacy `.bin` files are Fortran unformatted direct-access records, but the record contents and numeric types vary by file. For example, the `nextxy` reader expects two integer records; other readers expect real-valued parameters. Text metadata and tables may use `.txt` or `.csv`. The code also contains an optional NetCDF map reader, which requires a NetCDF-enabled build and matching NetCDF variables. Do not infer a complete file specification from the extension alone.
 
-When combining or generating map products, keep dimensions, grid spacing, geographic bounds, latitude/longitude ordering, missing-value conventions, data types, and units consistent with the target map and reader. An input matrix must additionally match the runoff grid and orientation. Detailed format specifications belong with the relevant tool or manual rather than in this overview.
+When combining or generating map products, keep dimensions, grid spacing, geographic bounds, latitude/longitude ordering, stored missing values and special codes, data types, and units consistent with the target map and reader. An input matrix must additionally match the runoff grid and orientation. Detailed format specifications belong with the relevant tool or manual rather than in this overview.
 
 ## Relationship to other directories
 

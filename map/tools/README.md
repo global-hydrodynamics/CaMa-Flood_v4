@@ -1,41 +1,64 @@
 # CaMa-Flood v5 map tools
 
-`map/tools/` contains the v5 map-processing framework. It is separate from the legacy v4 workflows under `map/src/`, which remain available and unchanged. The regionalization implementation has been run manually on the `map/mekong_15min/` development/test sample. File generation and format checks do not establish scientific validity; no regional scientific validation or v4/v5 equivalence test is claimed. Channel-parameter generation under `script_params/` is a later, separate workflow.
+`map/tools/` contains shared v5 map-processing programs and reusable workflow templates. It is separate from the legacy v4 tools under `map/src/`. The GitHub repository also distributes `map/mekong_15min/` as its official development/test sample; the global source map `glb_15min` and some high-resolution/runoff inputs are distributed separately in CaMa-Flood data packages.
+
+The Mekong map-local regionalization scripts are maintainer-operated **sample-preparation tools**. They create or refresh the distributed sample from package-only global source data. They are not automated tests. Adding or updating a sample does not constitute scientific validation of its river network or hydraulic properties.
 
 ## Shared code and build
 
-- `code/` contains the shared Fortran and Python implementations, one unified Makefile, and compiled executables.
-- `script_region/` contains the regionalization template copied into a map directory.
-- `script_params/` is reserved for the subsequent map-local channel-parameter workflow.
+- `code/` contains shared Fortran programs, the CTL generator, and a Makefile.
+- `script_region/` is the reusable v5 regional-map preparation template.
+- `script_params/` is reserved for a subsequent map-local channel-parameter workflow.
 
-Regional sources and executables use `region_` prefixes; parameter tools use `param_`. The Makefile builds directly in `map/tools/code/`, and all map datasets use the same executables. Build explicitly after configuring the compiler in `adm/Mkinclude`; map-local scripts do not compile tools:
+Regional executables use the `region_` prefix. Build them with the active compiler settings in `adm/Mkinclude`:
 
 ```sh
 make -C map/tools/code region
 make -C map/tools/code clean
 ```
 
-The `params` Make target is reserved for parameter tools as they are added. Build products are ignored by Git. See the [regional workflow guide](script_region/README.md) for configuration, inputs, outputs, and checks.
+Map-local scripts do not compile tools. They invoke shared executables through paths relative to the target map's `script_region/` working directory. See the [regional workflow guide](script_region/README.md) for user configuration, required source inputs, outputs, and limitations.
 
-## Regionalization workflow
+## Regional map preparation
 
-Copy `script_region/` into the target map directory, configure `SOURCE` and the geographic bounds in `s01-regional_map.sh`, then run that script once from the copied `script_region/` directory. It calls the shared executables through `../../tools/code/`; keeping the map-local script directory as the working directory is required because the Fortran programs use relative data paths. Its sequence is crop the base map and write dimension metadata, filter bifurcation paths, derive network-analysis products, crop any supported high-resolution layers, and optionally make the sample-runoff input matrix used for channel parameterization. The exact outputs depend on the source map and available high-resolution data.
+The reusable `script_region/` template is intended for preparing a new regional map: copy it into a target map directory, configure `SOURCE` and geographic bounds in `s01-regional_map.sh`, build the shared programs, then run the script from the copied map-local `script_region/` directory. The workflow crops the base map, filters bifurcation paths, derives network products, crops supported high-resolution layers, and may create an input matrix for the channel-parameter preparation workflow. Exact outputs depend on source-map contents and settings.
 
-The shell script checks that all five shared executables exist before starting. It does not stop on every later program error, so review each program's terminal output and check the expected products and dimensions. The working example is `map/mekong_15min/`; its files are a development/test example, not an official or scientifically validated production map.
+The sample-local script directory under `map/mekong_15min/` has a different operational role: it records the maintainer's procedure for preparing the official sample. Its original global map input is provided by the distribution package, not GitHub. Do not run it in CI or point its output at the tracked sample when ordinary testing or user workflow examples are intended.
 
 ## GrADS CTL files
 
-CTL generation is a separate manual step; `s01-regional_map.sh` does not invoke it. The `s02-write_ctl.sh` wrapper scans the base map and immediate child directories containing `location.txt`. The shared generator uses `params.txt` for base-map geometry and the relevant high-resolution directory's `location.txt` for high-resolution files. It follows the legacy `yrev little_endian` and cell-center convention and checks registered record layouts and binary sizes. It can describe the regionalization input matrix using its paired `diminfo_<TAG>.txt` file; the `_TAG` identifies a runoff-data/configuration variant. This matrix supports channel width/depth parameterization from sample annual-mean runoff, not the simulation runoff matrix later prepared by `script_params`.
-
-From the copied map-local `script_region/` directory:
+CTL generation is a separate step; `s01-regional_map.sh` does not call it. Run `s02-write_ctl.sh` from the map-local `script_region/` directory. The wrapper scans binaries in the base map and immediate high-resolution subdirectories with `location.txt`. The generator reads base geometry from `params.txt`, high-resolution geometry from `location.txt`, and registered binary layouts from [`map_variables.csv`](../map_variables.csv). Paired `diminfo_<TAG>.txt` metadata supports the regionalization input matrix. The generator checks registered layouts and binary sizes, and follows the legacy `yrev little_endian` and cell-center conventions.
 
 ```sh
 ./s02-write_ctl.sh --dry-run
 ./s02-write_ctl.sh
 ```
 
-The wrapper replaces CTLs by default; pass `--no-overwrite` to retain existing files. Grid geometry stays in the map's metadata files and is not duplicated in [`map_variables.csv`](../map_variables.csv). The registry specifies shared variable names, types, dimensions, missing values, and record layouts; see the [metadata schema](../map_metadata_spec.md).
+The wrapper replaces CTLs by default; use `--no-overwrite` to retain existing descriptors. `map_variables.csv` is the common variable registry; [`map_metadata_spec.md`](../map_metadata_spec.md) defines its schema and the relationship between map metadata files.
 
-The committed Mekong `lonlat.ctl` uses `outlon` and `outlat`, matching the maintainer-confirmed registry names. The recorded wrapper execution predates the last generator fixes; the committed CTLs are present, but a post-fix wrapper run has not been confirmed in the development record. Existing generated CTLs and successful tool execution do not prove scientific correctness.
+### Missing and special values
 
-High-resolution `downxy` files contain per-pixel relative downstream offsets on their own grid. Low-resolution `downxy` uses `-9999` for sea; the matching high-resolution code for land pixels without an assigned unit catchment remains unconfirmed. Record order and interpretation are documented in the [regional workflow guide](script_region/README.md#high-resolution-downstream-links) and [map metadata specification](../map_metadata_spec.md#high-resolution-source-semantics).
+The registry's `missing_value` field contains one numeric sentinel stored in the binary. `special_values` describes meaningful codes such as river mouths, boundaries, sinks, and categories; the generator does not treat these values as missing or append them to CTL descriptions. Leave `missing_value` blank when the stored sentinel is unknown.
+
+For a blank value, the generator uses a provisional CTL-only default and warns for each affected binary: `float32=-9999`, `int32=-9999`, `int16=-9999`, `int8=-9`. The run summary includes the number of files that used a fallback. The defaults do not update the CSV or binary data. Explicit values are checked for numeric validity, integer form and storage range as applicable. If variables in one binary resolve to different missing values, the generator refuses that file.
+
+GrADS documents byte input as unsigned (`-1,40,1`), two-byte signed input as `-1,40,2,-1`, and four-byte integer input as `-1,40,4`; its documented byte format has no signed one-byte mode. CaMa-Flood int8 binaries are signed, so the generator writes their signed sentinel `-9` as unsigned-byte `undef 247` and leaves the binary unchanged. Other negative int8 data codes display as unsigned values (for example `-1` as `255`). Use a signed-aware tool when those original codes matter. See [GrADS Variable Formats](https://sources.debian.org/data/main/g/grads/3%3A2.2.1-1/doc/variableformats.html) and the [GrADS descriptor file format](https://sources.debian.org/data/main/g/grads/2%3A2.0.2-3/doc/descriptorfile.html#VARS).
+
+## GitHub-only automated tests
+
+Routine tests use code and data included in the repository. They do not execute `s01-regional_map.sh` and do not require or download `glb_15min`.
+
+```sh
+python3 -B -m unittest map.tools.tests.test_generate_ctl -v
+python3 -B map/tests/validate_map_variables.py
+python3 -B map/tests/validate_mekong_sample.py
+python3 -B -m unittest map.tools.tests.test_mekong_ctl_integration -v
+python3 -B -c 'from pathlib import Path; [compile(p.read_text(), str(p), "exec") for p in [Path("map/tools/code/generate_ctl.py"), *Path("map/tools/tests").glob("*.py"), *Path("map/tests").glob("*.py")]]'
+for script in map/tools/script_region/*.sh; do sh -n "$script"; done
+make -C map/tools/code region
+make -C map/tools/code clean
+```
+
+The synthetic unit tests cover CTL layout, multi-record/multi-layer inputs, errors, fallbacks, conflicting sentinel declarations, overwrite handling, and integer types. The Mekong integration test copies all sample binaries and needed metadata to a temporary tree and invokes the actual map-local CTL wrapper there; it verifies descriptors for base and high-resolution data without modifying the tracked CTLs. The sample validator checks its dimensions, binary inventory, type/layout sizes, and registry mapping. The registry validator checks the new metadata columns and numeric sentinel ranges. CI runs the same source-only and sample-data checks and builds regional Fortran tools when `gfortran` is available.
+
+**PASS** means the check ran and met its criteria. **FAIL** means it ran but criteria were violated or an implementation defect prevented the required result. **SKIP** is only for an explicitly optional compiler/toolchain that is unavailable; missing package-only map data is not a test and is not reported as SKIP. A successful CTL or file-integrity check confirms metadata/layout compatibility only, not scientific correctness. Scientific validation is a separate activity.

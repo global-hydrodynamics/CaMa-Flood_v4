@@ -1,22 +1,61 @@
-name: Map sample validation
+name: Map tools validation
 
 on:
   push:
     paths:
+      - "map/tools/**"
+      - "map/src/map_data_tools/map_metadata.py"
+      - "map/tests/**"
+      - "map/map_variables.csv"
+      - "map/map_metadata_spec.md"
+      - "map/README.md"
       - "map/mekong_15min/**"
-      - "map/tests/validate_mekong_sample.py"
       - ".github/workflows/map-sample-validation.yml"
   pull_request:
     paths:
+      - "map/tools/**"
+      - "map/src/map_data_tools/map_metadata.py"
+      - "map/tests/**"
+      - "map/map_variables.csv"
+      - "map/map_metadata_spec.md"
+      - "map/README.md"
       - "map/mekong_15min/**"
-      - "map/tests/validate_mekong_sample.py"
       - ".github/workflows/map-sample-validation.yml"
   workflow_dispatch:
 
 jobs:
-  mekong-sample:
+  source-only:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate the tracked reference dataset
-        run: python3 map/tests/validate_mekong_sample.py
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Check Python and shell syntax
+        run: |
+          python3 -B -c 'from pathlib import Path; [compile(p.read_text(), str(p), "exec") for p in [Path("map/tools/code/generate_ctl.py"), *Path("map/tools/tests").glob("*.py"), *Path("map/tests").glob("*.py")]]'
+          for script in map/tools/script_region/*.sh; do sh -n "$script"; done
+      - name: Run synthetic CTL generator tests
+        run: python3 -B -m unittest map.tools.tests.test_generate_ctl -v
+      - name: Validate map variable metadata
+        run: python3 -B map/tests/validate_map_variables.py
+      - name: Build regional Fortran tools when gfortran is available
+        run: |
+          if command -v gfortran >/dev/null 2>&1; then
+            trap 'make -C map/tools/code clean' EXIT
+            make -C map/tools/code region
+          else
+            echo "SKIP: gfortran is unavailable; regional Fortran compilation was not run."
+          fi
+
+  committed-mekong:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Validate the committed Mekong sample fixture
+        run: python3 -B map/tests/validate_mekong_sample.py
+      - name: Run CTL generator and wrapper against temporary Mekong copies
+        run: python3 -B -m unittest map.tools.tests.test_mekong_ctl_integration -v

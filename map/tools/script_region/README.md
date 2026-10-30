@@ -1,6 +1,8 @@
 # Regional map preparation
 
-This guide describes the v5 regionalization workflow under `map/tools/`. It prepares a regional map from a compatible source map. The legacy v4 workflow remains under `map/src/src_region/` and is not modified here. Configure and execute `s01-regional_map.sh` once; the individual Fortran programs are implementation details and should not be run separately for the standard workflow.
+This guide documents the reusable v5 regional-map preparation template under `map/tools/`. It prepares a regional map from a compatible source map. The legacy v4 workflow remains under `map/src/src_region/` and is not modified here. Configure and execute `s01-regional_map.sh` for a target map; the individual Fortran programs are implementation details and should not be run separately for the standard workflow.
+
+The scripts under `map/mekong_15min/` are maintained separately to create or update the official GitHub sample using the original global map distributed with CaMa-Flood packages. They are sample-preparation tools, not test scripts. GitHub CI does not run them. The reusable template documented here can be used to prepare other regional maps.
 
 ## Inputs and settings
 
@@ -51,7 +53,7 @@ Do not run it from the map root: the Fortran programs use paths relative to the 
 | `generate_inpmat` | Parent map: `inpmat_test-1deg.bin` and `diminfo_test-1deg.txt` | Preprocessing input for channel width/depth parameterization when the required high-resolution map and sample runoff are available. |
 | Separate CTL step | `.ctl` files beside eligible binaries | GrADS descriptors based on the base `params.txt` or high-resolution `location.txt`; not written by `s01`. |
 
-Consult [`map_variables.csv`](../../map_variables.csv) for per-product type, dimensions, record layout, missing-value convention, and model/runtime role. Core model inputs and preprocessing/analysis products are distinguished there; the table above names outputs without duplicating every variable definition.
+Consult [`map_variables.csv`](../../map_variables.csv) for per-product type, dimensions, record layout, numeric missing value, special codes, and model/runtime role. Core model inputs and preprocessing/analysis products are distinguished there; the table above names outputs without duplicating every variable definition.
 
 ## High-resolution downstream links
 
@@ -66,8 +68,8 @@ Review terminal output after each internal program. The shell checks for build p
 
 The wrapper uses `params.txt` for the base map and each immediate child directory's `location.txt` for its own grid; existing CTLs are overwritten by default. A high-resolution `location.txt` starts with the area count, then a column header, then one row per area containing its identifier/name, bounds, dimensions, and cell size.
 
-## Verification status and limitations
+## Automated checks and scientific validation
 
-The regionalization workflow and the CTL wrapper have been manually used with the Mekong development/test sample. Source inspection establishes the described file paths and program behavior; the repository records an initial CTL run with 18 base and 12 high-resolution descriptors, including failures for `inpmat_test-1deg.bin` and `width.bin` and a skip for `lsmask.bin`. Subsequent generator changes passed synthetic tests, but a post-fix Mekong wrapper run has not been confirmed in the development record. The committed Mekong `lonlat.ctl` uses the `outlon` / `outlat` labels now recorded in the registry.
+The automated Mekong CTL check copies the tracked binary files and metadata to a temporary directory and runs the `s02-write_ctl.sh` wrapper there. It verifies CTL generation and file-format declarations without overwriting the checked-in sample. Other synthetic CTL generator checks and the sample/registry validators are listed in the [map-tools overview](../README.md#github-only-automated-tests). GitHub Actions does not execute this regionalization template or the Mekong sample-preparation scripts.
 
-Presence of files or successful generation is not scientific validation. No full simulation, river-network validation, or v4/v5 numerical equivalence test is claimed. High-resolution scientific meaning and selected units remain provisional where indicated in the registry. The shell does not stop after every failed Fortran command, so inspect its complete output and do not treat a final zero exit status alone as proof that every stage succeeded.
+Successful regional product generation, binary size checks, and CTL generation do not establish that the river network or hydraulic fields are scientifically correct. No full simulation, independent river-network validation, or v4/v5 numerical equivalence test is claimed. Check the registry for variables whose meaning, special codes, or units remain provisional. The regionalization shell does not stop after every failed Fortran command, so inspect the complete output and each expected product rather than relying only on the final exit code.

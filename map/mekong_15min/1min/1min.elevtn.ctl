@@ -7,5 +7,5 @@ ydef 1800 linear 5.00833333333 0.0166666666667
 tdef 1 linear 00Z01jan2000 1yr
 zdef 1 linear 1 1
 vars 1
-elevtn_hires 1 99 High-resolution elevation layer [m]
+elevtn 1 99 High-resolution elevation layer [m]
 ENDVARS

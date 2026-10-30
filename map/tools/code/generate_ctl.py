@@ -51,19 +51,21 @@ class Variable:
 
 
 SUPPORTED_TYPES = {
-    "int8": (1, "-1,40,1,-1"),
+    # GrADS supports byte input as unsigned only; signed byte data keep their
+    # original bit pattern and their Undef code is converted to 0..255 below.
+    "int8": (1, "-1,40,1"),
     "int16": (2, "-1,40,2,-1"),
-    "int32": (4, "-1,40,4,-1"),
+    "int32": (4, "-1,40,4"),
     "float32": (4, "99"),
 }
+DEFAULT_MISSING = {"int8": -9, "int16": -9999, "int32": -9999, "float32": -9999.0}
 REQUIRED_COLUMNS = {
     "category_id", "binary_filename", "alternative_binary_filename", "name",
     "long_name", "units", "dtype", "dimensions", "record_layout",
-    "record_index", "record_count", "missing_value_convention",
+    "record_index", "record_count", "missing_value", "special_values",
 }
 NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,14}$")
 RECORD_RE = re.compile(r"^\s*record\s+(\d+)\s*(?::\s*|\s+)?([A-Za-z][A-Za-z0-9_]*)?\s*$", re.I)
-NUMBER_RE = re.compile(r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?")
 LAYER_LAYOUT_RE = re.compile(r"^\s*records\s+1\.\.([A-Za-z0-9_]+)\s*;\s*record\s+k\s+is\s+layer\s+k\s*$", re.I)
 
 
@@ -216,37 +218,35 @@ def parse_count(value: str, grid: Grid) -> int | None:
     raise CtlError(f"unsupported symbolic record_count {value!r}")
 
 
-def missing_sentinel(row: dict[str, str], dtype: str) -> int | float:
-    text = (row.get("missing_value_convention") or "").strip()
-    if not text or re.search(r"\bno\s+(?:separate\s+)?missing\s+(?:value|code)", text, re.I):
-        raise CtlError("missing-value convention is not specified as a numeric sentinel")
-    clauses = re.split(r"[.;]", text)
-    keywords = ("undefined", "undef", "missing", "fill value", "unfilled", "outside", "initialized", "masked", "for cells where")
-    candidates: list[str] = []
-    for clause in clauses:
-        if any(word in clause.lower() for word in keywords):
-            candidates.extend(NUMBER_RE.findall(clause))
-    if not candidates:
-        raise CtlError("missing-value convention does not identify a numeric sentinel")
-    try:
-        value = float(candidates[0])
-    except ValueError as exc:
-        raise CtlError("invalid missing-value sentinel") from exc
+def missing_sentinel(row: dict[str, str], dtype: str) -> tuple[int | float, bool]:
+    """Return the original stored sentinel and whether a type fallback was used."""
+    dtype = dtype.strip().lower()
+    if dtype not in DEFAULT_MISSING:
+        raise CtlError(f"unsupported dtype {dtype!r} for missing-value handling")
+    raw = (row.get("missing_value") or "").strip()
+    fallback = not raw
+    if fallback:
+        value: int | float = DEFAULT_MISSING[dtype]
+    else:
+        try:
+            value = float(raw)
+        except ValueError as exc:
+            raise CtlValidationError(f"invalid numeric missing_value {raw!r}") from exc
     if not math.isfinite(value):
-        raise CtlError("missing-value sentinel must be finite")
+        raise CtlValidationError("missing-value sentinel must be finite")
     if dtype.startswith("int"):
         if not value.is_integer():
-            raise CtlError(f"integer file has non-integer missing value {value}")
+            raise CtlValidationError(f"integer file has non-integer missing value {value}")
         bits = SUPPORTED_TYPES[dtype][0] * 8
         if not -(2 ** (bits - 1)) <= value < 2 ** (bits - 1):
-            raise CtlError(f"missing value {value:g} is outside the range of {dtype}")
-        return int(value)
+            raise CtlValidationError(f"missing value {value:g} is outside the range of {dtype}")
+        value = int(value)
     if abs(value) > 3.4028235e38:
-        raise CtlError(f"missing value {value:g} is outside the range of float32")
-    return value
+        raise CtlValidationError(f"missing value {value:g} is outside the range of float32")
+    return value, fallback
 
 
-def record_variables(rows: list[dict[str, str]], grid: Grid) -> tuple[list[Variable], int, int | float]:
+def record_variables(rows: list[dict[str, str]], grid: Grid) -> tuple[list[Variable], int, int | float, bool]:
     if not rows:
         raise CtlError("no registry rows")
     types = {(row.get("dtype") or "").strip().lower() for row in rows}
@@ -260,10 +260,12 @@ def record_variables(rows: list[dict[str, str]], grid: Grid) -> tuple[list[Varia
     if len(dims) != 1 or dims.pop() not in allowed:
         raise CtlError("dimensions are unknown, inconsistent, or unsupported for this grid")
 
-    sentinels = {missing_sentinel(row, dtype) for row in rows}
+    sentinel_info = [missing_sentinel(row, dtype) for row in rows]
+    sentinels = {value for value, _ in sentinel_info}
     if len(sentinels) != 1:
-        raise CtlError("rows for one file specify inconsistent missing-value sentinels")
+        raise CtlValidationError("rows for one file specify inconsistent missing-value sentinels")
     sentinel = sentinels.pop()
+    used_fallback = any(fallback for _, fallback in sentinel_info)
 
     declared_counts = {parse_count(row.get("record_count", ""), grid) for row in rows}
     declared_counts.discard(None)
@@ -291,7 +293,7 @@ def record_variables(rows: list[dict[str, str]], grid: Grid) -> tuple[list[Varia
     if layered:
         if len(rows) != 1 or len(layered) != 1:
             raise CtlError("layered files must have one logical variable row")
-        return layered, layered[0].levels, sentinel
+        return layered, layered[0].levels, sentinel, used_fallback
 
     variables: list[Variable] = []
     for row in rows:
@@ -337,7 +339,7 @@ def record_variables(rows: list[dict[str, str]], grid: Grid) -> tuple[list[Varia
     if record_count != len(variables):
         raise CtlValidationError("record count does not match independent variable records")
     variables.sort(key=lambda item: item.record_index)
-    return variables, record_count, sentinel
+    return variables, record_count, sentinel, used_fallback
 
 
 def expected_dimensions(row: dict[str, str], grid: Grid) -> bool:
@@ -347,7 +349,8 @@ def expected_dimensions(row: dict[str, str], grid: Grid) -> bool:
     return dims == "NX,NY" or dims == "NX,NY,NLFP"
 
 
-def read_input_matrix_descriptor(binary_path: Path, grid: Grid) -> tuple[list[Variable], int, int | float]:
+def read_input_matrix_descriptor(binary_path: Path, grid: Grid,
+                                 registry_row: dict[str, str]) -> tuple[list[Variable], int, int | float, bool]:
     """Read the companion text file written by region_generate_inpmat.F90."""
     stem = binary_path.stem
     candidates = [binary_path.with_suffix(".txt")]
@@ -381,11 +384,12 @@ def read_input_matrix_descriptor(binary_path: Path, grid: Grid) -> tuple[list[Va
         (west, grid.west), (east, grid.east), (south, grid.south), (north, grid.north)
     )):
         raise CtlValidationError(f"{descriptor} geographic bounds do not match params.txt")
+    sentinel, fallback = missing_sentinel(registry_row, "int32")
     return [
         Variable("inpx", inpn, "int32", f"Input-grid x index (INPN={inpn})", "", 1),
         Variable("inpy", inpn, "int32", f"Input-grid y index (INPN={inpn})", "", 2),
         Variable("inpa", inpn, "float32", f"Overlap area (INPN={inpn})", "m2", 3),
-    ], 3, 0
+    ], 3, sentinel, fallback
 
 
 def is_input_matrix(row: dict[str, str]) -> bool:
@@ -404,8 +408,9 @@ def ctl_text(path: Path, variables: list[Variable], grid: Grid, sentinel: int | 
     if not math.isclose(dx, dy, rel_tol=1e-7, abs_tol=1e-9):
         raise CtlError("CTL generator supports square regular lon/lat cells only")
     zlevels = max(variable.levels for variable in variables)
+    ctl_sentinel = sentinel & 0xFF if variables[0].dtype == "int8" else sentinel
     lines = [
-        f"dset ^{path.name}", f"undef {sentinel:g}",
+        f"dset ^{path.name}", f"undef {ctl_sentinel:g}",
         f"title CaMa-Flood map file {path.name}",
         "options yrev little_endian",
         f"xdef {grid.nx} linear {grid.west + dx / 2:.12g} {dx:.12g}",
@@ -416,11 +421,14 @@ def ctl_text(path: Path, variables: list[Variable], grid: Grid, sentinel: int | 
     ]
     for variable in variables:
         type_code = SUPPORTED_TYPES[variable.dtype][1]
+        name = variable.name
+        if grid.high_resolution and name.endswith("_hires"):
+            name = name[:-len("_hires")]
         description = variable.description.replace("\n", " ").replace("\r", " ")
         units = variable.units.replace("\n", " ").replace("\r", " ")
         if units:
             description += f" [{units}]"
-        lines.append(f"{variable.name} {variable.levels} {type_code} {description}".rstrip())
+        lines.append(f"{name} {variable.levels} {type_code} {description}".rstrip())
     lines.append("ENDVARS")
     return "\n".join(lines) + "\n"
 
@@ -430,6 +438,7 @@ class Summary:
     generated: int = 0
     skipped: int = 0
     failed: int = 0
+    fallback_files: int = 0
 
 
 def generate_directory(map_dir: Path, registry_path: Path, *, dry_run: bool = False,
@@ -487,14 +496,14 @@ def generate_directory(map_dir: Path, registry_path: Path, *, dry_run: bool = Fa
             if base_grid is not None:
                 grid = base_grid
                 if len(matches) == 1 and is_input_matrix(matches[0]):
-                    variables, records, sentinel = read_input_matrix_descriptor(path, grid)
+                    variables, records, sentinel, used_fallback = read_input_matrix_descriptor(path, grid, matches[0])
                 elif not all(expected_dimensions(row, grid) for row in matches):
                     declared_dims = (matches[0].get("dimensions") or "").replace(" ", "").upper()
                     if declared_dims not in {"NX,NY", "NX,NY,NLFP"}:
                         raise CtlError("registry dimensions are not a supported regular map grid")
                     raise CtlValidationError("registry dimensions do not match base-map params.txt geometry")
                 else:
-                    variables, records, sentinel = record_variables(matches, grid)
+                    variables, records, sentinel, used_fallback = record_variables(matches, grid)
             else:
                 area = select_area(relpath, target, matches, areas)
                 grid = area.grid
@@ -503,7 +512,7 @@ def generate_directory(map_dir: Path, registry_path: Path, *, dry_run: bool = Fa
                     if not declared_dims.startswith("NX_HIRES,NY_HIRES"):
                         raise CtlError("registry dimensions are not a supported high-resolution grid")
                     raise CtlValidationError("registry dimensions do not match high-resolution location.txt geometry")
-                variables, records, sentinel = record_variables(matches, grid)
+                variables, records, sentinel, used_fallback = record_variables(matches, grid)
             expected_size = sum(
                 grid.nx * grid.ny * variable.levels * SUPPORTED_TYPES[variable.dtype][0]
                 for variable in variables
@@ -516,6 +525,9 @@ def generate_directory(map_dir: Path, registry_path: Path, *, dry_run: bool = Fa
             except CtlError as exc:
                 raise CtlValidationError(str(exc)) from exc
             output = path.with_suffix(".ctl")
+            if used_fallback:
+                summary.fallback_files += 1
+                print(f"WARNING {path.name}: missing_value is blank; using {variables[0].dtype} default {sentinel:g}")
             if output.exists() and not overwrite:
                 print(f"SKIP {path.name}: {output.name} exists (use --overwrite)")
                 summary.skipped += 1
@@ -549,7 +561,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     summary = generate_directory(args.map_dir, args.metadata_csv, dry_run=args.dry_run, overwrite=args.overwrite)
     action = "planned" if args.dry_run else "generated"
-    print(f"Summary: {action}={summary.generated}, skipped={summary.skipped}, failed={summary.failed}")
+    print(f"Summary: {action}={summary.generated}, skipped={summary.skipped}, failed={summary.failed}, fallback={summary.fallback_files}")
     return 1 if summary.failed else 0
 
 

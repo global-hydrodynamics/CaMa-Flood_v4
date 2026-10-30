@@ -7,6 +7,6 @@ ydef 120 linear 5.125 0.25
 tdef 1 linear 00Z01jan2000 1yr
 zdef 1 linear 1 1
 vars 2
-nextx 1 -1,40,4,-1 Downstream indices without regional edge endpoints
-nexty 1 -1,40,4,-1 Downstream indices without regional edge endpoints
+nextx 1 -1,40,4 Downstream indices without regional edge endpoints
+nexty 1 -1,40,4 Downstream indices without regional edge endpoints
 ENDVARS

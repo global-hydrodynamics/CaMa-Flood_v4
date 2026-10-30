@@ -7,6 +7,6 @@ ydef 1800 linear 5.00833333333 0.0166666666667
 tdef 1 linear 00Z01jan2000 1yr
 zdef 1 linear 1 1
 vars 2
-downx 1 -1,40,2,-1 High-resolution downstream x/y indices [1]
-downy 1 -1,40,2,-1 High-resolution downstream x/y indices [1]
+downx 1 -1,40,2,-1 High-resolution downstream relative x/y offsets [grid cells]
+downy 1 -1,40,2,-1 High-resolution downstream relative x/y offsets [grid cells]
 ENDVARS
