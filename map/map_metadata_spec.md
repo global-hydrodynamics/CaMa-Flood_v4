@@ -4,37 +4,44 @@
 
 `map/map_variables.csv` is the shared, machine-readable definition of CaMa-Flood map variables and binary products. It is intended to describe variables across map resolutions and regional domains, not to define one dataset's dimensions.
 
-This document defines the CSV columns, records the design choices, and explains how the shared variable definitions relate to metadata files distributed with a map. The CSV is the primary source for variable short names, proposed long names, units, types, symbolic dimensions, binary records, missing conventions, distribution roles, and model reader/NetCDF name mappings. Do not copy its full variable table into another README or manual.
+This document defines the CSV columns, records the design choices, and explains how the shared variable definitions relate to metadata files distributed with a map. The CSV is the primary source for variable short names, proposed long names, units, data types, symbolic dimensions, binary record positions, missing conventions, distribution roles, and model-reader/NetCDF variable mappings. Do not copy its full variable table into another README or manual.
 
 Dataset-specific dimensions, bounds, and spacing remain in each map dataset's metadata. Input-grid/runoff settings remain in the run's `diminfo` and its paired input matrix. Neither dataset-specific dimensions nor runoff-grid settings belong in the common variable definition.
 
 ## CSV format and row model
 
-The CSV uses UTF-8, a header row, and one row per logical variable or traceable data product. Multi-variable files such as `nextxy.bin` have one row per variable, with a repeated filename and a per-row record index. When the same variable is available in multiple files, record one row per file. Non-raster tables and source-generated outputs may also be recorded, with their real layout stated rather than forced into `NX × NY`.
+The CSV uses UTF-8, a header row, and one row per logical variable or traceable data product. Multi-variable files such as `nextxy.bin` have one row per variable, with a repeated filename and a per-row record index. When the same variable is available in multiple files, record one row per file. Non-raster tables and source-generated outputs may also be recorded, with their real layout stated rather than forced into `NX,NY`.
 
-Dimensions use symbolic names and Fortran array order where verified, such as `NX,NY` or `NX,NY,NLFP`. Use `N/A` when a product is non-spatial and has no map-grid dimensions (for example, text configuration files, tables, or GrADS CTLs); put its record structure in `record_layout` and `record_count`. Blank cells mean “not specified in this inventory,” not zero, dimensionless, or absent. Use `unknown` or `not established` where a value is known to be unresolved. Evidence paths are repository-relative; citations may be URLs.
+Dimensions use symbolic names and Fortran array order where verified, such as `NX,NY`, `NX,NY,NLFP`, or `NX_HIRES,NY_HIRES`. Use `N/A` for non-spatial products and `unknown` when the shape is unresolved. `record_index` and `record_count` summarize positions and counts; `record_layout` adds a concise file-level structure where useful. Text metadata rows do not need a verbose record description when the format is documented elsewhere and no tool consumes it. Blank cells mean “not specified in this inventory,” not zero, dimensionless, or absent. Evidence paths are repository-relative; citations may be URLs.
+
+The column order is intentional. Fields before `usage` are the concise, human-facing inventory; `record_index` and `record_count` appear before `record_layout` for quick scanning. `usage` and the columns to its right are supporting workflow, provenance, and verification notes, and may contain more detail. CSV consumers use column names, so the display order does not define processing order.
 
 For high-resolution GrADS CTL output, the generator removes a terminal `_hires` from the registry `name` when writing the variable declaration. The suffix can distinguish high-resolution products in the shared registry, while the shorter GrADS variable name is easier to use in plotting commands. The registry value itself is unchanged.
 
 ### Categories and sorting
 
-`category_id` is the first column and numeric sorting key. The ID scheme is provisional and may change as the inventory develops; it groups products by broad function and is not an intrinsic property of a map variable. The descriptive `category` value can identify a more specific product group within an ID. The current grouping is:
+`category_id` is the first column and numeric sorting key. IDs are organized to follow the map-product workflow where practical: 10-series entries cover package defaults and regional preparation, while 900-series entries cover high-resolution products. IDs from 20 onward are being organized as those products are inventoried. The scheme remains provisional; IDs group products and are not intrinsic properties of map variables. The current grouping is:
 
 | ID | Group / current category labels | Meaning |
 | ---: | --- | --- |
-| 11 | Map (`river_map_default`, `river_map_region`) | Base map layers and their regional-map variants. |
-| 12 | Cross-section parameters (`river_parameter`) | Channel width, depth, and roughness parameters. |
-| 16 | Derived map layers (`river_map_grid`) | Map-grid products derived from the base map or river network. |
-| 20–29 | Optional products; current labels: `MPI` (21), `bifurcation` (22), `inflow_scheme` (23), `dam_reservoir` (24) | Optional model features and their preprocessing products. The remaining IDs in this range are not assigned yet. |
-| 41 | Input matrices (`input_matrix`) | Mapping products and paired configuration files connecting map cells to input-grid cells. |
-| 51 | Supplementary maps (`river_map_supplement`) | Supporting, diagnostic, or otherwise non-core map layers. |
-| 71 | High-resolution data (`high-res_data`) | High-resolution source layers, regional extracts, and their area metadata. |
-| 81 | Verification data (currently `gauge_alloc`) | Data used to check or support map allocation and verification. |
-| 91 | Metadata (`metadata`) | Map dimensions, bounds, and other non-raster map metadata. |
+| 10 | `default_metadata` | Default map metadata used to describe map geometry. |
+| 11 | `default_rivmap` | Core river-network and topography map products. |
+| 12 | `default_rivmap_grid` | Derived products on the base map grid. |
+| 13 | `default_rivmap_region` | Products created or updated during regional map preparation. |
+| 14 | `default_bifurcation` | Bifurcation products in the default preparation workflow. |
+| 15 | `default_inpmap` | Default map-to-input-grid products. |
+| 16 | `default_rivmap_supp` | Supplementary products associated with default map preparation. |
+| 20 | `river_param_default` | Channel width, depth, and roughness parameters. |
+| 21–24 | `MPI`, `bifurcation`, `inflow_scheme`, `dam_reservoir` | Optional features and their supporting products. |
+| 52 | `input_matrix` | Input-matrix products and paired configuration. |
+| 62–63 | `river_map_supplement` | Supporting or specialized map products. |
+| 81 | `gauge_alloc` | Gauge allocation and verification data. |
+| 900 | `hires_metadata` | High-resolution area metadata. |
+| 901 | `hires_data` | High-resolution map layers. |
 
 The temporary `workflow_stage` column follows `category_id`; it is a sample/workflow status annotation, not an intrinsic property of a map variable or a statement of runtime necessity. Set it to `default` for registry rows whose matching product files are present in the current `map/mekong_15min/` sample, including registered text metadata/configuration products. Other workflow values are retained only where a maintainer has identified them; leave the field blank when no status has been confirmed. Keep all rows for a multi-variable file consistent. This field is not source provenance: record global defaults and regional derivation in `generation_or_processing`.
 
-Sort rows by ascending numeric `category_id`, then `binary_filename` (case-insensitive), then numeric `record_index` with blank indices last. Preserve all evidence and verification-status fields during recategorization. Use the functional descriptions and evidence to select a group; do not classify from a filename alone. Treat `workflow_stage` as a temporary sample/workflow-status annotation; never use it to define the product or general workflow.
+Sort rows by ascending numeric `category_id`, then `binary_filename` (case-insensitive), then numeric `record_index` with blank indices last. For the human-facing columns, prefer concise labels and structures; put extended provenance and verification notes in the fields from `usage` onward. Preserve all evidence and verification-status fields during recategorization. Use the functional descriptions and evidence to select a group; do not classify from a filename alone. Treat `workflow_stage` as a temporary sample/workflow-status annotation; never use it to define the product or general workflow.
 
 ### Columns
 
@@ -49,11 +56,11 @@ Sort rows by ascending numeric `category_id`, then `binary_filename` (case-insen
 | `long_name` | Concise English label proposed for human and future NetCDF use. Blank when semantics are unresolved. |
 | `physical_description` | Concise physical or functional meaning, with only essential assumptions or uncertainty. Put code legends in `special_values`, provenance in `generation_or_processing`, and file structure in `record_layout`; do not repeat those details here. Do not infer meaning from a filename alone. |
 | `units` | Verified or proposed unit string. Blank does not imply dimensionless. |
-| `dtype` | Verified binary primitive/layout, e.g. `int32`, `float32`, `mixed`, `formatted text`, `NetCDF`, or `unknown`. |
-| `dimensions` | Symbolic map/data shape or a descriptive configuration-dependent value; use `N/A` for non-spatial text/configuration products with no map-grid dimensions, and do not hardcode one map's concrete dimensions here. |
-| `record_index` | One-based record or variable-block index for a variable row in a multi-variable file. For input-matrix files, this is the block order (`inpx`, `inpy`, `inpa`); each block contains `INPN` levels. Blank for products whose position cannot be established. |
-| `record_count` | Total records/variable blocks represented by the file (for example, `2` for `nextxy.bin`, `3` for an input matrix, or symbolic `NLFP` for the `fldhgt` layers). |
-| `record_layout` | Machine-readable record/block mapping where supported (for example, `record 1` or `block 1: inpx levels 1..INPN`), plus human-readable indexing/order; use `not established` if unresolved. |
+| `dtype` | Data type or encoding, using the compact values present in the registry, such as `int8`, `int16`, `int32`, `float32`, `text`, `CSV`, `NetCDF`, or `unknown`. |
+| `dimensions` | Symbolic array shape such as `NX,NY`, `NX,NY,NLFP`, or `NX_HIRES,NY_HIRES`; use `N/A` for non-spatial products and `unknown` when unresolved. Do not hardcode one map's concrete dimensions here. |
+| `record_index` | One-based record or variable-block index for this row. For input matrices, the order is `inpx`, `inpy`, `inpa`; each block contains `INPN` levels. Blank when no position is established or needed. |
+| `record_count` | Total records/variable blocks in the file (for example, `2` for `nextxy.bin`, `3` for an input matrix, or `NLFP` for `fldhgt`). |
+| `record_layout` | Concise file-level record/block arrangement. The CTL generator parses recognized layered (`fldhgt`) and input-matrix layouts; ordinary per-variable records are ordered by `record_index`. Keep text-metadata layouts brief or blank when no current tool consumes them; document detailed text formats in their component documentation. |
 | `missing_value` | One numeric sentinel stored in the original binary variable. Blank means the stored sentinel is not established; it does not mean that the data are known to have no missing value. This field records current binary data, not an automatic NetCDF `_FillValue`/`missing_value` policy. |
 | `special_values` | Human-readable meanings for other meaningful codes, such as river mouths, boundary outlets, sinks, and categorical values. Do not repeat the missing sentinel here or treat these codes as missing. |
 | `usage` | Short workflow role, such as runtime input, preprocessing input/output, visualization, or analysis. |
@@ -63,7 +70,6 @@ Sort rows by ascending numeric `category_id`, then `binary_filename` (case-insen
 | `generation_or_processing` | Original provenance, in-repository producer/transformer, or explicit statement that it was not found. Regional extraction is not original global generation. |
 | `model_reader` | Verified model read routine and source path; blank where not traced. |
 | `netcdf_variable` | Existing model-reader container and variable lookup, if any; not a proposed final NetCDF grouping. |
-| `vertical_datum` | Datum only where verified; currently EGM96 for `elevtn`. |
 | `verification_status` | Controlled confidence state (below). |
 | `evidence_ref` | Source, manual, package observation, maintainer confirmation, or citation supporting the row. |
 
@@ -111,31 +117,26 @@ The current model binary readers use unformatted, direct-access records of `4 ×
 
 Byte order and row orientation are dataset properties, not properties of a variable. The inspected `glb_15min` CTLs specify `little_endian` and `yrev`; the model's `LMAPEND` controls byte conversion and defaults to false. `params.txt` does not encode either setting. Do not assume every regional or future dataset shares the reference package's binary byte order or orientation.
 
-## Core conversion contract and dataset configuration
+## Current map tools and model reader contract
 
-The tools in [`src/map_data_tools/`](src/map_data_tools/README.md) select category ID 11 and require the six core files `nextxy.bin`, `ctmare.bin`, `elevtn.bin`, `nxtdst.bin`, `rivlen.bin`, and `fldhgt.bin`. They read this CSV for names, types, record indices/counts, long names, units, and datum metadata. They validate the binary byte count using `NX`, `NY`, and `NLFP` from the map's `params.txt` before writing output.
+The current shared map utilities are under `map/tools/`. `map/tools/code/generate_ctl.py` reads registered binary products from this CSV and combines their variable-level metadata with map geometry from `params.txt` or high-resolution `location.txt`. The category-11 core runtime products are `nextxy.bin`, `ctmare.bin`, `elevtn.bin`, `nxtdst.bin`, `rivlen.bin`, and `fldhgt.bin`; category IDs describe workflow order and are not a file-selection API for every utility.
 
 The CaMa-Flood v4 reader contract is verified in `src/cmf_ctrl_maps_mod.F90`:
 
 - `READ_MAP_CDF` reads `nextx`, `nexty`, `lon`, and `lat` from the `CRIVCLINC` file.
 - `READ_TOPO_CDF` reads `ctmare`, `elevtn`, `nxtdst`, `rivlen`, and `fldhgt` from that same file.
-- Horizontal variables have Fortran array bounds `(NX,NY)`; `fldhgt` is read one layer at a time into `(NX,NY)` for each `1..NLFP`.
-- The Python NetCDF file uses on-disk dimensions `(lat,lon)` for horizontal variables and `(lfp,lat,lon)` for `fldhgt`. A synthetic test reads these variables using the same NetCDF-Fortran API calls and array extents used by the model. This verifies the file's shape/order contract, not a full model simulation.
+- Horizontal variables have Fortran array bounds `(NX,NY)`; `fldhgt` is read one layer at a time into `(NX,NY)` for each `1..NLFP`. This describes the model reader interface, not a binary-to-NetCDF converter layout.
 - The 1-D `lon` and `lat` coordinate variables are required by `READ_MAP_CDF`; coordinates are cell centers derived from the dataset bounds in `params.txt`.
 
-Dataset-level settings are explicit in `map_metadata.json` (see [`the portable example`](src/map_data_tools/examples/map_metadata.example.json)). `byte_order`, `row_order`, `coordinate_mode`, file paths, and each core binary's missing-value sentinel are not inferred from the filename or hard-coded as universal dataset properties. The tools reject missing or unsupported values. Relative paths in `files` are resolved from the target map directory. The inspected global 15-minute sample uses little-endian binary records, north-to-south rows, regular longitude/latitude cells, and `-9999` sentinels; other maps must be checked and configured individually.
+The current CTL generator follows the legacy `little_endian` and `yrev` convention and reads geometry from the target map directory. The inspected `glb_15min` CTLs and Mekong sample are reference evidence; byte order and row orientation remain dataset properties and must not be generalized without evidence.
 
-For this first NetCDF output, binary numeric values and 1-based `nextx`/`nexty` indices are preserved exactly. The configured binary sentinel is also written as NetCDF `_FillValue` and `missing_value`; it is not translated to the model's `RMIS=1.E20`. Negative `nextxy` endpoint codes such as `-9` and `-10` remain data values. `elevtn` carries `vertical_datum=EGM96`. No variable `standard_name` is added beyond the verified coordinate names.
-
-Each generated CTL describes one category-11 binary file. The `nextxy.ctl` variable order follows records `nextx`, then `nexty`; `fldhgt.ctl` defines `NLFP` levels. The configured endian option and row order determine `little_endian`/`big_endian` and `yrev`. Generation refuses to replace an existing CTL unless `--overwrite` is given.
-
-The converter emits only the core `CRIVCLINC` map. It does not create `CRIVPARNC` channel parameter inputs; the model still needs those separately when configured. Optional schemes, parameter products, and non-core CSV rows are outside this first conversion implementation.
+The model source includes NetCDF map readers, but `map/tools/` does not currently provide a binary-to-NetCDF map converter. The CSV's `netcdf_variable` values record existing reader lookups only; they do not finalize a file grouping, dimension naming convention, conversion policy, or attribute set.
 
 ## Confirmed facts and proposed attributes
 
 The model names in the CSV are established variable names. English `long_name` text and some unit strings are proposed conventions, distinct from attributes verified in existing binary maps. The existing CTLs often have generic labels/titles; they are not an authoritative semantic dictionary. No CF `standard_name` is added where no applicable name has been verified.
 
-- The maintainer confirmed that `elevtn` uses the EGM96 vertical datum. The CSV records this in `vertical_datum`; elevation units are metres.
+- The maintainer confirmed that `elevtn` uses the EGM96 vertical datum; this fact is currently stated in its `physical_description` and evidence, because the CSV has no dedicated `vertical_datum` column. Elevation units are metres.
 - `rivman` is the river-channel Manning roughness coefficient. The maintainer previously stated its SI dimensional unit as `s m-1/3`; the current inventory task explicitly directs that the CSV `units` cell remain blank. The field is intentionally blank and does not mean dimensionless. That blank is deliberate and does not mean dimensionless; do not auto-fill it without a revised maintainer decision.
 - Core network/topography inputs `nextxy`, `ctmare`, `elevtn`, `nxtdst`, `rivlen`, and `fldhgt` are provided in the standard distributed map package.
 - Channel parameters `rivwth`, `rivhgt`, and `rivman` are intended to be generated or checked by users for the target map with tools under `map/src/src_param/`, rather than assumed to be universal inputs. The v4.30 `glb_15min` package contains precomputed copies; this does not make them guaranteed standard files for every map.
@@ -202,7 +203,7 @@ For blank `missing_value` entries, the v5 generator uses provisional CTL-only de
 
 GrADS' documented `-1,40` non-float formats include 1-byte unsigned chars (`-1,40,1`), 2-byte unsigned (`-1,40,2`), 2-byte signed (`-1,40,2,-1`), and 4-byte integers (`-1,40,4`). No signed 1-byte format is documented in the referenced variable-format table. CaMa-Flood `int8` files are signed, so CTLs use the unsigned-byte reader and convert a signed missing sentinel such as `-9` to its byte value `247` in `undef`. Binary bytes are not changed. This allows GrADS to mask that byte value but means other negative `int8` codes are displayed as unsigned values (for example, `-1` appears as `255`); use a signed-aware reader for their original scientific code values. See [GrADS Variable Formats](https://sources.debian.org/data/main/g/grads/3%3A2.2.1-1/doc/variableformats.html) and [GrADS Data Descriptor File: non-float data](https://sources.debian.org/data/main/g/grads/2%3A2.0.2-3/doc/descriptorfile.html#VARS).
 
-The existing v4-era `map/src/map_data_tools/generate_ctl.py` remains category-11-only and requires its dataset JSON. Its shared parser currently requires exactly six category-11 core files, so an additional category-11 product such as `nextxy_noedge.bin` makes that legacy converter test suite reject the current registry. Its dataset-specific missing values continue to come from its JSON configuration. The separate v5 `map/tools/code/generate_ctl.py` reads the common CSV, scans only the selected directory, validates registered layout and exact binary size, and writes CTLs beside supported binaries. For high-resolution files it reads `location.txt`, whose first record is the area count, second is the field-name header, and following rows give `iarea`, `carea`, bounds, `nx`, `ny`, and `csize`; `<AREA>` in a registry path is matched to `carea`. It uses recognized record-layout forms, applies per-type defaults with warnings for blank sentinels, and rejects conflicting resolved missing values across logical variables in a file.
+The current `map/tools/code/generate_ctl.py` reads the common CSV, scans only the selected directory, validates supported layouts and binary sizes, and writes CTLs beside supported binaries. For high-resolution files it reads `location.txt`, whose first record is the area count, second is the field-name header, and following rows give `iarea`, `carea`, bounds, `nx`, `ny`, and `csize`; `<AREA>` in a registry path is matched to `carea`. It recognizes the layered `fldhgt` layout, input-matrix blocks, and independent per-variable records. It applies per-type defaults with warnings for blank sentinels and rejects conflicting resolved missing values across logical variables in a file.
 
 ## Channel-parameter generation workflow
 
@@ -228,19 +229,17 @@ The maintainer confirmed that the module-level files were previously generated a
 
 The v5 generator is implemented at `map/tools/code/generate_ctl.py`. It combines variable metadata from `map_variables.csv` with dataset-specific geometry read from `params.txt` or `location.txt`. The CSV describes reusable products and record layouts, not sample-map dimensions. It accepts explicit independent-record layouts (including one row per variable with record indices), the documented `NLFP` layered-variable layout, and the regionalization input matrix paired with its dimension description. In an input-matrix filename pair, the shared suffix (for example `_test-1deg`) identifies the runoff-data/configuration variant: `inpmat_<TAG>.bin` pairs with `diminfo_<TAG>.txt`, as written by the current Fortran program. The description supplies `NX`, `NY`, `INPN`, bounds, and the paired binary filename; map dimensions and bounds are checked against `params.txt`. A same-basename `.txt` is also accepted. Unknown dimensions/types and unrecognized record descriptions are skipped; blank missing values use the per-type fallback with a warning; invalid values, conflicting declarations, and binary size/layout mismatches are rejected. It scans one selected directory at a time and does not recurse.
 
-The v5 tool follows the existing legacy CTL convention `yrev little_endian` and cell-center coordinates. The regional input matrix has three logical variables (`inpx`, `inpy`, `inpa`) with `INPN` levels, matching the two integer-index records and one floating-point overlap-area record written by `generate_inpmat.F90`; unused slots initialized to zero are represented by `undef 0`. For `lsmask.bin`, the registry declares `-9999` as the stored missing value. The tool is intended for current workflow products that follow the legacy convention; it does not infer or validate alternative endianness or row order. The separate `map/src/map_data_tools/generate_ctl.py` remains the earlier category-11 generator and still uses an explicit dataset JSON configuration.
+The tool follows the existing legacy CTL convention `yrev little_endian` and cell-center coordinates. The regional input matrix has three logical variables (`inpx`, `inpy`, `inpa`) with `INPN` levels, matching the two integer-index blocks and one floating-point overlap-area block written by `generate_inpmat.F90`; unused slots initialized to zero are represented by `undef 0`. It is intended for current workflow products following the legacy convention and does not infer or validate alternative endianness or row order.
 
-### NetCDF conversion
+### NetCDF map support
 
-The CSV contributes variable names, descriptions, units, types, dimensions, vertical datum, stored missing sentinels, special codes, and current model-reader variable names. Dataset-specific grid coordinates come from map geometry. The tool must preserve 1-based `nextx`/`nexty` indices unless an explicit transformation is specified.
-
-For category 11, the initial converter uses one `CRIVCLINC`-compatible file, disk dimensions `(lat,lon)` and `(lfp,lat,lon)`, 1-D longitude/latitude coordinates, and the dataset-configured sentinel as both `_FillValue` and `missing_value`. These choices are checked against the existing Fortran reader interface and a synthetic smoke test. Other categories, `CRIVPARNC`, optional schemes, and maps requiring non-regular coordinates remain outside the implementation. The `netcdf_variable` column records existing model-reader lookup names only.
+The model source contains NetCDF readers for map and topography fields. The `netcdf_variable` column records the container/variable lookup names already present in those readers. It does not mean a repository conversion utility currently exists. A binary-to-NetCDF workflow, its dimensions and file grouping, missing-value attributes, coordinate metadata, and public compatibility requirements remain to be specified. Any implementation must preserve 1-based `nextx`/`nexty` indices and must be checked against the actual Fortran reader before the output format is treated as compatible.
 
 ## High-resolution source semantics
 
 FLOW source distinguishes `catmxy=-9999` for sea from `catmxy=-999` for a pixel without an assigned unit catchment. Raw profile-grid initialization distinguishes `catmzz` / `catmz100` values -99 for sea and -9 for unassigned catchments. FLOW `merge_hires` sets profile values to -9 whenever `catmxy <= -900`, collapsing both cases. The v5 regional combiner copies available profile-layer values unchanged and uses -9 as the fill value only when an input layer is unavailable. The Mekong sample confirms this merged behavior: both `catmxy=-9999` and `catmxy=-999` pixels have profile value -9. These are different layers and processing stages, not conflicting encodings. `catmzz` contains 10 profile bands (1 nearest the channel, 10 farthest); `catmz100` contains 100 ranks and adds a small downstream-distance term to distinguish equal elevations. FLOW maps `flwdir` 1–8 to N, NE, E, SE, S, SW, W, NW; 0 is a river mouth and -1 an inland sink. Its `visual` classes include 7 for small streams. The maintainer confirms that `flddif` is relative height above the unit-catchment reference river pixel in metres, `hand` is Height Above Nearest Drainage in metres relative to a river with upstream area >=0.5 km2, and high-resolution `uparea` is contributing area in km2. High-resolution `grdare` is land area per grid cell in km2, including only land pixels in coastal cells; FLOW area-generation code labels the result km2 and `generate_inpmat` converts positive values to m2 with a factor of 1e6. The base-resolution `uparea` remains in m2.
 
-High-resolution `downxy` stores two signed 16-bit relative offsets on the high-resolution grid, not absolute destination indices: for source pixel `(ix, iy)` with Fortran-style 1-based indices, the downstream pixel is `(ix + downx, iy + downy)`. FLOW adjusts the x offset to take the shorter periodic route across the global longitude seam. It writes `-999` in both records for a river mouth and `-1000` in both for an inland termination. The arrays are initialized to `-9999`, which remains wherever no downstream offset is assigned. The maintainer confirms that `-9999` means sea in the low-resolution layer, but high-resolution land pixels without an assigned unit catchment may use a different code; the exact high-resolution encoding is not yet confirmed. CaMa-Flood high-resolution parameter tools treat any `downx <= -900` as a stopping condition. The v5 regional combiner copies these records without coordinate adjustment. See the [regional workflow guide](tools/script_region/README.md#high-resolution-downstream-links) and the `downxy_hires` entry in [`map_variables.csv`](map_variables.csv).
+High-resolution `downxy` stores two signed 16-bit relative offsets on the high-resolution grid, not absolute destination indices: for source pixel `(ix, iy)` with Fortran-style 1-based indices, the downstream pixel is `(ix + downx, iy + downy)`. FLOW adjusts the x offset to take the shorter periodic route across the global longitude seam. It writes `-999` in both records for a river mouth and `-1000` in both for an inland termination. The arrays are initialized to `-9999`, which remains wherever no downstream offset is assigned. The maintainer confirms that `-9999` means sea in the low-resolution layer, but high-resolution land pixels without an assigned unit catchment may use a different code; the exact high-resolution encoding is not yet confirmed. CaMa-Flood high-resolution parameter tools treat any `downx <= -900` as a stopping condition. The v5 regional combiner copies these records without coordinate adjustment. See the [regional workflow guide](tools/script_region/README.md#high-resolution-downstream-links) and the `downx` / `downy` rows for `<HIRES>/<AREA>.downxy.bin` in [`map_variables.csv`](map_variables.csv).
 
 ## Open Questions
 
