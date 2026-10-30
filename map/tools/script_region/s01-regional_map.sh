@@ -12,7 +12,7 @@ NORTH="35.0"
 
 # Shared executables must be built explicitly from map/tools/code/ before use.
 CODE_DIR="../../tools/code"
-for PROGRAM in region_cut_domain region_cut_bifway region_set_map region_combine_hires region_generate_inpmat
+for PROGRAM in region_cut_domain region_cut_bifway region_set_map region_combine_hires region_default_inpmat
 do
   if [ ! -x "$CODE_DIR/$PROGRAM" ]; then
     echo "Missing shared executable: $CODE_DIR/$PROGRAM" >&2
@@ -42,17 +42,17 @@ do
   fi
 done
 
-# Build the parameterization input matrix for channel width/depth calculations.
-# This uses sample annual-mean runoff in map/data; it is not a simulation runoff
-# input matrix. The simulation-specific matrix is prepared later under src_param.
+# Build the standard mapping matrix for the annual runoff climatology used in
+# channel cross-section estimation. This uses map layers, not runoff data; the
+# simulation-specific matrix is prepared later under src_param.
 if [ -f ../1min/location.txt ]; then
-  "$CODE_DIR/region_generate_inpmat" 1min
+  "$CODE_DIR/region_default_inpmat" 1min
 elif [ -f ../30sec/location.txt ]; then
-  "$CODE_DIR/region_generate_inpmat" 30sec
+  "$CODE_DIR/region_default_inpmat" 30sec
 elif [ -f ../15sec/location.txt ]; then
-  "$CODE_DIR/region_generate_inpmat" 15sec
+  "$CODE_DIR/region_default_inpmat" 15sec
 elif [ -f ../3sec/location.txt ]; then
-  "$CODE_DIR/region_generate_inpmat" 3sec
+  "$CODE_DIR/region_default_inpmat" 3sec
 fi
 
 # CTL generation is a separate manual step: run s02-write_ctl.sh after

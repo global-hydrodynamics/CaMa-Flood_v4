@@ -350,7 +350,7 @@ def expected_dimensions(row: dict[str, str], grid: Grid) -> bool:
 
 def read_input_matrix_descriptor(binary_path: Path, grid: Grid,
                                  registry_rows: list[dict[str, str]]) -> tuple[list[Variable], int, int | float, bool]:
-    """Read the companion text file written by region_generate_inpmat.F90."""
+    """Read the companion text file written by region_default_inpmat.F90."""
     stem = binary_path.stem
     candidates = [binary_path.with_suffix(".txt")]
     if stem.startswith("inpmat_"):

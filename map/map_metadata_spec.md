@@ -76,6 +76,7 @@ Sort rows by ascending numeric `category_id`, then `binary_filename` (case-insen
 ### Controlled statuses
 
 - `standard_distributed_core`: core river-network/topography dataset product described as supplied in standard map packages. Check the selected archive; this does not assert that every release or map tag contains every file.
+- `standard_distributed_support`: standard supporting product distributed with map datasets but not a core runtime river-network/topography layer. The selected map archive still determines whether a particular product is present.
 - `map_specific_user_generated`: channel parameters intended to be generated or checked for a target map. Some packages include prepared examples.
 - `optional_or_auxiliary`: ancillary, specialized, derived, analysis, or workflow products; not implied to be standard runtime requirements.
 - `source_only_generated`: traceable source output not found in the inspected v4.30 map packages.
@@ -229,7 +230,7 @@ The maintainer confirmed that the module-level files were previously generated a
 
 The v5 generator is implemented at `map/tools/code/generate_ctl.py`. It combines variable metadata from `map_variables.csv` with dataset-specific geometry read from `params.txt` or `location.txt`. The CSV describes reusable products and record layouts, not sample-map dimensions. It accepts explicit independent-record layouts (including one row per variable with record indices), the documented `NLFP` layered-variable layout, and the regionalization input matrix paired with its dimension description. In an input-matrix filename pair, the shared suffix (for example `_test-1deg`) identifies the runoff-data/configuration variant: `inpmat_<TAG>.bin` pairs with `diminfo_<TAG>.txt`, as written by the current Fortran program. The description supplies `NX`, `NY`, `INPN`, bounds, and the paired binary filename; map dimensions and bounds are checked against `params.txt`. A same-basename `.txt` is also accepted. Unknown dimensions/types and unrecognized record descriptions are skipped; blank missing values use the per-type fallback with a warning; invalid values, conflicting declarations, and binary size/layout mismatches are rejected. It scans one selected directory at a time and does not recurse.
 
-The tool follows the existing legacy CTL convention `yrev little_endian` and cell-center coordinates. The regional input matrix has three logical variables (`inpx`, `inpy`, `inpa`) with `INPN` levels, matching the two integer-index blocks and one floating-point overlap-area block written by `generate_inpmat.F90`; unused slots initialized to zero are represented by `undef 0`. It is intended for current workflow products following the legacy convention and does not infer or validate alternative endianness or row order.
+The tool follows the existing legacy CTL convention `yrev little_endian` and cell-center coordinates. The standard regional input matrix has three logical variables (`inpx`, `inpy`, `inpa`) with `INPN` levels, matching the two integer-index blocks and one floating-point overlap-area block written by `region_default_inpmat.F90`; unused slots initialized to zero are represented by `undef 0`. This is the distributed mapping for the standard annual runoff climatology used in channel cross-section parameter estimation. It is distinct from the general-purpose `generate_inpmat.F90` utility for user-selected runoff grids. The generator does not read the runoff dataset itself. The CTL tool does not infer or validate alternative endianness or row order.
 
 ### NetCDF map support
 
@@ -251,7 +252,7 @@ High-resolution `downxy` stores two signed 16-bit relative offsets on the high-r
 ## Evidence and source references
 
 - Variable definitions and common product mappings: [`map_variables.csv`](map_variables.csv).
-- Map-specific geometry and input-matrix workflow: [`params.txt` readers/writers](src/src_param/generate_inpmat.F90), [input-matrix shell configuration](src/src_param/s02-generate_inpmat.sh), and [regional extraction](src/src_region/cut_domain.F90).
+- Map-specific geometry and input-matrix workflow: [`params.txt` readers/writers and general input matrix](src/src_param/generate_inpmat.F90), [input-matrix shell configuration](src/src_param/s02-generate_inpmat.sh), [regional default climatology matrix](tools/code/region_default_inpmat.F90), and [regional extraction](src/src_region/cut_domain.F90).
 - Model binary and NetCDF readers: [`cmf_ctrl_maps_mod.F90`](../src/cmf_ctrl_maps_mod.F90#L232); dimension config: [`cmf_ctrl_nmlist_mod.F90`](../src/cmf_ctrl_nmlist_mod.F90#L180).
 - Binary kind definitions: [`parkind1.F90`](../src/parkind1.F90#L20), including the precision switch for `JPRB`.
 - Channel workflow: [`s01-channel_params.sh`](src/src_param/s01-channel_params.sh), [`calc_outclm.F90`](src/src_param/calc_outclm.F90), [`calc_rivwth.F90`](src/src_param/calc_rivwth.F90), and [`set_gwdlr.F90`](src/src_param/set_gwdlr.F90).

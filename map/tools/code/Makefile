@@ -2,7 +2,7 @@
 CODE_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 include $(CODE_DIR)/../../../adm/Mkinclude
 
-REGION_NAMES := cut_domain cut_bifway set_map combine_hires generate_inpmat
+REGION_NAMES := cut_domain cut_bifway set_map combine_hires default_inpmat
 REGION_BINS := $(addprefix $(CODE_DIR)/region_,$(REGION_NAMES))
 PARAM_SOURCES := $(wildcard $(CODE_DIR)/param_*.F90)
 PARAM_BINS := $(patsubst %.F90,%,$(PARAM_SOURCES))

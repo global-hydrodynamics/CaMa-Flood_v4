@@ -1,4 +1,4 @@
-      program GENERATE_INPMAT
+      program REGION_DEFAULT_INPMAT
 ! ===============================================
       implicit none
 ! CaMa-Flood parameters                                        !! (from param.txt)
@@ -75,11 +75,11 @@
 ! ===============================================
 ! Build a sparse overlap table between regional map cells and input-grid cells.
 ! This version uses the fixed global 1-degree N-to-S input grid below.
-print *, 'CALC_INPMAT:'
+print *, 'REGION_DEFAULT_INPMAT:'
 
       call getarg(1,tag)
        if( tag=='' ) then
-         print *, 'usage % generate_inpmat $HIRES $GSISE $WEST $EAST $NORTH $SOUTH $OLAT'
+         print *, 'usage % region_default_inpmat $HIRES'
          stop
       endif
 
@@ -349,5 +349,5 @@ CONTAINS
 !+
 !+
 !+
-      end program GENERATE_INPMAT
+      end program REGION_DEFAULT_INPMAT
 

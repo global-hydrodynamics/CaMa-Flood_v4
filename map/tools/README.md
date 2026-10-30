@@ -8,7 +8,12 @@ The Mekong map-local regionalization scripts are maintainer-operated **sample-pr
 
 - `code/` contains shared Fortran programs, the CTL generator, and a Makefile.
 - `script_region/` is the reusable v5 regional-map preparation template.
-- `script_params/` is reserved for a subsequent map-local channel-parameter workflow.
+- `script_params/` is the map-preparation and parameterization workflow family: channel parameters, user-configured runoff matrices, bifurcation/MPI setup, and gauge/dam allocation templates.
+- `script_analysis/` is for independent map analysis and diagnostic workflows.
+
+All shared Fortran sources and executables remain centralized in `code/`. Executable prefixes identify tool families (`region_*`, `param_*`, `analysis_*`, `allocate_*`); allocation programs do not require a separate `script_allocate/` directory. These are the approved target organization for migration; existing `map/src/` legacy tools remain unchanged.
+
+The general-purpose runoff input-matrix generator is available as `param_generate_inpmat`, built with `make -C map/tools/code param`. Its map-local wrapper template is [`script_params/s02-generate_inpmat.sh`](script_params/s02-generate_inpmat.sh); copy it into a target map's `script_params/` directory before configuring and running it. This generator supports user-selected regular runoff grids and is distinct from `region_default_inpmat`, which creates the standard climatology matrix distributed with prepared maps. See the [parameter workflow guide](script_params/README.md) for required inputs, configuration, outputs, and regression status.
 
 Regional executables use the `region_` prefix. Build them with the active compiler settings in `adm/Mkinclude`:
 
@@ -22,7 +27,7 @@ Map-local scripts do not compile tools. They invoke shared executables through p
 
 ## Regional map preparation
 
-The reusable `script_region/` template is intended for preparing a new regional map: copy it into a target map directory, configure `SOURCE` and geographic bounds in `s01-regional_map.sh`, build the shared programs, then run the script from the copied map-local `script_region/` directory. The workflow crops the base map, filters bifurcation paths, derives network products, crops supported high-resolution layers, and may create an input matrix for the channel-parameter preparation workflow. Exact outputs depend on source-map contents and settings.
+The reusable `script_region/` template is intended for preparing a new regional map: copy it into a target map directory, configure `SOURCE` and geographic bounds in `s01-regional_map.sh`, build the shared programs, then run the script from the copied map-local `script_region/` directory. The workflow crops the base map, filters bifurcation paths, derives network products, crops supported high-resolution layers, and creates the standard annual-runoff-climatology input mapping matrix when a supported high-resolution map is available. `region_default_inpmat` produces this distributed map product for channel cross-section parameter estimation; it is distinct from the user-configured runoff-grid matrices generated later by `param_generate_inpmat`. Exact outputs depend on source-map contents and settings.
 
 The sample-local script directory under `map/mekong_15min/` has a different operational role: it records the maintainer's procedure for preparing the official sample. Its original global map input is provided by the distribution package, not GitHub. Do not run it in CI or point its output at the tracked sample when ordinary testing or user workflow examples are intended.
 

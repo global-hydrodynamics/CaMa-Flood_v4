@@ -30,3 +30,16 @@ No complete baseline execution environment has been frozen. The following is a o
 | Source revision | `c2b1aac25e297607fb4adba2023b5cb6fb5326a8`; documentation, registry, generator, and test changes were uncommitted; existing Mekong CTL edits/deletions were preserved | `git rev-parse HEAD`; `git status --short` |
 | Dataset | Git-tracked Mekong map sample; CTL integration generated only in temporary directories | `map/tests/validate_mekong_sample.py`; `map/tools/tests/test_mekong_ctl_integration.py` |
 | Limitations | No map generation, full model simulation, network validation, or scientific comparison. The Fortran compiler emitted existing int32-to-int16 narrowing warnings in `region_combine_hires.F90`. | Validation record `VR-0018` |
+
+## Additional capture: 2026-10-31 input-matrix tool rename checks
+
+| Field | Recorded value | Evidence/reference |
+| --- | --- | --- |
+| Environment ID | `AUDIT-macos-arm64-2026-10-31` | This validation run |
+| Collection date | `2026-10-31` (date precision) | Current environment inspection |
+| OS/architecture | Darwin 23.3.0, arm64 | `uname -srm` |
+| Python | Python 3.13.3 | `python3 --version` |
+| Fortran compiler | GNU Fortran 14.2.0 (Homebrew GCC 14.2.0_1) | `gfortran --version` |
+| Source revision | `9ccedf69253f6f1e1ac1ea4c3aa01dd37e2cac3c`; rename/documentation worktree dirty | `git rev-parse HEAD`; `git status --short` |
+| Dataset | Tracked Mekong sample, read through a test that copies it into a temporary tree | `map/tools/tests/test_mekong_ctl_integration.py`; `map/tests/validate_mekong_sample.py` |
+| Limitations | No global-source regionalization, model simulation, or scientific comparison was run | `VR-0023` |
