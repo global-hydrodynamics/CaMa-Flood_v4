@@ -1,4 +1,4 @@
 discussion_id,event_id,source_type,source_reference,summary_path,review_status,source_access
 DR-0001,EV-0001,Codex conversation,"Maintainer instructions in active Codex conversation, 2026-10-28; no stable archive ID",research/records/discussions/DR-0001.md,pending,restricted
 DR-0002,EV-0059,Codex conversation,"Maintainer request and clarification in active Codex conversation, 2026-10-30; no stable archive ID",research/records/discussions/DR-0002.md,pending,restricted
-DR-0003,EV-0062,repository history and research records,"EV-0020..EV-0031; commits ad7d544/c2b1aac/ea14d6b; VR-0005..VR-0008",research/records/discussions/DR-0003.md,pending,public_and_local_observation
+DR-0003,EV-0062,repository history and research records,"EV-0020..EV-0031; commits ad7d544/c2b1aac/ea14d6b; VR-0005..VR-0008; maintainer clarification in Codex conversation 2026-10-30",research/records/discussions/DR-0003.md,pending,public_and_restricted
