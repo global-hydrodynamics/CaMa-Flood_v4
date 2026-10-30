@@ -44,6 +44,7 @@ jobs:
           if command -v gfortran >/dev/null 2>&1; then
             trap 'make -C map/tools/code clean' EXIT
             make -C map/tools/code region
+            python3 -B -m unittest map.tools.tests.test_region_cut_domain_optional_maps -v
           else
             echo "SKIP: gfortran is unavailable; regional Fortran compilation was not run."
           fi

@@ -23,12 +23,15 @@
 !
       character*256          ::  fnextxy0, fdownxy0, felevtn0, ffldhgt0, fctmare0, fgrdare0, fuparea0
       character*256          ::  flonlat0, fnxtdst0, frivlen0, fwidth0
+      character*256          ::  fcatmpx0, fclass0
       character*256          ::  fnextxy,  fdownxy,  felevtn,  ffldhgt,  fctmare,  fgrdare,  fuparea
       character*256          ::  flonlat,  fnxtdst,  frivlen,  fwidth
+      character*256          ::  fcatmpx,  fclass
       character*256          ::  flsmask
 
       integer,allocatable    ::  nextx0(:,:),  nexty0(:,:)      !!  global maps
       integer,allocatable    ::  downx0(:,:),  downy0(:,:)      !!  global maps
+      integer,allocatable    ::  catmpx0(:,:), classmap0(:,:)
       real,allocatable       ::  elevtn0(:,:), fldhgt0(:,:,:)
       real,allocatable       ::  ctmare0(:,:), uparea0(:,:), grdare0(:,:)
       real,allocatable       ::  lon0(:,:)   , lat0(:,:)
@@ -37,6 +40,7 @@
 
       integer,allocatable    ::  nextx(:,:),  nexty(:,:)        !!  regional maps
       integer,allocatable    ::  downx(:,:),  downy(:,:)        !!  regional maps
+      integer,allocatable    ::  catmpx(:,:), classmap(:,:)
       real,allocatable       ::  elevtn(:,:), fldhgt(:,:,:)
       real,allocatable       ::  ctmare(:,:), uparea(:,:),   grdare(:,:)
       real,allocatable       ::  lon(:,:),    lat(:,:)
@@ -48,6 +52,7 @@
 
       integer,allocatable    ::  check(:,:)
       integer                ::  icheck
+      logical                ::  has_catmpx, has_class
 
 ! ==================================================
 ! Read the source-map directory and requested west/east/south/north bounds.
@@ -187,6 +192,25 @@
       fnxtdst0=trim(global_dir)//'nxtdst.bin'
       frivlen0=trim(global_dir)//'rivlen.bin'
       fwidth0=trim(global_dir)//'width.bin'
+      fcatmpx0=trim(global_dir)//'catmpx.bin'
+      fclass0=trim(global_dir)//'class.bin'
+
+! These supplementary integer layers are optional in older/source map sets.
+! Preserve their source values on the cropped rectangle when they are present.
+      inquire(file=trim(fcatmpx0),exist=has_catmpx)
+      inquire(file=trim(fclass0),exist=has_class)
+      if( has_catmpx )then
+        allocate(catmpx0(nx,ny),catmpx(mx,my))
+        open(11,file=fcatmpx0,form='unformatted',access='direct',recl=4*nx*ny)
+        read(11,rec=1) catmpx0
+        close(11)
+      endif
+      if( has_class )then
+        allocate(classmap0(nx,ny),classmap(mx,my))
+        open(11,file=fclass0,form='unformatted',access='direct',recl=4*nx*ny)
+        read(11,rec=1) classmap0
+        close(11)
+      endif
 
 print *, 'read global maps'
       print *, trim(fnextxy0)
@@ -276,6 +300,11 @@ print *, 'cut domain'
           jx=ix+dx
           jy=iy+dy
 
+! Unlike river-network fields, these raster values are retained for every
+! cropped grid cell, including non-river land cells.
+          if( has_catmpx ) catmpx(ix,iy)=catmpx0(jx,jy)
+          if( has_class )  classmap(ix,iy)=classmap0(jx,jy)
+
           if( nextx0(jx,jy)>0 )then
             nextx(ix,iy)=nextx0(jx,jy)-dx
             nexty(ix,iy)=nexty0(jx,jy)-dy
@@ -328,6 +357,8 @@ print *, 'write reagional maps'
       frivlen='../rivlen.bin'
       fwidth ='../width.bin'
       flsmask='../lsmask.bin'
+      fcatmpx='../catmpx.bin'
+      fclass='../class.bin'
 
       print *, trim(fnextxy)
       open(21,file=fnextxy,form='unformatted',access='direct',recl=4*mx*my)
@@ -394,6 +425,17 @@ print *, 'write reagional maps'
       open(21,file=flsmask,form='unformatted',access='direct',recl=4*mx*my)
       write(21,rec=1) lsmask
       close(21)
+
+      if( has_catmpx )then
+        open(21,file=fcatmpx,form='unformatted',access='direct',recl=4*mx*my)
+        write(21,rec=1) catmpx
+        close(21)
+      endif
+      if( has_class )then
+        open(21,file=fclass,form='unformatted',access='direct',recl=4*mx*my)
+        write(21,rec=1) classmap
+        close(21)
+      endif
 
 ! Trace rivers touching the outer two-cell border and mask those paths in the
 ! separate nextxy_noedge.bin used by regional processing tools.

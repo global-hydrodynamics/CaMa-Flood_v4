@@ -32,16 +32,16 @@ For high-resolution GrADS CTL output, the generator removes a terminal `_hires` 
 | 81 | Verification data (currently `gauge_alloc`) | Data used to check or support map allocation and verification. |
 | 91 | Metadata (`metadata`) | Map dimensions, bounds, and other non-raster map metadata. |
 
-The temporary `workflow_stage` column follows `category_id`; it is a sample/workflow status annotation, not an intrinsic property of a map variable or a statement of runtime necessity. Set it to `default` for registry rows whose matching binary products are present in the current `map/mekong_15min/` sample. Other workflow values are retained only where a maintainer has identified them; leave the field blank when no status has been confirmed. Keep all rows for a multi-variable file consistent. This field is not source provenance: record global defaults and regional derivation in `generation_or_processing`.
+The temporary `workflow_stage` column follows `category_id`; it is a sample/workflow status annotation, not an intrinsic property of a map variable or a statement of runtime necessity. Set it to `default` for registry rows whose matching product files are present in the current `map/mekong_15min/` sample, including registered text metadata/configuration products. Other workflow values are retained only where a maintainer has identified them; leave the field blank when no status has been confirmed. Keep all rows for a multi-variable file consistent. This field is not source provenance: record global defaults and regional derivation in `generation_or_processing`.
 
-Sort rows by ascending numeric `category_id`, then `binary_filename` (case-insensitive), then numeric `record_index` with blank indices last. Preserve all evidence and verification-status fields during recategorization. Use the functional descriptions and evidence to select a group; do not classify from a filename alone. Treat `workflow_stage` as a temporary manual execution annotation that may be progressively filled as stages are verified; never use it to define the product or general workflow.
+Sort rows by ascending numeric `category_id`, then `binary_filename` (case-insensitive), then numeric `record_index` with blank indices last. Preserve all evidence and verification-status fields during recategorization. Use the functional descriptions and evidence to select a group; do not classify from a filename alone. Treat `workflow_stage` as a temporary sample/workflow-status annotation; never use it to define the product or general workflow.
 
 ### Columns
 
 | Column | Meaning |
 | --- | --- |
 | `category_id` | Provisional numeric grouping/sort key from the table above; it is the first CSV column and may be revised as the inventory develops. |
-| `workflow_stage` | Provisional sample/workflow status immediately after `category_id`. `default` means the matching binary is present in the current Mekong sample; it does not mean the product is required by the standard simulation or distributed in every map. Blank means no status is confirmed. Keep all rows for a multi-variable file consistent. |
+| `workflow_stage` | Provisional sample/workflow status immediately after `category_id`. `default` means the matching product file is present in the current Mekong sample; it does not mean the product is required by the standard simulation or distributed in every map. Blank means no status is confirmed. Keep all rows for a multi-variable file consistent. |
 | `category` | Descriptive product subgroup within the broad functional group identified by `category_id`. |
 | `product_kind` | `binary_variable_or_product`, `nonbinary_or_generated_product`, or a brief product-kind value when a source format is known. |
 | `binary_filename` | Primary filename or logical output filename; it may be a pattern such as `bifprm-<N>.txt`. |

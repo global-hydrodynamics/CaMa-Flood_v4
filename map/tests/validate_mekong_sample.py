@@ -61,6 +61,22 @@ class MekongFixtureTests(unittest.TestCase):
         self.assertEqual(actual_base, expected_base)
         self.assertEqual(actual_high, expected_high)
 
+    def test_registered_text_metadata_present_in_sample_has_default_status(self) -> None:
+        with (ROOT / "map" / "map_variables.csv").open(newline="", encoding="utf-8") as stream:
+            rows = list(csv.DictReader(stream))
+        sample_text = {
+            "params.txt": "params.txt",
+            "bifori.txt": "bifori.txt",
+            "diminfo_test-1deg.txt": "diminfo_test-1deg.txt",
+            "1min/location.txt": "<HIRES>/location.txt",
+        }
+        for relative, registered_name in sample_text.items():
+            with self.subTest(path=relative):
+                self.assertTrue((MAP / relative).is_file())
+                matches = [row for row in rows if row["binary_filename"] == registered_name]
+                self.assertEqual(len(matches), 1)
+                self.assertEqual(matches[0]["workflow_stage"], "default")
+
     def test_binary_byte_counts_match_mekong_grid_and_registered_types(self) -> None:
         base_cells = 80 * 120
         high_cells = 1200 * 1800
