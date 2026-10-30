@@ -10,7 +10,7 @@ module nc_mod
     &   cf_time_axis, &
     &   cf_read_time_axis, &
     &   cf_find_time_record, &
-    &   cf_calendar_matches_lleapyr
+    &   cf_calendar_supports_model
     use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
     use netcdf
     implicit none
@@ -109,7 +109,7 @@ type(NCConfig) function init_ncconfig(path, varname, slice_dimname, slice_index)
         &   obj%time_axis%ntime, ', data time dimension length=', obj%time_len
         stop 9
     endif
-    calendar_ok = cf_calendar_matches_lleapyr( &
+    calendar_ok = cf_calendar_supports_model( &
     &   obj%time_axis%calendar, LLEAPYR, ierr, message)
     if (ierr /= 0_JPIM .or. .not. calendar_ok) then
         write(LOGNAM, '(3a,l1)') '[nc_mod/init_ncconfig ERROR] calendar=', &
