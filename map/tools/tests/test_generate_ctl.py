@@ -9,7 +9,7 @@ from map.tools.code.generate_ctl import CtlError, generate_directory, missing_se
 
 FIELDS = [
     "category_id", "workflow_stage", "category", "product_kind", "binary_filename",
-    "alternative_binary_filename", "name", "long_name", "units", "dtype",
+    "name", "long_name", "units", "dtype",
     "dimensions", "record_layout", "missing_value", "special_values", "record_index",
     "record_count",
 ]
@@ -18,7 +18,7 @@ FIELDS = [
 def row(filename: str, name: str, dtype: str, dimensions: str = "NX,NY", *,
         record_layout: str = "record 1", record_index: str = "1", record_count: str = "1",
         missing: str = "-9999", special: str = "") -> dict[str, str]:
-    return dict(zip(FIELDS, ["11", "", "map", "binary", filename, "", name,
+    return dict(zip(FIELDS, ["11", "", "map", "binary_map", filename, name,
                              f"{name} test layer", "m", dtype, dimensions, record_layout,
                              missing, special, record_index, record_count]))
 
@@ -112,14 +112,23 @@ class GenerateCtlTests(unittest.TestCase):
         self.assertFalse((self.map_dir / "known.ctl").exists())
 
     def test_input_matrix_uses_its_diminfo_descriptor_and_mixed_record_types(self):
-        matrix = row(
-            "inpmat_test-1deg.bin", "inpmat", "int32 + float32", "NX,NY,INPN",
-            record_layout=("record 1: INPN x-index fields; record 2: INPN y-index fields; "
-                           "record 3: INPN overlap-area fields (each record shape NX,NY,INPN)"),
-            record_index="", record_count="",
-            missing="0", special="Unused mapping slots are initialized to zero",
-        )
-        write_registry(self.registry, [matrix])
+        matrix_rows = []
+        for name, dtype, index, long_name, units in (
+            ("inpx", "int32", "1", "Input-grid x index", "1"),
+            ("inpy", "int32", "2", "Input-grid y index", "1"),
+            ("inpa", "float32", "3", "Input-grid overlap area", "m2"),
+        ):
+            item = row(
+                "inpmat_test-1deg.bin", name, dtype, "NX,NY,INPN",
+                record_layout=f"block {index}: {name} levels 1..INPN",
+                record_index=index, record_count="3", missing="0",
+                special="0: unused contribution slot",
+            )
+            item["product_kind"] = "binary_mult"
+            item["long_name"] = long_name
+            item["units"] = units
+            matrix_rows.append(item)
+        write_registry(self.registry, matrix_rows)
         (self.map_dir / "diminfo_test-1deg.txt").write_text(
             "3 !! nXX\n2 !! nYY\n2 !! floodplain layers\n360 !! input nXX\n"
             "180 !! input nYY\n4 !! input num\ninpmat_test-1deg.bin\n"
@@ -136,8 +145,9 @@ class GenerateCtlTests(unittest.TestCase):
         self.assertIn("inpx 4 -1,40,4", ctl)
         self.assertIn("inpy 4 -1,40,4", ctl)
         self.assertIn("inpa 4 99", ctl)
-        matrix["missing_value"] = "-7"
-        write_registry(self.registry, [matrix])
+        for item in matrix_rows:
+            item["missing_value"] = "-7"
+        write_registry(self.registry, matrix_rows)
         (self.map_dir / "inpmat_test-1deg.ctl").unlink()
         self.assertEqual(self.run_generator().generated, 1)
         self.assertIn("undef -7", (self.map_dir / "inpmat_test-1deg.ctl").read_text())
@@ -218,8 +228,10 @@ class GenerateCtlTests(unittest.TestCase):
         self.assertIn("-10", nextx["special_values"])
 
         expected = {
-            ("downxy.bin", "downxy"): ("-9999", ("-1000",)),
-            ("<HIRES>/<AREA>.downxy.bin", "downxy_hires"): ("-9999", ("-999", "-1000")),
+            ("downxy.bin", "downx"): ("-9999", ("-1000",)),
+            ("downxy.bin", "downy"): ("-9999", ("-1000",)),
+            ("<HIRES>/<AREA>.downxy.bin", "downx"): ("-9999", ("-999", "-1000")),
+            ("<HIRES>/<AREA>.downxy.bin", "downy"): ("-9999", ("-999", "-1000")),
             ("<HIRES>/<AREA>.flwdir.bin", "flwdir"): ("-9", ("0", "-1")),
         }
         with registry.open(newline="", encoding="utf-8") as stream:

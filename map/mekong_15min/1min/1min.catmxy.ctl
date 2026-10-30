@@ -7,6 +7,6 @@ ydef 1800 linear 5.00833333333 0.0166666666667
 tdef 1 linear 00Z01jan2000 1yr
 zdef 1 linear 1 1
 vars 2
-catmxx 1 -1,40,2,-1 Regional high-resolution catchment x/y indices [1]
-catmyy 1 -1,40,2,-1 Regional high-resolution catchment x/y indices [1]
+catmxx 1 -1,40,2,-1 Regional unit-catchment x index [1]
+catmyy 1 -1,40,2,-1 Regional unit-catchment y index [1]
 ENDVARS

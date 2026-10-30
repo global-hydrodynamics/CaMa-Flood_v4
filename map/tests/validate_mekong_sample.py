@@ -45,7 +45,7 @@ class MekongFixtureTests(unittest.TestCase):
 
     def test_committed_base_and_high_resolution_binary_inventory(self) -> None:
         expected_base = {
-            "basin.bin", "bsncol.bin", "ctmare.bin", "downxy.bin", "elevtn.bin",
+            "basin.bin", "bsncol.bin", "catmpx.bin", "class.bin", "ctmare.bin", "downxy.bin", "elevtn.bin",
             "fldhgt.bin", "grdare.bin", "inpmat_test-1deg.bin", "lonlat.bin",
             "lsmask.bin", "nextxy.bin", "nextxy_noedge.bin", "nxtdst.bin",
             "nxtdst_grid.bin", "rivlen.bin", "rivlen_grid.bin", "rivseq.bin",
@@ -84,7 +84,7 @@ class MekongFixtureTests(unittest.TestCase):
         with (ROOT / "map" / "map_variables.csv").open(newline="", encoding="utf-8") as stream:
             rows = list(csv.DictReader(stream))
         binary_paths = sorted(MAP.rglob("*.bin"))
-        self.assertEqual(len(binary_paths), 33)
+        self.assertEqual(len(binary_paths), 35)
         for path in binary_paths:
             self.assertGreater(path.stat().st_size, 0, path.relative_to(MAP))
             self.assertLess(path.stat().st_size, 100 * 1024 * 1024, path.relative_to(MAP))

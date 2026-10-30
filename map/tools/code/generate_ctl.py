@@ -60,13 +60,14 @@ SUPPORTED_TYPES = {
 }
 DEFAULT_MISSING = {"int8": -9, "int16": -9999, "int32": -9999, "float32": -9999.0}
 REQUIRED_COLUMNS = {
-    "category_id", "binary_filename", "alternative_binary_filename", "name",
+    "category_id", "binary_filename", "name",
     "long_name", "units", "dtype", "dimensions", "record_layout",
     "record_index", "record_count", "missing_value", "special_values",
 }
 NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,14}$")
 RECORD_RE = re.compile(r"^\s*record\s+(\d+)\s*(?::\s*|\s+)?([A-Za-z][A-Za-z0-9_]*)?\s*$", re.I)
 LAYER_LAYOUT_RE = re.compile(r"^\s*records\s+1\.\.([A-Za-z0-9_]+)\s*;\s*record\s+k\s+is\s+layer\s+k\s*$", re.I)
+MATRIX_BLOCK_RE = re.compile(r"^block\s+(\d+)\s*:\s*([A-Za-z][A-Za-z0-9_]*)\s+levels\s+1\.\.INPN$", re.I)
 
 
 def default_registry_path() -> Path:
@@ -162,12 +163,10 @@ def read_location(path: Path) -> list[Area]:
 
 
 def registry_patterns(row: dict[str, str]) -> list[str]:
-    result = []
-    for key in ("binary_filename", "alternative_binary_filename"):
-        value = (row.get(key) or "").strip()
-        if value and value.lower() not in {"n/a", "na", "none"}:
-            result.extend(item.strip() for item in value.split(";") if item.strip())
-    return result
+    value = (row.get("binary_filename") or "").strip()
+    if not value or value.lower() in {"n/a", "na", "none"}:
+        return []
+    return [item.strip() for item in value.split(";") if item.strip()]
 
 
 def pattern_glob(pattern: str) -> str:
@@ -350,7 +349,7 @@ def expected_dimensions(row: dict[str, str], grid: Grid) -> bool:
 
 
 def read_input_matrix_descriptor(binary_path: Path, grid: Grid,
-                                 registry_row: dict[str, str]) -> tuple[list[Variable], int, int | float, bool]:
+                                 registry_rows: list[dict[str, str]]) -> tuple[list[Variable], int, int | float, bool]:
     """Read the companion text file written by region_generate_inpmat.F90."""
     stem = binary_path.stem
     candidates = [binary_path.with_suffix(".txt")]
@@ -384,21 +383,48 @@ def read_input_matrix_descriptor(binary_path: Path, grid: Grid,
         (west, grid.west), (east, grid.east), (south, grid.south), (north, grid.north)
     )):
         raise CtlValidationError(f"{descriptor} geographic bounds do not match params.txt")
-    sentinel, fallback = missing_sentinel(registry_row, "int32")
-    return [
-        Variable("inpx", inpn, "int32", f"Input-grid x index (INPN={inpn})", "", 1),
-        Variable("inpy", inpn, "int32", f"Input-grid y index (INPN={inpn})", "", 2),
-        Variable("inpa", inpn, "float32", f"Overlap area (INPN={inpn})", "m2", 3),
-    ], 3, sentinel, fallback
+    expected_types = {"inpx": "int32", "inpy": "int32", "inpa": "float32"}
+    expected_indices = {"inpx": 1, "inpy": 2, "inpa": 3}
+    if len(registry_rows) != 3 or {(row.get("name") or "").strip() for row in registry_rows} != set(expected_types):
+        raise CtlValidationError("input-matrix registry must contain one row each for inpx, inpy, and inpa")
+
+    variables: list[Variable] = []
+    sentinels: set[int | float] = set()
+    fallbacks: list[bool] = []
+    for row in registry_rows:
+        name = (row.get("name") or "").strip()
+        dtype = (row.get("dtype") or "").strip().lower()
+        if dtype != expected_types[name]:
+            raise CtlValidationError(f"input-matrix variable {name} must use dtype {expected_types[name]}")
+        if (row.get("dimensions") or "").replace(" ", "").upper() != "NX,NY,INPN":
+            raise CtlValidationError(f"input-matrix variable {name} must use dimensions NX,NY,INPN")
+        try:
+            index = int((row.get("record_index") or "").strip())
+            count = int((row.get("record_count") or "").strip())
+        except ValueError as exc:
+            raise CtlValidationError(f"input-matrix variable {name} needs numeric record_index and record_count") from exc
+        layout_match = MATRIX_BLOCK_RE.fullmatch((row.get("record_layout") or "").strip())
+        if index != expected_indices[name] or count != 3:
+            raise CtlValidationError("input-matrix block indices must be inpx=1, inpy=2, inpa=3 with record_count=3")
+        if not layout_match or int(layout_match.group(1)) != index or layout_match.group(2).lower() != name:
+            raise CtlValidationError(f"input-matrix record_layout does not match block {index} ({name})")
+        sentinel, fallback = missing_sentinel(row, dtype)
+        sentinels.add(sentinel)
+        fallbacks.append(fallback)
+        description = (row.get("long_name") or "").strip() or f"{name} (INPN={inpn})"
+        units = (row.get("units") or "").strip()
+        variables.append(Variable(name, inpn, dtype, description, units, index))
+    if len(sentinels) != 1:
+        raise CtlValidationError("input-matrix variables must use one shared missing-value sentinel")
+    variables.sort(key=lambda variable: variable.record_index)
+    return variables, 3, sentinels.pop(), any(fallbacks)
 
 
-def is_input_matrix(row: dict[str, str]) -> bool:
+def is_input_matrix(rows: list[dict[str, str]]) -> bool:
     return (
-        (row.get("dimensions") or "").replace(" ", "").upper() == "NX,NY,INPN"
-        and (row.get("dtype") or "").strip().lower() == "int32 + float32"
-        and "x-index" in (row.get("record_layout") or "").lower()
-        and "y-index" in (row.get("record_layout") or "").lower()
-        and "overlap-area" in (row.get("record_layout") or "").lower()
+        bool(rows)
+        and (Path(rows[0].get("binary_filename", "")).name.startswith("inpmat_"))
+        and all((row.get("dimensions") or "").replace(" ", "").upper() == "NX,NY,INPN" for row in rows)
     )
 
 
@@ -495,8 +521,8 @@ def generate_directory(map_dir: Path, registry_path: Path, *, dry_run: bool = Fa
         try:
             if base_grid is not None:
                 grid = base_grid
-                if len(matches) == 1 and is_input_matrix(matches[0]):
-                    variables, records, sentinel, used_fallback = read_input_matrix_descriptor(path, grid, matches[0])
+                if is_input_matrix(matches):
+                    variables, records, sentinel, used_fallback = read_input_matrix_descriptor(path, grid, matches)
                 elif not all(expected_dimensions(row, grid) for row in matches):
                     declared_dims = (matches[0].get("dimensions") or "").replace(" ", "").upper()
                     if declared_dims not in {"NX,NY", "NX,NY,NLFP"}:

@@ -10,7 +10,7 @@ Dataset-specific dimensions, bounds, and spacing remain in each map dataset's me
 
 ## CSV format and row model
 
-The CSV uses UTF-8, a header row, and one row per logical variable or traceable data product. Multi-record files such as `nextxy.bin` have one row per logical variable. A single row may link alternative files that implement the same variable, as for `rivwth.bin` and `rivwth_gwdlr.bin`; the latter is width only. Non-raster tables and source-generated outputs may also be recorded, with their real layout stated rather than forced into `NX × NY`.
+The CSV uses UTF-8, a header row, and one row per logical variable or traceable data product. Multi-variable files such as `nextxy.bin` have one row per variable, with a repeated filename and a per-row record index. When the same variable is available in multiple files, record one row per file. Non-raster tables and source-generated outputs may also be recorded, with their real layout stated rather than forced into `NX × NY`.
 
 Dimensions use symbolic names and Fortran array order where verified, such as `NX,NY` or `NX,NY,NLFP`. Use `N/A` when a product is non-spatial and has no map-grid dimensions (for example, text configuration files, tables, or GrADS CTLs); put its record structure in `record_layout` and `record_count`. Blank cells mean “not specified in this inventory,” not zero, dimensionless, or absent. Use `unknown` or `not established` where a value is known to be unresolved. Evidence paths are repository-relative; citations may be URLs.
 
@@ -43,18 +43,17 @@ Sort rows by ascending numeric `category_id`, then `binary_filename` (case-insen
 | `category_id` | Provisional numeric grouping/sort key from the table above; it is the first CSV column and may be revised as the inventory develops. |
 | `workflow_stage` | Provisional sample/workflow status immediately after `category_id`. `default` means the matching product file is present in the current Mekong sample; it does not mean the product is required by the standard simulation or distributed in every map. Blank means no status is confirmed. Keep all rows for a multi-variable file consistent. |
 | `category` | Descriptive product subgroup within the broad functional group identified by `category_id`. |
-| `product_kind` | `binary_variable_or_product`, `nonbinary_or_generated_product`, or a brief product-kind value when a source format is known. |
+| `product_kind` | One of four data-product classes: `binary_map` for one 2-D map variable; `binary_mult` for a binary file containing multiple variable arrays or a 3-D/multilayer array; `text_meta` for descriptive metadata/configuration text; or `text_table` for tabular text such as station records. Repeat the file-level kind on every variable row for that file. The `dtype` column records each variable's actual storage type or encoding. |
 | `binary_filename` | Primary filename or logical output filename; it may be a pattern such as `bifprm-<N>.txt`. |
-| `alternative_binary_filename` | Alternate file carrying the same variable/product, when applicable. Blank means no alternative is registered. |
-| `name` | Established model variable/product short name; use the source name where available. |
+| `name` | One variable's short name for GrADS or the corresponding product field. Keep one name per row; represent a multi-variable file with one row per variable and repeat `binary_filename`. Do not put slash-separated names in this column. |
 | `long_name` | Concise English label proposed for human and future NetCDF use. Blank when semantics are unresolved. |
-| `physical_description` | Meaning, assumptions, or explicit uncertainty. Do not infer from a filename alone. |
+| `physical_description` | Concise physical or functional meaning, with only essential assumptions or uncertainty. Put code legends in `special_values`, provenance in `generation_or_processing`, and file structure in `record_layout`; do not repeat those details here. Do not infer meaning from a filename alone. |
 | `units` | Verified or proposed unit string. Blank does not imply dimensionless. |
 | `dtype` | Verified binary primitive/layout, e.g. `int32`, `float32`, `mixed`, `formatted text`, `NetCDF`, or `unknown`. |
 | `dimensions` | Symbolic map/data shape or a descriptive configuration-dependent value; use `N/A` for non-spatial text/configuration products with no map-grid dimensions, and do not hardcode one map's concrete dimensions here. |
-| `record_index` | One-based numeric record for a row representing one field in a multi-variable file. Blank for products whose record cannot be established. |
-| `record_count` | Total records in the binary file for the row's product (`1`, `2`, or symbolic `NLFP` when variable by dataset). |
-| `record_layout` | Human-readable record indexing/order, or `not established` if unresolved. |
+| `record_index` | One-based record or variable-block index for a variable row in a multi-variable file. For input-matrix files, this is the block order (`inpx`, `inpy`, `inpa`); each block contains `INPN` levels. Blank for products whose position cannot be established. |
+| `record_count` | Total records/variable blocks represented by the file (for example, `2` for `nextxy.bin`, `3` for an input matrix, or symbolic `NLFP` for the `fldhgt` layers). |
+| `record_layout` | Machine-readable record/block mapping where supported (for example, `record 1` or `block 1: inpx levels 1..INPN`), plus human-readable indexing/order; use `not established` if unresolved. |
 | `missing_value` | One numeric sentinel stored in the original binary variable. Blank means the stored sentinel is not established; it does not mean that the data are known to have no missing value. This field records current binary data, not an automatic NetCDF `_FillValue`/`missing_value` policy. |
 | `special_values` | Human-readable meanings for other meaningful codes, such as river mouths, boundary outlets, sinks, and categorical values. Do not repeat the missing sentinel here or treat these codes as missing. |
 | `usage` | Short workflow role, such as runtime input, preprocessing input/output, visualization, or analysis. |

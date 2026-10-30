@@ -7,6 +7,6 @@ ydef 120 linear 5.125 0.25
 tdef 1 linear 00Z01jan2000 1yr
 zdef 1 linear 1 1
 vars 2
-downx 1 -1,40,4 Base-resolution downstream grid fields
-downy 1 -1,40,4 Base-resolution downstream grid fields
+downx 1 -1,40,4 Downstream x component
+downy 1 -1,40,4 Downstream y component
 ENDVARS

@@ -63,13 +63,20 @@ class MekongCtlWrapperIntegrationTests(unittest.TestCase):
             self.assertIn("vars 2", (fixture / "nextxy.ctl").read_text())
             self.assertIn("nextx 1 -1,40,4", (fixture / "nextxy.ctl").read_text())
             self.assertIn("undef -9999", (fixture / "nextxy.ctl").read_text())
+            noedge_ctl = (fixture / "nextxy_noedge.ctl").read_text()
+            self.assertIn("nextx_noedge 1 -1,40,4", noedge_ctl)
+            self.assertIn("nexty_noedge 1 -1,40,4", noedge_ctl)
             self.assertIn("downx 1 -1,40,4", (fixture / "downxy.ctl").read_text())
+            self.assertIn("downy 1 -1,40,4", (fixture / "downxy.ctl").read_text())
             self.assertIn("zdef 10 linear", (fixture / "fldhgt.ctl").read_text())
             self.assertIn("zdef 4 linear", (fixture / "inpmat_test-1deg.ctl").read_text())
             self.assertIn("xdef 1200 linear", (fixture / "1min" / "1min.catmxy.ctl").read_text())
             catmxy_ctl = (fixture / "1min" / "1min.catmxy.ctl").read_text()
             self.assertIn("catmxx 1 -1,40,2,-1", catmxy_ctl)
             self.assertIn("catmyy 1 -1,40,2,-1", catmxy_ctl)
+            high_downxy_ctl = (fixture / "1min" / "1min.downxy.ctl").read_text()
+            self.assertIn("downx 1 -1,40,2,-1", high_downxy_ctl)
+            self.assertIn("downy 1 -1,40,2,-1", high_downxy_ctl)
             for name, sentinel in (("1min.catmz100.ctl", 247), ("1min.catmzz.ctl", 247),
                                    ("1min.flwdir.ctl", 247), ("1min.visual.ctl", 247),
                                    ("1min.downxy.ctl", -9999)):
