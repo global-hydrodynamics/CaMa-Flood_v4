@@ -1,14 +1,19 @@
-# Regional map preparation template
+# Regional map preparation
 
-This template prepares a regional CaMa-Flood map from a compatible source map. It is the v5 workflow under `map/tools/`; the legacy v4 workflow remains under `map/src/src_region/`. Fortran programs are shared under `map/tools/code/` and built once for use by all map datasets.
+This guide describes the v5 regionalization workflow under `map/tools/`. It prepares a regional map from a compatible source map. The legacy v4 workflow remains under `map/src/src_region/` and is not modified here. Configure and execute `s01-regional_map.sh` once; the individual Fortran programs are implementation details and should not be run separately for the standard workflow.
 
-## Inputs and configuration
+## Inputs and settings
 
-The source directory must contain `params.txt`, `nextxy.bin`, `downxy.bin`, `elevtn.bin`, `fldhgt.bin`, `ctmare.bin`, `grdare.bin`, `uparea.bin`, `lonlat.bin`, `nxtdst.bin`, `rivlen.bin`, `width.bin`, and `bifori.txt`. These requirements are derived from the current Fortran readers. Dimensions and binary layouts must match the source map parameters.
+The source directory must contain a compatible `params.txt`, `nextxy.bin`, `downxy.bin`, `elevtn.bin`, `fldhgt.bin`, `ctmare.bin`, `grdare.bin`, `uparea.bin`, `lonlat.bin`, `nxtdst.bin`, `rivlen.bin`, `width.bin`, and `bifori.txt`. `cut_domain` reads the map geometry and listed grids; `cut_bifway` filters `bifori.txt` using the crop metadata and regional network. Confirm the binary formats and dimensions match the selected source map.
 
-High-resolution processing is optional. For a supported tag (`1min`, `30sec`, `15sec`, or `3sec`), the source needs a `location.txt` and the layers it lists. The parameterization input matrix uses the first available regional high-resolution tag in the order `1min`, `30sec`, `15sec`, `3sec`, and also requires the sample annual-mean runoff input under `map/data`.
+High-resolution cropping is optional. For each supported tag (`1min`, `30sec`, `15sec`, or `3sec`), the source needs that directory's `location.txt`, which lists area names, bounds, dimensions, and cell size, plus the corresponding source layer files read by the combiner. If present, the workflow crops the first available high-resolution tag in the order `1min`, `30sec`, `15sec`, `3sec` to make the channel-parameterization input matrix. This matrix step also requires the sample annual-mean runoff data under `map/data`. These are external/source datasets; the repository's workflow code does not supply a replacement global map or runoff archive.
 
-Configure the settings at the top of `s01-regional_map.sh`:
+Copy the template into a map directory and edit the settings at the top of `s01-regional_map.sh`:
+
+```sh
+mkdir -p map/myregion_15min
+cp -a map/tools/script_region map/myregion_15min/
+```
 
 ```sh
 SOURCE="../../glb_15min/"
@@ -18,46 +23,51 @@ SOUTH="5.0"
 NORTH="35.0"
 ```
 
-`SOURCE` is relative to the current `script_region/` directory or an absolute path; retain its trailing slash. Configure bounds for the target region and source-map coverage.
+`SOURCE` is relative to the copied `script_region/` directory or absolute; keep the trailing slash. Choose bounds contained in the source map's coverage. The Mekong example uses the v400 global map and 90–110°E, 5–35°N.
 
 ## Build and run
 
-Build shared regional executables once from the repository root, or rebuild after changing compiler settings:
+Build the shared executables explicitly from the repository root, using the active compiler configuration in `adm/Mkinclude`:
 
 ```sh
 make -C map/tools/code region
-```
-
-Then copy the template to a new map directory, configure the copied script, and run it from that map's `script_region/` directory:
-
-```sh
-mkdir -p map/myregion_15min
-cp -a map/tools/script_region map/myregion_15min/
 cd map/myregion_15min/script_region
 ./s01-regional_map.sh
 ```
 
-The script checks that shared executables exist under `../../tools/code/`, then calls them through that path. It does not compile. Keep `script_region/` as the current working directory because the Fortran programs use relative input and output paths. The Makefile uses the active repository `adm/Mkinclude` compiler configuration and writes executables and compiler intermediates directly to `map/tools/code/`. Clean shared build products from the repository root with:
+Do not run it from the map root: the Fortran programs use paths relative to the map-local `script_region/` working directory. The shell verifies the five shared executables exist under `../../tools/code/` but does not compile them. The same binaries serve all map datasets. Rebuild them after changing compiler settings; clean shared build products with `make -C map/tools/code clean` from the repository root.
 
-```sh
-make -C map/tools/code clean
-```
-
-The naming convention is `region_<program>.F90` → `region_<program>`. Parameter tools will use `param_<program>.F90` → `param_<program>` and the same Makefile's `params` target.
+`s01-regional_map.sh` runs the following sequence internally: `region_cut_domain`, `region_cut_bifway`, `region_set_map`, `region_combine_hires` for available source tags, and `region_generate_inpmat` when a suitable high-resolution map exists. The generated `inpmat_test-1deg.bin` and its `diminfo_test-1deg.txt` description support channel width/depth calculations using sample runoff. `generate_inpmat` reads high-resolution `grdare` as km² and converts positive values to m² for the overlap matrix; FLOW generates `grdare` from land-pixel areas, so coastal cells contribute only their land area. These files are not the simulation-specific runoff input matrix, which belongs to the later `script_params/` workflow.
 
 ## Outputs and checks
 
-The workflow writes `region_info.txt`, `dim_change.txt`, and `nextxy_noedge.bin` in `script_region/`. Programs write map outputs mostly in the parent directory: `params.txt`; core binaries `nextxy.bin`, `downxy.bin`, `elevtn.bin`, `fldhgt.bin`, `ctmare.bin`, `grdare.bin`, `uparea.bin`, `lonlat.bin`, `nxtdst.bin`, `rivlen.bin`, `width.bin`, and `lsmask.bin`; `bifori.txt`; and derived network files such as `rivseq.bin`, `basin.bin`, `bsncol.bin`, `upgrid.bin`, `uparea_grid.bin`, `nxtdst_grid.bin`, and `rivlen_grid.bin`. When source high-resolution tags are available, regional tag directories and their `location.txt` files are created. When an eligible tag and sample runoff data are available, `inpmat_test-1deg.bin` and `diminfo_test-1deg.txt` are produced.
+| Stage | Outputs | Role |
+| --- | --- | --- |
+| Script and crop metadata | `region_info.txt` and `dim_change.txt` in `script_region/` | Requested source/bounds and crop offsets/dimensions used by subsequent programs. |
+| `cut_domain` | Parent map: `params.txt`; cropped `nextxy.bin`, `downxy.bin`, `elevtn.bin`, `fldhgt.bin`, `ctmare.bin`, `grdare.bin`, `uparea.bin`, `lonlat.bin`, `nxtdst.bin`, `rivlen.bin`, `width.bin`, `lsmask.bin`; `nextxy_noedge.bin` | Cropped base-resolution map fields and bifurcation-filter input. `nextxy_noedge.bin` is in the parent map directory. |
+| `cut_bifway` | Parent map: `bifori.txt` | Source bifurcation paths that remain within the regional network. |
+| `set_map` | Parent map: `rivseq.bin`, `basin.bin`, `bsncol.bin`, `upgrid.bin`, `uparea_grid.bin`, `nxtdst_grid.bin`, `rivlen_grid.bin` | Derived river ordering, basin/visualization, and grid-based analysis products. `rivlen_grid.bin` intentionally contains the same downstream-distance array as `nxtdst_grid.bin` for rectangular-grid simulations. |
+| `combine_hires` | Regional high-resolution tag directory, including layers and its `location.txt` | Cropped high-resolution layers and geometry metadata, when corresponding source data are available. |
+| `generate_inpmat` | Parent map: `inpmat_test-1deg.bin` and `diminfo_test-1deg.txt` | Preprocessing input for channel width/depth parameterization when the required high-resolution map and sample runoff are available. |
+| Separate CTL step | `.ctl` files beside eligible binaries | GrADS descriptors based on the base `params.txt` or high-resolution `location.txt`; not written by `s01`. |
 
-The input matrix supports channel width/depth parameter calculation from sample annual-mean runoff. It is not the simulation runoff matrix; that is prepared in the later `src_param` workflow. CTL generation is a separate manual step after reviewing the regionalization outputs:
+Consult [`map_variables.csv`](../../map_variables.csv) for per-product type, dimensions, record layout, missing-value convention, and model/runtime role. Core model inputs and preprocessing/analysis products are distinguished there; the table above names outputs without duplicating every variable definition.
+
+## High-resolution downstream links
+
+In high-resolution `downxy` files, record 1 (`downx`) and record 2 (`downy`) are signed 16-bit offsets on that same high-resolution grid. For a source pixel `(ix, iy)` with 1-based indices, add the two offsets to recover its downstream pixel: `(ix + downx, iy + downy)`. These are relative offsets, not absolute indices. FLOW adjusts the x offset for periodic wrapping at the global longitude seam. The paired sentinel values are `-999` for a river mouth and `-1000` for an inland termination. The output array starts at `-9999`; source inspection shows this remains when no downstream offset is assigned. The maintainer confirms `-9999` means sea in the low-resolution layer, but the high-resolution layer may use a different value for land pixels without an assigned unit catchment; that encoding remains unconfirmed. Consumers treat `downx <= -900` as a stop condition. The regional combiner preserves the offsets as-is. The common registry distinguishes the resolutions and records the unresolved high-resolution sentinel.
+
+Review terminal output after each internal program. The shell checks for build products before starting but does not stop on every processing failure. Confirm expected outputs exist, dimensions agree with the generated `params.txt` / `location.txt`, and binary sizes match the declared record layout. These checks establish file consistency only; they do not validate network correctness or scientific suitability. Run the separate CTL wrapper from the same `script_region/` directory after reviewing map outputs:
 
 ```sh
 ./s02-write_ctl.sh --dry-run
 ./s02-write_ctl.sh
 ```
 
-The wrapper scans the base map and each immediate child directory with `location.txt`, using `params.txt` for the base grid and each high-resolution `location.txt` for its own grid. It replaces existing CTLs by default; use `--no-overwrite` to preserve them. For the regionalization input matrix, the shared filename suffix (such as `_test-1deg`) identifies the runoff-data/configuration variant: `inpmat_test-1deg.bin` is paired with `diminfo_test-1deg.txt`. The latter is written by the current Fortran program and provides the matrix dimensions and record layout. The regional workflow does not invoke CTL generation automatically. Inspect terminal output, `../params.txt`, and expected files for configured source layers and optional branches. Check dimensions and file sizes against source parameters and output metadata. These checks establish basic file consistency only, not river-network correctness or scientific validity. The shell script checks build products but does not stop on every failed processing program, so review each program's output.
+The wrapper uses `params.txt` for the base map and each immediate child directory's `location.txt` for its own grid; existing CTLs are overwritten by default. A high-resolution `location.txt` starts with the area count, then a column header, then one row per area containing its identifier/name, bounds, dimensions, and cell size.
 
-## Current limitations
+## Verification status and limitations
 
-This workflow does not invoke the separate CTL generator, migrate channel-parameter generation, or validate scientific properties. It assumes required source files and compatible binary formats. The actual v5 workflow remains unverified until the maintainer reports results.
+The regionalization workflow and the CTL wrapper have been manually used with the Mekong development/test sample. Source inspection establishes the described file paths and program behavior; the repository records an initial CTL run with 18 base and 12 high-resolution descriptors, including failures for `inpmat_test-1deg.bin` and `width.bin` and a skip for `lsmask.bin`. Subsequent generator changes passed synthetic tests, but a post-fix Mekong wrapper run has not been confirmed in the development record. The committed Mekong `lonlat.ctl` uses the `outlon` / `outlat` labels now recorded in the registry.
+
+Presence of files or successful generation is not scientific validation. No full simulation, river-network validation, or v4/v5 numerical equivalence test is claimed. High-resolution scientific meaning and selected units remain provisional where indicated in the registry. The shell does not stop after every failed Fortran command, so inspect its complete output and do not treat a final zero exit status alone as proof that every stage succeeded.

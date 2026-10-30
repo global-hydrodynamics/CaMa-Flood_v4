@@ -1,56 +1,41 @@
 # CaMa-Flood v5 map tools
 
-`map/tools/` contains reusable map-processing code and map-local workflows for v5. The legacy v4 tools and workflows under `map/src/` remain unchanged. The regional workflow is awaiting maintainer execution and scientific validation.
+`map/tools/` contains the v5 map-processing framework. It is separate from the legacy v4 workflows under `map/src/`, which remain available and unchanged. The regionalization implementation has been run manually on the `map/mekong_15min/` development/test sample. File generation and format checks do not establish scientific validity; no regional scientific validation or v4/v5 equivalence test is claimed. Channel-parameter generation under `script_params/` is a later, separate workflow.
 
-## Directory roles and naming
+## Shared code and build
 
-- `code/` contains shared Fortran/Python implementations, the unified Makefile, and shared compiled executables.
-- `script_region/` contains map-local settings and the regional workflow script.
-- `script_params/` is reserved for channel-parameter workflows.
+- `code/` contains the shared Fortran and Python implementations, one unified Makefile, and compiled executables.
+- `script_region/` contains the regionalization template copied into a map directory.
+- `script_params/` is reserved for the subsequent map-local channel-parameter workflow.
 
-Source and executable names use `region_*.F90` → `region_*` for regionalization, and `param_*.F90` → `param_*` for channel-parameter tools. Existing Fortran `PROGRAM` identifiers are retained. Regional sources currently have no module or cross-file source dependencies.
-
-## Build shared tools
-
-Build tools explicitly from `map/tools/code/` after setting compiler options in the repository's `adm/Mkinclude`:
+Regional sources and executables use `region_` prefixes; parameter tools use `param_`. The Makefile builds directly in `map/tools/code/`, and all map datasets use the same executables. Build explicitly after configuring the compiler in `adm/Mkinclude`; map-local scripts do not compile tools:
 
 ```sh
 make -C map/tools/code region
-make -C map/tools/code params
-```
-
-`region` builds regional programs; `params` builds available parameter programs. Both targets place executables and compiler intermediates directly in `map/tools/code/`. The same executables are shared by all map datasets. Rebuild them after changing compiler settings. Remove generated build products with:
-
-```sh
 make -C map/tools/code clean
 ```
 
-## Run a map-local workflow
+The `params` Make target is reserved for parameter tools as they are added. Build products are ignored by Git. See the [regional workflow guide](script_region/README.md) for configuration, inputs, outputs, and checks.
 
-Copy the regional script directory into a map dataset, configure its source path and region bounds, then run the script while keeping that directory as the current working directory:
+## Regionalization workflow
 
-```sh
-mkdir -p map/myregion_15min
-cp -a map/tools/script_region map/myregion_15min/
-cd map/myregion_15min/script_region
-./s01-regional_map.sh
-```
+Copy `script_region/` into the target map directory, configure `SOURCE` and the geographic bounds in `s01-regional_map.sh`, then run that script once from the copied `script_region/` directory. It calls the shared executables through `../../tools/code/`; keeping the map-local script directory as the working directory is required because the Fortran programs use relative data paths. Its sequence is crop the base map and write dimension metadata, filter bifurcation paths, derive network-analysis products, crop any supported high-resolution layers, and optionally make the sample-runoff input matrix used for channel parameterization. The exact outputs depend on the source map and available high-resolution data.
 
-Build the shared `region` executables before running the script. It calls them through `../../tools/code/` and keeps the map-local script directory as its working directory, as the Fortran programs use relative input and output paths. The script writes `region_info.txt` and working metadata in `script_region/`; map products are written under the parent map directory. See the script-specific README for inputs, outputs, and checks.
+The shell script checks that all five shared executables exist before starting. It does not stop on every later program error, so review each program's terminal output and check the expected products and dimensions. The working example is `map/mekong_15min/`; its files are a development/test example, not an official or scientifically validated production map.
 
-## Generate GrADS CTL files
+## GrADS CTL files
 
-The CTL generator is a separate Python step; regionalization does not invoke it automatically. It scans only `.bin` files directly inside the selected directory, matches them to `map/map_variables.csv`, checks the declared type, record layout, numeric missing-value convention, grid dimensions, and exact file size, then writes a sibling `.ctl` file. Unregistered files and incomplete or unsupported registry entries are reported and skipped; size or layout mismatches are reported as failures.
+CTL generation is a separate manual step; `s01-regional_map.sh` does not invoke it. The `s02-write_ctl.sh` wrapper scans the base map and immediate child directories containing `location.txt`. The shared generator uses `params.txt` for base-map geometry and the relevant high-resolution directory's `location.txt` for high-resolution files. It follows the legacy `yrev little_endian` and cell-center convention and checks registered record layouts and binary sizes. It can describe the regionalization input matrix using its paired `diminfo_<TAG>.txt` file; the `_TAG` identifies a runoff-data/configuration variant. This matrix supports channel width/depth parameterization from sample annual-mean runoff, not the simulation runoff matrix later prepared by `script_params`.
 
-After copying the template into a map dataset and reviewing regionalization outputs, run its wrapper from that map's `script_region/` directory. It scans the base map and all immediate child directories that contain `location.txt`:
+From the copied map-local `script_region/` directory:
 
 ```sh
 ./s02-write_ctl.sh --dry-run
 ./s02-write_ctl.sh
 ```
 
-The wrapper uses `params.txt` for the base map and each high-resolution directory's own `location.txt`, matching each `<AREA>` filename to the corresponding `carea` row. Geometry stays in those map-local files, not in the shared CSV. `--dry-run` validates and lists planned files without writing. Existing CTLs are replaced by default; pass `--no-overwrite` to preserve them. For direct generator use or a different registry, call `code/generate_ctl.py` with `--map-dir` and optionally `--metadata-csv PATH`. The generator supports the legacy regular-grid convention (`yrev little_endian`) and only explicitly recognized record layouts. It scans one directory per invocation; the wrapper handles the base directory and high-resolution children.
+The wrapper replaces CTLs by default; pass `--no-overwrite` to retain existing files. Grid geometry stays in the map's metadata files and is not duplicated in [`map_variables.csv`](../map_variables.csv). The registry specifies shared variable names, types, dimensions, missing values, and record layouts; see the [metadata schema](../map_metadata_spec.md).
 
-`map_variables.csv` must describe the binary filename or template, primitive type, symbolic dimensions, numeric missing-value convention, and record layout. Independent records can use one row per variable with `record_index` and `record_count`, or a structured `record_layout` such as `record 1 downx; record 2 downy`. A layered variable uses `dimensions=NX,NY,NLFP`, `record_count=NLFP`, and `records 1..NLFP; record k is layer k`. The regionalization input matrix is also supported: the shared suffix (for example `_test-1deg`) is a runoff-data/configuration tag, and pairs `inpmat_<TAG>.bin` with `diminfo_<TAG>.txt` as written by `region_generate_inpmat.F90`. The generator reads `INPN` and the paired binary name from that description, checks map dimensions and bounds against `params.txt`, and describes the two integer-index fields plus the floating-point overlap-area field. A same-basename `.txt` is also accepted. Unrecognized layouts and unsupported metadata are skipped; binary-size or declared-grid mismatches are failures. The current Mekong sample has metadata/layout candidates among base files `ctmare.bin`, `elevtn.bin`, `fldhgt.bin`, `nextxy.bin`, `downxy.bin`, `lonlat.bin`, `nextxy_noedge.bin`, `nxtdst.bin`, `rivlen.bin`, `grdare.bin`, `basin.bin`, `bsncol.bin`, `rivseq.bin`, `uparea.bin`, `upgrid.bin`, `uparea_grid.bin`, `nxtdst_grid.bin`, and `rivlen_grid.bin`; its `1min/` directory has corresponding registry entries for all twelve present layers. The tool still checks each binary size when run. `width.bin` with unrecognized dimensions is skipped until they are specified; `lsmask.bin` uses `-9999` as its CTL missing value.
+The committed Mekong `lonlat.ctl` uses `outlon` and `outlat`, matching the maintainer-confirmed registry names. The recorded wrapper execution predates the last generator fixes; the committed CTLs are present, but a post-fix wrapper run has not been confirmed in the development record. Existing generated CTLs and successful tool execution do not prove scientific correctness.
 
-The input matrix created by regionalization supports later channel width/depth parameter calculation using sample runoff; it is not a simulation-specific runoff input matrix. These tools are experimental development files, and successful CTL generation is not scientific validation.
+High-resolution `downxy` files contain per-pixel relative downstream offsets on their own grid. Low-resolution `downxy` uses `-9999` for sea; the matching high-resolution code for land pixels without an assigned unit catchment remains unconfirmed. Record order and interpretation are documented in the [regional workflow guide](script_region/README.md#high-resolution-downstream-links) and [map metadata specification](../map_metadata_spec.md#high-resolution-source-semantics).

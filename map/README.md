@@ -22,15 +22,17 @@ Use the [official CaMa-Flood website](https://global-hydrodynamics.github.io/CaM
 
 The official page describes basic map datasets under CC BY 4.0 and notes that some advanced high-resolution data have separate access conditions. Dataset terms can differ. Check the current website and the license or agreement supplied with the exact dataset you use; the source-code license does not automatically apply to map data.
 
-Cloning the GitHub repository provides the source tools under `map/src/`; it does not provide the map datasets used by the standard simulations. A distribution package combines code with selected maps and sample inputs. Package contents depend on the release; check its included files and release documentation before downloading additional data or preparing new products.
+Cloning the GitHub repository provides the legacy v4 source templates under `map/src/` and the developing v5 framework under `map/tools/`; it does not provide the map datasets used by the standard simulations. A distribution package combines code with selected maps and sample inputs. Package contents depend on the release; check its included files and release documentation before downloading additional data or preparing new products.
 
 ## Directory organization
 
 | Path | Role | Notes |
 | --- | --- | --- |
-| `map/src/src_param/` | Reusable source template for preparing or inspecting map parameters and forcing-to-map input matrices. | Has a [component README](src/src_param/README.md); copy the component into a target map directory to work with that map. |
+| `map/tools/` | Shared v5 map-processing implementations, a unified Makefile, and reusable map-local workflow templates. | See the [v5 tools overview](tools/README.md) and [regional workflow guide](tools/script_region/README.md). |
+| `map/src/src_param/` | Legacy v4 reusable source template for preparing or inspecting map parameters and forcing-to-map input matrices. | Has a [component README](src/src_param/README.md); copy the component into a target map directory to work with that map. |
 | `map/src/src_param/native_inpmat/` | Optional native-grid remapping workflow associated with `src_param`. | Compose a native-grid remapping operator with an existing CaMa input matrix and validate results; see its [README](src/src_param/native_inpmat/README.md). |
-| `map/src/src_region/` | Reusable source template for extracting a regional domain from a global map and preparing regional products. | See the [regional-map preparation guide](src/src_region/README.md). |
+| `map/src/src_region/` | Legacy v4 reusable source template for regional map preparation. | See the [v4 regional-map guide](src/src_region/README.md). |
+| `map/tools/script_region/` | v5 regionalization template; copied into a target map directory and run with shared tools. | See the [v5 regional workflow guide](tools/script_region/README.md). |
 | `map/src/src_dam/` | Reusable source template for preparing dam/reservoir locations and parameters for a target map. | Has an existing [reservoir-preparation README](src/src_dam/ReadMe.md). |
 | `map/src/map_data_tools/` | Shared metadata validation plus standalone CTL and NetCDF conversion CLIs for core category-11 maps. | See its [tool guide](src/map_data_tools/README.md); the current converter supports only the core river-network group. |
 | `map/src/` | Reusable source templates and standalone map-data tools. | Contains `src_param/`, `src_region/`, `src_dam/`, and `map_data_tools/`; this is separate from the model's numerical `src/`. |
@@ -39,7 +41,7 @@ Cloning the GitHub repository provides the source tools under `map/src/`; it doe
 
 ### Reusable sources and map-local working copies
 
-The directories `map/src/src_param/`, `map/src/src_region/`, and `map/src/src_dam/` are reusable workflow sources intended to be copied into the relevant map directory when preparing or extending that map. For example, the channel-parameter workflow is run from a map-local `src_param/`; the regionalization and reservoir workflows similarly use map-local working directories and relative paths. Copy only the components needed for the task. Some data-rich packages already include selected copies, but not every map directory contains every component.
+The legacy v4 directories `map/src/src_param/`, `map/src/src_region/`, and `map/src/src_dam/` are reusable workflow sources intended to be copied into the relevant map directory when preparing or extending that map. The v5 regional template is `map/tools/script_region/`; its shared programs remain under `map/tools/code/`. For example, the channel-parameter workflow is run from a map-local `src_param/`; the regionalization and reservoir workflows similarly use map-local working directories and relative paths. Copy only the components needed for the task. Some data-rich packages already include selected copies, but not every map directory contains every component.
 
 Keep the distinction clear: `map/src/` holds source templates, while paths such as `map/glb_15min/src_param/` are working copies associated with an individual map. Copying creates a separate working copy; edits to a template do not automatically update copies already placed in map directories. These map tools operate on map data; they are not the model's numerical source tree at repository `src/`.
 
@@ -47,14 +49,14 @@ The v4.30 package-preparation workflow assembles `glb_15min/`, `conus_06min/`, a
 
 `glb_15min/` is the global 15-minute (0.25-degree) river map; `params.txt` records its dimensions and geographical coverage. Higher-resolution supporting files, such as those under `glb_15min/1min/`, are used by selected preprocessing and downscaling workflows. They do not change the base river-map resolution. Packages may also include prepared working copies such as `glb_15min/src_param/`; check which components and supporting layers are included with your map release.
 
-The map-processing Makefiles use the repository's active build configuration in [`adm/`](../adm/README.md). Their programs are separate from the numerical model executable in `src/`.
+The v4 and v5 map-processing programs use the repository's active build configuration in [`adm/`](../adm/README.md). The v5 shared Makefile builds executables directly under `map/tools/code/`; regional scripts call them from map-local working directories. Map tools are separate from the numerical model executable in `src/`.
 
 ### Dataset, tools, and products are different things
 
 | Category | Examples | How to treat it |
 | --- | --- | --- |
 | Distributed datasets | Global or Japan river-map archives and high-resolution supporting layers. | Obtain from the official project download page and follow the specific dataset terms. |
-| Repository tools | Fortran and Python programs, shell workflows, configuration, and documentation under `map/src/`. | These are source code for preparing, inspecting, or transforming data; they are not the datasets themselves. |
+| Repository tools | Legacy v4 tools under `map/src/` and v5 shared code/templates under `map/tools/`. | These are source code for preparing, inspecting, or transforming data; they are not the datasets themselves. |
 | Generated products | Regional network files, channel parameters, runoff input matrices, MPI region maps, and dam parameter tables. | Generate or obtain these for the selected map and configuration; keep their metadata and inputs together. |
 | Optional ancillary data | Groundwater-delay, sea-level, reservoir, gauge, and high-resolution information. | Prepare only when a selected feature or workflow requires it; requirements are feature-specific. |
 
@@ -64,7 +66,7 @@ A successful build of the map tools does not supply external source datasets or 
 
 A **global map** supplies a connected network and parameters over its published global domain at a selected grid spacing; `glb_15min/` is the global 15-minute example used by the standard runs. A **regional map** is derived for a smaller domain, usually by starting from a compatible global map and selecting region bounds. The regional tools adjust the network and related arrays to the regional grid and can combine available higher-resolution map information.
 
-The sample regional script, `src/src_region/s01-regional_map.sh`, reads a source map and west/east/south/north bounds from its settings, then calls `cut_domain`, `cut_bifway`, and `set_map`. It may combine high-resolution layers when those source layers are present, generate a regional input matrix, and write map-control metadata. The exact outputs depend on the source map and available high-resolution data.
+Two workflows are available. The legacy v4 regionalization template is under `map/src/src_region/`. The v5 workflow is under `map/tools/script_region/`: build the shared programs once, copy the template into a target map directory, configure the source map and bounds, and run `s01-regional_map.sh` from that map's `script_region/` directory. It crops the base map, filters bifurcation paths, derives network-analysis products, crops available high-resolution data, and may make a sample-runoff input matrix for channel parameterization. `s02-write_ctl.sh` is a separate, manual CTL-generation step. See the [v5 regional workflow guide](tools/script_region/README.md) and [v5 tools overview](tools/README.md) for commands and limitations.
 
 Examples of maps used by sample runs are listed in [`gosh/README.md`](../gosh/README.md). A regional map must remain consistent with its source resolution and extent, downstream connectivity, metadata, and parameter files. Do not substitute files from a different map tag merely because their filenames match.
 
@@ -133,12 +135,13 @@ Not every feature uses a file generated under `map/`, and some optional products
 
 ### Create a regional map
 
-1. Obtain a compatible global map and any high-resolution layers required by the regional workflow.
-2. Copy the relevant `src_region/` workflow from `map/src/` into the target map directory and set the source map and target domain bounds.
-3. Run the regional processing tools from their map-local working directory to cut the domain and create its network, associated products, and metadata.
-4. Copy or use the relevant `src_param/` tools to prepare channel and forcing input parameters for that regional product, then configure a run using the regional grid.
+1. Obtain a compatible source map and any high-resolution layers or sample runoff data the workflow needs.
+2. Build the shared v5 regional programs with `make -C map/tools/code region`.
+3. Copy `map/tools/script_region/` into the target map directory, configure `SOURCE` and the domain bounds in `s01-regional_map.sh`, then run it from the copied `script_region/` directory.
+4. Review the program output and map dimensions/products; run `s02-write_ctl.sh` separately if GrADS descriptors are needed.
+5. Prepare simulation-specific channel parameters and runoff input matrices in the separate `script_params/` workflow when available; the regionalization sample matrix is only for channel parameterization from sample runoff.
 
-See `src/src_region/s01-regional_map.sh` for the current orchestration example. It is a starting point to inspect, not a universal command sequence for all map sources or regions.
+The [v5 regional workflow guide](tools/script_region/README.md) lists the current source requirements, outputs, and verification limits. The v4 template remains documented under `map/src/src_region/README.md`.
 
 ### Prepare additional parameters
 
