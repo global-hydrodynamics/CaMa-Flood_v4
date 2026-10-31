@@ -19,7 +19,7 @@ MAP_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd)
 CODE_DIR=$(CDPATH= cd "$SCRIPT_DIR/../../tools/code" && pwd)
 PROGRAM="$CODE_DIR/param_generate_inpmat"
 
-# One runoff tag derives both paired output names.
+# A shared runoff tag names the paired metadata and matrix products.
 ROFFTAG="${ROFFTAG:-test-15min_nc}"
 INPDIM="inpdim_${ROFFTAG}.txt"
 INPMAT="inpmat_${ROFFTAG}.bin"
@@ -41,7 +41,8 @@ fail() {
 [ -x "$PROGRAM" ] || fail "shared executable not found or not executable: $PROGRAM (build with make -C map/tools/code param)"
 [ -f "$MAP_DIR/params.txt" ] || fail "map parameters not found: $MAP_DIR/params.txt"
 
-# HIRES_TAG selects high-resolution map data and is separate from ROFFTAG.
+# HIRES_TAG selects the high-resolution map directory. It is independent of
+# ROFFTAG, which names the runoff-grid configuration and generated file pair.
 HIRES_TAG=${HIRES_TAG:-}
 if [ -z "$HIRES_TAG" ]; then
     if [ -f "$MAP_DIR/1min/location.txt" ]; then

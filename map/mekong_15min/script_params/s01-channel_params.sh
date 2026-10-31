@@ -22,7 +22,7 @@ CODE_DIR=$(CDPATH= cd "$SCRIPT_DIR/../../tools/code" && pwd -P)
 # Workflow configuration. Relative paths are interpreted from the map root.
 TYPE="bin"                                      # binary runoff input
 INTERP="inpmat"                                 # use the standard map input matrix
-ROFFTAG="${ROFFTAG:-test-1deg}"                # runoff/input-grid configuration identifier
+ROFFTAG="${ROFFTAG:-test-1deg}"                # identifies runoff/input-grid configuration
 INPDIM="inpdim_${ROFFTAG}.txt"
 INPMAT="inpmat_${ROFFTAG}.bin"
 CROFBIN="../data/ELSE_GPCC_clm-1981-2010.one"  # annual mean runoff [mm/s]
@@ -74,7 +74,7 @@ run_step() {
 [ -s "$MAP_DIR/ctmare.bin" ] || fail "map input missing: $MAP_DIR/ctmare.bin"
 [ -s "$MAP_DIR/width.bin" ] || fail "MERIT Hydro width input missing: $MAP_DIR/width.bin"
 
-# The seventh line is retained in the format and must name the paired matrix.
+# The seventh line is retained in the file format and must match the paired name.
 METADATA_INPMAT=$(awk 'NR == 7 { print $1; exit }' "$INPDIM_PATH")
 [ "$METADATA_INPMAT" = "$INPMAT" ] || fail "line 7 of $INPDIM does not name its paired matrix $INPMAT"
 case $INPMAT in

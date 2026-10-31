@@ -723,7 +723,7 @@ CONTAINS
       implicit none
       character*(*) :: filename
 ! ===============================================
-      print *, 'ERROR: could not open optional layer; continuing with missing values: ', trim(filename)
+      print *, 'WARNING: could not open optional layer; continuing with missing values: ', trim(filename)
       end subroutine report_missing
 
       subroutine set_name(lon,lat,cname)
