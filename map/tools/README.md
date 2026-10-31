@@ -13,7 +13,9 @@ The Mekong map-local regionalization scripts are maintainer-operated **sample-pr
 
 All shared Fortran sources and executables remain centralized in `code/`. Executable prefixes identify tool families (`region_*`, `param_*`, `analysis_*`, `allocate_*`); allocation programs do not require a separate `script_allocate/` directory. These are the approved target organization for migration; existing `map/src/` legacy tools remain unchanged.
 
-The general-purpose runoff input-matrix generator is available as `param_generate_inpmat`, built with `make -C map/tools/code param`. Its map-local wrapper template is [`script_params/s02-generate_inpmat.sh`](script_params/s02-generate_inpmat.sh); copy it into a target map's `script_params/` directory before configuring and running it. This generator supports user-selected regular runoff grids and is distinct from `region_default_inpmat`, which creates the standard climatology matrix distributed with prepared maps. See the [parameter workflow guide](script_params/README.md) for required inputs, configuration, outputs, and regression status.
+The general-purpose runoff input-matrix generator is available as `param_generate_inpmat`, built with `make -C map/tools/code param`. Its map-local wrapper template is [`script_params/s03-generate_inpmat.sh`](script_params/s03-generate_inpmat.sh); copy it into a target map's `script_params/` directory before configuring and running it. This generator supports user-selected regular runoff grids and is distinct from `region_default_inpmat`, which creates the standard climatology matrix distributed with prepared maps. See the [parameter workflow guide](script_params/README.md) for required inputs, configuration, outputs, and regression status.
+
+The v5 [`script_params/s01-channel_params.sh`](script_params/s01-channel_params.sh) runs annual mean discharge estimation, power-law channel parameterization, and MERIT Hydro width merging only. It uses the standard distributed `diminfo_test-1deg.txt` and input matrix by default. The v5 tools include `param_calc_outclm`, `param_calc_rivwth`, and `param_set_merit_width`; they preserve the legacy calculations and write the alternate merged width as `rivwth_merit.bin`. The v4 `gosh/` and `map/src/` workflows, including their `rivwth_gwdlr.bin` output, remain unchanged. The current model reader does not automatically select the v5 alternate output. The annual runoff climatology comes from the data-rich distribution package and is not included in the GitHub source repository because its redistribution terms are not established.
 
 Regional executables use the `region_` prefix. Build them with the active compiler settings in `adm/Mkinclude`:
 
@@ -23,7 +25,7 @@ python3 -B -m unittest map.tools.tests.test_region_cut_domain_optional_maps -v
 make -C map/tools/code clean
 ```
 
-Map-local scripts do not compile tools. They invoke shared executables through paths relative to the target map's `script_region/` working directory. See the [regional workflow guide](script_region/README.md) for user configuration, required source inputs, outputs, and limitations.
+Map-local scripts do not compile tools. Regional templates resolve shared executables from the copied `script_region/` directory; parameter templates resolve shared programs from the copied `script_params/` directory and set the CWD required by each utility. See the [regional workflow guide](script_region/README.md) and [parameter workflow guide](script_params/README.md) for configuration, inputs, outputs, and limitations.
 
 ## Regional map preparation
 

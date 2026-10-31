@@ -12,6 +12,8 @@
 *.mod
 out/
 /.venv/
+# Package reference data copied locally; selectively unignore files as they are approved for tracking.
+/map/data/
 # The official Mekong sample is distributed as complete reference data.
 !map/mekong_15min/**
 # Keep only reference inputs and source/configuration; omit local build and run artifacts.

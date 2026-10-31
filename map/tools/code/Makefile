@@ -12,7 +12,7 @@ all: region params
 
 region: $(REGION_BINS)
 
-# Parameter programs will be added under param_*.F90 in Phase B2.
+# Parameter programs under param_*.F90 are built together by the shared target.
 ifeq ($(strip $(PARAM_SOURCES)),)
 params:
 	@echo "No param_*.F90 sources are available yet (planned for Phase B2)."

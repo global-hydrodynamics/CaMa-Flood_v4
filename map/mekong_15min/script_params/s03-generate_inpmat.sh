@@ -22,7 +22,7 @@ SOUTHIN=-60.0
 OLAT="NtoS" # NtoS: north row first; StoN: south row first.
 
 fail() {
-    echo "s02-generate_inpmat.sh: $*" >&2
+    echo "s03-generate_inpmat.sh: $*" >&2
     exit 1
 }
 

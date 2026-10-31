@@ -21,6 +21,8 @@ Obtain explicit maintainer approval before:
 
 State the concrete proposed change and its compatibility or numerical consequences when requesting approval. Continue independent work already within scope while a decision is pending. Testing does not authorize an intentional numerical change or a scope expansion. Report out-of-scope findings in the project issue when one exists, or in the project status/completion report; do not silently fix them.
 
+For multi-stage work coordinated by the maintainer, ChatGPT, and Codex, use the reusable review and handoff protocol in [`docs/ai_development_workflow.md`](docs/ai_development_workflow.md).
+
 ## 2. One project, one persistent working branch
 
 Use one registered working branch per project across tasks, commits, developers, and AI sessions. Do not create a branch for every task or session. Historical branches need not be renamed or reorganized.
