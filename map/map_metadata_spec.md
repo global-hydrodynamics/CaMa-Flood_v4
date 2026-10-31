@@ -225,7 +225,7 @@ The script also proceeds to bifurcation and ancillary products after channel par
 
 ### Existing partial NetCDF output
 
-Some NetCDF-writing code already exists in legacy `calc_rivwth.F90` and its migrated v5 copy `param_calc_rivwth.F90` when built and invoked with `type=cdf`. It writes `rivpar.nc` with `lon`, `lat`, `rivwth`, and `rivhgt`, but not `rivman`. It sets NetCDF `missing_value=1.e20` while the arrays contain `-9999` outside the network. This is a partial utility output and is distinct from the module-level `CRIVCLINC`/`CRIVPARNC` files expected by the model reader.
+Some NetCDF-writing code already exists in legacy `calc_rivwth.F90` and its migrated v5 copy `param_calc_rivwth.F90` when built and invoked with `type=cdf`. It writes `rivpar.nc` with `lon`, `lat`, `rivwth`, and `rivhgt`, but not `rivman`. It sets NetCDF `missing_value=1.e20` while the arrays contain `-9999` outside the network. This is a partial utility output and is distinct from the module-level `CRIVCLINC`/`CRIVPARNC` files expected by the model reader. **Maintainer decision:** defer adding `rivpar.nc` to `map_variables.csv` until the NetCDF map product design is considered; do not treat this legacy utility output as a finalized map product or infer its future container/layout from the current writer.
 
 The maintainer confirmed that the module-level files were previously generated at ECMWF, are absent from the current distribution, and that code to reproduce this generation workflow is planned. Do not infer a finalized file grouping, dimension order, coordinate convention, or missing-value policy from the current partial writer.
 
