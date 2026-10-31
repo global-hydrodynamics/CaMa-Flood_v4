@@ -2,6 +2,13 @@
 ! ================================================
 ! fuse power-law width (rivwth.bin) and MERIT Hydro width (width.bin)
 ! to create the alternate width product (rivwth_merit.bin)
+! Processing outline:
+!   1. Read the map dimensions from DIMINFO and topology from NEXTXY.
+!   2. Read power-law river widths (RIVWTH) and MERIT Hydro widths (WIDTH).
+!   3. On river cells, retain MERIT widths with existing lower/upper
+!      adjustments relative to the power-law width; mark other cells missing.
+!   4. Write the result as a single-record float32 map in RIVWTH_MERIT.
+! Run from the map directory; all filenames except DIMINFO are fixed below.
 ! ================================================
       implicit none
 ! ===================
@@ -59,8 +66,12 @@ print *, trim(cwidth)
       close(13)
 
 
-! ********************************************************************
-! please modify this part to calibrate river width and height parameters
+! Apply the inherited width-merging rules to river cells:
+!   - MERIT width below 50 m: use the larger of MERIT and power-law width.
+!   - Otherwise, constrain it to 0.5-5 times the power-law width and cap at
+!     10,000 m. Non-river cells receive the -9999 missing-value sentinel.
+! These thresholds are part of the existing algorithm; this routine does
+! not recalibrate channel-height parameters.
 ! ********************************************************************
       do iy=1, ny
         do ix=1, nx

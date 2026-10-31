@@ -20,7 +20,7 @@ For high-resolution GrADS CTL output, the generator removes a terminal `_hires` 
 
 ### Categories and sorting
 
-`category_id` is the first column and numeric sorting key. IDs are organized to follow the map-product workflow where practical: 10-series entries cover package defaults and regional preparation, while 900-series entries cover high-resolution products. IDs from 20 onward are being organized as those products are inventoried. The scheme remains provisional; IDs group products and are not intrinsic properties of map variables. The current grouping is:
+`category_id` is the first column and numeric sorting key. IDs are organized to follow the map-product workflow where practical: 10–19 cover products distributed by default or produced during regionalization, and 900–999 cover high-resolution products. IDs from 20 onward are being organized as the parameter and auxiliary workflows are inventoried. The scheme remains provisional; IDs group products and are not intrinsic properties of map variables. The table below records current assignments in `map_variables.csv`; it is not a reservation of unassigned IDs.
 
 | ID | Group / current category labels | Meaning |
 | ---: | --- | --- |
@@ -31,11 +31,16 @@ For high-resolution GrADS CTL output, the generator removes a terminal `_hires` 
 | 14 | `default_bifurcation` | Bifurcation products in the default preparation workflow. |
 | 15 | `default_inpmap` | Default map-to-input-grid products. |
 | 16 | `default_rivmap_supp` | Supplementary products associated with default map preparation. |
-| 20 | `river_param_default` | Channel width, depth, and roughness parameters. |
-| 21–24 | `MPI`, `bifurcation`, `inflow_scheme`, `dam_reservoir` | Optional features and their supporting products. |
-| 52 | `input_matrix` | Input-matrix products and paired configuration. |
+| 20 | Unassigned | No current product uses this ID. |
+| 21 | `param_cross-section` | Channel-discharge and cross-section parameter products, including outputs of the `s01` workflow and alternate width products. |
+| 22 | `bifurcation` | Bifurcation parameters and supporting products. |
+| 23 | `inflow_scheme` | Inflow-boundary products and supporting masks. |
+| 24 | `dam_reservoir` | Dam and reservoir parameter products. |
+| 25 | `MPI` | MPI partitioning and supporting products. |
+| 52 | `input_matrix` | User-configured input-matrix products and paired configuration. |
 | 62–63 | `river_map_supplement` | Supporting or specialized map products. |
 | 81 | `gauge_alloc` | Gauge allocation and verification data. |
+| 99 | `netCDF parameter` | NetCDF parameter product records. |
 | 900 | `hires_metadata` | High-resolution area metadata. |
 | 901 | `hires_data` | High-resolution map layers. |
 

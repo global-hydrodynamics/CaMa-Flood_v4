@@ -1,8 +1,17 @@
       program param_calc_outclm
 ! ================================================
-! calculate annual mean discharge (and 30day maximum discharge)
-! using runoff climatology (daily mean over 20~30 years)
-! -- 30day max discharge calculation is deactivated in CaMa-Flood v4. Please set lout30=.true.
+! Calculate annual-mean discharge from a runoff climatology.
+! This implementation writes the annual-mean field only; it does not produce
+! the historical optional 30-day maximum discharge product.
+! Processing outline:
+!   1. Read map/runoff dimensions and the input-matrix filename from DIMINFO.
+!   2. Read NEXTXY, CTMARE, the map-to-runoff matrix, and one runoff field.
+!   3. Convert runoff depth rate to local discharge, then accumulate it
+!      downstream in river-network order.
+!   4. Write the resulting annual-mean discharge field to OUTCLM.
+! Run from the map directory; files other than command-line inputs are fixed
+! to the filenames declared below. Binary grids are direct-access float32 or
+! int32 records, as indicated by the arrays read from them.
 ! ================================================
 #ifdef UseCDF_CMF
 USE NETCDF
@@ -68,7 +77,7 @@ USE NETCDF
       integer             ::  ios
 
       character*256       ::  cinpmat                 !! input matrix
-      character*256       ::  crivout                 !! annual max discharge [m3/s], rec=1: annual max;  rec=2; annual mean
+      character*256       ::  crivout                 !! annual-mean discharge [m3/s], one record
       parameter              (crivout='./outclm.bin')
 
 ! undef
@@ -110,8 +119,9 @@ print *, 'calc_outclm: read parameters from arguments'
         print *, 'Runoff=',  trim(crofbin)
       endif
 
+! Read map dimensions, runoff-grid dimensions, matrix layout, and grid bounds.
+! DIMINFO and its named matrix are supplied by the map-parameter workflow.
 ! ===============================
-! read river network and input file dimentions
       if( type=='cdf')then
         print *, 'calculation for netCDF map'
       else
@@ -140,6 +150,7 @@ print *, 'calc_outclm: read parameters from arguments'
       allocate(roffin(nxin,nyin))
       allocate(runoff(nx,ny),rivout(nx,ny))
 
+! Calculate cell-center coordinates from the regular map bounds.
 ! ===========================================
       allocate(lon(nx),lat(ny))
       gsize=(east-west)/real(nx)
@@ -150,6 +161,8 @@ print *, 'calc_outclm: read parameters from arguments'
         lat(iy)=north-(real(iy)-0.5)*gsize
       enddo
 ! =========
+! Read the three record groups of the direct-access input matrix: input x,
+! input y, and contributing area for each of INPN slots and map cells.
 print *, 'calc_outclm: read input matrix'
       if( intp/='near' )then
         allocate(inpx(nx,ny,inpn),inpy(nx,ny,inpn),inpa(nx,ny,inpn))
@@ -174,6 +187,9 @@ print *, 'calc_outclm: read nextxy.bin'
       read(13,rec=1) ctmare
       close(13)
 ! ==========
+! Build an upstream-to-downstream traversal order with a Kahn-style count of
+! incoming tributaries. Each cell is eligible after all upstream cells have
+! been registered; discharge can then be accumulated in one forward pass.
 print *, 'calc_outclm: calculate river sequence'
       allocate(upst(nx,ny),upnow(nx,ny),xseq(nx*ny),yseq(nx*ny))
       upst(:,:)=0
@@ -252,6 +268,8 @@ print *, trim(crofcdf)
 #endif
 
 ! ============================================================
+! Interpolate runoff to each map cell, convert mm/s times area to m3/s, then
+! sum local and upstream contributions along NEXTXY.
 print *, 'calc_outclm: calc annual average'
       if( intp=='near' )then
         call conv_resol(nx,ny,nxin,nyin,imis,rmis,nextx,ctmare,roffin,runoff)
@@ -316,6 +334,8 @@ print *, 'calc_outclm: calc annual average'
 !+
       subroutine intp_roff(nx,ny,nxin,nyin,imis,rmis,nextx,inpn,inpx,inpy,inpa,r2inp,r2out)
 ! ================================================
+! Map runoff-grid values to river cells using the precomputed input matrix.
+! INPA is converted from mm/s over m2 to m3/s by multiplying by 1.e-3.
       implicit none
 ! input
       integer             ::  nx, ny, nxin, nyin  !! number of grids in horizontal
@@ -328,7 +348,7 @@ print *, 'calc_outclm: calc annual average'
       real                ::  inpa(nx,ny,inpn)
 
       real                ::  r2inp (nxin,nyin)   !! runoff in [mm/s]
-      real                ::  r2out(nx,ny)        !! runoff out [mm/s]
+      real                ::  r2out(nx,ny)        !! local runoff volume [m3/s]
 ! local
       integer             ::  i
       integer             ::  ix, iy              !! for input
@@ -357,6 +377,9 @@ print *, 'calc_outclm: calc annual average'
 !+
       subroutine conv_resol(nx,ny,nxin,nyin,imis,rmis,nextx,ctmare,r2inp,r2out)
 ! ================================================
+! Fallback resolution conversion used by the nearest-grid mode. For a finer
+! map, copy each runoff value to its corresponding map cells; for a coarser
+! map, average the covered runoff cells. CTMARE then converts mm/s to m3/s.
 ! to convert resolution
 ! by Dai YAMAZAKI
 ! on 30th Mar 2008

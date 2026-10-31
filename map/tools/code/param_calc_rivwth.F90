@@ -3,6 +3,14 @@
 ! calculate river channel width and depth (rivwth.bin and rivhgt.bin) 
 ! using power-law function of annual mean discharge (outclm.bin)
 ! + distributed manning roughness is also generated (rivman.bin)
+! Processing outline:
+!   1. Read map dimensions from DIMINFO and river topology from NEXTXY.
+!   2. Read annual-mean discharge from OUTCLM.
+!   3. Apply the configured power laws and minimum limits on river cells.
+!   4. Write channel width, depth, Manning roughness, and a high-depth
+!      field for experiments without floodplain storage.
+! Run from the map directory. The ordinary products are direct-access
+! single-record float32 grids; their filenames are fixed below.
 ! ================================================
 #ifdef UseCDF_CMF
 USE NETCDF
@@ -97,8 +105,9 @@ print *, 'calc_rivwth :read parameters from arguments'
       print *, 'HEIGHT H=max(', HMIN, ',', HC, '*Qave**',HP, '+', HO, ')'
       print *, 'WIDTH  W=max(', WMIN, ',', WC, '*Qave**',WP, '+', WO, ')'
 
+! Read map dimensions and bounds from DIMINFO; intervening fields also
+! describe the runoff grid and are intentionally skipped by this tool.
 ! ===============================
-! read dimention from diminfo
 
       if( type=='cdf')then
         print *, 'calculation for netCDF map'
@@ -149,8 +158,14 @@ print *, 'calc_rivwth: read nextxy.bin'
       read(13,rec=1) rivout
       close(13)
 
+! Compute channel parameters from annual-mean discharge:
+!   depth = max(HMIN, HC * Q**HP + HO)
+!   width = max(WMIN, WC * Q**WP + WO)
+! Manning roughness is currently fixed at 0.03 on mapped river cells.
 ! =============================
 print *, 'calc_rivwth: width & depth calculation'
+! Create the no-floodplain experiment input by assigning a very large
+! floodplain height to every grid cell, including non-river cells.
       do iy=1, ny
         do ix=1, nx
           if( nextx(ix,iy)/=imis )then

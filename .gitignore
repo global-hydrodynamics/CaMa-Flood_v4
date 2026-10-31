@@ -13,7 +13,8 @@
 out/
 /.venv/
 # Package reference data copied locally; selectively unignore files as they are approved for tracking.
-/map/data/
+/map/data/*
+!/map/data/ELSE_GPCC_clm-1981-2010.ctl
 # The official Mekong sample is distributed as complete reference data.
 !map/mekong_15min/**
 # Keep only reference inputs and source/configuration; omit local build and run artifacts.

@@ -1,6 +1,18 @@
 #!/bin/sh
 # Map-local template for annual-runoff channel parameter generation.
 # Copy into <map>/script_params/, edit configuration below, and run from any CWD.
+#
+# Inputs (relative paths are resolved from the map root):
+#   - DIMINFO: runoff-grid dimensions and map-to-runoff input-matrix metadata.
+#   - The input matrix named on line 7 of DIMINFO.
+#   - CROFBIN: annual-mean runoff climatology (default: ../data/ELSE_GPCC_clm-1981-2010.one).
+#   - nextxy.bin and ctmare.bin: river-network maps used by the parameter programs.
+#   - width.bin: MERIT Hydro channel-width estimates used for the MERIT merge.
+#
+# Outputs in the map root (existing files with these names may be replaced):
+#   - outclm.bin: climatological discharge calculated from runoff and the input matrix.
+#   - rivwth.bin, rivhgt.bin, rivman.bin, rivhgt_inf.bin: power-law channel parameters.
+#   - rivwth_merit.bin: width.bin estimates merged with the power-law river widths.
 set -eu
 
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
@@ -12,6 +24,9 @@ TYPE="bin"                                      # binary runoff input
 INTERP="inpmat"                                 # use the standard map input matrix
 DIMINFO="diminfo_test-1deg.txt"                # standard runoff-grid metadata
 CROFBIN="../data/ELSE_GPCC_clm-1981-2010.one"  # annual mean runoff [mm/s]
+# Runoff-climatology data source: Kim, Yeh, Oki, and Kanae (2009),
+# "Role of rivers in the seasonal variations of terrestrial water storage over global basins."
+# Geophysical Research Letters. https://doi.org/10.1029/2009GL039006
 
 # Channel cross-section coefficients from the legacy standard workflow.
 HC=0.1

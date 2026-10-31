@@ -1,6 +1,17 @@
 #!/bin/sh
 # Generate a map-to-runoff input matrix for a user-selected regular runoff grid.
 # Copy this template into a map-local script_params/ directory before running.
+#
+# Inputs:
+#   - params.txt in the map root, describing the target CaMa-Flood map grid.
+#   - <TAG>/location.txt and each listed area's <area>.catmxy.bin high-resolution
+#     catchment map. grdare.bin is optional; the Fortran tool has a fallback.
+#   - The runoff-grid geometry and row order configured below; these describe
+#     the runoff grid, not the CaMa-Flood map.
+#
+# Outputs in the map root (existing files with these configured names may be replaced):
+#   - DIMINFO: text metadata describing the selected runoff grid and matrix.
+#   - INPMAT: binary map-to-runoff input matrix for the map and runoff grids.
 set -eu
 
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd)
