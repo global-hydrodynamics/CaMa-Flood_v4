@@ -9,7 +9,7 @@ The maintainer-approved organization follows the preferred map-preparation seque
 | Script | Purpose | Status |
 | --- | --- | --- |
 | `s01-channel_params.sh` | Annual mean discharge, power-law channel width/depth/roughness, and MERIT Hydro width merging. | Implemented |
-| `s02-bifurcation.sh` | Bifurcation parameters and basin products. | Planned; not implemented here |
+| `s02-bifurcation.sh` | Standard non-MPI bifurcation parameters and basin-connectivity products. | Implemented |
 | `s03-generate_inpmat.sh` | User-configured runoff-grid mapping matrix. | Implemented |
 | `s04-mpi_map_setup.sh` | MPI map preprocessing. | Planned; not implemented here |
 | `s05-permanent_water.sh` | Permanent-water parameter generation. | Planned; not implemented here |
@@ -34,6 +34,14 @@ Build the shared executables, copy the script into the target map's `script_para
 The standard channel workflow uses annual mean runoff. The historical `map/src/src_param/calc_outclmday.F90` remains legacy-only: it reflects the older maximum-30-day climatology approach associated with Yamazaki et al. (2011). The maintainer reports that later evaluation favored annual mean runoff. This migration does not revalidate the historical method scientifically.
 
 `rivwth.bin` is the power-law width and `rivwth_merit.bin` is the separately named merged width product; the latter is not simply a copy of `width.bin`. The merge algorithm and thresholds are preserved from the legacy tool. The current core map reader selects `rivwth.bin` and does not automatically choose `rivwth_merit.bin`; this workflow produces the alternate product but does not change model-reader selection. See [`map_variables.csv`](../../map_variables.csv) and the [Phase B2 migration plan](../../../docs/map_params_migration_plan.md) for product metadata and migration evidence.
+
+## Standard bifurcation workflow
+
+[`s02-bifurcation.sh`](s02-bifurcation.sh) generates ordinary bifurcation parameters and basin-connectivity products after the channel-depth map is available. It uses `rivhgt.bin` from `s01`, plus map-root `nextxy.bin`, `basin.bin`, `bifori.txt`, `params.txt`, and the configured `DIMINFO` (default `diminfo_test-1deg.txt`). The first two dimensions in `DIMINFO` must match `params.txt`. `BIFLAYER` defaults to the legacy value `5`; the documented maximum is 10.
+
+The workflow runs `param_set_bifparam` from the map root, then runs `param_set_bif_basin` from the map-local `script_params/` directory because its input/output paths use `../`. By default it writes or replaces `bifprm.txt`, `bifbsn.bin`, `bpoint.bin`, `bifmod.bin`, and `bifcol.bin`. The depth/width inspection raster is optional: run `s02-bifurcation.sh check_map` to also write or replace `check_bif_dphwth.bin`. That file has two float32 records (`bifdph` depth, then `bifwth` width), is only for checking, and is not a model input. Without `check_map`, the shared v5 program does not create it. Older `bifdph.bin` files from the v4 workflow are left untouched. `bifprm.txt` is read by the model only when bifurcation processing is enabled.
+
+This wrapper retains standard non-MPI behavior and the unsorted order written by `param_set_bifparam`. It does not sort `bifprm.txt`, run `set_bif_basin_mpi` or `set_mpi_region`, generate MPI variants, or apply `MaxMPI` modifications. Those operations belong to the future `s04-mpi_map_setup.sh`. The v4 source files and workflows under `map/src/` are unchanged. The migration regression compared the legacy and v5 outputs on temporary copies of the tracked Mekong inputs; this demonstrates compatibility for that case, not independent scientific validation.
 
 ## General-purpose runoff input matrix
 

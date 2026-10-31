@@ -22,6 +22,15 @@ For high-resolution GrADS CTL output, the generator removes a terminal `_hires` 
 
 `category_id` is the first column and numeric sorting key. IDs are organized to follow the map-product workflow where practical: 10–19 cover products distributed by default or produced during regionalization, and 900–999 cover high-resolution products. IDs from 20 onward are being organized as the parameter and auxiliary workflows are inventoried. The scheme remains provisional; IDs group products and are not intrinsic properties of map variables. The table below records current assignments in `map_variables.csv`; it is not a reservation of unassigned IDs.
 
+`sub_id` is a separate functional-role label. It does not encode processing order and must not be combined with `category_id` (for example, as `21A`). The currently approved values are:
+
+| Value | Meaning | Classification evidence |
+| --- | --- | --- |
+| `A` | Model input: data read during CaMa-Flood execution, including supported alternative inputs that can be selected or configured. | Trace the model read/configuration path; being a default input is not required. |
+| `B` | Supporting data: map-preparation intermediates, diagnostics, and analysis data not directly read during model execution. | Trace the preprocessing, diagnostic, or analysis use. |
+
+Assign only `A` or `B`. Do not classify from a filename or producer alone. If repository evidence does not establish the role, leave `sub_id` blank and report the gap. A product used by preprocessing is not automatically a model input. Preserve existing maintainer classifications; when inspected code appears to conflict, record the evidence and request maintainer review rather than silently changing the value. Adding another role requires maintainer approval.
+
 | ID | Group / current category labels | Meaning |
 | ---: | --- | --- |
 | 10 | `default_metadata` | Default map metadata used to describe map geometry. |
@@ -33,10 +42,10 @@ For high-resolution GrADS CTL output, the generator removes a terminal `_hires` 
 | 16 | `default_rivmap_supp` | Supplementary products associated with default map preparation. |
 | 20 | Unassigned | No current product uses this ID. |
 | 21 | `param_cross-section` | Channel-discharge and cross-section parameter products, including outputs of the `s01` workflow and alternate width products. |
-| 22 | `bifurcation` | Bifurcation parameters and supporting products. |
+| 22 | `bifurcation` | Standard non-MPI bifurcation parameters and basin-connectivity products. |
 | 23 | `inflow_scheme` | Inflow-boundary products and supporting masks. |
 | 24 | `dam_reservoir` | Dam and reservoir parameter products. |
-| 25 | `MPI` | MPI partitioning and supporting products. |
+| 25 | `MPI` | MPI-specific bifurcation variants and partitioning products. |
 | 52 | `input_matrix` | User-configured input-matrix products and paired configuration. |
 | 62–63 | `river_map_supplement` | Supporting or specialized map products. |
 | 81 | `gauge_alloc` | Gauge allocation and verification data. |
@@ -44,7 +53,7 @@ For high-resolution GrADS CTL output, the generator removes a terminal `_hires` 
 | 900 | `hires_metadata` | High-resolution area metadata. |
 | 901 | `hires_data` | High-resolution map layers. |
 
-The temporary `workflow_stage` column follows `category_id`; it is a sample/workflow status annotation, not an intrinsic property of a map variable or a statement of runtime necessity. Set it to `default` for registry rows whose matching product files are present in the current `map/mekong_15min/` sample, including registered text metadata/configuration products. Other workflow values are retained only where a maintainer has identified them; leave the field blank when no status has been confirmed. Keep all rows for a multi-variable file consistent. This field is not source provenance: record global defaults and regional derivation in `generation_or_processing`.
+The CSV columns begin with `category_id`, `sub_id`, and `workflow_stage`, in that order. `workflow_stage` is a sample/workflow status annotation, not an intrinsic property of a map variable or a statement of runtime necessity. The maintainer updates this column manually for review. Codex and other AI agents must preserve its values and must not infer or change `default` from file presence; report suggested status changes to the maintainer instead. Keep all rows for a multi-variable file consistent when the maintainer updates them. This field is not source provenance: record global defaults and regional derivation in `generation_or_processing`.
 
 Sort rows by ascending numeric `category_id`, then `binary_filename` (case-insensitive), then numeric `record_index` with blank indices last. For the human-facing columns, prefer concise labels and structures; put extended provenance and verification notes in the fields from `usage` onward. Preserve all evidence and verification-status fields during recategorization. Use the functional descriptions and evidence to select a group; do not classify from a filename alone. Treat `workflow_stage` as a temporary sample/workflow-status annotation; never use it to define the product or general workflow.
 
@@ -53,7 +62,8 @@ Sort rows by ascending numeric `category_id`, then `binary_filename` (case-insen
 | Column | Meaning |
 | --- | --- |
 | `category_id` | Provisional numeric grouping/sort key from the table above; it is the first CSV column and may be revised as the inventory develops. |
-| `workflow_stage` | Provisional sample/workflow status immediately after `category_id`. `default` means the matching product file is present in the current Mekong sample; it does not mean the product is required by the standard simulation or distributed in every map. Blank means no status is confirmed. Keep all rows for a multi-variable file consistent. |
+| `sub_id` | Functional role independent of `category_id`: `A` for model-execution inputs, including configurable alternatives; `B` for preparation intermediates, diagnostics, and analysis data; blank when repository evidence is insufficient. Verify actual read/use paths and preserve maintainer assignments pending review of conflicts. |
+| `workflow_stage` | Provisional sample/workflow status immediately after `sub_id`. `default` means the matching product file is present in the current Mekong sample; it does not mean the product is required by the standard simulation or distributed in every map. Blank means no status is confirmed. Keep all rows for a multi-variable file consistent. |
 | `category` | Descriptive product subgroup within the broad functional group identified by `category_id`. |
 | `product_kind` | One of four data-product classes: `binary_map` for one 2-D map variable; `binary_mult` for a binary file containing multiple variable arrays or a 3-D/multilayer array; `text_meta` for descriptive metadata/configuration text; or `text_table` for tabular text such as station records. Repeat the file-level kind on every variable row for that file. The `dtype` column records each variable's actual storage type or encoding. |
 | `binary_filename` | Primary filename or logical output filename; it may be a pattern such as `bifprm-<N>.txt`. |
@@ -90,6 +100,8 @@ Sort rows by ascending numeric `category_id`, then `binary_filename` (case-insen
 `verification_status` values in this draft are `verified_source_and_sample`, `verified_source`, `maintainer_confirmed`, `package_observed`, and `provisional_semantics`. `verified_source_and_sample` means the source-derived definition and sample presence have both been checked; it does not mean scientific suitability or correctness has been validated. `maintainer_confirmed` records a maintainer-provided definition that the inspected source only passes through or does not establish independently; it does not imply scientific validation. The `workflow_stage` field separately records the current sample status described above. `provisional_semantics` means product presence or structure may be known while producer, meaning, format, or use remains unresolved. Blank/unknown semantic fields remain intentionally unresolved.
 
 The fields deliberately separate two questions: `distribution_status` describes the product's role in the workflow, while `sample_availability` records where it was actually observed. Package observations do not prove universal distribution. A source program that writes a file does not establish that a corresponding product is shipped. These distinctions should be preserved when adding entries.
+
+The bifurcation check raster illustrates why the writer and filename must be recorded precisely. The legacy v4 `map/src/src_param/set_bifparam.F90` writes `bifdph.bin` with two records (`bifdph`, then `bifwth`); this is an auxiliary inspection product, not a model runtime input. The shared v5 `map/tools/code/param_set_bifparam.F90` keeps the same record contents but writes them to `check_bif_dphwth.bin` only when `check_map` is explicitly requested. It does not create or replace `bifdph.bin`. Keep separate registry rows for these filenames, even though they contain variables with the same short names, and do not treat the v5 diagnostic as part of the default workflow.
 
 ## Maintenance rules
 

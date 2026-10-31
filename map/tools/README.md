@@ -17,6 +17,8 @@ The general-purpose runoff input-matrix generator is available as `param_generat
 
 The v5 [`script_params/s01-channel_params.sh`](script_params/s01-channel_params.sh) runs annual mean discharge estimation, power-law channel parameterization, and MERIT Hydro width merging only. It uses the standard distributed `diminfo_test-1deg.txt` and input matrix by default. The v5 tools include `param_calc_outclm`, `param_calc_rivwth`, and `param_set_merit_width`; they preserve the legacy calculations and write the alternate merged width as `rivwth_merit.bin`. The v4 `gosh/` and `map/src/` workflows, including their `rivwth_gwdlr.bin` output, remain unchanged. The current model reader does not automatically select the v5 alternate output. The annual runoff climatology comes from the data-rich distribution package and is not included in the GitHub source repository because its redistribution terms are not established.
 
+The v5 [`script_params/s02-bifurcation.sh`](script_params/s02-bifurcation.sh) generates standard non-MPI bifurcation parameters and basin-connectivity products after `rivhgt.bin` is available. It preserves the legacy default `BIFLAYER=5`, regular parameter/basin output names, and non-MPI `bifprm.txt` ordering. The diagnostic depth/width raster is written only when the wrapper is invoked as `s02-bifurcation.sh check_map`; it is named `check_bif_dphwth.bin` and is not a simulation input. MPI-specific sorting and products are reserved for the separate `s04-mpi_map_setup.sh` workflow. Build both programs with `make -C map/tools/code param`; the wrapper handles the different map-root and map-local `script_params/` working directories required by the legacy implementations. It overwrites outputs it creates, so preserve any files that must be retained before running it. The legacy v4 `map/src/` implementation keeps its existing `bifdph.bin` output.
+
 Regional executables use the `region_` prefix. Build them with the active compiler settings in `adm/Mkinclude`:
 
 ```sh
@@ -63,7 +65,9 @@ python3 -B map/tests/validate_mekong_sample.py
 python3 -B -m unittest map.tools.tests.test_mekong_ctl_integration -v
 python3 -B -c 'from pathlib import Path; [compile(p.read_text(), str(p), "exec") for p in [Path("map/tools/code/generate_ctl.py"), *Path("map/tools/tests").glob("*.py"), *Path("map/tests").glob("*.py")]]'
 for script in map/tools/script_region/*.sh; do sh -n "$script"; done
+for script in map/tools/script_params/*.sh; do sh -n "$script"; done
 make -C map/tools/code region
+make -C map/tools/code param
 make -C map/tools/code clean
 ```
 
