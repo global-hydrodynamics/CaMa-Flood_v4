@@ -24,7 +24,7 @@ USE NETCDF
       data                    type /'bin'/
 
       character*256       ::  diminfo             !! dimention info file
-      data                    diminfo /'./diminfo_test-1deg.txt'/
+      data                    diminfo /'./inpdim_test-1deg.txt'/
 
 ! parameter
       real                ::  HC, HP, HO, HMIN    !! Coef, Power, Offset, Minimum for Height (H=max(HMIN,HC*Qave**HP)

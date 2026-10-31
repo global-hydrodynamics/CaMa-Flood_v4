@@ -1,7 +1,7 @@
       program COMBINE_HIRES
 ! ===============================================
       implicit none
-      character*256          ::  tag
+      character*256          ::  hires_tag
 
       character*256          ::  global_dir                    !! global map directory
       integer                ::  nXX, nYY
@@ -57,7 +57,7 @@
       integer                ::  ios
       character*256          ::  buf
 ! ===============================================
-      call getarg(1,tag)
+      call getarg(1,hires_tag)
 
 ! Combine source high-resolution map areas for tag (for example, 1min)
 ! into the selected regional extent; available layer files are read by area.
@@ -84,25 +84,25 @@
       read(11,*    ) north
       close(11)
 
-      hires=trim(global_dir)//'/'//trim(tag)//'/'
-      out_hdir='../'//trim(tag)//'/'
+      hires=trim(global_dir)//'/'//trim(hires_tag)//'/'
+      out_hdir='../'//trim(hires_tag)//'/'
 
-      if( trim(tag)=="1min" )then
+      if( trim(hires_tag)=="1min" )then
         cnum=60
         csize=1./dble(cnum)
-      elseif( trim(tag)=="30sec" )then
+      elseif( trim(hires_tag)=="30sec" )then
         cnum=120
         csize=1./dble(cnum)
-      elseif( trim(tag)=="15sec" )then
+      elseif( trim(hires_tag)=="15sec" )then
         cnum=240
         csize=1./dble(cnum)
-      elseif( trim(tag)=="5sec" )then
+      elseif( trim(hires_tag)=="5sec" )then
         cnum=720
         csize=1./dble(cnum)
-      elseif( trim(tag)=="3sec" )then
+      elseif( trim(hires_tag)=="3sec" )then
         cnum=1200
         csize=1./dble(cnum)
-      elseif( trim(tag)=="1sec" )then
+      elseif( trim(hires_tag)=="1sec" )then
         cnum=3600
         csize=1./dble(cnum)
       else
@@ -114,7 +114,7 @@
 
 ! Large high-resolution extents are processed as tiles (except 1min).
       isTile=0
-      if( trim(tag)/='1min' )then
+      if( trim(hires_tag)/='1min' )then
         if( nx>16000 .or. ny>16000)then
           isTile=1
         endif
@@ -130,7 +130,7 @@
       isFdir=0
       if( isTile==0 )then
 
-        CCname=trim(tag)
+        CCname=trim(hires_tag)
 
         allocate(catmXX(nx,ny),catmYY(nx,ny),catmZZ(nx,ny),flddif(nx,ny),grdare(nx,ny),catmZ100(nx,ny))
         allocate(flwdir(nx,ny),hand(nx,ny),elevtn(nx,ny),uparea(nx,ny),rivwth(nx,ny),visual(nx,ny),downx(nx,ny),downy(nx,ny))
@@ -378,7 +378,7 @@
         write(21,rec=1) flddif
         close(21)
 
-        if( trim(tag)/='3sec' )then
+        if( trim(hires_tag)/='3sec' )then
           wfile1=trim(out_hdir)//'/'//trim(CCname)//'.grdare.bin'
           open(21,file=wfile1,form='unformatted',access='direct',recl=4*nx*ny)
           write(21,rec=1) grdare
@@ -430,7 +430,7 @@
         open(21,file=wfile1,form='formatted')
         write(21,'(i6,a10)') 1, '  narea'
         write(21,'(a6,a10,4a10,  2a8,a20)'   )   'iarea', 'carea', 'west', 'east', 'south', 'north', 'nx', 'ny', 'csize'
-        write(21,'(i6,a10,4f10.3,2i8,f20.15)')   1, trim(tag), west, east, south, north, nx, ny, csize
+        write(21,'(i6,a10,4f10.3,2i8,f20.15)')   1, trim(hires_tag), west, east, south, north, nx, ny, csize
         close(21)
       endif
 
@@ -438,23 +438,23 @@
 
 ! For large domains, process and write geographic tiles instead of one array.
       if( isTile==1 )then        !! Tiles High Resolution Data
-        if( trim(tag)=="30sec" )then
+        if( trim(hires_tag)=="30sec" )then
           cnum=120
           csize=1./dble(cnum)
           mwin=30
-        elseif( trim(tag)=="15sec" )then
+        elseif( trim(hires_tag)=="15sec" )then
           cnum=240
           csize=1./dble(cnum)
           mwin=30
-        elseif( trim(tag)=="5sec" )then
+        elseif( trim(hires_tag)=="5sec" )then
           cnum=720
           csize=1./dble(cnum)
           mwin=10
-        elseif( trim(tag)=="3sec" )then
+        elseif( trim(hires_tag)=="3sec" )then
           cnum=1200
           csize=1./dble(cnum)
           mwin=10
-        elseif( trim(tag)=="1sec" )then
+        elseif( trim(hires_tag)=="1sec" )then
           cnum=3600
           csize=1./dble(cnum)
           mwin=5

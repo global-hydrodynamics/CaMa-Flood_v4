@@ -20,7 +20,7 @@ USE NETCDF
 ! calculation type
       character*256       ::  buf
       character*256       ::  diminfo                 !! dimention info file
-      data                    diminfo /'./diminfo_test-1deg.txt'/
+      data                    diminfo /'./inpdim_test-1deg.txt'/
 
 
 ! river network map parameters
@@ -79,7 +79,7 @@ print *, 'set_bifparam: read parameters from arguments'
         stop 1
       endif
 
-! DIMINFO supplies the base-grid dimensions and bounds; all subsequent direct
+! INPDIM supplies the base-grid dimensions and bounds; all subsequent direct
 ! binary records are sized as NX*NY four-byte values.
       open(11,file=diminfo,form='formatted')
       read(11,*) nx

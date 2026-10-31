@@ -65,11 +65,11 @@
 ! files
       integer                ::  ios
       character*256          ::  rfile1, wfile1
-      character*256          ::  mapdir, hires, inpmat, tag
-      character*256          ::  diminfo
+      character*256          ::  mapdir, hires, inpmat, hires_tag
+      character*256          ::  inpdim
       parameter                 (mapdir='../')
       parameter                 (inpmat='inpmat_test-1deg.bin')
-      parameter                 (diminfo='../diminfo_test-1deg.txt')
+      parameter                 (inpdim='../inpdim_test-1deg.txt')
 ! function
       character*256          ::  buf
 ! ===============================================
@@ -77,13 +77,13 @@
 ! This version uses the fixed global 1-degree N-to-S input grid below.
 print *, 'REGION_DEFAULT_INPMAT:'
 
-      call getarg(1,tag)
-       if( tag=='' ) then
-         print *, 'usage % region_default_inpmat $HIRES'
+      call getarg(1,hires_tag)
+       if( hires_tag=='' ) then
+         print *, 'usage % region_default_inpmat $HIRES_TAG'
          stop
       endif
 
-      hires=trim(mapdir)//'/'//trim(tag)//'/'
+      hires=trim(mapdir)//'/'//trim(hires_tag)//'/'
 
       nxin=nint( (eastin -westin )/gsizein )
       nyin=nint( (northin-southin)/gsizein )
@@ -250,7 +250,7 @@ print *, 'REGION_DEFAULT_INPMAT:'
 
 ! Write dimensions and the sparse matrix: input X indices, Y indices, then
 ! overlap areas, each as a separate direct-access record.
-      open(11,file=diminfo,form='formatted')
+      open(11,file=inpdim,form='formatted')
       write(11,'(i10,5x,a)') nXX,          '!! nXX'
       write(11,'(i10,5x,a)') nYY,          '!! nYY'
       write(11,'(i10,5x,a)') nflp,         '!! floodplain layer'

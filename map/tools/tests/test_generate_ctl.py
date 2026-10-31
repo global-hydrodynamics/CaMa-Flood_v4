@@ -111,7 +111,7 @@ class GenerateCtlTests(unittest.TestCase):
         self.assertEqual((result.generated, result.skipped, result.failed), (0, 1, 1))
         self.assertFalse((self.map_dir / "known.ctl").exists())
 
-    def test_input_matrix_uses_its_diminfo_descriptor_and_mixed_record_types(self):
+    def test_input_matrix_uses_its_inpdim_descriptor_and_mixed_record_types(self):
         matrix_rows = []
         for name, dtype, index, long_name, units in (
             ("inpx", "int32", "1", "Input-grid x index", "1"),
@@ -129,7 +129,7 @@ class GenerateCtlTests(unittest.TestCase):
             item["units"] = units
             matrix_rows.append(item)
         write_registry(self.registry, matrix_rows)
-        (self.map_dir / "diminfo_test-1deg.txt").write_text(
+        (self.map_dir / "inpdim_test-1deg.txt").write_text(
             "3 !! nXX\n2 !! nYY\n2 !! floodplain layers\n360 !! input nXX\n"
             "180 !! input nYY\n4 !! input num\ninpmat_test-1deg.bin\n"
             "-1.5 !! west\n1.5 !! east\n1.0 !! north\n-1.0 !! south\n",
@@ -151,6 +151,23 @@ class GenerateCtlTests(unittest.TestCase):
         (self.map_dir / "inpmat_test-1deg.ctl").unlink()
         self.assertEqual(self.run_generator().generated, 1)
         self.assertIn("undef -7", (self.map_dir / "inpmat_test-1deg.ctl").read_text())
+
+    def test_input_matrix_still_accepts_legacy_diminfo_descriptor(self):
+        matrix_rows = []
+        for name, index in (("inpx", "1"), ("inpy", "2"), ("inpa", "3")):
+            item = row("inpmat_legacy.bin", name, "int32" if name != "inpa" else "float32",
+                       "NX,NY,INPN", record_layout=f"block {index}: {name} levels 1..INPN",
+                       record_index=index, record_count="3", missing="0")
+            item["product_kind"] = "binary_mult"
+            matrix_rows.append(item)
+        write_registry(self.registry, matrix_rows)
+        (self.map_dir / "diminfo_legacy.txt").write_text(
+            "3\n2\n2\n360\n180\n1\ninpmat_legacy.bin\n-1.5\n1.5\n1\n-1\n",
+            encoding="ascii",
+        )
+        (self.map_dir / "inpmat_legacy.bin").write_bytes(b"\0" * (3 * 2 * 1 * 3 * 4))
+        result = self.run_generator()
+        self.assertEqual((result.generated, result.skipped, result.failed), (1, 0, 0))
 
     def test_unknown_registry_dimensions_are_skipped_not_reported_as_grid_mismatch(self):
         write_registry(self.registry, [row("width.bin", "width", "float32", "dataset-dependent")])

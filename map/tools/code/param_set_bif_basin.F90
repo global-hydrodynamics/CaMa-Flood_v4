@@ -1,7 +1,19 @@
 ! Shared v5 map-tool copy of map/src/src_param/set_bif_basin.F90.
-! Scientific implementation and binary/text layouts are preserved.
-! Merge basin IDs connected by the paths in bifprm.txt, then write the updated
-! basin map and diagnostic maps for modified basins, connection points, and colors.
+! Scientific calculations are preserved; v5 diagnostic layout is described below.
+! Generate bifbsn.bin by merging basin IDs connected through the pathways
+! registered in bifprm.txt. STEP 1 handles river-channel bifurcations with a
+! positive first-layer width; STEP 2 includes the remaining registered
+! floodplain/overland pathways. STEP 2 does not evaluate instantaneous water
+! levels or whether a pathway is active, so the result represents potential
+! connectivity through the registered pathways.
+! This is a general basin-connectivity preprocessing tool, independent of MPI.
+! The current MPI domain-partitioning workflow generates a separate basin map,
+! bifbsn_mpi.bin, using set_bif_basin_mpi; it does not read this program's
+! standard output bifbsn.bin as a direct input.
+! It always writes bifcol.bin for merged-basin visualization. When invoked
+! with the optional "check_map" argument, it writes check_bif_bsnmod.bin with
+! bifmod and bpoint as records 1 and 2. Separate bifmod.bin and bpoint.bin are
+! legacy outputs and are not produced by this v5 program.
 ! Run with CWD=<map>/script_params; input/output paths below are relative to it.
       program param_set_bif_basin
 ! ================================================
@@ -15,14 +27,14 @@
       real                ::  west, east, north, south
       real                ::  gsize
 
-! river netwrok map
+! River-network and basin maps.
       integer,allocatable ::  nextx(:,:)                 !! downstream x
       integer,allocatable ::  nexty(:,:)                 !! downstream y
       integer,allocatable ::  basin(:,:)                 !! basin
 
       integer,allocatable ::  bsnori(:,:)                !! to save original basin data for comparison
-      integer,allocatable ::  bifmod(:,:)                !! highlihgt basins where connectivity is modified
-      integer,allocatable ::  bpoint(:,:)                !! grids where inter-basin bifurcation happens
+      integer,allocatable ::  bifmod(:,:)                !! basin modification classes; see output classification below
+      integer,allocatable ::  bpoint(:,:)                !! original inter-basin pathway endpoints; see codes below
 ! bifurcation
       integer             ::  ipth, npth                 !! bifurcation pathway ID
       integer             ::  ilev, nlev                 !! bifurcation layers
@@ -35,7 +47,7 @@
       real,allocatable    ::  wth(:)                     !! bifurcation width for each layer
       real                ::  lat, lon
 
-! color for mpi basins
+! Visualization colors for the merged basin map; not an MPI partition map.
       integer,allocatable ::  color(:,:)                 !! basin color for visualization
       integer,allocatable ::  bsn_mask(:,:)
       integer             ::  color_this, color_max, grid
@@ -50,8 +62,27 @@
       integer             ::  again
 ! files
       character*256       ::  finp, fparam, fout, fbifori
+      character*256       ::  arg
       integer             ::  ios
+      integer             ::  nargs
+      logical             ::  write_check_map
 ! ================================================
+      nargs=command_argument_count()
+      write_check_map=.false.
+      if( nargs>1 )then
+        print *, 'ERROR: usage: param_set_bif_basin [check_map]'
+        stop 1
+      endif
+      if( nargs==1 )then
+        call getarg(1,arg)
+        if( trim(adjustl(arg))=='check_map' )then
+          write_check_map=.true.
+        else
+          print *, 'ERROR: optional argument must be check_map'
+          stop 1
+        endif
+      endif
+
       print *, 'Update basin ID considering inter-basin bifurcation:'
 
 ! Read base-map geometry from params.txt. The grid is traversed in Fortran array
@@ -138,8 +169,9 @@
       allocate( wth(nlev) )
 print *, '******************'
 !=================================================================
-! STEP 1: merge basins connected by a positive layer-1 (river-channel) width.
-! Repeat until every river-channel bifurcation endpoint has a common basin ID.
+! STEP 1: merge basins connected by river-channel bifurcations identified by
+! positive first-layer width (wth(1)>0). Repeat until those path endpoints
+! have a common basin ID.
  500 continue
 
 print *, 'STEP-1: merge basins with inter-basin channels'
@@ -151,7 +183,7 @@ print *, 'STEP-1: merge basins with inter-basin channels'
 print *, '-- analyse inter-basin channels'
       do ipth=1, npth
         read(12,*) ix,iy,jx,jy, len, elv, dph, (wth(ilev),ilev=1,nlev), lat, lon
-        if( wth(1)<=0 ) cycle                      !! no river bifurcation
+        if( wth(1)<=0 ) cycle                      !! not a river-channel bifurcation
 
         if( basin(ix,iy)/=basin(jx,jy) )then
           if( basin(ix,iy)<basin(jx,jy) )then
@@ -163,9 +195,9 @@ print *, '-- analyse inter-basin channels'
           endif
 
           if( bnew(jbsn)==-9999 )then
-            bnew(jbsn)=ibsn  !! jbsn should be integrated to ibsn
+            bnew(jbsn)=ibsn  !! merge the larger numeric basin ID into the smaller ID
           elseif( bnew(jbsn)>ibsn )then
-            bnew(jbsn)=ibsn  !! jbsn should be integrated to ibsn
+            bnew(jbsn)=ibsn  !! retain the smaller numeric basin ID as representative
           endif
 
         endif
@@ -173,8 +205,9 @@ print *, '-- analyse inter-basin channels'
       close(12)
 
 print *, '-- decide basin IDs to be updated'
-! Resolve chains of basin merges to their final destination, update basin sizes,
-! then apply the mapping to every cell in the basin raster.
+! Resolve merge chains to their final representative ID, then update basin
+! counts and apply the mapping. The representative is chosen by numeric basin
+! ID, not by basin area or hydrological dominance.
       do ibsn=1, nbsn
         if( bnew(ibsn)/=-9999 )then
           jbsn=bnew(ibsn)
@@ -202,7 +235,7 @@ print *, '-- update basin number'
       end do
       bnew(:)=-9999
 
-print *, 'check all bifurcation merged or not' !! if one basin has multiple connection, avobe method does not work
+print *, 'check all bifurcation merged or not' !! repeated paths may require another merge pass
 
       open(12,file=fbifori,form='formatted')
       read(12,*) npth, nlev
@@ -243,11 +276,16 @@ print *, 'check all bifurcation merged or not' !! if one basin has multiple conn
 !**********************
 
 print *, '*****************'
-print *, 'STEP-2: merge basins with river bifurcation connectivity'
+print *, 'STEP-2: merge basins with all bifurcation pathways'
 
 
-! STEP 2: merge remaining basins connected by overland bifurcation pathways.
-! Traverse paths in reverse order, then repeat until all path endpoints agree.
+! STEP 2: consider every pathway registered in bifprm.txt, including the
+! floodplain/overland pathways not merged in STEP 1. This is potential
+! connectivity: no instantaneous water level or active-connection test is made.
+! The loop index decreases, but each sequential formatted READ still consumes
+! the next record in the original file order. Repeat until all path endpoints
+! have a common basin ID. As in STEP 1, the smaller numeric basin ID represents
+! each merged group; basin area and hydrological dominance are not considered.
 1000 continue
 
       fbifori='../bifprm.txt'
@@ -268,9 +306,9 @@ print *, '-- analyse inter-basin channels (overland)'
           endif
           
           if( bnew(jbsn)==-9999 )then
-            bnew(jbsn)=ibsn  !! jbsn should be integrated to ibsn
+            bnew(jbsn)=ibsn  !! merge the larger numeric basin ID into the smaller ID
           elseif( bnew(jbsn)>ibsn )then
-            bnew(jbsn)=ibsn  !! jbsn should be integrated to ibsn
+            bnew(jbsn)=ibsn  !! retain the smaller numeric basin ID as representative
           endif
         endif
       end do
@@ -292,7 +330,7 @@ print *, '-- decide basin IDs to be updated'
       end do
 
 ! Resolve the overland merge chains, mark source and destination basins for
-! bifmod.bin, and apply the resulting basin-ID mapping to each map cell.
+! modification flags, and apply the resulting basin-ID mapping to each map cell.
       do ibsn=1, nbsn
         if( bnew(ibsn)/=-9999 )then
           jbsn=bnew(ibsn)
@@ -315,7 +353,7 @@ print *, '-- update basin number'
       end do
       bnew(:)=-9999
 
-print *, 'check all bifurcation passway merged or not' !! if one basin has multiple connection, avobe method does not work
+print *, 'check all bifurcation pathways merged or not' !! repeated paths may require another merge pass
 
       open(12,file=fbifori,form='formatted')
       read(12,*) npth, nlev
@@ -355,10 +393,12 @@ print *, 'Post Process: update basin color map'
 ! calculations or the basin IDs written to bifbsn.bin.
       call set_color
 
-print *, 'Mark inter-basin connectivity locations (bpoint.bin)'
-! Mark the two cells at each original inter-basin path. Codes: 1=connection
-! still split after non-MPI merging; 2=merged overland connection;
-! 3=merged river-channel connection. The greater code wins at shared cells.
+print *, 'Mark inter-basin connectivity endpoints (bpoint array)'
+! Mark both endpoints of each path that originally connected different basins.
+! Codes: 1=the endpoints remain in different basins after this merge;
+! 2=the overland connection was merged; 3=the river-channel connection was
+! merged. This describes the resulting basin map, not an MPI region map. At a
+! shared cell, the highest code is retained.
       bpoint(:,:)=-9999
       open(12,file=fbifori,form='formatted')
       read(12,*) npth, nlev
@@ -372,7 +412,7 @@ print *, 'Mark inter-basin connectivity locations (bpoint.bin)'
             bpoint(ix,iy)=max(mark,bpoint(ix,iy))
             bpoint(jx,jy)=max(mark,bpoint(jx,jy))
           else
-            mark=1                                 !! 1= inter-basin connection not represented in MPI region map
+            mark=1                                 !! 1=original inter-basin pathway remains split in this basin map
             bpoint(ix,iy)=max(mark,bpoint(ix,iy))
             bpoint(jx,jy)=max(mark,bpoint(jx,jy))
           endif
@@ -380,7 +420,7 @@ print *, 'Mark inter-basin connectivity locations (bpoint.bin)'
       end do
       close(12)
 
-print *, 'Mark basins which exmands/absorved'
+print *, 'Mark basins that expand or are absorbed'
       bnum=0
       do iy=1, ny
         do ix=1, nx
@@ -391,8 +431,9 @@ print *, 'Mark basins which exmands/absorved'
         end do
       end do
 
-! Classify original basin cells: 0 unchanged, 1 basin absorbed, 2 basin expanded.
-! Non-basin cells retain the legacy -9999 sentinel.
+! The bifmod array classifies original basin cells: 0=unchanged, 1=absorbed into
+! another basin, and 2=the retained basin expanded through merging. Non-basin
+! cells retain the legacy -9999 sentinel.
       bifmod(:,:)=-9999
       do iy=1, ny
         do ix=1, nx
@@ -401,7 +442,7 @@ print *, 'Mark basins which exmands/absorved'
             ibsn=bsnori(ix,iy)
             if( bnum(ibsn)>bnumori(ibsn) )then !! basins expanded by merging
               bifmod(ix,iy)=2
-            elseif( bnum(ibsn)==0 )then        !! basins absorvd 
+            elseif( bnum(ibsn)==0 )then        !! basin absorbed into another basin
               bifmod(ix,iy)=1
             endif
           endif
@@ -411,31 +452,33 @@ print *, 'Mark basins which exmands/absorved'
 !============================================
 print *, 'Write to Files'
 
-! Write one direct-access int32 map record per product, keeping the original
-! filenames and file layout expected by the legacy workflow.
+! Write the standard merged basin map and visualization colors. Keep both
+! products unconditional; bifcol.bin is routinely used to inspect the map.
       fout='../bifbsn.bin'
       open(11,file=fout,form='unformatted',access='direct',recl=4*nx*ny)
       write(11,rec=1) basin
-      close(11)
-
-      fout='../bpoint.bin'
-      open(11,file=fout,form='unformatted',access='direct',recl=4*nx*ny)
-      write(11,rec=1) bpoint
-      close(11)
-
-      fout='../bifmod.bin'
-      open(11,file=fout,form='unformatted',access='direct',recl=4*nx*ny)
-      write(11,rec=1) bifmod
       close(11)
 
       fout='../bifcol.bin'
       open(11,file=fout,form='unformatted',access='direct',recl=4*nx*ny)
       write(11,rec=1) color
       close(11)
+
+! Optional check output consolidates the existing diagnostic arrays without
+! changing their classifications: record 1 is bifmod, record 2 is bpoint.
+! Do not open this file in the standard mode, so a prior check file is kept.
+      if( write_check_map )then
+        fout='../check_bif_bsnmod.bin'
+        open(11,file=fout,form='unformatted',access='direct',recl=4*nx*ny,status='replace')
+        write(11,rec=1) bifmod
+        write(11,rec=2) bpoint
+        close(11)
+      endif
 !============================================
 CONTAINS
 ! Compute basin bounding boxes and greedily assign visualization colors while
-! avoiding colors already used by neighboring basins.
+! avoiding colors already used by neighboring basins. These colors are for
+! displaying the merged basin map and are not MPI rank or partition IDs.
       subroutine set_color
 
 print *, 'SET_MAP color basin'

@@ -69,8 +69,8 @@
 ! files
       integer                ::  ios
       character*256          ::  rfile1, wfile1
-      character*256          ::  mapdir, hires, inpmat, tag
-      character*256          ::  diminfo
+      character*256          ::  mapdir, hires, inpmat, hires_tag
+      character*256          ::  inpdim
       parameter                 (mapdir='./')
 ! function
       character*256          ::  fmt1, cnmax
@@ -78,9 +78,9 @@
 !================================================
 print *, 'CALC_INPMAT:'
 
-      call getarg(1,tag)
-       if( tag=='' ) then
-         print *, 'usage % generate_inpmat $HIRES $GSISE $WEST $EAST $NORTH $SOUTH $OLAT $DIMINFO $INPMAT'
+      call getarg(1,hires_tag)
+       if( hires_tag=='' ) then
+         print *, 'usage % generate_inpmat $HIRES_TAG $GRSIZE $WEST $EAST $NORTH $SOUTH $OLAT $INPDIM $INPMAT'
          stop
       endif
       call getarg(2,buf)
@@ -96,11 +96,11 @@ print *, 'CALC_INPMAT:'
       call getarg(7,buf)
        if( buf/='' ) read(buf,*) olat
       call getarg(8,buf)
-       if( buf/='' ) read(buf,*) diminfo
+       if( buf/='' ) read(buf,*) inpdim
       call getarg(9,buf)
        if( buf/='' ) read(buf,*) inpmat
 
-      hires=trim(mapdir)//'/'//trim(tag)//'/'
+      hires=trim(mapdir)//'/'//trim(hires_tag)//'/'
 
       nxin=nint( (eastin -westin )/gsizein )
       nyin=nint( (northin-southin)/gsizein )
@@ -109,7 +109,7 @@ print *, 'CALC_INPMAT:'
       print *, 'nxin, nyin, gsizein:',      nxin,   nyin,   gsizein
       print *, 'west, east, north, south:', westin, eastin, northin, southin
       print *, 'north-south order:   ',     olat
-      print *, 'dimention info file  ',     trim(diminfo)
+      print *, 'dimention info file  ',     trim(inpdim)
       print *, 'input matrix file    ',     trim(inpmat)
 
       open(11,file=param,form='formatted')
@@ -263,7 +263,7 @@ print *, 'CALC_INPMAT:'
       end do
       print *, 'input_num_max: ', mmax, 'lon lat: ', west+real(iXX0-1)*gsize, north-real(iYY0-1)*gsize, 'ix, iy: ', iXX0, iYY0
 
-      open(11,file=diminfo,form='formatted')
+      open(11,file=inpdim,form='formatted')
       write(11,'(i10,5x,a)') nXX,          '!! nXX'
       write(11,'(i10,5x,a)') nYY,          '!! nYY'
       write(11,'(i10,5x,a)') nflp,         '!! floodplain layer'

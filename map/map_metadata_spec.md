@@ -101,7 +101,7 @@ Sort rows by ascending numeric `category_id`, then `binary_filename` (case-insen
 
 The fields deliberately separate two questions: `distribution_status` describes the product's role in the workflow, while `sample_availability` records where it was actually observed. Package observations do not prove universal distribution. A source program that writes a file does not establish that a corresponding product is shipped. These distinctions should be preserved when adding entries.
 
-The bifurcation check raster illustrates why the writer and filename must be recorded precisely. The legacy v4 `map/src/src_param/set_bifparam.F90` writes `bifdph.bin` with two records (`bifdph`, then `bifwth`); this is an auxiliary inspection product, not a model runtime input. The shared v5 `map/tools/code/param_set_bifparam.F90` keeps the same record contents but writes them to `check_bif_dphwth.bin` only when `check_map` is explicitly requested. It does not create or replace `bifdph.bin`. Keep separate registry rows for these filenames, even though they contain variables with the same short names, and do not treat the v5 diagnostic as part of the default workflow.
+The v5 bifurcation workflow distinguishes regular supporting output from optional diagnostics. `bifcol.bin` is generated on every standard run because it is routinely used to visualize the merged basin map. With `check_map`, `param_set_bifparam` writes `check_bif_dphwth.bin` (float32 records `bifdph`, then `bifwth`), and `param_set_bif_basin` writes `check_bif_bsnmod.bin` (int32 records `bifmod`, then `bpoint`). Each diagnostic file has two `NX × NY` direct-access records and is not a model runtime input. The v5 basin utility no longer writes separate `bifmod.bin` and `bpoint.bin`; those names belong to the unchanged v4 workflow. The legacy v4 `set_bifparam.F90` continues to write `bifdph.bin`, while v5 does not create or replace it. `biftag.bin` is excluded from the v5 product registry; any package or legacy occurrences remain untouched. The registry uses two variable rows per multi-record diagnostic file, preserving record indexes and order. `sub_id=B` identifies supporting data; it does not imply that the file is optional or generated only on request.
 
 ## Maintenance rules
 
@@ -189,7 +189,13 @@ The package example contains three records: `NX`, `NY`, and `NLFP`. The maintain
 
 The external algorithm's source is not included in this repository. The repository therefore has no in-tree reader/writer for this file; the distributed map package is the reference for its observed three-record representation.
 
-### `diminfo*.txt` — simulation and runoff/input-grid configuration
+### `inpdim_<ROFFTAG>.txt` — v5 runoff/input-grid configuration
+
+v5 map workflows pair `inpdim_<ROFFTAG>.txt` with `inpmat_<ROFFTAG>.bin`. `ROFFTAG` identifies the runoff product or input-grid mapping configuration (for example, `test-1deg` or `test-15min_nc`). It is independent of `HIRES_TAG`, which selects the high-resolution map directory used to generate a mapping, such as `1min` or `15sec`.
+
+The legacy `diminfo_` prefix remains in existing v4 package data and workflows that have not migrated. The v5 CTL generator accepts both `inpdim_` and legacy `diminfo_` companions. The model's namelist/API field remains named `diminfo_file`; that interface name does not dictate the physical descriptor filename. Existing legacy descriptors are retained for backward compatibility while v5 scripts select `inpdim_<ROFFTAG>.txt`.
+
+### Text descriptor format (legacy `diminfo_*.txt` and v5 `inpdim_*.txt`)
 
 The standard sample format contains eleven records:
 
@@ -198,12 +204,12 @@ The standard sample format contains eleven records:
 | 1–3 | `NX`, `NY`, `NLFP` | Destination map dimensions/layers; map-specific |
 | 4–5 | `NXIN`, `NYIN` | Runoff/input-grid dimensions; input product and domain specific |
 | 6 | `INPN` | Maximum input-grid contributors per CaMa-Flood map cell; mapping-specific |
-| 7 | Paired input-matrix filename text | Descriptive filename written by the generator; model parser skips this line and callers supply the actual matrix path |
+| 7 | Paired input-matrix filename text | Must name `inpmat_<ROFFTAG>.bin` for a v5 pair; the model parser skips this line and callers supply the actual matrix path |
 | 8–11 | west, east, north, south map bounds | Destination map domain, in degrees for the inspected geographic grids |
 
 The core run configuration parser reads the dimensions, input-grid dimensions, and `INPN`; when `LGRIDMAP` is true (the inspected default), it also reads the four map bounds. The input matrix is a separate binary file, with records grouped as `INPN` x-index records, `INPN` y-index records, then `INPN` float32 overlap-area records, each covering `NX × NY`.
 
-The file combines destination-map geometry with runoff/input-grid configuration. It does not by itself specify runoff-grid spacing, source bounds, longitude convention, or row order; the shell workflow/input dataset provides those. `generate_inpmat.F90` reads the destination grid from `params.txt`, calculates `NXIN`/`NYIN` from configured input bounds and spacing, and writes `diminfo` plus the paired matrix. Thus `params.txt` and `diminfo` repeat some map dimensions/bounds but have distinct roles.
+The file combines destination-map geometry with runoff/input-grid configuration. It does not by itself specify runoff-grid spacing, source bounds, longitude convention, or row order; the shell workflow/input dataset provides those. `generate_inpmat.F90` reads the destination grid from `params.txt`, calculates `NXIN`/`NYIN` from configured input bounds and spacing, and writes the descriptor plus paired matrix. Thus `params.txt` and the descriptor repeat some map dimensions/bounds but have distinct roles. v5 `param_generate_inpmat` derives both filenames from `ROFFTAG`; `HIRES_TAG` is passed separately to select high-resolution lookup data.
 
 ### GrADS `.ctl` files — binary visualization metadata
 
@@ -245,7 +251,7 @@ The maintainer confirmed that the module-level files were previously generated a
 
 ### GrADS CTL generation
 
-The v5 generator is implemented at `map/tools/code/generate_ctl.py`. It combines variable metadata from `map_variables.csv` with dataset-specific geometry read from `params.txt` or `location.txt`. The CSV describes reusable products and record layouts, not sample-map dimensions. It accepts explicit independent-record layouts (including one row per variable with record indices), the documented `NLFP` layered-variable layout, and the regionalization input matrix paired with its dimension description. In an input-matrix filename pair, the shared suffix (for example `_test-1deg`) identifies the runoff-data/configuration variant: `inpmat_<TAG>.bin` pairs with `diminfo_<TAG>.txt`, as written by the current Fortran program. The description supplies `NX`, `NY`, `INPN`, bounds, and the paired binary filename; map dimensions and bounds are checked against `params.txt`. A same-basename `.txt` is also accepted. Unknown dimensions/types and unrecognized record descriptions are skipped; blank missing values use the per-type fallback with a warning; invalid values, conflicting declarations, and binary size/layout mismatches are rejected. It scans one selected directory at a time and does not recurse.
+The v5 generator is implemented at `map/tools/code/generate_ctl.py`. It combines variable metadata from `map_variables.csv` with dataset-specific geometry read from `params.txt` or `location.txt`. The CSV describes reusable products and record layouts, not sample-map dimensions. It accepts explicit independent-record layouts (including one row per variable with record indices), the documented `NLFP` layered-variable layout, and the regionalization input matrix paired with its dimension description. In a v5 input-matrix filename pair, the shared suffix (for example `_test-1deg`) identifies the runoff-data/configuration variant: `inpmat_<ROFFTAG>.bin` pairs with `inpdim_<ROFFTAG>.txt`. The generator also accepts legacy `diminfo_<ROFFTAG>.txt` descriptors for existing maps. The description supplies `NX`, `NY`, `INPN`, bounds, and the paired binary filename; map dimensions and bounds are checked against `params.txt`. A same-basename `.txt` is also accepted. Unknown dimensions/types and unrecognized record descriptions are skipped; blank missing values use the per-type fallback with a warning; invalid values, conflicting declarations, and binary size/layout mismatches are rejected. It scans one selected directory at a time and does not recurse.
 
 The tool follows the existing legacy CTL convention `yrev little_endian` and cell-center coordinates. The standard regional input matrix has three logical variables (`inpx`, `inpy`, `inpa`) with `INPN` levels, matching the two integer-index blocks and one floating-point overlap-area block written by `region_default_inpmat.F90`; unused slots initialized to zero are represented by `undef 0`. This is the distributed mapping for the standard annual runoff climatology used in channel cross-section parameter estimation. It is distinct from the general-purpose `generate_inpmat.F90` utility for user-selected runoff grids. The generator does not read the runoff dataset itself. The CTL tool does not infer or validate alternative endianness or row order.
 

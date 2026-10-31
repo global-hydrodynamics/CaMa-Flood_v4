@@ -30,12 +30,10 @@ Cloning the GitHub repository provides the legacy v4 source templates under `map
 | --- | --- | --- |
 | `map/tools/` | Shared v5 map-processing implementations, a unified Makefile, and reusable map-local workflow templates. | See the [v5 tools overview](tools/README.md) and [regional workflow guide](tools/script_region/README.md). |
 | `map/src/src_param/` | Legacy v4 reusable source template for preparing or inspecting map parameters and forcing-to-map input matrices. | Has a [component README](src/src_param/README.md); copy the component into a target map directory to work with that map. |
-| `map/src/src_param/native_inpmat/` | Optional native-grid remapping workflow associated with `src_param`. | Compose a native-grid remapping operator with an existing CaMa input matrix and validate results; see its [README](src/src_param/native_inpmat/README.md). |
 | `map/src/src_region/` | Legacy v4 reusable source template for regional map preparation. | See the [v4 regional-map guide](src/src_region/README.md). |
 | `map/tools/script_region/` | v5 regionalization template; copied into a target map directory and run with shared tools. | See the [v5 regional workflow guide](tools/script_region/README.md). |
-| `map/src/src_dam/` | Reusable source template for preparing dam/reservoir locations and parameters for a target map. | Has an existing [reservoir-preparation README](src/src_dam/ReadMe.md). |
-| `map/src/map_data_tools/` | Shared metadata validation plus standalone CTL and NetCDF conversion CLIs for core category-11 maps. | See its [tool guide](src/map_data_tools/README.md); the current converter supports only the core river-network group. |
-| `map/src/` | Reusable source templates and standalone map-data tools. | Contains `src_param/`, `src_region/`, `src_dam/`, and `map_data_tools/`; this is separate from the model's numerical `src/`. |
+| `map/src/src_dam/` | Legacy v4 reusable source template for preparing dam/reservoir locations and parameters for a target map. | Has an existing [reservoir-preparation README](src/src_dam/ReadMe.md). |
+| `map/src/` | Historical v4 map-preparation tools, retained for users of the v4 workflows. | Contains `src_param/`, `src_region/`, and `src_dam/`; new v5 map-tool development belongs under `map/tools/`. It is separate from the model's numerical `src/`. |
 | `map/<map-tag>/` | A map instance: downloaded map data, metadata, derived products, and any map-local processing copies needed for that workflow. | Examples include `glb_15min` and `conus_06min`; these datasets are supplied through distribution packages or separate map downloads. |
 | `map/data/` | Optional supporting datasets in some data-rich packages. | Some reservoir and levee workflows use supporting data here, including GRSAD and ReGeom. Availability and terms depend on the dataset and package release. |
 
@@ -76,25 +74,21 @@ Examples of maps used by sample runs are listed in [`gosh/README.md`](../gosh/RE
 
 [`map_variables.csv`](map_variables.csv) is the source-linked variable and data-product registry for CaMa-Flood maps. It uses symbolic dimensions such as `NX`, `NY`, and `NLFP`, so the definitions apply across map resolutions and regional domains. It is the primary source for variable names, proposed long names and units, data types, record layouts, numeric stored missing values, meaningful special codes, product variants, distribution roles, and current model-reader mappings.
 
-[`map_metadata_spec.md`](map_metadata_spec.md) explains the CSV schema and how it relates to per-map `params.txt`, `mapdim.txt`, run-specific `diminfo*.txt`, and GrADS CTL files. The CSV defines common variable-level metadata; each map's files supply its actual dimensions, bounds, spacing, and dataset-specific binary settings. Runoff-grid configuration belongs to `diminfo` and the paired input matrix.
+[`map_metadata_spec.md`](map_metadata_spec.md) explains the CSV schema and how it relates to per-map `params.txt`, `mapdim.txt`, runoff/input-grid descriptors, and GrADS CTL files. v5 workflows pair `inpdim_<ROFFTAG>.txt` with `inpmat_<ROFFTAG>.bin`; legacy `diminfo_*.txt` names remain supported for existing v4 data and callers. `ROFFTAG` identifies the runoff/input-grid configuration, while `HIRES_TAG` selects high-resolution map data.
 
-The channel-parameter entries describe products users generate or verify for a target map. Data-rich packages may include prepared examples; check the actual package contents before generating replacements. The CSV distinguishes empirical `rivwth.bin` from the alternative GWD-LR merged width product `rivwth_gwdlr.bin`.
+The channel-parameter entries describe products users generate or verify for a target map. Data-rich packages may include prepared examples; check the actual package contents before generating replacements. The v5 workflow writes the alternative MERIT Hydro merged width as `rivwth_merit.bin`; the preserved v4 workflow retains its historical `rivwth_gwdlr.bin` output.
 
-### Core map metadata and conversion tools
+### GrADS CTL generation
 
-`map/src/map_data_tools/` contains a GrADS CTL generator and a binary-to-NetCDF converter for category 11 only. Both read the CSV and validate category-11 record sizes against the map's `params.txt`. A portable per-map JSON configuration supplies byte order, row order, missing sentinels, coordinate mode, and any non-default file paths; these dataset-specific settings are not inferred automatically.
-
-Install the Python requirements and copy/edit the example config for the selected map before running:
+The v5 CTL generator is [`map/tools/code/generate_ctl.py`](tools/code/generate_ctl.py), invoked by the map-local [`s02-write_ctl.sh`](tools/script_region/s02-write_ctl.sh) wrapper. It reads `map_variables.csv` and map geometry metadata, then validates registered binary layouts and file sizes before writing GrADS descriptors. The current map-tools directory provides CTL generation; a binary-to-NetCDF conversion command is not currently documented as an available map tool.
 
 ```sh
-python3 -m pip install -r map/src/map_data_tools/requirements.txt
-cp map/src/map_data_tools/examples/map_metadata.example.json map/glb_15min/map_metadata.json
-# Edit dataset_id and verify byte_order, row_order, missing_values, and files.
-python3 map/src/map_data_tools/generate_ctl.py --map-dir map/glb_15min --config map/glb_15min/map_metadata.json
-python3 map/src/map_data_tools/binary_to_netcdf.py --map-dir map/glb_15min --config map/glb_15min/map_metadata.json
+cd map/<map-tag>/script_region
+./s02-write_ctl.sh --dry-run
+./s02-write_ctl.sh
 ```
 
-The NetCDF output is a `CRIVCLINC`-compatible core river map; it does not contain channel parameters for `CRIVPARNC`. Existing CTLs and output NetCDF files are not overwritten unless `--overwrite` is supplied. See the [tool guide](src/map_data_tools/README.md) and [metadata conversion contract](map_metadata_spec.md#core-conversion-contract-and-dataset-configuration) for supported formats, validation, and limitations.
+See the [v5 tools guide](tools/README.md#grads-ctl-files) for supported registry formats, missing-value handling, and current limitations. NetCDF map-reading support in the model is separate from map conversion tooling.
 
 ## Map parameters and preprocessing
 
@@ -106,7 +100,7 @@ The NetCDF output is a `CRIVCLINC`-compatible core river map; it does not contai
 - Generating an `inpmat` lookup table that maps an external runoff grid onto the CaMa-Flood unit catchments. One matrix is specific to a map and a forcing-grid definition; it must match the forcing grid and its orientation.
 - Allocating gauges, dams, or level stations, and creating basin, sub-basin, or other diagnostic products.
 
-The [parameter-tools README](src/src_param/README.md) and scripts document those workflows. For supported native rectilinear runoff grids, the separate [composed-remapping workflow](src/src_param/native_inpmat/README.md) documents its assumptions, output files, and validation. These two input-matrix paths should not be treated as interchangeable without checking their grid and format assumptions.
+The [legacy v4 parameter-tools README](src/src_param/README.md) and the v5 [parameter workflow guide](tools/script_params/README.md) document the available workflows. Check each workflow's grid and format assumptions before reusing an input matrix; the v4 and v5 naming conventions are intentionally distinct.
 
 ### Reservoir and dam information
 
@@ -160,7 +154,7 @@ Check the feature-specific manual or workflow first. For reservoirs, see `src/sr
 
 Map directories are commonly named by region and grid spacing, for example `glb_15min` or `conus_06min`. The model's namelist explicitly names the map paths; scripts commonly set a base such as `FMAP` and build those paths from it. A directory name alone does not establish that its contents are complete or compatible.
 
-The standard binary map path uses files such as `nextxy.bin` (downstream grid indices), `ctmare.bin` (unit-catchment area), `elevtn.bin`, `nxtdst.bin`, `rivlen.bin`, and `fldhgt.bin`; channel parameters may include `rivwth.bin`, `rivhgt.bin`, and `rivman.bin`. `diminfo` or other map metadata describe dimensions and geographic coverage. Optional files and required names depend on the selected model options. The `NMAP` namelist in `src/cmf_ctrl_maps_mod.F90` shows the paths read by the model, while sample execution scripts show concrete configurations.
+The standard binary map path uses files such as `nextxy.bin` (downstream grid indices), `ctmare.bin` (unit-catchment area), `elevtn.bin`, `nxtdst.bin`, `rivlen.bin`, and `fldhgt.bin`; channel parameters may include `rivwth.bin`, `rivhgt.bin`, and `rivman.bin`. Runoff/input-grid descriptors carry dimensions and map bounds: v5 tools name them `inpdim_<ROFFTAG>.txt`, while existing v4 configurations retain `diminfo_*.txt`. The model's namelist key remains `diminfo_file`. Optional files and required names depend on the selected model options. The `NMAP` namelist in `src/cmf_ctrl_maps_mod.F90` shows the paths read by the model, while sample execution scripts show concrete configurations.
 
 Many legacy `.bin` files are Fortran unformatted direct-access records, but the record contents and numeric types vary by file. For example, the `nextxy` reader expects two integer records; other readers expect real-valued parameters. Text metadata and tables may use `.txt` or `.csv`. The code also contains an optional NetCDF map reader, which requires a NetCDF-enabled build and matching NetCDF variables. Do not infer a complete file specification from the extension alone.
 
@@ -184,7 +178,6 @@ When combining or generating map products, keep dimensions, grid spacing, geogra
 - [Main user manual](../doc/Manual_CaMa-Flood_v420.docx)
 - [Reservoir operation manual](../doc/Manual_ReservoirOperation_v420.docx)
 - [Parameter-processing tools](src/src_param/README.md)
-- [Native-grid input-matrix tools](src/src_param/native_inpmat/README.md)
 - [Dam/reservoir parameter workflow](src/src_dam/ReadMe.md)
 - [Model source architecture](../src/README.md)
 - [Sample simulation workflows](../gosh/README.md)

@@ -4,14 +4,14 @@
 #
 # Inputs:
 #   - params.txt in the map root, describing the target CaMa-Flood map grid.
-#   - <TAG>/location.txt and each listed area's <area>.catmxy.bin high-resolution
+#   - <HIRES_TAG>/location.txt and each listed area's <area>.catmxy.bin high-resolution
 #     catchment map. grdare.bin is optional; the Fortran tool has a fallback.
 #   - The runoff-grid geometry and row order configured below; these describe
 #     the runoff grid, not the CaMa-Flood map.
 #
 # Outputs in the map root (existing files with these configured names may be replaced):
-#   - DIMINFO: text metadata describing the selected runoff grid and matrix.
-#   - INPMAT: binary map-to-runoff input matrix for the map and runoff grids.
+#   - inpdim_<ROFFTAG>.txt: metadata describing the selected runoff grid and matrix.
+#   - inpmat_<ROFFTAG>.bin: binary map-to-runoff input matrix.
 set -eu
 
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd)
@@ -19,9 +19,10 @@ MAP_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd)
 CODE_DIR=$(CDPATH= cd "$SCRIPT_DIR/../../tools/code" && pwd)
 PROGRAM="$CODE_DIR/param_generate_inpmat"
 
-# Output metadata and matrix. Existing files with these names may be replaced.
-DIMINFO="diminfo_test-15min_nc.txt"
-INPMAT="inpmat_test-15min_nc.bin"
+# One runoff tag derives both paired output names.
+ROFFTAG="${ROFFTAG:-test-15min_nc}"
+INPDIM="inpdim_${ROFFTAG}.txt"
+INPMAT="inpmat_${ROFFTAG}.bin"
 
 # Runoff input-grid geometry (degrees), retained from the legacy s02 example.
 # These values describe the runoff dataset, not the CaMa-Flood map.
@@ -40,21 +41,21 @@ fail() {
 [ -x "$PROGRAM" ] || fail "shared executable not found or not executable: $PROGRAM (build with make -C map/tools/code param)"
 [ -f "$MAP_DIR/params.txt" ] || fail "map parameters not found: $MAP_DIR/params.txt"
 
-# Preserve the legacy preference for 1min, then 15sec; TAG can select another
-# available high-resolution directory (for example 30sec) explicitly.
-if [ -z "${TAG:-}" ]; then
+# HIRES_TAG selects high-resolution map data and is separate from ROFFTAG.
+HIRES_TAG=${HIRES_TAG:-}
+if [ -z "$HIRES_TAG" ]; then
     if [ -f "$MAP_DIR/1min/location.txt" ]; then
-        TAG=1min
+        HIRES_TAG=1min
     elif [ -f "$MAP_DIR/15sec/location.txt" ]; then
-        TAG=15sec
+        HIRES_TAG=15sec
     else
-        fail "no default high-resolution location.txt found (expected 1min/ or 15sec/); set TAG to an available map tag"
+        fail "no default high-resolution location.txt found (expected 1min/ or 15sec/); set HIRES_TAG to an available map tag"
     fi
 fi
 
-HIRES_DIR="$MAP_DIR/$TAG"
+HIRES_DIR="$MAP_DIR/$HIRES_TAG"
 LOCATION="$HIRES_DIR/location.txt"
-[ -f "$LOCATION" ] || fail "high-resolution location file not found for TAG=$TAG: $LOCATION"
+[ -f "$LOCATION" ] || fail "high-resolution location file not found for HIRES_TAG=$HIRES_TAG: $LOCATION"
 
 # The Fortran program requires each area's catchment-index raster. grdare.bin
 # is optional; if absent, the original area-calculation fallback is used.
@@ -65,9 +66,11 @@ for AREA in $AREAS; do
 done
 
 cd "$MAP_DIR"
-"$PROGRAM" "$TAG" "$GRSIZEIN" "$WESTIN" "$EASTIN" "$NORTHIN" "$SOUTHIN" "$OLAT" "$DIMINFO" "$INPMAT" \
+"$PROGRAM" "$HIRES_TAG" "$GRSIZEIN" "$WESTIN" "$EASTIN" "$NORTHIN" "$SOUTHIN" "$OLAT" "$INPDIM" "$INPMAT" \
     || fail "param_generate_inpmat failed"
 
-[ -s "$MAP_DIR/$DIMINFO" ] || fail "expected dimension metadata was not created: $MAP_DIR/$DIMINFO"
+[ -s "$MAP_DIR/$INPDIM" ] || fail "expected dimension metadata was not created: $MAP_DIR/$INPDIM"
 [ -s "$MAP_DIR/$INPMAT" ] || fail "expected input matrix was not created: $MAP_DIR/$INPMAT"
-echo "Created $DIMINFO and $INPMAT in $MAP_DIR"
+METADATA_INPMAT=$(awk 'NR == 7 { print $1; exit }' "$MAP_DIR/$INPDIM")
+[ "$METADATA_INPMAT" = "$INPMAT" ] || fail "line 7 of $INPDIM does not name its paired matrix $INPMAT"
+echo "Created $INPDIM and $INPMAT in $MAP_DIR (ROFFTAG=$ROFFTAG, HIRES_TAG=$HIRES_TAG)"

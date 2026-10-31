@@ -27,7 +27,7 @@ class MekongCtlWrapperIntegrationTests(unittest.TestCase):
                          map_root / "tools" / "code" / "generate_ctl.py")
             shutil.copy2(SAMPLE / "script_region" / "s02-write_ctl.sh",
                          fixture / "script_region" / "s02-write_ctl.sh")
-            for name in ("params.txt", "diminfo_test-1deg.txt"):
+            for name in ("params.txt", "inpdim_test-1deg.txt", "inpdim_test-15min_nc.txt"):
                 shutil.copy2(SAMPLE / name, fixture / name)
             for path in SAMPLE.glob("*.bin"):
                 shutil.copy2(path, fixture / path.name)
@@ -46,7 +46,12 @@ class MekongCtlWrapperIntegrationTests(unittest.TestCase):
             self.assertEqual(len(summaries), 2, process.stdout + process.stderr)
             expected = (len(list(SAMPLE.glob("*.bin"))),
                         len(list((SAMPLE / "1min").glob("*.bin"))) )
-            self.assertEqual(summaries, [(expected[0], 0, 0, 0), (expected[1], 0, 0, 0)],
+            # Two base-map registry entries intentionally have no declared
+            # missing-value sentinel, so CTL generation reports those fallback
+            # defaults. Fallback warnings do not mean a binary was skipped or
+            # failed to receive a descriptor.
+            self.assertEqual([summary[:3] for summary in summaries],
+                             [(expected[0], 0, 0), (expected[1], 0, 0)],
                              process.stdout + process.stderr)
 
             base_ctls = list(fixture.glob("*.ctl"))

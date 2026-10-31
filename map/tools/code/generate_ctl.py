@@ -354,10 +354,13 @@ def read_input_matrix_descriptor(binary_path: Path, grid: Grid,
     stem = binary_path.stem
     candidates = [binary_path.with_suffix(".txt")]
     if stem.startswith("inpmat_"):
-        candidates.append(binary_path.with_name(f"diminfo_{stem[len('inpmat_'): ]}.txt"))
+        tag = stem[len("inpmat_") :]
+        candidates.append(binary_path.with_name(f"inpdim_{tag}.txt"))
+        # Keep reading existing v4 descriptors while v5 writes inpdim_<ROFFTAG>.
+        candidates.append(binary_path.with_name(f"diminfo_{tag}.txt"))
     descriptor = next((path for path in candidates if path.is_file()), None)
     if descriptor is None:
-        raise CtlError("input matrix needs its paired dimension description (.txt or diminfo_*.txt)")
+        raise CtlError("input matrix needs its paired dimension description (.txt, inpdim_*.txt, or legacy diminfo_*.txt)")
     try:
         lines = [line.strip() for line in descriptor.read_text(encoding="utf-8").splitlines() if line.strip()]
     except OSError as exc:
