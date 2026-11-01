@@ -1,7 +1,7 @@
 # CaMa-Flood v5 Allocation Tools Migration Plan
 
 **Phase:** B — legacy characterization, v5 migration, and regression
-**Status:** Phase A assessment and Phase B0–B6 migration, documentation, research reconciliation, and regression are complete in this worktree. Independent scientific validation remains outside this migration.
+**Status:** Phase A assessment and Phase B0–B6 migration, documentation, research reconciliation, and regression are complete and pushed to `feature/map-data-tools` (`ef9fec9`). Independent scientific validation remains outside this migration.
 **Project:** map data/tools modernization, [Issue #122](https://github.com/global-hydrodynamics/CaMa-Flood_v4/issues/122)
 **Branch:** `feature/map-data-tools`. Phase A originally inspected 93d5a36; Phase B started at 05258b288e1045e5d6c056ae30216a13f5e84793, confirmed equal to `origin/feature/map-data-tools` after fetch.
 
@@ -180,6 +180,6 @@ The current Phase A research gap register links these questions to source and re
 2. **B1 — complete:** compiled unmodified v4 sources with GNU Fortran 14.2.0 and saved six output snapshots with input selection and source hashes in `map/tools/tests/data/allocation/legacy_gfortran_14_2/`.
 3. **B2 — complete:** implemented direct-record readers and single-area `location.txt` validation in `mod_allocation_map_io.F90`.
 4. **B3–B5 — complete:** migrated the flow-gauge, dam, and level-gauge programs separately; regression tests match all six v4 reference outputs.
-5. **B6 — complete:** integrated the three wrappers into the shared build and script architecture, documented their input/output contracts and limits, reconciled Phase A records, ran the full map-tools and repository data/research validators, and reviewed the diff. The results are recorded in `VR-0064` and `VR-0065`. Independent scientific validation remains outside this migration.
+5. **B6 — complete:** integrated the three wrappers into the shared build and script architecture, documented their input/output contracts and limits, reconciled Phase A records, ran the full map-tools and repository data/research validators, and reviewed the diff. The results are recorded in `VR-0064` and `VR-0065`. The migration was committed as `ef9fec9` and pushed to `feature/map-data-tools`; Issue #122 was updated. Independent scientific validation remains outside this migration.
 
 Every milestone should re-run the knowledge-gap checklist. Any proposed numerical or interface change requires explicit maintainer approval under AGENTS.md.
