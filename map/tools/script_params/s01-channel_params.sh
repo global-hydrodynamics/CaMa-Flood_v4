@@ -57,9 +57,9 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 
 # Shared executables (build beforehand with map/tools/code/Makefile).
-EXEC_OUTCLM="$CODE_DIR/param_calc_outclm"
-EXEC_RIVWTH="$CODE_DIR/param_calc_rivwth"
-EXEC_MERIT="$CODE_DIR/param_set_merit_width"
+EXEC_OUTCLM="$CODE_DIR/param_channel_calc_outclm"
+EXEC_RIVWTH="$CODE_DIR/param_channel_calc_rivwth"
+EXEC_MERIT="$CODE_DIR/param_channel_set_merit_width"
 
 cd "$MAP_DIR"
 

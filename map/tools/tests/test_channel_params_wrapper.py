@@ -32,9 +32,9 @@ class ChannelParamsWrapperTests(unittest.TestCase):
         )
         self.calls = self.root / "calls.txt"
         for name, outputs in (
-            ("param_calc_outclm", ("outclm.bin",)),
-            ("param_calc_rivwth", ("rivwth.bin", "rivhgt.bin", "rivman.bin", "rivhgt_inf.bin")),
-            ("param_set_merit_width", ("rivwth_merit.bin",)),
+            ("param_channel_calc_outclm", ("outclm.bin",)),
+            ("param_channel_calc_rivwth", ("rivwth.bin", "rivhgt.bin", "rivman.bin", "rivhgt_inf.bin")),
+            ("param_channel_set_merit_width", ("rivwth_merit.bin",)),
         ):
             output_lines = "\n".join(f"printf x > '{output}'" for output in outputs)
             program = self.code_dir / name

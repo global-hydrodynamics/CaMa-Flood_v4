@@ -1,60 +1,116 @@
       program cut_domain
 ! ==================================================
       implicit none
-!
-      character*256          ::  region_info
+
+! Region request and source-map geometry.
+      character*256            :: region_info
       parameter                 (region_info='./region_info.txt')
-      character*256          ::  global_dir
-      real*8                 ::  west, east, north, south
-      real*8                 ::  west2, east2, north2, south2
+      character*256            :: global_dir
+      real*8                   :: west, east, north, south  !! map bounds [deg]
+      real*8                   :: west2, east2, north2, south2  !! map bounds [deg]
 
-      character*256          ::  global_param, cut_param
-      real*8                 ::  lon_ori, lat_ori, lon_end, lat_end
-      real*8                 ::  glon, glat, d1, d2
+      character*256            :: global_param
+      character*256            :: cut_param
+      real*8                   :: lon_ori, lat_ori
+      real*8                   :: lon_end, lat_end
+      real*8                   :: glon
+      real*8                   :: glat
+      real*8                   :: d1
+      real*8                   :: d2
 
-      character*256          ::  region_dir, region_param
+      character*256            :: region_dir
+      character*256            :: region_param
       parameter                 (region_dir='../')
       parameter                 (region_param='../params.txt')
 !
-      integer                ::  ix, iy, jx, jy, kx, ky
-      integer                ::  nx, ny, mx, my, dx, dy
-      real*8                 ::  gsize
-      integer                ::  iflp, nflp                  !! number of floodplain layer
+      integer                  :: ix, iy  !! x/y grid index
+      integer                  :: jx, jy  !! target x/y grid index
+      integer                  :: kx
+      integer                  :: ky
+      integer                  :: nx, ny  !! x/y grid dimensions
+      integer                  :: mx
+      integer                  :: my
+      integer                  :: dx
+      integer                  :: dy
+      real*8                   :: gsize  !! map grid size [deg]
+      integer                  :: iflp  !! number of floodplain layer
+      integer                  :: nflp  !! floodplain-layer count
 !
-      character*256          ::  fnextxy0, fdownxy0, felevtn0, ffldhgt0, fctmare0, fgrdare0, fuparea0
-      character*256          ::  flonlat0, fnxtdst0, frivlen0, fwidth0
-      character*256          ::  fcatmpx0, fclass0
-      character*256          ::  fnextxy,  fdownxy,  felevtn,  ffldhgt,  fctmare,  fgrdare,  fuparea
-      character*256          ::  flonlat,  fnxtdst,  frivlen,  fwidth
-      character*256          ::  fcatmpx,  fclass
-      character*256          ::  flsmask
+! Source and output filenames for the map layers.
+      character*256            :: fnextxy0
+      character*256            :: fdownxy0
+      character*256            :: felevtn0
+      character*256            :: ffldhgt0
+      character*256            :: fctmare0
+      character*256            :: fgrdare0
+      character*256            :: fuparea0
+      character*256            :: flonlat0
+      character*256            :: fnxtdst0
+      character*256            :: frivlen0
+      character*256            :: fwidth0
+      character*256            :: fcatmpx0
+      character*256            :: fclass0
+      character*256            :: fnextxy
+      character*256            :: fdownxy
+      character*256            :: felevtn
+      character*256            :: ffldhgt
+      character*256            :: fctmare
+      character*256            :: fgrdare
+      character*256            :: fuparea
+      character*256            :: flonlat
+      character*256            :: fnxtdst
+      character*256            :: frivlen
+      character*256            :: fwidth
+      character*256            :: fcatmpx
+      character*256            :: fclass
+      character*256            :: flsmask
 
-      integer,allocatable    ::  nextx0(:,:),  nexty0(:,:)      !!  global maps
-      integer,allocatable    ::  downx0(:,:),  downy0(:,:)      !!  global maps
-      integer,allocatable    ::  catmpx0(:,:), classmap0(:,:)
-      real,allocatable       ::  elevtn0(:,:), fldhgt0(:,:,:)
-      real,allocatable       ::  ctmare0(:,:), uparea0(:,:), grdare0(:,:)
-      real,allocatable       ::  lon0(:,:)   , lat0(:,:)
-      real,allocatable       ::  nxtdst0(:,:), rivlen0(:,:)
-      real,allocatable       ::  width0(:,:)
+! Source-map arrays. Multi-layer floodplain height is kept in the third dimension.
+      integer, allocatable      :: nextx0(:,:)  !! source-map downstream x index
+      integer, allocatable      :: nexty0(:,:)  !! source-map downstream y index
+      integer, allocatable      :: downx0(:,:)  !! source-map high-resolution downstream x index
+      integer, allocatable      :: downy0(:,:)  !! source-map high-resolution downstream y index
+      integer, allocatable      :: catmpx0(:,:)
+      integer, allocatable      :: classmap0(:,:)
+      real, allocatable         :: elevtn0(:,:)
+      real, allocatable         :: fldhgt0(:,:,:)
+      real, allocatable         :: ctmare0(:,:)
+      real, allocatable         :: uparea0(:,:)
+      real, allocatable         :: grdare0(:,:)
+      real, allocatable         :: lon0(:,:), lat0(:,:)
+      real, allocatable         :: nxtdst0(:,:)
+      real, allocatable         :: rivlen0(:,:)
+      real, allocatable         :: width0(:,:)
 
-      integer,allocatable    ::  nextx(:,:),  nexty(:,:)        !!  regional maps
-      integer,allocatable    ::  downx(:,:),  downy(:,:)        !!  regional maps
-      integer,allocatable    ::  catmpx(:,:), classmap(:,:)
-      real,allocatable       ::  elevtn(:,:), fldhgt(:,:,:)
-      real,allocatable       ::  ctmare(:,:), uparea(:,:),   grdare(:,:)
-      real,allocatable       ::  lon(:,:),    lat(:,:)
-      real,allocatable       ::  nxtdst(:,:), rivlen(:,:)
-      real,allocatable       ::  width(:,:)
-      integer,allocatable    ::  lsmask(:,:)
+! Cropped regional arrays and optional supplementary map layers.
+      integer, allocatable      :: nextx(:,:), nexty(:,:)  !! downstream cell x/y indices
+      integer, allocatable      :: downx(:,:), downy(:,:)  !!  regional maps
+      integer, allocatable      :: catmpx(:,:)
+      integer, allocatable      :: classmap(:,:)  !! map classification code
+      real, allocatable         :: elevtn(:,:)  !! elevation [m]
+      real, allocatable         :: fldhgt(:,:,:)  !! floodplain height by layer [m]
+      real, allocatable         :: ctmare(:,:)  !! unit-catchment area [m2]
+      real, allocatable         :: uparea(:,:)
+      real, allocatable         :: grdare(:,:)
+      real, allocatable         :: lon(:,:), lat(:,:)  !! longitude/latitude [deg]
+      real, allocatable         :: nxtdst(:,:)  !! distance to downstream grid [m]
+      real, allocatable         :: rivlen(:,:)  !! river length [m]
+      real, allocatable         :: width(:,:)  !! channel width [m]
+      integer, allocatable      :: lsmask(:,:)
 
-      real,allocatable       ::  tmp0(:,:), tmp(:,:)            !! for fldhgt I/O
+      real, allocatable         :: tmp0(:,:)  !! for fldhgt I/O
+      real, allocatable         :: tmp(:,:)  !! for fldhgt I/O
 
-      integer,allocatable    ::  check(:,:)
-      integer                ::  icheck
-      logical                ::  has_catmpx, has_class
+! Boundary-path mask and optional-layer availability flags.
+      integer, allocatable      :: check(:,:)  !! edge-path classification map
+      integer                  :: icheck
+      logical                  :: has_catmpx
+      logical                  :: has_class
 
 ! ==================================================
+! ================================================
+! [1] Read the region request and align it to source-grid edges
+! ================================================
 ! Read the source-map directory and requested west/east/south/north bounds.
 ! The source params.txt supplies the grid size and global map dimensions.
       open(11,file=region_info,form='formatted')
@@ -130,6 +186,9 @@
       dx=nint( dble(west-lon_ori) /dble(gsize) )
       dy=nint( dble(lat_ori-north)/dble(gsize) )
 
+! ================================================
+! [2] Save crop metadata and determine source/output arrays
+! ================================================
 ! Save source dimensions, regional dimensions, offsets, and final bounds for
 ! the following regional-map programs; params.txt becomes the model map config.
       cut_param='./dim_change.txt'
@@ -180,6 +239,9 @@
 
       allocate(tmp0(nx,ny), tmp(mx,my))
 
+! ================================================
+! [3] Read source map records and crop the requested rectangle
+! ================================================
 ! Read the required source binary layers, then copy the selected rectangle.
       fnextxy0=trim(global_dir)//'nextxy.bin'
       fdownxy0=trim(global_dir)//'downxy.bin'
@@ -293,6 +355,9 @@ print *, 'cut domain'
       width(:,:)=-9999
       lsmask(:,:)=0
 
+! ================================================
+! [4] Translate network indices and copy selected raster values
+! ================================================
 ! Translate downstream indices into regional coordinates. Mark rivers whose
 ! next cell falls outside the selected rectangle as regional boundary outlets.
       do iy=1, my
@@ -343,6 +408,9 @@ print *, 'cut domain'
 
 print *, 'write reagional maps'
 
+! ================================================
+! [5] Write regional layers and the edge-masked network copy
+! ================================================
 ! Write the cropped map layers (nextxy/downxy, elevations, areas, coordinates,
 ! distances, widths, and land-sea mask) in the regional map directory.
       fnextxy='../nextxy.bin'

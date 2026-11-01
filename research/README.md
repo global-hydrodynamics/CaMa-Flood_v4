@@ -29,6 +29,12 @@ For a substantial task, record its objective, approved scope, owner, branch, sta
 6. Have the human maintainer review AI-generated discussion summaries before treating them as research records. Do not include hidden reasoning or infer missing conversation content.
 7. Run `python3 research/validate_records.py` after editing record tables. Commit the record update with the work it documents or in a follow-up commit that points to the completed work.
 
+## Proactive knowledge-gap review
+
+At the end of each substantial task or stage, use the short checklist in [`docs/ai_development_workflow.md`](../docs/ai_development_workflow.md) to look for unclear scientific assumptions or thresholds, undocumented I/O contracts or dependencies, unreconstructable historical rationale, inconsistencies across code/comments/docs/metadata, and unsupported assumptions introduced during AI work. This is a milestone check, not a requirement after every small edit.
+
+Record significant questions before resolution in the existing knowledge-gap record format. Give a precise trigger, source references, why the answer matters, status/blocking impact, and evidence needed. At handoff, present unresolved scientific and architectural questions together for maintainer review; non-blocking items do not stop independent work. On resolution, cross-link the original question, trigger, source/test evidence or maintainer explanation, final interpretation, and its formalization location. Identify whether resolution was source/test-based or maintainer-confirmed. Preserve rejected or unresolved interpretations. If a review finds no material new gap, record the review outcome as such without adding a gap row. See the detailed, reproducible method in [`analysis/knowledge_recovery_protocol.md`](analysis/knowledge_recovery_protocol.md).
+
 The structured tables now include verified Git stage events, the current task, the annotated baseline milestone, and audit reruns. They do not reconstruct unavailable historical discussions. [`stages/`](stages/README.md) contains the stage narratives; [`baseline/pre_documentation.md`](baseline/pre_documentation.md) describes the selected pre-documentation state. [`examples/illustrative_records.md`](examples/illustrative_records.md) remains fictional and separate from actual research data.
 
 ## Evidence archive and privacy
@@ -46,3 +52,4 @@ Public repository records should contain public metadata and reviewed summaries 
 - [`baseline/`](baseline/): release and pre-documentation baselines, comparison procedure, and recorded audit environment.
 - [`stages/`](stages/README.md): evidence-based development-stage narratives.
 - [`analysis/`](analysis/): later analysis guidance; no comparative study results are claimed.
+- [`analysis/knowledge_recovery_protocol.md`](analysis/knowledge_recovery_protocol.md): reproducible method for prospective knowledge-gap review and later v4/v5 knowledge-recovery analysis.

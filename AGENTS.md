@@ -87,6 +87,8 @@ Investigate technical questions using documentation, source code, and available 
 
 Record non-blocking questions in the relevant technical document under **Open Questions**, explaining why each answer matters and what work can continue. Group related questions and avoid repeated interruptions. Continue unrelated work while a blocking decision is pending. When the maintainer answers, record confirmed facts and rationale, update or remove resolved questions, and do not ask again unless new evidence reveals a contradiction.
 
+At completion of a substantial task or development stage, run the brief **Knowledge-gap review** in [`docs/ai_development_workflow.md`](docs/ai_development_workflow.md). Record material questions before resolving them, including source references and why the answer matters. At handoff, list unresolved scientific or architectural questions; unrelated work need not wait for non-blocking answers. Link resolved questions to their discovery trigger, evidence, interpretation, and formalization. Record a completed review with no material new gaps; never invent questions or findings.
+
 ## 5. Technical boundaries for CaMa-Flood
 
 Preserve the existing architecture unless the approved task justifies changing it:
@@ -117,6 +119,14 @@ For the current maintainer-led v5 modernization, AI agents should use these prac
 When adding or changing map-related readers, writers, preprocessing products, or model map interfaces, inspect and update [`map/map_variables.csv`](map/map_variables.csv) and the responsible module README. Keep verified facts distinct from provisional fields, and record distribution role separately from packages where a product was observed; see [`map/map_metadata_spec.md`](map/map_metadata_spec.md).
 
 The maintainer manually controls the map registry's workflow-status column, currently named `workflow_stage` in `map/map_variables.csv`. Codex may read it but must not edit its values, including when adding or revising registry rows. If the status appears stale or a new row needs a status, leave it unchanged or blank and report the suggested update to the maintainer. Preserve the existing column values during CSV edits and do not infer or set `default` from file presence.
+
+## Shared Fortran Module Naming (`map/tools/code/`)
+
+Name shared Fortran module source files in `map/tools/code/` with the `mod_` prefix (for example, `mod_map_color.F90`). This convention is limited to shared module source files in this directory; it does not apply to main-model files under `src/`, programs, or files in other directories. A source filename rename does not require renaming its internal Fortran module or procedures unless a task explicitly approves that interface change.
+
+## Fortran Source Readability
+
+Fortran declarations are a human-readable inventory of a program's data structures. Prioritize human understanding over compactness: group declarations by scientific or computational purpose, keep closely related values together (for example, `nx, ny` or `ix, iy`), and use separate declarations for variables with different meanings even when this adds lines. Use short comments and blank lines between groups. Add concise inline notes for variable roles, physical units, and important classifications when established by code or maintainer decisions; do not guess at unknown meaning. Align declarations reasonably. Use concise comments for major calculations and assumptions, not trivial operations. Long programs should use numbered headings such as `[1]`, `[2]`, and `[3]` with visible separators (`! ================================================`) to mark major stages. Keep scientific expressions and decision rules visible, and avoid helper abstractions that hide them. These are community recommendations, not strict formatting requirements for every contributor. In the current maintainer-led v5 modernization, apply them by default while preserving numerical behavior and keeping formatting changes focused.
 
 ## Cross-project research logging for the v5 case study
 

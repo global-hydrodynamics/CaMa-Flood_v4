@@ -5,59 +5,83 @@
 ! with the optional fifth argument "check_map", it also writes the two-record
 ! check-only raster check_bif_dphwth.bin (depth, then width). This program does
 ! not modify basin.bin.
-      program param_set_bifparam
+      program param_bif_set_params
 ! ================================================
 ! original file: bifori.txt
-! bifucation parameter (bifurcation channle depth = bifdph) is added by analyzing river network
+! Bifurcation-channel depth (BIFDPH) is estimated from the river network.
 ! (if needed, number of bifurcation layers can be modified.)
-! -- 10 layer exist in original. Reduced to 5 by s01-*sh script to reduce computation cost
+! The source table can contain up to 10 width layers; the workflow may retain fewer.
 ! ================================================
 #ifdef UseCDF_CMF
 USE NETCDF
 #endif
       implicit none
 ! ===================
-! calculation type
-      character*256       ::  buf
-      character*256       ::  diminfo                 !! dimention info file
+! Command-line options and input mode
+      character*256            :: buf
+      character*256            :: diminfo  !! input-dimension descriptor filename
       data                    diminfo /'./inpdim_test-1deg.txt'/
 
+! River-network map parameters
+      integer                  :: ix, iy  !! x/y grid index
+      integer                  :: jx, jy  !! target x/y grid index
+      integer                  :: nx, ny  !! x/y grid dimensions
 
-! river network map parameters
-      integer             ::  ix, iy, jx, jy
-      integer             ::  nx, ny          !! river map grid number
-! river netwrok map
-      integer,allocatable ::  nextx(:,:)      !! downstream x
-      integer,allocatable ::  nexty(:,:)      !! downstream y
-      real                ::  west, east, north, south
-! variable
-      integer,allocatable ::  basin(:,:)      !! 
+! River-network maps
+      integer, allocatable      :: nextx(:,:)  !! downstream x grid index
+      integer, allocatable      :: nexty(:,:)  !! downstream y grid index
+      real                     :: west, east, north, south  !! map bounds [deg]
 
-      real,allocatable    ::  rivhgt(:,:)
-      real,allocatable    ::  bifdph(:,:), bifwth(:,:)     !! channel depth / width [m]
-! file
-      character*256       ::  cnextxy, crivhgt, cbifway, cbifprm, cbasin
-      integer             ::  ios
-      logical             ::  write_check_map
+! Working arrays
+      integer, allocatable      :: basin(:,:)  !! basin identifier
 
-      integer             ::  ipth, npth, npth_new
-      integer             ::  ilev, nlev, nlev_new
+      real, allocatable         :: rivhgt(:,:)  !! channel depth/height [m]
+      real, allocatable         :: bifdph(:,:)  !! bifurcation depth [m]
+      real, allocatable         :: bifwth(:,:)  !! bifurcation width [m]
 
-      real                ::  len, elv, dph, lon, lat
-      real,allocatable    ::  wth(:)
+! Input and output filenames
+      character*256            :: cnextxy
+      character*256            :: crivhgt
+      character*256            :: cbifway
+      character*256            :: cbifprm
+      character*256            :: cbasin
 
-      real                ::  dph0
-      integer             ::  isData, ibsn, jbsn
+! Input status and optional diagnostic-output control.
+      integer                  :: ios  !! I/O status code
+      logical                  :: write_check_map
+
+! Bifurcation-table dimensions and path counters.
+      integer                  :: ipth  !! bifurcation-path index
+      integer                  :: npth  !! bifurcation-path count
+      integer                  :: npth_new
+      integer                  :: ilev  !! bifurcation-layer index
+      integer                  :: nlev  !! layer count
+      integer                  :: nlev_new
+
+! Physical attributes read from each bifurcation-table row.
+      real                     :: len  !! pathway length [m]
+      real                     :: elv  !! pathway elevation [m]
+      real                     :: dph  !! bifurcation depth [m]
+      real                     :: lon, lat  !! longitude/latitude [deg]
+      real, allocatable         :: wth(:)  !! bifurcation width [m]
+
+! Pathway filter and basin identifiers.
+      real                     :: dph0
+      integer                  :: isData
+      integer                  :: ibsn  !! basin identifier
+      integer                  :: jbsn  !! basin identifier
 !
-! Undefined Values
-      integer             ::  imis                !! integer undefined value
-      real                ::  rmis                !! real    undefined value
+! Missing-value sentinels
+      integer                  :: imis  !! integer undefined value
+      real                     :: rmis  !! real    undefined value
       parameter              (imis = -9999)
       parameter              (rmis = 1.e+20)
 
-      character*256          ::  cfmt, clen
+      character*256            :: cfmt
+      character*256            :: clen
 ! ================================================
 print *, 'set_bifparam: read parameters from arguments'
+
 ! Arguments: river-depth binary, output parameter-table filename, number of
 ! bifurcation layers to retain, optional dimension-info text filename, and an
 ! optional "check_map" token to request the diagnostic map output.
@@ -87,6 +111,9 @@ print *, 'set_bifparam: read parameters from arguments'
         stop 1
       endif
 
+! ================================================
+! [1] Read map configuration and river-network inputs
+! ================================================
 ! INPDIM supplies the base-grid dimensions and bounds; all subsequent direct
 ! binary records are sized as NX*NY four-byte values.
       open(11,file=diminfo,form='formatted')
@@ -152,6 +179,9 @@ print *, 'set_bifparam: read bifori.txt'
         nlev_new=nlev
       endif
 
+! ================================================
+! [2] Read and filter the bifurcation pathway table
+! ================================================
 ! bifori.txt starts with path count and layer count. Each path row stores its
 ! endpoint indices, length/elevation, widths by layer, and latitude/longitude.
       allocate(wth(nlev))
@@ -207,6 +237,9 @@ print *, 'set_bifparam: read bifori.txt'
             dph=-9999
             wth(1)=0.0
           else                           !! if channel connectivity exist, set depth following bifurcation channel width.
+! ================================================
+! [3] Estimate pathway depths and write bifprm.txt
+! ================================================
 ! Estimate river-channel bifurcation depth from layer-1 width, apply the
 ! 0.5 m lower bound, and cap it at the deeper endpoint's existing channel depth.
             dph=log10(wth(1))*2.5-4.0
@@ -236,6 +269,9 @@ print *, 'set_bifparam: read bifori.txt'
       close(21)
 
 ! ------
+! ================================================
+! [4] Write the optional inspection raster
+! ================================================
 ! The optional check map has two direct-access float32 records: bifurcation
 ! depth first and width second. It is for inspection, not simulation input.
       if( write_check_map )then
@@ -260,7 +296,7 @@ print *, 'set_bifparam: read bifori.txt'
       SUBROUTINE NCERROR(STATUS,STRING)
       USE NETCDF
       IMPLICIT NONE
-      INTEGER,INTENT(IN) :: STATUS
+      INTEGER,INTENT(IN)       :: STATUS
       CHARACTER(LEN=*),INTENT(IN),OPTIONAL :: STRING
 
 ! ======
@@ -274,4 +310,4 @@ print *, 'set_bifparam: read bifori.txt'
 #endif
 !!================================================
 
-      end program param_set_bifparam
+      end program param_bif_set_params

@@ -19,4 +19,6 @@ For a substantial modernization task, add a short evidence-linked note with:
 - **Change and enabled capability:** what interface, data contract, or workflow changed, and what new reuse or extension it makes possible. Distinguish implemented behavior from planned work.
 - **Scientific and compatibility impact:** whether a scientific method, physical parameterization, or model feature changed (yes / no / unknown); identify rationale, approval evidence, affected behavior, backward-compatibility checks, and numerical differences where applicable.
 
+At task completion, include a brief knowledge-gap review (see [`docs/ai_development_workflow.md`](../../docs/ai_development_workflow.md)): checklist completed; material questions and their source references, consequences, and blocking status; resolution method and formalization links; or an explicit “no material new gaps found.” Do not create artificial questions. Raise unresolved scientific/architectural questions for maintainer review while noting what unrelated work can continue.
+
 Keep these details in an existing task note or relevant stage/technical document when that is clearer; do not add CSV columns or duplicate the Issue/PR. For ordinary fixes or external contributions, record a change category only when it materially helps distinguish that work from infrastructure modernization.

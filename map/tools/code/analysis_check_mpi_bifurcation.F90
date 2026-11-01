@@ -3,18 +3,65 @@
 ! because its traversal step does not re-check the destination region label.
 program analysis_check_mpi_bifurcation
   implicit none
-  integer :: nx,ny,npth,nlev,u,ucsv,ios,i,k,ix,iy,jx,jy,regcount,cat,region
-  integer :: head,tail
-  integer :: total(3),channel(3),flood(3),cross_region_retained
-  integer,allocatable :: regions(:,:),nextx(:,:),nexty(:,:),upst_count(:,:),upstream_now(:,:),queue_x(:),queue_y(:)
-  integer,allocatable :: path_ix(:),path_iy(:),path_jx(:),path_jy(:),region_up(:),region_down(:)
-  logical,allocatable :: vector(:,:),up_valid(:),down_valid(:),retained_path(:),valid_coords(:)
-  real,allocatable :: widths(:),path_elv(:),path_lat(:),path_lon(:),path_w1(:)
-  real :: len,dph
-  character(len=512) :: region_file,arg,csv_file,line
-  character(len=24) :: kind_label
-  logical :: write_csv
 
+  ! Map dimensions, region labels, and grid-traversal counters.
+  integer                  :: nx, ny  !! x/y grid dimensions
+  integer                  :: npth  !! bifurcation-path count
+  integer                  :: nlev  !! layer count
+  integer                  :: u
+  integer                  :: ucsv  !! CSV output unit
+  integer                  :: ios  !! I/O status code
+  integer                  :: i
+  integer                  :: k
+  integer                  :: ix, iy  !! x/y grid index
+  integer                  :: jx, jy  !! target x/y grid index
+  integer                  :: regcount
+  integer                  :: cat  !! pathway class: 1 retained, 2 dropped, 3 invalid
+  integer                  :: region
+  integer                  :: head
+  integer                  :: tail
+  integer                  :: total(3)  !! pathway counts by class
+  integer                  :: channel(3)  !! channel-path counts by class
+  integer                  :: flood(3)  !! floodplain-only counts by class
+  integer                  :: cross_region_retained  !! retained cross-region pathway count
+
+  ! Map arrays and queue used to reproduce model-local river-vector membership.
+  integer, allocatable      :: regions(:,:)  !! MPI region labels
+  integer, allocatable      :: nextx(:,:), nexty(:,:)  !! downstream cell x/y indices
+  integer, allocatable      :: upst_count(:,:)  !! upstream-link count per cell
+  integer, allocatable      :: upstream_now(:,:)  !! visited upstream-link count
+  integer, allocatable      :: queue_x(:)
+  integer, allocatable      :: queue_y(:)
+
+  ! Bifurcation endpoints and their assigned MPI regions.
+  integer, allocatable      :: path_ix(:), path_iy(:)
+  integer, allocatable      :: path_jx(:), path_jy(:)
+  integer, allocatable      :: region_up(:)  !! upstream endpoint region
+  integer, allocatable      :: region_down(:)  !! downstream endpoint region
+
+  ! Pathway classification flags and parsed physical attributes.
+  logical, allocatable      :: vector(:,:)  !! model-local river-vector membership
+  logical, allocatable      :: up_valid(:)
+  logical, allocatable      :: down_valid(:)
+  logical, allocatable      :: retained_path(:)
+  logical, allocatable      :: valid_coords(:)
+  real, allocatable         :: widths(:)  !! bifurcation widths [m]
+  real, allocatable         :: path_elv(:)  !! pathway elevation [m]
+  real, allocatable         :: path_lat(:)  !! pathway latitude [deg]
+  real, allocatable         :: path_lon(:)  !! pathway longitude [deg]
+  real, allocatable         :: path_w1(:)  !! first-layer bifurcation width [m]
+  real                     :: len  !! pathway length [m]
+  real                     :: dph  !! bifurcation depth [m]
+  character(len=512)       :: region_file  !! MPI-region map filename
+  character(len=512)       :: arg  !! command-line argument
+  character(len=512)       :: csv_file  !! optional dropped-path CSV filename
+  character(len=512)       :: line  !! formatted input row
+  character(len=24)        :: kind_label  !! pathway classification label
+  logical                  :: write_csv  !! whether to write the dropped-path CSV
+
+  ! ================================================
+  ! [1] Read command-line options and map geometry
+  ! ================================================
   call get_command_argument(1,region_file)
   if(len_trim(region_file)==0) call die('usage: analysis_check_mpi_bifurcation <region-map.bin> [--csv <dropped.csv>]')
   write_csv=.false.; csv_file=''
@@ -32,6 +79,9 @@ program analysis_check_mpi_bifurcation
   close(u)
   if(ios/=0.or.nx<1.or.ny<1) call die('invalid map dimensions in params.txt')
 
+  ! ================================================
+  ! [2] Read the region map, river network, and bifurcation table
+  ! ================================================
   allocate(regions(nx,ny),nextx(nx,ny),nexty(nx,ny))
   open(newunit=u,file=trim(region_file),form='unformatted',access='direct',recl=4*nx*ny,status='old',iostat=ios)
   if(ios/=0) call die('cannot open region map: '//trim(region_file))
@@ -72,6 +122,9 @@ program analysis_check_mpi_bifurcation
     region_down(i)=regions(path_jx(i),path_jy(i))
   end do
 
+  ! ================================================
+  ! [3] Reconstruct model-local river-vector membership
+  ! ================================================
   regcount=max(0,maxval(regions))
   allocate(upst_count(nx,ny),upstream_now(nx,ny),vector(nx,ny),queue_x(nx*ny),queue_y(nx*ny))
   ! Reproduce membership in I2VECTOR built by src/cmf_ctrl_maps_mod.F90:
@@ -132,6 +185,9 @@ program analysis_check_mpi_bifurcation
     end do
   end do
 
+  ! ================================================
+  ! [4] Classify pathways and report connectivity diagnostics
+  ! ================================================
   total=0; channel=0; flood=0; cross_region_retained=0
   if(write_csv) then
     open(newunit=ucsv,file=trim(csv_file),status='replace',action='write',iostat=ios)
@@ -169,7 +225,7 @@ program analysis_check_mpi_bifurcation
   if(write_csv) write(*,'(a)') 'Dropped-path CSV: '//trim(csv_file)
 contains
   subroutine die(message)
-    character(len=*),intent(in)::message
+    character(len=*),intent(in) :: message
     write(*,'(a)') 'analysis_check_mpi_bifurcation: ERROR: '//trim(message)
     stop 1
   end subroutine die

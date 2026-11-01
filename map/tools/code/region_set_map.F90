@@ -1,49 +1,77 @@
       program SET_MAP
 ! ===============================================
-! to set various maps
+! Derive regional lookup, distance, drainage-area, basin, and display maps.
 ! ===============================================
       implicit none
-! parameter
-      character*256      ::  params
-      parameter             (params='../params.txt')
-! index CaMa-Flood
-      integer            ::  iXX, iYY, jXX, jYY
-      integer            ::  nXX, nYY                        !! x-y matrix GLOBAL
-      real               ::  gsize                         !! grid size [degree]
-      real               ::  dstmth
-      parameter             (dstmth=25)
-      real               ::  west, north, east, south
-! input
-      integer,allocatable::  nextX(:,:)                  !! next grid X
-      integer,allocatable::  nextY(:,:)                  !! flow direction conbined
-! output
-      integer,allocatable::  rivseq(:,:)                 !! river sequence
-      real,allocatable   ::  grdare(:,:)                 !! drainage area (GRID base)
-      real,allocatable   ::  uparea(:,:)                 !! upa drainage area (GRID base)
-      real,allocatable   ::  nxtdst(:,:)                 !! next dstistance
-      integer,allocatable::  color(:,:)                  !! color of basin
-      integer,allocatable::  basin(:,:)                  !! basin ID
-      integer,allocatable::  upgrid(:,:)                 !! upstream grids
-! 
-      real,allocatable   ::  lon(:)
-      real,allocatable   ::  lat(:)
-      real               ::  n_lat, s_lat
-! local
-      integer,allocatable::  seqxy(:,:)
-      integer            ::  nseq, nseq_max
-      integer            ::  n, m, nmax
-      real               ::  upa
-      integer            ::  upg
-      real               ::  lon1, lon2, lat1, lat2
-      integer            ::  nbsn, basin_this, nbsn_max
-      integer,allocatable::  bsn_mask(:,:)
-      integer            ::  color_this, color_max, grid
-      integer            ::  col_used(10), icol
 
-      integer,allocatable::  basin_grid(:), basin_order(:), basin_new(:)
-! file
-      character*256      ::  rfile1,  rfile2
-      character*256      ::  wfile1,  wfile3,  wfile4,  wfile5,  wfile5a, wfile6, wfile7
+! Map geometry and fixed calculation settings.
+      character*256            :: params
+      parameter             (params='../params.txt')
+
+! Grid indices and dimensions.
+      integer                  :: iXX, iYY
+      integer                  :: jXX, jYY
+      integer                  :: nXX, nYY  !! x/y map dimensions
+      real                     :: gsize  !! map grid size [deg]
+      real                     :: dstmth
+      parameter             (dstmth=25)
+      real                     :: west, north, east, south  !! map bounds [deg]
+
+! Input arrays and source filenames.
+      integer, allocatable      :: nextX(:,:)  !! downstream x grid index
+      integer, allocatable      :: nextY(:,:)  !! downstream y grid index
+
+! Derived map arrays and output filenames.
+      integer, allocatable      :: rivseq(:,:)  !! upstream-to-downstream river sequence
+      real, allocatable         :: grdare(:,:)  !! drainage area (GRID base)
+      real, allocatable         :: uparea(:,:)  !! upa drainage area (GRID base)
+      real, allocatable         :: nxtdst(:,:)  !! distance to downstream grid [m]
+      integer, allocatable      :: color(:,:)  !! basin display-color map
+      integer, allocatable      :: basin(:,:)  !! basin identifier
+      integer, allocatable      :: upgrid(:,:)  !! upstream map-grid count
+! 
+      real, allocatable         :: lon(:)  !! longitude/latitude [deg]
+      real, allocatable         :: lat(:)  !! longitude/latitude [deg]
+      real                     :: n_lat
+      real                     :: s_lat
+
+! Working arrays and basin/color counters.
+      integer, allocatable      :: seqxy(:,:)
+      integer                  :: nseq  !! river-sequence index
+      integer                  :: nseq_max  !! maximum river-sequence index
+      integer                  :: n
+      integer                  :: m
+      integer                  :: nmax
+      real                     :: upa
+      integer                  :: upg
+      real                     :: lon1
+      real                     :: lon2
+      real                     :: lat1
+      real                     :: lat2
+      integer                  :: nbsn  !! basin count or basin ID bound
+      integer                  :: basin_this
+      integer                  :: nbsn_max
+      integer, allocatable      :: bsn_mask(:,:)
+      integer                  :: color_this  !! selected basin display color
+      integer                  :: color_max  !! maximum display-color ID
+      integer                  :: grid  !! grid-cell count in basin
+      integer                  :: col_used(10)  !! neighboring-color occupancy flags
+      integer                  :: icol
+
+      integer, allocatable      :: basin_grid(:)
+      integer, allocatable      :: basin_order(:)
+      integer, allocatable      :: basin_new(:)
+
+! Input and output map paths.
+      character*256            :: rfile1
+      character*256            :: rfile2
+      character*256            :: wfile1
+      character*256            :: wfile3
+      character*256            :: wfile4
+      character*256            :: wfile5
+      character*256            :: wfile5a
+      character*256            :: wfile6
+      character*256            :: wfile7
       parameter             (rfile1='../nextxy.bin')
       parameter             (rfile2='../grdare.bin')
 
@@ -55,6 +83,9 @@
       parameter             (wfile6='../basin.bin')
       parameter             (wfile7='../bsncol.bin')
 ! ===============================================
+! ================================================
+! [1] Read map geometry and calculate cell-center coordinates
+! ================================================
 ! Build derived regional lookup maps from params.txt, nextxy.bin, and grdare.bin.
 ! Outputs are written one binary record per map in the parent regional directory.
       open(11,file=params,form='formatted')
@@ -98,6 +129,9 @@ print *, 'SET_MAP longitude, latitude and grid area'
         s_lat=max(lat(iYY)-0.5*gsize,-90.0)
       end do
 ! ===============================================
+! ================================================
+! [2] Order river cells and accumulate upstream drainage properties
+! ================================================
 ! Assign an upstream-to-downstream sequence number to connected river cells.
 ! ===============================================
 print *, 'SET_MAP calc river sequence'
@@ -203,6 +237,9 @@ print *, 'SET_MAP calc upa drainage area'
       write(24,rec=1) upgrid
       close(24)
 ! ===============================================
+! ================================================
+! [3] Calculate distance-to-downstream maps
+! ================================================
 ! Calculate center-to-center distance to the next cell for each river cell.
 ! ===============================================
 print *, 'SET_MAP calc distance to next grid'
@@ -236,6 +273,9 @@ print *, 'SET_MAP calc distance to next grid'
       write(25,rec=1) nxtdst
       close(25)
 ! ===============================================
+! ================================================
+! [4] Label basins and assign visualization colors
+! ================================================
 ! Label river basins, then derive basin display colors in the following section.
 ! ===============================================
 print *, 'SET_MAP calc basin'
@@ -481,7 +521,8 @@ CONTAINS
        subroutine nextGRID(iXX, iYY, jXX, jYY)
 ! ===============================================
        implicit none
-       integer            ::  iXX, iYY, jXX, jYY
+       integer                  :: iXX, iYY
+       integer                  :: jXX, jYY
 ! ===============================================
        iXX=jXX
        iYY=jYY
@@ -499,14 +540,15 @@ CONTAINS
 ! ===============================================
       implicit none
 !
-      integer            ::  nmax
-      integer            ::  a(nmax)
-      integer            ::  b(nmax)
+      integer                  :: nmax
+      integer                  :: a(nmax)
+      integer                  :: b(nmax)
 !
-      integer            ::  i, n
-      integer            ::  c
-      integer            ::  d
-      integer            ::  mod
+      integer                  :: i
+      integer                  :: n
+      integer                  :: c
+      integer                  :: d
+      integer                  :: mod
 ! ===============================================
       i=int(nmax/2)
       n=i
@@ -625,35 +667,35 @@ CONTAINS
 !     at the final calculation, earth is assumed to be a sphere
 ! ================================================
       implicit none
-      real                ::  rpi                !! Pi
-      double precision    ::  de2                !! eccentricity powered by 2
-      double precision    ::  da                 !! the radius of the earth
+      real                     :: rpi  !! Pi
+      double precision         :: de2  !! eccentricity powered by 2
+      double precision         :: da  !! the radius of the earth
 !
-      real                ::  rlon1              !! longitude of the origin
-      real                ::  rlon2              !! longitude of the destination
-      real                ::  rlat1              !! latitude of the origin
-      real                ::  rlat2              !! latitude of the destination
-      double precision    ::  dsinlat1           !! sin(lat1)
-      double precision    ::  dsinlon1           !! sin(lon1)
-      double precision    ::  dcoslat1           !! cos(lat1)
-      double precision    ::  dcoslon1           !! cos(lon1)
-      double precision    ::  dsinlat2           !! sin(lat2) 
-      double precision    ::  dsinlon2           !! sin(lon2)
-      double precision    ::  dcoslat2           !! cos(lat2)
-      double precision    ::  dcoslon2           !! cos(lon2)
-      double precision    ::  dh1                !! hegiht of the origin
-      double precision    ::  dn1                !! intermediate val of calculation
-      double precision    ::  dx1                !! X coordinate of the origin
-      double precision    ::  dy1                !! Y coordinate of the origin
-      double precision    ::  dz1                !! Z coordinate of the origin
-      double precision    ::  dh2                !! height of the destination
-      double precision    ::  dn2                !! intermediate val of calculation
-      double precision    ::  dx2                !! X coordinate of the destination
-      double precision    ::  dy2                !! Y coordinate of the destination
-      double precision    ::  dz2                !! Z coordinate of the destination
+      real                     :: rlon1  !! longitude of the origin
+      real                     :: rlon2  !! longitude of the destination
+      real                     :: rlat1  !! latitude of the origin
+      real                     :: rlat2  !! latitude of the destination
+      double precision         :: dsinlat1  !! sin(lat1)
+      double precision         :: dsinlon1  !! sin(lon1)
+      double precision         :: dcoslat1  !! cos(lat1)
+      double precision         :: dcoslon1  !! cos(lon1)
+      double precision         :: dsinlat2  !! sin(lat2)
+      double precision         :: dsinlon2  !! sin(lon2)
+      double precision         :: dcoslat2  !! cos(lat2)
+      double precision         :: dcoslon2  !! cos(lon2)
+      double precision         :: dh1  !! hegiht of the origin
+      double precision         :: dn1  !! intermediate val of calculation
+      double precision         :: dx1  !! X coordinate of the origin
+      double precision         :: dy1  !! Y coordinate of the origin
+      double precision         :: dz1  !! Z coordinate of the origin
+      double precision         :: dh2  !! height of the destination
+      double precision         :: dn2  !! intermediate val of calculation
+      double precision         :: dx2  !! X coordinate of the destination
+      double precision         :: dy2  !! Y coordinate of the destination
+      double precision         :: dz2  !! Z coordinate of the destination
 !
-      double precision    ::  dlen               !! length between origin and destination
-      double precision    ::  drad               !! half of the angle
+      double precision         :: dlen  !! length between origin and destination
+      double precision         :: drad  !! half of the angle
 ! parameters
       data             da/6378137.0/
       data             de2/0.006694470/
@@ -710,20 +752,20 @@ CONTAINS
 ! ================================================
       implicit none
 !
-      real                ::  rlon1               !! longitude
-      real                ::  rlon2               !! longitude
-      real                ::  rlat1               !! latitude
-      real                ::  rlat2               !! latitude
+      real                     :: rlon1  !! longitude
+      real                     :: rlon2  !! longitude
+      real                     :: rlat1  !! latitude
+      real                     :: rlat2  !! latitude
 !
-      real                ::  rpi                 !! Pi
-      double precision    ::  dpi                 !! Pi
-      double precision    ::  de                  !! e
-      double precision    ::  de2                 !! e2
-      double precision    ::  drad                !! radius of the earth
-      double precision    ::  dfnc1               !! result of function for dlat1
-      double precision    ::  dfnc2               !! result of function for dlat2
-      double precision    ::  dsin1               !! result of sin(dlat1)
-      double precision    ::  dsin2               !! result of sin(dlat2)
+      real                     :: rpi  !! Pi
+      double precision         :: dpi  !! Pi
+      double precision         :: de  !! e
+      double precision         :: de2  !! e2
+      double precision         :: drad  !! radius of the earth
+      double precision         :: dfnc1  !! result of function for dlat1
+      double precision         :: dfnc2  !! result of function for dlat2
+      double precision         :: dsin1  !! result of sin(dlat1)
+      double precision         :: dsin2  !! result of sin(dlat2)
 !
       data                    de2/0.00669447/
       data                    rpi/3.141592653589793238462643383/

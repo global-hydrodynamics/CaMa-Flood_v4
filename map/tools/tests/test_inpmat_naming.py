@@ -27,7 +27,7 @@ class InputMatrixNamingTests(unittest.TestCase):
             (hires_dir / "location.txt").write_text("1\narea west east south north nx ny cell\n1 tile\n", encoding="ascii")
             (hires_dir / "tile.catmxy.bin").write_bytes(b"fixture")
 
-            program = code_dir / "param_generate_inpmat"
+            program = code_dir / "param_inpmat_generate"
             program.write_text(
                 "#!/bin/sh\n"
                 "hires=$1; inpdim=$8; inpmat=$9\n"

@@ -3,8 +3,9 @@
 # Copy to <map>/script_params/, edit the settings below, and run from any CWD.
 #
 # Inputs:  params.txt, basin.bin, bifprm.txt, nextxy.bin
-# Outputs: mpireg-N.bin for each MPI count, plus mpireg.bin for DEFAULT_MPI
-# Usage:   ./s04-mpi_map_setup.sh
+# Outputs: bifcol_mpi.bin; mpireg-N.bin for each MPI count; default connectivity report
+# Optional: ./s04-mpi_map_setup.sh check_map also writes check_bif_bsnmod_mpi.bin
+# Usage:   ./s04-mpi_map_setup.sh [check_map]
 set -eu
 
 # Paths
@@ -45,8 +46,8 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 
 # Programs (compile these with the shared Makefile before running this script).
-EXEC_SETBASIN_MPI="$CODE_DIR/param_set_bif_basin_mpi"
-EXEC_SETREGION_MPI="$CODE_DIR/param_set_mpi_region"
+EXEC_SETBASIN_MPI="$CODE_DIR/param_mpi_set_basin"
+EXEC_SETREGION_MPI="$CODE_DIR/param_mpi_set_region"
 EXEC_CHECKBIF="$CODE_DIR/analysis_check_mpi_bifurcation"
 TEMP_BASIN="$MAP_DIR/bifbsn_mpi.tmp"
 
@@ -55,28 +56,28 @@ cd "$SCRIPT_DIR"
 
 # 1. Merge connected basins for MPI decomposition. bifprm.txt is read only.
 STEP="Aggregate basins for MPI mode $MPIMODE"
-printf '==================================================\n[STEP 1/4] Aggregate basins for MPI decomposition (%s)\n==================================================\n' "$MPIMODE"
-"$EXEC_SETBASIN_MPI" "$MPIMODE"
+printf '==================================================\n[STEP 1/3] Aggregate basins for MPI decomposition (%s)\n==================================================\n' "$MPIMODE"
+if [ "${1:-}" = "check_map" ]; then
+    "$EXEC_SETBASIN_MPI" "$MPIMODE" check_map
+else
+    "$EXEC_SETBASIN_MPI" "$MPIMODE"
+fi
 
 # 2. Assign the merged basins to each requested number of regions.
 for N in $MPI_COUNTS; do
     STEP="Generate mpireg-$N.bin"
-    printf '==================================================\n[STEP 2/4] Generate mpireg-%s.bin\n==================================================\n' "$N"
+    printf '==================================================\n[STEP 2/3] Generate mpireg-%s.bin\n==================================================\n' "$N"
     "$EXEC_SETREGION_MPI" "$N"
 done
 
-# 3. Set the standard runtime map to the selected partition count.
-STEP="Select mpireg-$DEFAULT_MPI.bin as the default partition"
-printf '==================================================\n[STEP 3/4] Select default partition mpireg-%s.bin\n==================================================\n' "$DEFAULT_MPI"
-cp "$MAP_DIR/mpireg-$DEFAULT_MPI.bin" "$MAP_DIR/mpireg.bin"
-
-# 4. Report bifurcation pathways excluded by the default partition.
+# 3. Analyze bifurcation pathways for the selected default partition.
 STEP="Analyze bifurcation connectivity for mpireg-$DEFAULT_MPI.bin"
-printf '==================================================\n[STEP 4/4] Analyze default-partition bifurcation connectivity\n==================================================\n'
+printf '==================================================\n[STEP 3/3] Analyze default partition mpireg-%s.bin\n==================================================\n' "$DEFAULT_MPI"
 (cd "$MAP_DIR" && "$EXEC_CHECKBIF" "mpireg-$DEFAULT_MPI.bin")
 
-# 5. Analyze another partition from the map root when needed.
-echo "To analyze another partition from the map root:"
+# Optional manual visualization and analysis for another partition from the map root.
+echo "To visualize and analyze another partition from the map root:"
+echo "  ../tools/code/analysis_mpi_region_color mpireg-8.bin"
 echo "  ./script_analysis/a01-check_mpi_bifurcation.sh mpireg-8.bin"
 echo "  ./script_analysis/a01-check_mpi_bifurcation.sh mpireg-8.bin --csv dropped_bifurcations.csv"
 STEP="Remove temporary MPI basin-group map"

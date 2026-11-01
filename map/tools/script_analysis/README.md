@@ -24,3 +24,14 @@ It reports totals, percentages, channel (`width(1)>0`) versus floodplain-only (`
 The dropped fraction describes connections omitted by the selected domain partition. It is not an estimate of discharge, storage, or inundation error, and it does not independently validate the scientific quality of the map or simulation.
 
 The s04 map-generation script invokes this tool for its selected `DEFAULT_MPI` map and prints the summary in the run log. The same standalone command can inspect any compatible externally generated map. See the [parameter workflow guide](../script_params/README.md#mpi-map-preparation) for basin merging, threshold rationale, generated files, and regression evidence.
+
+
+## MPI region coloring
+
+`analysis_mpi_region_color` is an independent visualization tool. From a map root, pass an existing numbered region map; it reads `params.txt` for dimensions and global-wrap geometry, then writes the matching color raster:
+
+```sh
+../tools/code/analysis_mpi_region_color mpireg-8.bin
+```
+
+This creates `bsncol_mpi-8.bin`, a single int32 `NX x NY` record with `-9999` outside assigned regions. It colors region IDs using the legacy size-prioritized, adjacency-aware palette logic (large regions first; then small regions, with singleton regions assigned color 1). The palette and tie/order behavior follow `set_color` in `map/src/src_param/set_bif_basin_mpi.F90`; the utility applies that logic to the supplied MPI region raster. It does not alter the region map and is not called by s04. Invoke it manually for any existing partition when visualization is useful. `bifcol_mpi.bin`, produced during s04 basin aggregation, is a separate visualization of MPI-aggregated basin IDs.

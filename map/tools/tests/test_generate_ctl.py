@@ -83,6 +83,30 @@ class GenerateCtlTests(unittest.TestCase):
         self.assertIn("zdef 2 linear 1 1", fldhgt)
         self.assertIn("fldhgt 2 99", fldhgt)
 
+    def test_mpi_basin_diagnostic_uses_two_registered_records_in_order(self):
+        rows = []
+        for index, name, long_name in (
+            ("1", "bifmod_mpi", "MPI basin modification class"),
+            ("2", "bpoint_mpi", "MPI bifurcation endpoint class"),
+        ):
+            item = row(
+                "check_bif_bsnmod_mpi.bin", name, "int32",
+                record_layout=f"record {index}", record_index=index, record_count="2",
+            )
+            item["product_kind"] = "binary_mult"
+            item["long_name"] = long_name
+            item["units"] = "1"
+            rows.append(item)
+        write_registry(self.registry, rows)
+        (self.map_dir / "check_bif_bsnmod_mpi.bin").write_bytes(b"\0" * (3 * 2 * 4 * 2))
+
+        result = self.run_generator()
+        self.assertEqual(result.generated, 1)
+        ctl = (self.map_dir / "check_bif_bsnmod_mpi.ctl").read_text()
+        self.assertIn("vars 2", ctl)
+        self.assertIn("undef -9999", ctl)
+        self.assertLess(ctl.index("bifmod_mpi 1"), ctl.index("bpoint_mpi 1"))
+
     def test_high_resolution_uses_location_geometry_and_area_name(self):
         hires = self.map_dir / "1min"
         hires.mkdir()

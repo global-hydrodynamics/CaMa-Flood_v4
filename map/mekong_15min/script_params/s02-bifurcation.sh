@@ -45,8 +45,8 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 
 # Shared executables (build beforehand with map/tools/code/Makefile).
-EXEC_SETPARAM="$CODE_DIR/param_set_bifparam"
-EXEC_SETBASIN="$CODE_DIR/param_set_bif_basin"
+EXEC_SETPARAM="$CODE_DIR/param_bif_set_params"
+EXEC_SETBASIN="$CODE_DIR/param_bif_set_basin"
 
 # Keep the optional diagnostic switch explicit.
 CHECK_MAP=${1:-}

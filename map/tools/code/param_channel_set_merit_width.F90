@@ -1,4 +1,4 @@
-      program param_set_merit_width
+      program param_channel_set_merit_width
 ! ================================================
 ! fuse power-law width (rivwth.bin) and MERIT Hydro width (width.bin)
 ! to create the alternate width product (rivwth_merit.bin)
@@ -12,29 +12,35 @@
 ! ================================================
       implicit none
 ! ===================
-! river network map parameters
-      integer             ::  ix, iy
-      integer             ::  nx, ny          !! river map grid number
-! river netwrok map
-      integer,allocatable ::  nextx(:,:)      !! downstream x
-      integer,allocatable ::  nexty(:,:)      !! downstream y
-      real,allocatable    ::  lon(:), lat(:)  !! longitude, latitude [deg]
+! River-network map parameters
+      integer                  :: ix, iy  !! x/y grid index
+      integer                  :: nx, ny  !! x/y grid dimensions
 
-! variable
-      real,allocatable    ::  rivwth(:,:)     !! channel width (empirical) [m]
-      real,allocatable    ::  meritwth(:,:)      !! MERIT Hydro channel width [m]
-! file
-      character*256       ::  diminfo
+! River-network maps
+      integer, allocatable      :: nextx(:,:)  !! downstream x grid index
+      integer, allocatable      :: nexty(:,:)  !! downstream y grid index
+      real, allocatable         :: lon(:), lat(:)  !! longitude/latitude [deg]
+
+! Working arrays
+      real, allocatable         :: rivwth(:,:)  !! channel width [m]
+      real, allocatable         :: meritwth(:,:)  !! MERIT Hydro width [m]
+
+! Input and output filenames
+      character*256            :: diminfo  !! input-dimension descriptor filename
 !
-      character*256       ::  cnextxy, crivwth, cwidth, cmerit
+      character*256            :: cnextxy
+      character*256            :: crivwth
+      character*256            :: cwidth
+      character*256            :: cmerit
       parameter              (crivwth='./rivwth.bin')
       parameter              (cwidth='./width.bin')
       parameter              (cmerit='./rivwth_merit.bin')
 
-      integer             ::  ios
-! Undefined Values
-      integer             ::  imis                !! integer undefined value
-      real                ::  rmis                !! real    undefined value
+      integer                  :: ios  !! I/O status code
+
+! Missing-value sentinel
+      integer                  :: imis  !! integer undefined value
+      real                     :: rmis  !! real    undefined value
       parameter              (imis = -9999)
       parameter              (rmis = 1.e+20)
 ! ================================================
@@ -65,8 +71,10 @@ print *, trim(cwidth)
       read(13,rec=1) meritwth
       close(13)
 
-
-! Apply the inherited width-merging rules to river cells:
+! ================================================
+! [1] Apply the inherited width-merging rules to river cells
+! ================================================
+! Apply the inherited rules:
 !   - MERIT width below 50 m: use the larger of MERIT and power-law width.
 !   - Otherwise, constrain it to 0.5-5 times the power-law width and cap at
 !     10,000 m. Non-river cells receive the -9999 missing-value sentinel.
@@ -95,11 +103,14 @@ print *, trim(cwidth)
       end do
 ! ********************************************************************
 print *, trim(cmerit)
+! ================================================
+! [2] Write the alternate MERIT-merged width map
+! ================================================
       open(21,file=cmerit,form='unformatted',access='direct',recl=4*nx*ny)
       write(21,rec=1) meritwth
       close(21)
 
 
-      end program param_set_merit_width
+      end program param_channel_set_merit_width
 
 

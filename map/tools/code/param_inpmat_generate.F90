@@ -1,4 +1,4 @@
-      program GENERATE_INPMAT
+      program param_inpmat_generate
 !==========================================================
 !* PURPOSE: generate input matrix for CaMa-Flood
 !
@@ -13,34 +13,37 @@
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
       implicit none
-! CaMa-Flood parameters                                        !! (from param.txt)
-      character*256          ::  param                         !! river map parameters
+
+! Map geometry from params.txt.
+      character*256            :: param  !! river map parameters
       parameter                 (param='./params.txt')
-      integer                ::  iXX, iYY
-      integer                ::  nXX, nYY                      !! grid number (river network map)
-      integer                ::  nflp                          !! floodplain layers
-      real                   ::  gsize                         !! grid size [deg]
-      real                   ::  west, east, north, south      !! domain (river network map)
-! HydroSHEDS parameters                                        !! (from location.txt)
-      integer                ::  i, narea               !! area ID
-      character*256          ::  area                          !! area code
-      integer                ::  ix, iy                        
-      integer                ::  nx, ny                        !! grid number (hires data)
-      real                   ::  csize                         !! size of pixel [deg]
-      real                   ::  lon_ori                       !! west  edge
-      real                   ::  lat_ori                       !! north edge
+      integer                  :: iXX, iYY
+      integer                  :: nXX, nYY  !! x/y map dimensions
+      integer                  :: nflp  !! floodplain-layer count
+      real                     :: gsize  !! map grid size [deg]
+      real                     :: west, east, north, south  !! map bounds [deg]
+
+! High-resolution source geometry and area metadata from location.txt.
+      integer                  :: i  !! area ID
+      integer                  :: narea  !! area ID
+      character*256            :: area  !! area code
+      integer                  :: ix, iy  !! x/y grid index
+      integer                  :: nx, ny  !! x/y grid dimensions
+      real                     :: csize  !! high-resolution pixel size [deg]
+      real                     :: lon_ori  !! west  edge
+      real                     :: lat_ori  !! north edge
 !
-      character*256          ::  list_loc
+      character*256            :: list_loc
 !================================================
-! input data parameters
+! Runoff-grid settings supplied by the user.
 !   please modify this part to generate input matrix for different input data resolution.
 !   default: linert Cartesian grid
-      integer            ::  ixin, iyin
-      integer            ::  nxin, nyin                        !! input grid numbers
-      real               ::  gsizein                           !! input grid size [deg]
+      integer                  :: ixin, iyin  !! input-grid x/y index
+      integer                  :: nxin, nyin  !! input-grid x/y dimensions
+      real                     :: gsizein  !! runoff-grid size [deg]
 
-      real               ::  westin, eastin, northin, southin
-      character*4        ::  olat                              !! north-south data order. (NtoS): for North to South, StoN for South to North
+      real                     :: westin, eastin, northin, southin  !! runoff-grid bounds [deg]
+      character*4              :: olat  !! north-south data order. (NtoS): for North to South, StoN for South to North
 
       data                   westin  /-180.0/
       data                   eastin  / 180.0/
@@ -48,39 +51,54 @@
       data                   southin / -90.0/
       data                   olat    /'NtoS'/
 
-      real               ::  lon0, lat0
+      real                     :: lon0, lat0
 ! ===============================================
-! Input mattrix
-      integer                ::  inum, nmax, mmax              !! 
+! Sparse input-matrix arrays: source-grid indices and overlap areas.
+      integer                  :: inum  !!
+      integer                  :: nmax  !!
+      integer                  :: mmax  !!
       parameter                 (nmax=100)
-      integer,allocatable    ::  inpn(:,:)                     !! number of input grids for river network grid (iXX,iYY)
-      integer,allocatable    ::  inpx(:,:,:), inpy(:,:,:)      !! input grid (ixin, iyin)
-      real,allocatable       ::  inpa(:,:,:)                   !! area overlapped between river network grid (iXX,iYY) and input grid (ixin,iyin)
+      integer, allocatable      :: inpn(:,:)  !! number of input grids for river network grid (iXX,iYY)
+      integer, allocatable      :: inpx(:,:,:), inpy(:,:,:)  !! input-grid x/y indices
+      real, allocatable         :: inpa(:,:,:)  !! overlap area [m2]
 
-      integer,allocatable    ::  inpx0(:,:,:), inpy0(:,:,:)
-      real,allocatable       ::  inpa0(:,:,:)
-! HydroSHEDS hires info
-      integer*2,allocatable  ::  catmXX(:,:), catmYY(:,:)      !! catchment (iXX,iYY)  of hires pixel (ix,iy)
-      real,allocatable       ::  lon(:),  lat(:)               !! longitude & latitude of hires pixel (ix) (iy)
-      real,allocatable       ::  carea(:,:)                      !! area of hires pixel (iy)
-! for calculation
-      integer                ::  new
-      integer                ::  iXX0, iYY0
-! files
-      integer                ::  ios
-      character*256          ::  rfile1, wfile1
-      character*256          ::  mapdir, hires, inpmat, hires_tag
-      character*256          ::  inpdim
+      integer, allocatable      :: inpx0(:,:,:)
+      integer, allocatable      :: inpy0(:,:,:)
+      real, allocatable         :: inpa0(:,:,:)
+
+! Per-area high-resolution map arrays.
+      integer*2, allocatable    :: catmXX(:,:), catmYY(:,:)  !! catchment (iXX,iYY)  of hires pixel (ix,iy)
+      real, allocatable         :: lon(:), lat(:)  !! longitude/latitude [deg]
+      real, allocatable         :: carea(:,:)  !! high-resolution cell area [m2]
+
+! Working indices and counts.
+      integer                  :: new
+      integer                  :: iXX0, iYY0
+
+! Filenames and I/O status.
+      integer                  :: ios  !! I/O status code
+      character*256            :: rfile1
+      character*256            :: wfile1
+      character*256            :: mapdir
+      character*256            :: hires
+      character*256            :: inpmat  !! input-matrix filename
+      character*256            :: hires_tag
+      character*256            :: inpdim  !! input-dimension descriptor filename
       parameter                 (mapdir='./')
-! function
-      character*256          ::  fmt1, cnmax
-      character*256          ::  buf
+
+! Format strings and input buffers.
+      character*256            :: fmt1
+      character*256            :: cnmax
+      character*256            :: buf
 !================================================
+!==========================================================
+! [1] Read run settings and map geometry
+!==========================================================
 print *, 'CALC_INPMAT:'
 
       call getarg(1,hires_tag)
        if( hires_tag=='' ) then
-         print *, 'usage % generate_inpmat $HIRES_TAG $GRSIZE $WEST $EAST $NORTH $SOUTH $OLAT $INPDIM $INPMAT'
+         print *, 'usage % param_inpmat_generate $HIRES_TAG $GRSIZE $WEST $EAST $NORTH $SOUTH $OLAT $INPDIM $INPMAT'
          stop
       endif
       call getarg(2,buf)
@@ -130,6 +148,9 @@ print *, 'CALC_INPMAT:'
       inpy(:,:,:)=0
       inpa(:,:,:)=0
 
+!==========================================================
+! [2] Read each high-resolution area and its catchment data
+!==========================================================
       list_loc=trim(hires)//'/location.txt'
       open(11,file=list_loc,form='formatted')
       read(11,*) narea
@@ -184,6 +205,9 @@ print *, 'CALC_INPMAT:'
 
 !================================================
 
+!==========================================================
+! [3] Map pixels to runoff cells and accumulate overlap area
+!==========================================================
         do iy=1, ny
           do ix=1, nx
             if( catmXX(ix,iy)>0 .and. catmXX(ix,iy)<=nXX .and. catmYY(ix,iy)>0 .and. catmYY(ix,iy)<=nYY )then
@@ -191,10 +215,8 @@ print *, 'CALC_INPMAT:'
               iYY=catmYY(ix,iy)
 
           ! #################################################################################################
-          ! please modify the relation between hi-res pixel (ix,iy) and input grid (ixin,iyin)
-          !   in ordert to generate new input matrix
-          !
-          ! the folloing is the example for 0.5deg global input
+          ! Edit this relation when mapping pixels to another runoff grid.
+          ! The current example maps pixel centers to a regular 0.5-degree grid.
           ! #######
 
               lon0=lon(ix)
@@ -251,6 +273,9 @@ print *, 'CALC_INPMAT:'
         deallocate(catmXX,catmYY,lon,lat,carea)
       end do
 
+!==========================================================
+! [4] Write the paired inpdim descriptor and three matrix records
+!==========================================================
       mmax=0
       do iYY=1, nYY
         do iXX=1, nXX
@@ -312,6 +337,9 @@ print *, trim(wfile1)
 
       deallocate(inpx0,inpy0,inpa0)
 !==========================================================
+!==========================================================
+! [5] Calculate spherical grid-cell area when source grdare is absent
+!==========================================================
 CONTAINS
 !+
 !+
@@ -329,20 +357,20 @@ CONTAINS
 !==========================================================
       implicit none
 !
-      real                ::  rlon1               !! longitude
-      real                ::  rlon2               !! longitude
-      real                ::  rlat1               !! latitude
-      real                ::  rlat2               !! latitude
+      real                     :: rlon1  !! longitude
+      real                     :: rlon2  !! longitude
+      real                     :: rlat1  !! latitude
+      real                     :: rlat2  !! latitude
 !
-      real                ::  rpi                 !! Pi
-      double precision    ::  dpi                 !! Pi
-      double precision    ::  de                  !! e
-      double precision    ::  de2                 !! e2
-      double precision    ::  drad                !! radius of the earth
-      double precision    ::  dfnc1               !! result of function for dlat1
-      double precision    ::  dfnc2               !! result of function for dlat2
-      double precision    ::  dsin1               !! result of sin(dlat1)
-      double precision    ::  dsin2               !! result of sin(dlat2)
+      real                     :: rpi  !! Pi
+      double precision         :: dpi  !! Pi
+      double precision         :: de  !! e
+      double precision         :: de2  !! e2
+      double precision         :: drad  !! radius of the earth
+      double precision         :: dfnc1  !! result of function for dlat1
+      double precision         :: dfnc2  !! result of function for dlat2
+      double precision         :: dsin1  !! result of sin(dlat1)
+      double precision         :: dsin2  !! result of sin(dlat2)
 !
       data                    de2/0.00669447/
       data                    rpi/3.141592653589793238462643383/
@@ -386,5 +414,5 @@ CONTAINS
 !==========================================================
 !+
 !+
-      end program GENERATE_INPMAT
+      end program param_inpmat_generate
 

@@ -1,31 +1,47 @@
       program COMBINE_HIRES
 ! ===============================================
+! Filter source bifurcation pathways to the selected regional map.
+! ===============================================
       implicit none
 
-      character*256          ::  global_dir                    !! global map directory
-      integer                ::  nXX, nYY
-      real                   ::  lon_ori, lat_ori              !! west and north edge of global map
-      real                   ::  lon_end, lat_end              !! east and south edge of global map
-      integer                ::  mXX, mYY                      !! river map grid numbers
-      integer                ::  dXX, dYY                      !! river map domain shift from global map
-      real                   ::  gsize                         !! river map grid size [deg]
-      real                   ::  west, east, north, south      !! domain
+! Crop offsets and dimensions, plus pathway-table fields.
 
-      integer,allocatable    ::  nextx(:,:)
+      character*256            :: global_dir  !! global map directory
+      integer                  :: nXX, nYY  !! x/y map dimensions
+      real                     :: lon_ori, lat_ori  !! west and north edge of global map
+      real                     :: lon_end, lat_end  !! east and south edge of global map
+      integer                  :: mXX, mYY  !! regional x/y dimensions
+      integer                  :: dXX, dYY  !! river map domain shift from global map
+      real                     :: gsize  !! map grid size [deg]
+      real                     :: west, east, north, south  !! map bounds [deg]
 
-      integer                ::  ipath, npath, mpath
-      integer                ::  ilev, nlev
+      integer, allocatable      :: nextx(:,:)  !! downstream x grid index
 
-      integer                ::  iXX,  iYY,  jXX,  jYY
-      integer                ::  iXX2, iYY2, jXX2, jYY2
-      real                   ::  dst, elv, lon, lat
-      real,allocatable       ::  wth(:)
+      integer                  :: ipath
+      integer                  :: npath  !! bifurcation-path count
+      integer                  :: mpath
+      integer                  :: ilev  !! bifurcation-layer index
+      integer                  :: nlev  !! layer count
+
+      integer                  :: iXX, iYY
+      integer                  :: jXX, jYY
+      integer                  :: iXX2, iYY2
+      integer                  :: jXX2, jYY2
+      real                     :: dst
+      real                     :: elv  !! pathway elevation [m]
+      real                     :: lon, lat  !! longitude/latitude [deg]
+      real, allocatable         :: wth(:)  !! bifurcation width [m]
 
 ! files
-      character*256          ::  rfile1, wfile1
-      character*256          ::  cfmt, clen
+      character*256            :: rfile1
+      character*256            :: wfile1
+      character*256            :: cfmt
+      character*256            :: clen
 
 ! ===============================================
+! ================================================
+! [1] Read crop metadata and the regional river network
+! ================================================
 ! Read the crop offsets and dimensions produced by cut_domain.
       rfile1='./dim_change.txt'
       open(11,file=rfile1,form='formatted')
@@ -56,6 +72,9 @@
       
 ! ====================
 
+! ================================================
+! [2] Count retained paths and write their regional coordinates
+! ================================================
 ! Count source bifurcation paths whose two endpoints remain inside the region.
 ! The second pass writes those paths with their indices shifted to regional grid.
       rfile1=trim(global_dir)//'/bifori.txt'
@@ -117,8 +136,9 @@
 ! =============================================
       implicit none
 !
-      integer   :: ix,iy,jx,jy
-      integer*1 :: dir
+      integer                  :: ix, iy  !! x/y grid index
+      integer                  :: jx, jy  !! target x/y grid index
+      integer*1                :: dir
 ! ============================================
       jx=ix
       jy=iy
@@ -146,12 +166,13 @@
 ! ===============================================
       implicit none
 !
-      real            ::  lon, lat
+      real                     :: lon, lat  !! longitude/latitude [deg]
 
-      character*1     ::  ew, sn
-      character*2     ::  clat
-      character*3     ::  clon
-      character*7     ::  cname
+      character*1              :: ew
+      character*1              :: sn
+      character*2              :: clat
+      character*3              :: clon
+      character*7              :: cname
 ! ===============================================
       if( lon<0 )then
         ew='w'

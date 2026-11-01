@@ -1,4 +1,4 @@
-      program param_calc_rivwth
+      program param_channel_calc_rivwth
 ! ================================================
 ! calculate river channel width and depth (rivwth.bin and rivhgt.bin) 
 ! using power-law function of annual mean discharge (outclm.bin)
@@ -17,18 +17,24 @@ USE NETCDF
 #endif
       implicit none
 ! ===================
-! calculation type
-      character*256       ::  buf
+! Calculation type
+      character*256            :: buf
 
-      character*256       ::  type            !! 'bin' for binary, 'cdf' for netCDF
+      character*256            :: type  !! 'bin' for binary, 'cdf' for netCDF
       data                    type /'bin'/
 
-      character*256       ::  diminfo             !! dimention info file
+      character*256            :: diminfo  !! input-dimension descriptor filename
       data                    diminfo /'./inpdim_test-1deg.txt'/
 
-! parameter
-      real                ::  HC, HP, HO, HMIN    !! Coef, Power, Offset, Minimum for Height (H=max(HMIN,HC*Qave**HP)
-      real                ::  WC, WP, WO, WMIN    !! Coef, Power, Offset, Minimum for Width  (W=max(WMIN,WC*Qave**WP)
+! Power-law coefficients and lower limits
+      real                     :: HC  !! depth power-law coefficient
+      real                     :: HP  !! depth power-law exponent
+      real                     :: HO  !! depth power-law offset [m]
+      real                     :: HMIN  !! minimum channel depth [m]
+      real                     :: WC  !! width power-law coefficient
+      real                     :: WP  !! width power-law exponent
+      real                     :: WO  !! width power-law offset [m]
+      real                     :: WMIN  !! minimum channel width [m]
 
       data                    HC   /0.1/
       data                    HP   /0.5/
@@ -40,37 +46,50 @@ USE NETCDF
       data                    WO   /0.00/
       data                    WMIN /10.0/
 
-! river network map parameters
-      integer             ::  ix, iy
-      integer             ::  nx, ny          !! river map grid number
-! river netwrok map
-      integer,allocatable ::  nextx(:,:)      !! downstream x
-      integer,allocatable ::  nexty(:,:)      !! downstream y
-      real,allocatable    ::  lon(:), lat(:)  !! longitude, latitude [deg]
-      real                ::  west, east, north, south, gsize
-! variable
-      real,allocatable    ::  rivout(:,:)     !! discharge     [m3/s]
-      real,allocatable    ::  rivwth(:,:)     !! channel width [m]
-      real,allocatable    ::  rivhgt(:,:)     !! channel depth [m]
-      real,allocatable    ::  rivhgt_inf(:,:) !! for no-floodplain experiment
-      real,allocatable    ::  rivman(:,:)     !! river channel manning roughness 
-! file
-      character*256       ::  cnextxy, crivout, crivwth, crivhgt, crivhgt_inf, crivman
+! River-network map parameters
+      integer                  :: ix, iy  !! x/y grid index
+      integer                  :: nx, ny  !! x/y grid dimensions
+
+! River-network maps
+      integer, allocatable      :: nextx(:,:)  !! downstream x grid index
+      integer, allocatable      :: nexty(:,:)  !! downstream y grid index
+      real, allocatable         :: lon(:), lat(:)  !! longitude/latitude [deg]
+      real                     :: west, east, north, south  !! map bounds [deg]
+      real                     :: gsize  !! map grid size [deg]
+
+! Working arrays
+      real, allocatable         :: rivout(:,:)  !! discharge [m3/s]
+      real, allocatable         :: rivwth(:,:)  !! channel width [m]
+      real, allocatable         :: rivhgt(:,:)  !! channel depth/height [m]
+      real, allocatable         :: rivhgt_inf(:,:)  !! for no-floodplain experiment
+      real, allocatable         :: rivman(:,:)  !! Manning roughness [s m-1/3]
+
+! Input and output filenames
+      character*256            :: cnextxy
+      character*256            :: crivout
+      character*256            :: crivwth
+      character*256            :: crivhgt
+      character*256            :: crivhgt_inf
+      character*256            :: crivman
       parameter              (crivout='./outclm.bin')
       parameter              (crivwth='./rivwth.bin')
       parameter              (crivhgt='./rivhgt.bin')
       parameter              (crivhgt_inf='./rivhgt_inf.bin')
       parameter              (crivman='./rivman.bin')
-      integer             ::  ios
+      integer                  :: ios  !! I/O status code
 !
 #ifdef UseCDF_CMF
-      character*256       ::  crivpar
+      character*256            :: crivpar
       parameter              (crivpar='./rivpar.nc')
-      integer             ::  ncid,varid,xid,yid
+      integer                  :: ncid
+      integer                  :: varid
+      integer                  :: xid
+      integer                  :: yid
 #endif
-! Undefined Values
-      integer             ::  imis                !! integer undefined value
-      real                ::  rmis                !! real    undefined value
+
+! Missing-value sentinels
+      integer                  :: imis  !! integer undefined value
+      real                     :: rmis  !! real    undefined value
       parameter              (imis = -9999)
       parameter              (rmis = 1.e+20)
 ! ================================================
@@ -105,6 +124,9 @@ print *, 'calc_rivwth :read parameters from arguments'
       print *, 'HEIGHT H=max(', HMIN, ',', HC, '*Qave**',HP, '+', HO, ')'
       print *, 'WIDTH  W=max(', WMIN, ',', WC, '*Qave**',WP, '+', WO, ')'
 
+! ================================================
+! [1] Read map geometry and annual-mean discharge
+! ================================================
 ! Read map dimensions and bounds from DIMINFO; intervening fields also
 ! describe the runoff grid and are intentionally skipped by this tool.
 ! ===============================
@@ -146,7 +168,9 @@ print *, 'calc_rivwth :read parameters from arguments'
         lat(iy)=north-(real(iy)-0.5)*gsize
       enddo
 
-! ===================
+! ================================================
+! [2] Read river topology and annual-mean discharge
+! ================================================
 print *, 'calc_rivwth: read nextxy.bin'
       cnextxy='./nextxy.bin'
       open(11,file=cnextxy,form='unformatted',access='direct',recl=4*nx*ny,status='old',iostat=ios)
@@ -158,12 +182,18 @@ print *, 'calc_rivwth: read nextxy.bin'
       read(13,rec=1) rivout
       close(13)
 
+! ================================================
+! [3] Calculate channel width, depth, and roughness from discharge
+! ================================================
 ! Compute channel parameters from annual-mean discharge:
 !   depth = max(HMIN, HC * Q**HP + HO)
 !   width = max(WMIN, WC * Q**WP + WO)
 ! Manning roughness is currently fixed at 0.03 on mapped river cells.
 ! =============================
 print *, 'calc_rivwth: width & depth calculation'
+! ================================================
+! [4] Assign channel values and form the no-floodplain variant
+! ================================================
 ! Create the no-floodplain experiment input by assigning a very large
 ! floodplain height to every grid cell, including non-river cells.
       do iy=1, ny
@@ -181,6 +211,9 @@ print *, 'calc_rivwth: width & depth calculation'
       end do
 ! =============================
 
+! ================================================
+! [5] Write the channel parameter maps and no-floodplain variant
+! ================================================
       open(21,file=crivwth,form='unformatted',access='direct',recl=4*nx*ny)
       write(21,rec=1) rivwth
       close(21)
@@ -261,7 +294,7 @@ print *, 'calc_rivwth: width & depth calculation'
       SUBROUTINE NCERROR(STATUS,STRING)
       USE NETCDF
       IMPLICIT NONE
-      INTEGER,INTENT(IN) :: STATUS
+      INTEGER,INTENT(IN)       :: STATUS
       CHARACTER(LEN=*),INTENT(IN),OPTIONAL :: STRING
 
 ! ======
@@ -275,4 +308,4 @@ print *, 'calc_rivwth: width & depth calculation'
 #endif
 !!================================================
 
-      end program param_calc_rivwth
+      end program param_channel_calc_rivwth

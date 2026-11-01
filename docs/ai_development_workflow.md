@@ -16,6 +16,20 @@ This document defines a reusable handoff process among the maintainer, ChatGPT, 
 6. **Escalation:** Return major unresolved scientific or architectural issues to the maintainer before dependent work proceeds. Do not silently choose an assumption that could change scientific behavior, interfaces, compatibility, data policy, or cause substantial rework. Record non-blocking questions and continue independent work as described in `AGENTS.md`.
 7. **Review after implementation:** Once Codex has completed the assigned scope, ChatGPT reviews the resulting code and documentation, the actual validation results, and related research records with the maintainer. Use that review to resolve gaps and decide the next task; do not treat successful execution alone as scientific validation.
 
+## Knowledge-gap review at milestones
+
+At completion of a substantial task or development stage, include this short review in the completion handoff:
+
+- Are scientific assumptions or numerical thresholds present whose rationale is unclear?
+- Are input/output meanings, dependencies, or data contracts undocumented or ambiguous?
+- Are historical design decisions not confidently reconstructable from available evidence?
+- Do code, comments, documentation, and metadata disagree?
+- Did implementation introduce an AI assumption that lacks adequate evidence?
+
+Record each material unresolved question before trying to resolve it. Include the triggering observation, relevant file/line or other source, why the answer matters, and whether it blocks only dependent work. Investigate repository evidence first; distinguish verified findings, maintainer explanations, proposals, and unresolved assumptions. Do not silently choose a scientific interpretation. Ask the maintainer at the milestone for a concise grouped list of open questions, while continuing unrelated work for non-blocking items.
+
+When resolved, link the original question to its discovery trigger, the evidence or maintainer explanation, the final interpretation, and where that knowledge was formalized. Mark whether resolution came from source/test analysis or maintainer knowledge. Preserve unresolved and rejected interpretations. If the review finds no material new gaps, record that the review was completed with no material questions found; do not create artificial gaps. Keep this as a brief checklist, not a separate audit after every minor commit. Use the knowledge-gap template and procedure in [`research/README.md`](../research/README.md) and [`research/analysis/knowledge_recovery_protocol.md`](../research/analysis/knowledge_recovery_protocol.md).
+
 ## Applying the shell-script convention
 
 Use the [`Shell Script Design Principles`](../AGENTS.md#shell-script-design-principles) as the community recommendation and the default for the current maintainer-led v5 modernization. Unless the maintainer explicitly requests otherwise, keep new and refactored scripts simple, keep scientific executable calls visible, and avoid defensive application-style logic. Print recognizable `[STEP]` headings and one final `[SUCCESS]` banner; on failure, print a prominent `[ERROR]` summary with script, current step, and original nonzero status. Use `set -eu` and a simple POSIX-compatible exit trap; preserve failure status and stop before later scientific steps. Keep message formatting self-contained in each script rather than adding a shared message helper. Put input validation and detailed diagnostics in `map/tools/code/` when practical. Preserve the separation between scientific algorithms and workflow orchestration, numerical behavior, and command interfaces. An explicit task-specific maintainer instruction takes precedence.
@@ -80,3 +94,7 @@ Issue/PR: <link, or “none”>
 ```
 
 The template is a handoff aid, not a substitute for maintainer approval, repository-specific policy, or evidence review. If an instruction conflicts with `AGENTS.md`, follow `AGENTS.md` and surface the conflict before affected implementation.
+
+## Applying the Fortran readability convention
+
+Use the [`Fortran Source Readability`](../AGENTS.md#fortran-source-readability) section as the community recommendation and the default for current maintainer-led v5 modernization. Treat declarations as a human-readable inventory, prioritizing meaning over compactness: group by purpose, keep related pairs together, and give differently purposed variables separate declarations even if this adds lines. Separate groups with short comments and blank lines, align declarations for scanning, and add concise role/unit/classification notes only where source or maintainer evidence establishes the meaning. Do not guess at undocumented science. Mark major stages in long programs and keep calculations and decision rules visible. Avoid unnecessary helper abstractions, rigid formatting, broad modernization, and unrelated source movement. Preserve human reviewability, keep readability work separate from algorithm changes, and verify that declaration types/shapes and executable behavior remain unchanged.

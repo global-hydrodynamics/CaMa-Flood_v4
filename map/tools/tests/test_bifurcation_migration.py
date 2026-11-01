@@ -51,7 +51,7 @@ class S02InputGuardTests(unittest.TestCase):
 
             for name in MAP_INPUTS:
                 shutil.copy2(SAMPLE / name, map_root / name)
-            for name in ("param_set_bifparam", "param_set_bif_basin"):
+            for name in ("param_bif_set_params", "param_bif_set_basin"):
                 executable = code_dir / name
                 executable.write_text("#!/bin/sh\necho parameter program invoked\nexit 99\n", encoding="ascii")
                 executable.chmod(0o755)
@@ -98,6 +98,7 @@ class BifurcationMigrationTests(unittest.TestCase):
         (cls.build_root / "adm").mkdir()
         shutil.copy2(ROOT / "adm" / "Mkinclude", cls.build_root / "adm" / "Mkinclude")
         shutil.copy2(CODE_SOURCE / "Makefile", cls.code_dir / "Makefile")
+        shutil.copy2(CODE_SOURCE / "mod_map_color.F90", cls.code_dir / "mod_map_color.F90")
         for source in CODE_SOURCE.glob("param_*.F90"):
             shutil.copy2(source, cls.code_dir / source.name)
 
@@ -155,7 +156,7 @@ class BifurcationMigrationTests(unittest.TestCase):
         return run([str(script), *args], cwd=self.root / "outside")
 
     def test_basin_program_rejects_unknown_argument(self) -> None:
-        result = run([str(self.code_dir / "param_set_bif_basin"), "unknown"],
+        result = run([str(self.code_dir / "param_bif_set_basin"), "unknown"],
                      cwd=self.root / "outside")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("optional argument must be check_map", result.stdout)
@@ -164,7 +165,7 @@ class BifurcationMigrationTests(unittest.TestCase):
         for biflayer in ("0", "11", "not-a-number"):
             with self.subTest(biflayer=biflayer):
                 result = run(
-                    [str(self.code_dir / "param_set_bifparam"), "rivhgt.bin", "bifprm.txt",
+                    [str(self.code_dir / "param_bif_set_params"), "rivhgt.bin", "bifprm.txt",
                      biflayer, "inpdim_test-1deg.txt"],
                     cwd=self.root,
                 )

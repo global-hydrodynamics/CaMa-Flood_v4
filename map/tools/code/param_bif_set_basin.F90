@@ -8,69 +8,85 @@
 ! connectivity through the registered pathways.
 ! This is a general basin-connectivity preprocessing tool, independent of MPI.
 ! The current MPI domain-partitioning workflow generates a separate basin map,
-! bifbsn_mpi.bin, using set_bif_basin_mpi; it does not read this program's
+! bifbsn_mpi.bin, using param_mpi_set_basin; it does not read this program's
 ! standard output bifbsn.bin as a direct input.
 ! It always writes bifcol.bin for merged-basin visualization. When invoked
 ! with the optional "check_map" argument, it writes check_bif_bsnmod.bin with
 ! bifmod and bpoint as records 1 and 2. Separate bifmod.bin and bpoint.bin are
 ! legacy outputs and are not produced by this v5 program.
 ! Run with CWD=<map>/script_params; input/output paths below are relative to it.
-      program param_set_bif_basin
-! ================================================
-! update basin data considering bifurcation channel connectivity
+      program param_bif_set_basin
+      use map_color_mod, only: color_map
       implicit none
-! ===================
+! ================================================
+! Basin-connectivity arrays and merge settings.
+! ================================================
 
-! river network map parameters
-      integer             ::  ix, iy, jx, jy
-      integer             ::  nx, ny                     !! river map grid number
-      real                ::  west, east, north, south
-      real                ::  gsize
+! River-network map geometry.
+      integer                  :: ix, iy  !! x/y grid index
+      integer                  :: jx, jy  !! target x/y grid index
+      integer                  :: nx, ny  !! x/y grid dimensions
+      real                     :: west, east, north, south  !! map bounds [deg]
+      real                     :: gsize  !! map grid size [deg]
 
 ! River-network and basin maps.
-      integer,allocatable ::  nextx(:,:)                 !! downstream x
-      integer,allocatable ::  nexty(:,:)                 !! downstream y
-      integer,allocatable ::  basin(:,:)                 !! basin
+      integer, allocatable      :: nextx(:,:)  !! downstream x grid index
+      integer, allocatable      :: nexty(:,:)  !! downstream y grid index
+      integer, allocatable      :: basin(:,:)  !! basin identifier
 
-      integer,allocatable ::  bsnori(:,:)                !! to save original basin data for comparison
-      integer,allocatable ::  bifmod(:,:)                !! basin modification classes; see output classification below
-      integer,allocatable ::  bpoint(:,:)                !! original inter-basin pathway endpoints; see codes below
-! bifurcation
-      integer             ::  ipth, npth                 !! bifurcation pathway ID
-      integer             ::  ilev, nlev                 !! bifurcation layers
+      integer, allocatable      :: bsnori(:,:)  !! original basin map for comparison
+      integer, allocatable      :: bifmod(:,:)  !! basin modification class
+      integer, allocatable      :: bpoint(:,:)  !! pathway endpoint class
 
-      integer,allocatable ::  bnew(:)                    !! new basin ID
-      integer,allocatable ::  bmod(:)                    !! modification tag
-      integer,allocatable ::  bnum(:),bnumori(:)         !! basin grid number
+! Bifurcation pathways and channel widths.
+      integer                  :: ipth  !! bifurcation-path index
+      integer                  :: npth  !! bifurcation-path count
+      integer                  :: ilev  !! bifurcation-layer index
+      integer                  :: nlev  !! layer count
 
-      real                ::  len, elv, dph              !! length, elevation, depth of the bifurcation channel
-      real,allocatable    ::  wth(:)                     !! bifurcation width for each layer
-      real                ::  lat, lon
+      integer, allocatable      :: bnew(:)  !! basin merge destination ID
+      integer, allocatable      :: bmod(:)  !! modification tag
+      integer, allocatable      :: bnum(:)  !! grid-cell count per basin
+      integer, allocatable      :: bnumori(:)  !! original grid-cell count per basin
+
+      real                     :: len  !! pathway length [m]
+      real                     :: elv  !! pathway elevation [m]
+      real                     :: dph  !! bifurcation depth [m]
+      real, allocatable         :: wth(:)  !! bifurcation width [m]
+      real                     :: lat, lon  !! longitude/latitude [deg]
 
 ! Visualization colors for the merged basin map; not an MPI partition map.
-      integer,allocatable ::  color(:,:)                 !! basin color for visualization
-      integer,allocatable ::  bsn_mask(:,:)
-      integer             ::  color_this, color_max, grid
+      integer, allocatable      :: color(:,:)  !! basin display-color map
+
 ! The legacy visualization palette tracks ten color IDs; the greedy chooser
 ! below searches for an unused ID starting at 2.
-      integer             ::  col_used(10), icol
-! local
-      integer             ::  nbsn, ibsn, jbsn, kbsn, nshown
-      integer             ::  allgrid, maxgrid
 
-      integer             ::  mark
-      integer             ::  again
-! files
-      character*256       ::  finp, fparam, fout, fbifori
-      character*256       ::  arg
-      integer             ::  ios
-      integer             ::  nargs
-      logical             ::  write_check_map
+! Working variables and merge counters.
+      integer                  :: nbsn  !! basin count or basin ID bound
+      integer                  :: ibsn  !! basin identifier
+      integer                  :: jbsn  !! basin identifier
+      integer                  :: kbsn  !! basin identifier
+      integer                  :: nshown
+      integer                  :: allgrid
+      integer                  :: maxgrid
+
+      integer                  :: mark
+      integer                  :: again
+
+! Input and output filenames.
+      character*256            :: finp
+      character*256            :: fparam
+      character*256            :: fout
+      character*256            :: fbifori
+      character*256            :: arg  !! command-line argument
+      integer                  :: ios  !! I/O status code
+      integer                  :: nargs
+      logical                  :: write_check_map
 ! ================================================
       nargs=command_argument_count()
       write_check_map=.false.
       if( nargs>1 )then
-        print *, 'ERROR: usage: param_set_bif_basin [check_map]'
+        print *, 'ERROR: usage: param_bif_set_basin [check_map]'
         stop 1
       endif
       if( nargs==1 )then
@@ -85,6 +101,9 @@
 
       print *, 'Update basin ID considering inter-basin bifurcation:'
 
+! ================================================
+! [1] Read map geometry, network maps, and bifurcation parameters
+! ================================================
 ! Read base-map geometry from params.txt. The grid is traversed in Fortran array
 ! order (X first, then Y); map binaries use one direct record per 2-D field.
       fparam='../params.txt'
@@ -169,6 +188,9 @@
       allocate( wth(nlev) )
 print *, '******************'
 !=================================================================
+! ================================================
+! [2] Merge channel bifurcations, then potential floodplain connections
+! ================================================
 ! STEP 1: merge basins connected by river-channel bifurcations identified by
 ! positive first-layer width (wth(1)>0). Repeat until those path endpoints
 ! have a common basin ID.
@@ -389,9 +411,12 @@ print *, 'check all bifurcation pathways merged or not' !! repeated paths may re
 !============================================
 print *, '*************'
 print *, 'Post Process: update basin color map'
+! ================================================
+! [3] Classify connections and assign visualization colors
+! ================================================
 ! Assign neighboring basins visualization colors; this does not affect model
 ! calculations or the basin IDs written to bifbsn.bin.
-      call set_color
+      call color_map(basin,nx,ny,west,east,color)
 
 print *, 'Mark inter-basin connectivity endpoints (bpoint array)'
 ! Mark both endpoints of each path that originally connected different basins.
@@ -452,6 +477,9 @@ print *, 'Mark basins that expand or are absorbed'
 !============================================
 print *, 'Write to Files'
 
+! ================================================
+! [4] Write standard maps and optional diagnostic products
+! ================================================
 ! Write the standard merged basin map and visualization colors. Keep both
 ! products unconditional; bifcol.bin is routinely used to inspect the map.
       fout='../bifbsn.bin'
@@ -479,169 +507,8 @@ CONTAINS
 ! Compute basin bounding boxes and greedily assign visualization colors while
 ! avoiding colors already used by neighboring basins. These colors are for
 ! displaying the merged basin map and are not MPI rank or partition IDs.
-      subroutine set_color
 
-print *, 'SET_MAP color basin'
-      color(:,:)=-9999
-      color_max=0
-      allocate(bsn_mask(nbsn,4))
-      bsn_mask(:,1)=999999
-      bsn_mask(:,2)=999999
-      bsn_mask(:,3)=-999999
-      bsn_mask(:,4)=-999999
-      do iy=1, ny
-        do ix=1, nx
-          if( basin(ix,iy)>0 )then
-            ibsn=int( basin(ix,iy) )
-            bsn_mask(ibsn,1) = min( bsn_mask(ibsn,1),ix )
-            bsn_mask(ibsn,2) = min( bsn_mask(ibsn,2),iy )
-            bsn_mask(ibsn,3) = max( bsn_mask(ibsn,3),ix )
-            bsn_mask(ibsn,4) = max( bsn_mask(ibsn,4),iy )
-          endif
-        end do
-      end do
-      do ibsn=1, nbsn
-        if( bsn_mask(ibsn,1)<=1 .or. bsn_mask(ibsn,3)>=nx )then
-          bsn_mask(ibsn,1) = 1
-          bsn_mask(ibsn,2) = max(bsn_mask(ibsn,2)-1,1 )
-          bsn_mask(ibsn,3) = nx
-          bsn_mask(ibsn,4) = min(bsn_mask(ibsn,4)+1,ny)
-        else
-          bsn_mask(ibsn,1) = bsn_mask(ibsn,1)-1
-          bsn_mask(ibsn,2) = max(bsn_mask(ibsn,2)-1,1 )
-          bsn_mask(ibsn,3) = bsn_mask(ibsn,3)+1
-          bsn_mask(ibsn,4) = min(bsn_mask(ibsn,4)+1,ny)
-        endif
-      end do
-
-! ==================
-! = count basin grids num and
-! = check color used in neighbour basin
-! = (step1: large basin)
-! ==================
-      do ibsn=1, nbsn
-        col_used=0
-        grid=0
-        do iy=bsn_mask(ibsn,2), bsn_mask(ibsn,4)
-          do ix=bsn_mask(ibsn,1), bsn_mask(ibsn,3)
-            if( basin(ix,iy)==ibsn )then
-              grid=grid+1
-
-              jx=ix
-              jy=iy+1
-              if( jx>=1 .and. jx<=nx .and. jy>=1 .and. jy<=ny) then
-                if( color(jx,jy)>0 ) col_used(color(jx,jy))=1
-              endif
-
-              jx=ix+1
-              jy=iy
-              if( east-west==360 .and. jx>nx ) jx=1
-              if( jx>=1 .and. jx<=nx .and. jy>=1 .and. jy<=ny) then
-                if( color(jx,jy)>0 ) col_used(color(jx,jy))=1
-              endif
-
-              jx=ix
-              jy=iy-1
-              if( jx>=1 .and. jx<=nx .and. jy>=1 .and. jy<=ny) then
-                if( color(jx,jy)>0 ) col_used(color(jx,jy))=1
-              endif
-
-              jx=ix-1
-              jy=iy
-              if( east-west==360 .and. jx==0 ) jx=nx
-              if( jx>=1 .and. jx<=nx .and. jy>=1 .and. jy<=ny) then
-                if( color(jx,jy)>0 ) col_used(color(jx,jy))=1
-              endif
-
-            endif
-          end do
-        end do
-! === decide color for large basin
-        if( grid>=20 )then
-! Select the first unused palette entry. The legacy code has no guard if every
-! tracked color from 2 through 10 is already used by neighboring basins.
-          icol=2
-          do
-            if( col_used(icol)/=1 ) exit
-            if( icol==10 ) exit
-            icol=icol+1
-          end do
-          color_this=icol
-          if( color_max<color_this )color_max=color_this
-
-          do iy=bsn_mask(ibsn,2), bsn_mask(ibsn,4)
-            do ix=bsn_mask(ibsn,1), bsn_mask(ibsn,3)
-              if(basin(ix,iy)==ibsn) color(ix,iy)=color_this
-            end do
-          end do
-        endif
-      end do
-
-! ==================
-! = (step2: small basin)
-! ==================
-      do ibsn=1, nbsn
-        col_used=0
-        grid=0
-        do iy=bsn_mask(ibsn,2), bsn_mask(ibsn,4)
-          do ix=bsn_mask(ibsn,1), bsn_mask(ibsn,3)
-            if( basin(ix,iy)==ibsn )then
-              grid=grid+1
-
-              jx=ix
-              jy=iy+1
-              if( jx>=1 .and. jx<=nx .and. jy>=1 .and. jy<=ny) then
-                if( color(jx,jy)>0 ) col_used(color(jx,jy))=1
-              endif
-
-              jx=ix+1
-              jy=iy
-              if( east-west==360 .and. jx>nx ) jx=1
-              if( jx>=1 .and. jx<=nx .and. jy>=1 .and. jy<=ny) then
-                if( color(jx,jy)>0 ) col_used(color(jx,jy))=1
-              endif
-
-              jx=ix
-              jy=iy-1
-              if( jx>=1 .and. jx<=nx .and. jy>=1 .and. jy<=ny) then
-                if( color(jx,jy)>0 ) col_used(color(jx,jy))=1
-              endif
-
-              jx=ix-1
-              jy=iy
-              if( east-west==360 .and. jx==0 ) jx=nx
-              if( jx>=1 .and. jx<=nx .and. jy>=1 .and. jy<=ny) then
-                if( color(jx,jy)>0 ) col_used(color(jx,jy))=1
-              endif
-
-            endif
-          end do
-        end do
-! === decide color for small
-        if( grid<20 )then
-! Use the same fixed palette search as for large basins; see the palette-bound
-! caveat above if no color from 2 through 10 is free.
-          icol=2
-          do
-            if( col_used(icol)/=1 ) exit
-            if( icol==10 ) exit
-            icol=icol+1
-          end do
-          color_this=icol
-          if(grid==1) color_this=1
-          if(color_max<color_this) color_max=color_this
-
-          do iy=bsn_mask(ibsn,2), bsn_mask(ibsn,4)
-            do ix=bsn_mask(ibsn,1), bsn_mask(ibsn,3)
-              if(basin(ix,iy)==ibsn) color(ix,iy)=color_this
-            end do
-          end do
-        endif
-      end do
-
-! ====================
-      end subroutine set_color
 
 !!================================================
 
-      end program param_set_bif_basin
+      end program param_bif_set_basin

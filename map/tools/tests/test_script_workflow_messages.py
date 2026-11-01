@@ -42,8 +42,9 @@ class WorkflowMessageTests(unittest.TestCase):
                 "    exit \"${FAIL_STATUS:-23}\"\n"
                 "fi\n"
                 "case \"$NAME\" in\n"
-                "    param_set_bif_basin_mpi) : > ../bifbsn_mpi.tmp ;;\n"
-                "    param_set_mpi_region) : > ../mpireg-$1.bin ;;\n"
+                "    param_mpi_set_basin) : > ../bifbsn_mpi.tmp ; : > ../bifcol_mpi.bin ;;\n"
+                "    param_mpi_set_region) : > ../mpireg-$1.bin ;;\n"
+                "    analysis_mpi_region_color) : > bsncol_mpi-${1#mpireg-} ;;\n"
                 "esac\n",
                 encoding="ascii",
             )
@@ -52,13 +53,14 @@ class WorkflowMessageTests(unittest.TestCase):
 
     def run_script(
         self, script: Path, fail_match: str | None = None, cwd: Path | None = None,
+        args: tuple[str, ...] = (),
     ) -> subprocess.CompletedProcess[str]:
         env = {**os.environ, "MOCK_LOG": str(self.log)}
         if fail_match:
             env["FAIL_MATCH"] = fail_match
             env["FAIL_STATUS"] = "23"
         return subprocess.run(
-            [str(script)], cwd=cwd or self.root, env=env, text=True,
+            [str(script), *args], cwd=cwd or self.root, env=env, text=True,
             capture_output=True, check=False,
         )
 
@@ -82,7 +84,7 @@ class WorkflowMessageTests(unittest.TestCase):
         self.assertIn(f"!!! Exit status: {expected_status}", result.stderr)
 
     def test_s01_success_and_failures_stop_at_first_middle_and_final_program(self) -> None:
-        executables = ("param_calc_outclm", "param_calc_rivwth", "param_set_merit_width")
+        executables = ("param_channel_calc_outclm", "param_channel_calc_rivwth", "param_channel_set_merit_width")
         script = self.install("s01-channel_params.sh", executables)
         result = self.run_script(script)
         self.assert_success(result, script.name)
@@ -90,9 +92,9 @@ class WorkflowMessageTests(unittest.TestCase):
         self.assertEqual(result.stdout.count("[STEP "), 3)
 
         cases = (
-            ("param_calc_outclm", "Calculate mean river discharge from annual runoff and the input matrix", 1),
-            ("param_calc_rivwth", "Estimate channel width, depth, and roughness", 2),
-            ("param_set_merit_width", "Merge power-law channel widths with MERIT Hydro widths", 3),
+            ("param_channel_calc_outclm", "Calculate mean river discharge from annual runoff and the input matrix", 1),
+            ("param_channel_calc_rivwth", "Estimate channel width, depth, and roughness", 2),
+            ("param_channel_set_merit_width", "Merge power-law channel widths with MERIT Hydro widths", 3),
         )
         for executable, step, expected_calls in cases:
             with self.subTest(executable=executable):
@@ -102,25 +104,25 @@ class WorkflowMessageTests(unittest.TestCase):
                 self.assertEqual(len(self.calls()), expected_calls)
 
     def test_s02_success_and_second_program_failure(self) -> None:
-        executables = ("param_set_bifparam", "param_set_bif_basin")
+        executables = ("param_bif_set_params", "param_bif_set_basin")
         script = self.install("s02-bifurcation.sh", executables)
         result = self.run_script(script)
         self.assert_success(result, script.name)
         self.assertEqual([line.split()[0] for line in self.calls()], list(executables))
         self.log.unlink()
 
-        result = self.run_script(script, "param_set_bif_basin:")
+        result = self.run_script(script, "param_bif_set_basin:")
         self.assert_failure(result, script.name, "Merge basins connected by bifurcation pathways")
         self.assertEqual([line.split()[0] for line in self.calls()], list(executables))
 
     def test_s03_success_and_program_failure(self) -> None:
-        script = self.install("s03-generate_inpmat.sh", ("param_generate_inpmat",))
+        script = self.install("s03-generate_inpmat.sh", ("param_inpmat_generate",))
         result = self.run_script(script)
         self.assert_success(result, script.name)
         self.assertIn("[STEP 1/1]", result.stdout)
         self.log.unlink()
 
-        result = self.run_script(script, "param_generate_inpmat:1min")
+        result = self.run_script(script, "param_inpmat_generate:1min")
         self.assert_failure(result, script.name, "Map river cells to the configured runoff grid")
         self.assertEqual(len(self.calls()), 1)
 
@@ -165,17 +167,26 @@ class WorkflowMessageTests(unittest.TestCase):
 
     def test_s04_success_cleans_visible_intermediate_and_reports_connectivity_failure(self) -> None:
         executables = (
-            "param_set_bif_basin_mpi", "param_set_mpi_region",
-            "analysis_check_mpi_bifurcation",
+            "param_mpi_set_basin", "param_mpi_set_region", "analysis_check_mpi_bifurcation",
         )
         script = self.install("s04-mpi_map_setup.sh", executables)
         result = self.run_script(script)
         self.assert_success(result, script.name)
-        self.assertIn("[STEP 4/4]", result.stdout)
-        self.assertEqual([line.split()[0] for line in self.calls()], [
-            "param_set_bif_basin_mpi", "param_set_mpi_region", "param_set_mpi_region",
-            "param_set_mpi_region", "analysis_check_mpi_bifurcation",
+        self.assertIn("[STEP 3/3]", result.stdout)
+        calls = [line.split() for line in self.calls()]
+        self.assertEqual([call[0] for call in calls], [
+            "param_mpi_set_basin", "param_mpi_set_region", "param_mpi_set_region",
+            "param_mpi_set_region", "analysis_check_mpi_bifurcation",
         ])
+        self.assertEqual(calls[1:4], [
+            ["param_mpi_set_region", "4"],
+            ["param_mpi_set_region", "8"],
+            ["param_mpi_set_region", "16"],
+        ])
+        self.assertEqual(calls[4], ["analysis_check_mpi_bifurcation", "mpireg-16.bin"])
+        self.assertFalse((self.map_root / "mpireg.bin").exists())
+        self.assertTrue((self.map_root / "bifcol_mpi.bin").exists())
+        self.assertFalse(list(self.map_root.glob("bsncol_mpi-*.bin")))
         self.assertFalse((self.map_root / "bifbsn_mpi.tmp").exists())
         self.log.unlink()
 
@@ -189,15 +200,26 @@ class WorkflowMessageTests(unittest.TestCase):
 
     def test_s04_partition_loop_failure_stops_later_counts_and_cleans_intermediate(self) -> None:
         script = self.install("s04-mpi_map_setup.sh", (
-            "param_set_bif_basin_mpi", "param_set_mpi_region",
-            "analysis_check_mpi_bifurcation",
+            "param_mpi_set_basin", "param_mpi_set_region", "analysis_check_mpi_bifurcation",
         ))
-        result = self.run_script(script, "param_set_mpi_region:8")
+        result = self.run_script(script, "param_mpi_set_region:8")
         self.assert_failure(result, script.name, "Generate mpireg-8.bin")
-        self.assertEqual(self.calls()[-1].split(), ["param_set_mpi_region", "8"])
-        self.assertNotIn("param_set_mpi_region 16", self.calls())
+        self.assertEqual(self.calls()[-1].split(), ["param_mpi_set_region", "8"])
+        self.assertNotIn("param_mpi_set_region 16", self.calls())
         self.assertNotIn("analysis_check_mpi_bifurcation", "\n".join(self.calls()))
         self.assertFalse((self.map_root / "bifbsn_mpi.tmp").exists())
+
+    def test_s04_forwards_check_map_only_to_basin_aggregation(self) -> None:
+        script = self.install("s04-mpi_map_setup.sh", (
+            "param_mpi_set_basin", "param_mpi_set_region", "analysis_check_mpi_bifurcation",
+        ))
+        result = self.run_script(script, args=("check_map",))
+        self.assert_success(result, script.name)
+        calls = self.calls()
+        self.assertEqual(calls[0].split(), ["param_mpi_set_basin", "normal", "check_map"])
+        self.assertEqual(calls[-1].split(), ["analysis_check_mpi_bifurcation", "mpireg-16.bin"])
+        self.assertNotIn("analysis_mpi_region_color", "\n".join(calls))
+        self.assertTrue(all("check_map" not in call for call in calls[1:]))
 
 
 if __name__ == "__main__":

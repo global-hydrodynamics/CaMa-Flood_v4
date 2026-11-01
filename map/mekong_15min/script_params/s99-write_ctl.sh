@@ -7,7 +7,7 @@
 
 usage() {
   cat <<'EOF'
-Usage: ./s06-write_ctl.sh [--dry-run] [--no-overwrite | --overwrite]
+Usage: ./s99-write_ctl.sh [--dry-run] [--no-overwrite | --overwrite]
 
   --dry-run       Validate inputs and list planned CTLs without writing files.
   --overwrite     Replace existing CTLs (the default).

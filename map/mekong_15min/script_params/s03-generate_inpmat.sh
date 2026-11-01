@@ -61,7 +61,7 @@ fi
 
 INPDIM="inpdim_${ROFFTAG}.txt"
 INPMAT="inpmat_${ROFFTAG}.bin"
-EXEC_INPMAT="$CODE_DIR/param_generate_inpmat"
+EXEC_INPMAT="$CODE_DIR/param_inpmat_generate"
 
 # For each river cell, find its runoff-grid source cell and write the matrix and descriptor.
 cd "$MAP_DIR"

@@ -1,4 +1,4 @@
-      program param_calc_outclm
+      program param_channel_calc_outclm
 ! ================================================
 ! Calculate annual-mean discharge from a runoff climatology.
 ! This implementation writes the annual-mean field only; it does not produce
@@ -19,70 +19,80 @@ USE NETCDF
       implicit none
 ! ==============================
 ! calculation type
-      character*256       ::  buf
+      character*256            :: buf
 
-      character*256       ::  type                    !! 'bin' for binary, 'cdf' for netCDF
-      character*256       ::  intp                    !! 'near' for nearest point interpolation, 'inpmat' for using input matrix
+      character*256            :: type  !! 'bin' for binary, 'cdf' for netCDF
+      character*256            :: intp  !! 'near' for nearest point interpolation, 'inpmat' for using input matrix
       data                    type /'bin'/
       data                    intp /'inpmat'/
 
 ! input files
-      character*256       ::  diminfo                 !! dimention info file
+      character*256            :: diminfo  !! input-dimension descriptor filename
       data                    diminfo /'./inpdim_test-1deg.txt'/
 
-      character*256       ::  crofbin                 !! runoff climatology (plain binary) in [mm/sec]
+      character*256            :: crofbin  !! runoff climatology (plain binary) in [mm/sec]
       data                    crofbin /'../data/runoff_1981-2000_ave.bin'/
 
-      character*256       ::  crofcdf                 !! runoff climatology (/netCDF)      in [mm/sec]
-      character*256       ::  crofvar                 !! netCDF runoff variable name
+      character*256            :: crofcdf  !! runoff climatology (/netCDF)      in [mm/sec]
+      character*256            :: crofvar  !! netCDF runoff variable name
       data                    crofcdf /'../data/rofcdf_ave.nc'/
       data                    crofvar /'RO'/
 
 #ifdef UseCDF_CMF
-      integer             ::  ncid, varid
+      integer                  :: ncid
+      integer                  :: varid
 #endif
 
-! dimention
-      integer             ::  ix, iy, jx, jy
-      integer             ::  nx, ny                  !! river map dimention
-      integer             ::  nxin, nyin              !! input map dimention
-      integer             ::  nflp                    !! floodplain layer
+! dimensions
+      integer                  :: ix, iy  !! x/y grid index
+      integer                  :: jx, jy  !! target x/y grid index
+      integer                  :: nx, ny  !! x/y grid dimensions
+      integer                  :: nxin, nyin  !! input-grid x/y dimensions
+      integer                  :: nflp  !! floodplain-layer count
 
-! river network map
-      integer,allocatable ::  nextx(:,:), nexty(:,:)  !! downstream xy
-      real,allocatable    ::  ctmare(:,:)             !! unit-catchment area [m2]
+! River-network maps
+      integer, allocatable      :: nextx(:,:), nexty(:,:)  !! downstream cell x/y indices
+      real, allocatable         :: ctmare(:,:)  !! unit-catchment area [m2]
 
-      real,allocatable    ::  lon(:), lat(:)          !! longitude, latidude [deg]
-      real                ::  west,east,north,south   !! domain boundary [deg]
-      real                ::  gsize                   !! grid size [deg]
+      real, allocatable         :: lon(:), lat(:)  !! longitude/latitude [deg]
+      real                     :: west, east, north, south  !! map bounds [deg]
+      real                     :: gsize  !! map grid size [deg]
 
-      integer,allocatable ::  upst(:,:)             !! # of upstreams
-      integer,allocatable ::  upnow(:,:)             !! count upstream
-      integer,allocatable ::  xseq(:), yseq(:)       !! calculation sequence from upstream
-      integer             ::  iseq, jseq, nseqpre, nseqnow, again
+      integer, allocatable      :: upst(:,:)  !! upstream-link count per cell
+      integer, allocatable      :: upnow(:,:)  !! processed upstream links per cell
+      integer, allocatable      :: xseq(:)  !! calculation sequence from upstream
+      integer, allocatable      :: yseq(:)  !! calculation sequence from upstream
+      integer                  :: iseq
+      integer                  :: jseq
+      integer                  :: nseqpre
+      integer                  :: nseqnow
+      integer                  :: again
 
 ! input matrix
-      integer             ::  i
-      integer             ::  inpn                    !! max number of input grid for one river grid
-      integer,allocatable ::  inpx(:,:,:),inpy(:,:,:) !! input grid (ixin,iyin) of river map grid (ix,iy)
-      real,allocatable    ::  inpa(:,:,:)             !! input area [m2]
+      integer                  :: i
+      integer                  :: inpn  !! max number of input grid for one river grid
+      integer, allocatable      :: inpx(:,:,:), inpy(:,:,:)  !! input-grid x/y indices
+      real, allocatable         :: inpa(:,:,:)  !! overlap area [m2]
 
-! input runoff
-      real,allocatable    ::  roffin(:,:)             !! runof (input: nxin, nyin) [mm/s]
-! variables
-      real,allocatable    ::  runoff(:,:)             !! runof (converted: nx, ny) [m3/s]     
-      real,allocatable    ::  rivout(:,:)             !! discharge [m3/s]
+! Runoff climatology input
+      real, allocatable         :: roffin(:,:)  !! runoff (input: nxin, nyin) [mm/s]
+
+! Working arrays
+      real, allocatable         :: runoff(:,:)  !! runoff (mapped: nx, ny) [m3/s]
+      real, allocatable         :: rivout(:,:)  !! discharge [m3/s]
+
 ! files
-      character*256       ::  cnextxy, cctmare        !! river network map, grid area
-      integer             ::  ios
+      character*256            :: cnextxy  !! river network map, grid area
+      character*256            :: cctmare  !! river network map, grid area
+      integer                  :: ios  !! I/O status code
 
-      character*256       ::  cinpmat                 !! input matrix
-      character*256       ::  crivout                 !! annual-mean discharge [m3/s], one record
+      character*256            :: cinpmat  !! input matrix
+      character*256            :: crivout  !! annual-mean discharge [m3/s], one record
       parameter              (crivout='./outclm.bin')
 
-! undef
-      integer             ::  imis                !! integer undefined value
-      real                ::  rmis                !! real    undefined value
+! Missing-value sentinels
+      integer                  :: imis  !! integer undefined value
+      real                     :: rmis  !! real    undefined value
       parameter              (imis = -9999)
       parameter              (rmis = 1.e+20)
 ! ================================================
@@ -119,6 +129,9 @@ print *, 'calc_outclm: read parameters from arguments'
         print *, 'Runoff=',  trim(crofbin)
       endif
 
+! ================================================
+! [1] Read map and runoff-grid metadata
+! ================================================
 ! Read map dimensions, runoff-grid dimensions, matrix layout, and grid bounds.
 ! DIMINFO and its named matrix are supplied by the map-parameter workflow.
 ! ===============================
@@ -150,6 +163,9 @@ print *, 'calc_outclm: read parameters from arguments'
       allocate(roffin(nxin,nyin))
       allocate(runoff(nx,ny),rivout(nx,ny))
 
+! ================================================
+! [2] Prepare grid coordinates and read input-matrix records
+! ================================================
 ! Calculate cell-center coordinates from the regular map bounds.
 ! ===========================================
       allocate(lon(nx),lat(ny))
@@ -187,6 +203,9 @@ print *, 'calc_outclm: read nextxy.bin'
       read(13,rec=1) ctmare
       close(13)
 ! ==========
+! ================================================
+! [3] Build an upstream-to-downstream calculation order
+! ================================================
 ! Build an upstream-to-downstream traversal order with a Kahn-style count of
 ! incoming tributaries. Each cell is eligible after all upstream cells have
 ! been registered; discharge can then be accumulated in one forward pass.
@@ -316,7 +335,7 @@ print *, 'calc_outclm: calc annual average'
       USE NETCDF
 
       IMPLICIT NONE
-      INTEGER,INTENT(IN) :: STATUS
+      INTEGER,INTENT(IN)       :: STATUS
       CHARACTER(LEN=*),INTENT(IN),OPTIONAL :: STRING
 
 !!====================
@@ -334,25 +353,29 @@ print *, 'calc_outclm: calc annual average'
 !+
       subroutine intp_roff(nx,ny,nxin,nyin,imis,rmis,nextx,inpn,inpx,inpy,inpa,r2inp,r2out)
 ! ================================================
+! ================================================
+! [4] Convert runoff and accumulate discharge along the river network
+! ================================================
 ! Map runoff-grid values to river cells using the precomputed input matrix.
 ! INPA is converted from mm/s over m2 to m3/s by multiplying by 1.e-3.
       implicit none
 ! input
-      integer             ::  nx, ny, nxin, nyin  !! number of grids in horizontal
-      integer             ::  imis                !! integer undefined value
-      real                ::  rmis                !! real    undefined value
-      integer             ::  nextx(nx,ny)      !! point downstream horizontal
+      integer                  :: nx, ny  !! x/y grid dimensions
+      integer                  :: nxin, nyin  !! input-grid x/y dimensions
+      integer                  :: imis  !! integer undefined value
+      real                     :: rmis  !! real    undefined value
+      integer                  :: nextx(nx,ny)  !! downstream cell x/y indices
 !
-      integer             ::  inpn
-      integer             ::  inpx(nx,ny,inpn), inpy(nx,ny,inpn)
-      real                ::  inpa(nx,ny,inpn)
+      integer                  :: inpn
+      integer                  :: inpx(nx,ny,inpn), inpy(nx,ny,inpn)  !! input-grid x/y indices
+      real                     :: inpa(nx,ny,inpn)  !! overlap area [m2]
 
-      real                ::  r2inp (nxin,nyin)   !! runoff in [mm/s]
-      real                ::  r2out(nx,ny)        !! local runoff volume [m3/s]
+      real                     :: r2inp (nxin,nyin)  !! runoff in [mm/s]
+      real                     :: r2out(nx,ny)  !! local runoff volume [m3/s]
 ! local
-      integer             ::  i
-      integer             ::  ix, iy              !! for input
-      integer             ::  jx, jy              !! for output
+      integer                  :: i
+      integer                  :: ix, iy  !! x/y grid index
+      integer                  :: jx, jy  !! target x/y grid index
 ! ================================================
       r2out(:,:)=0
       do iy=1, ny
@@ -387,21 +410,24 @@ print *, 'calc_outclm: calc annual average'
 ! ================================================
       implicit none
 ! input
-      integer             ::  nx                  !! number of grids in horizontal
-      integer             ::  ny                  !! number of grids in vertical
-      integer             ::  nxin                !! number of grids in horizontal
-      integer             ::  nyin                !! number of grids in vertical
-      integer             ::  imis                !! integer undefined value
-      real                ::  rmis                !! real    undefined value
-      integer             ::  nextx(nx,ny)      !! point downstream horizontal
-      real                ::  ctmare(nx,ny)
+      integer                  :: nx  !! x/y grid dimensions
+      integer                  :: ny  !! x/y grid dimensions
+      integer                  :: nxin  !! input-grid x/y dimensions
+      integer                  :: nyin  !! input-grid x/y dimensions
+      integer                  :: imis  !! integer undefined value
+      real                     :: rmis  !! real    undefined value
+      integer                  :: nextx(nx,ny)  !! downstream cell x/y indices
+      real                     :: ctmare(nx,ny)  !! unit-catchment area [m2]
 !
-      real                ::  r2inp (nxin,nyin) !! runoff in [mm/s]
-      real                ::  r2out(nx,ny)     !! runoff out [mm/s]
+      real                     :: r2inp (nxin,nyin)  !! runoff in [mm/s]
+      real                     :: r2out(nx,ny)  !! runoff out [mm/s]
 ! local
-      integer             ::  ix, iy              !! for input
-      integer             ::  jx, jy              !! for output
-      integer             ::  xx, yy, by, n
+      integer                  :: ix, iy  !! x/y grid index
+      integer                  :: jx, jy  !! target x/y grid index
+      integer                  :: xx
+      integer                  :: yy
+      integer                  :: by
+      integer                  :: n
 ! ================================================
       if( nx.ge.nxin )then
         by = nx/nxin
@@ -458,5 +484,5 @@ print *, 'calc_outclm: calc annual average'
 !+
 !+
 !+
-      end program param_calc_outclm
+      end program param_channel_calc_outclm
 

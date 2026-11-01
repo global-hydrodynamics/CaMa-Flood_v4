@@ -37,6 +37,8 @@ Classify evidence as:
 
 Keep source facts, maintainer-confirmed explanations, AI interpretations, and unresolved assumptions distinct. Git commits establish code changes, not the reasons for them. A test run establishes observed execution, not scientific validity.
 
+At the end of substantial development stages, use the proactive milestone checklist and evidence-tracing procedure in [`analysis/knowledge_recovery_protocol.md`](analysis/knowledge_recovery_protocol.md). This prospective procedure supports later evaluation of whether gaps were noticed, recorded before resolution, resolved from source/tests versus maintainer knowledge, and formalized. It is not a quantitative result or a requirement after each minor edit.
+
 ## Proposed outcomes and evaluation
 
 Evaluate change from a documented v4 baseline toward evolving v5 states through concrete, repeatable development and use tasks, not by counting README files, lines of code, commits, or tests alone. For each task, record the starting revision and environment, task prompt and scope, allowed assistance, observable completion criteria, evidence artifacts, failures, interventions, and limitations. Where possible, use comparable tasks and input data on the v4 and v5 states; explain when model capability or setup differences make a direct comparison invalid.

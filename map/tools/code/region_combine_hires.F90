@@ -1,64 +1,96 @@
       program COMBINE_HIRES
 ! ===============================================
       implicit none
-      character*256          ::  hires_tag
 
-      character*256          ::  global_dir                    !! global map directory
-      integer                ::  nXX, nYY
-      real*8                 ::  lon_ori, lat_ori              !! west and north edge of global map
-      real*8                 ::  lon_end, lat_end              !! east and south edge of global map
-      real*8                 ::  csize                         !! hires map pixel size [deg]
-      integer                ::  cnum
+! Map geometry, region offsets, and selected high-resolution resolution.
+      character*256            :: hires_tag
 
-      character*256          ::  region_param
+      character*256            :: global_dir  !! global map directory
+      integer                  :: nXX, nYY  !! x/y map dimensions
+      real*8                   :: lon_ori, lat_ori  !! west and north edge of global map
+      real*8                   :: lon_end, lat_end  !! east and south edge of global map
+      real*8                   :: csize  !! high-resolution pixel size [deg]
+      integer                  :: cnum
+
+      character*256            :: region_param
       parameter                 (region_param='../params.txt')
-      integer                ::  mXX, mYY                      !! river map grid numbers
-      integer                ::  dXX, dYY                      !! river map domain shift from global map
-      real*8                 ::  gsize                         !! river map grid size [deg]
-      real*8                 ::  west, east, north, south      !! domain
+      integer                  :: mXX, mYY  !! regional x/y dimensions
+      integer                  :: dXX, dYY  !! river map domain shift from global map
+      real*8                   :: gsize  !! map grid size [deg]
+      real*8                   :: west, east, north, south  !! map bounds [deg]
 
-      integer                ::  ix, iy                
-      integer                ::  nx, ny                        !! pixel number of regional hires map
+      integer                  :: ix, iy  !! x/y grid index
+      integer                  :: nx, ny  !! x/y grid dimensions
 !
-      character*256          ::  list_loc
-      character*256          ::  area                          !! area code
-      integer                ::  i, narea                      !! area ID
+      character*256            :: list_loc
+      character*256            :: area  !! area code
+      integer                  :: i  !! area ID
+      integer                  :: narea  !! area ID
 
-      integer                ::  ix0, iy0, nx0, ny0            !! input hires map dimention
-      real*8                 ::  west0, north0, east0, south0
+      integer                  :: ix0, iy0  !! input hires map dimention
+      integer                  :: nx0  !! input hires map dimention
+      integer                  :: ny0  !! input hires map dimention
+      real*8                   :: west0, north0, east0, south0  !! map bounds [deg]
 
-      integer                ::  isTile
-      integer                ::  ilon, ilat, nlon, nlat
-      character*7            ::  CCname
-      integer                ::  iloc, nloc
-      real                   ::  mwin
+      integer                  :: isTile
+      integer                  :: ilon
+      integer                  :: ilat
+      integer                  :: nlon
+      integer                  :: nlat
+      character*7              :: CCname
+      integer                  :: iloc
+      integer                  :: nloc
+      real                     :: mwin
 
 ! regional hires map
-      integer*2,allocatable  ::  catmXX(:,:), catmYY(:,:), downx(:,:), downy(:,:)
-      integer*1,allocatable  ::  catmZZ(:,:), catmZ100(:,:), flwdir(:,:)
-      real,allocatable       ::  flddif(:,:), grdare(:,:)
-      real,allocatable       ::  elevtn(:,:), uparea(:,:), rivwth(:,:), hand(:,:) 
-      integer*1,allocatable  ::  visual(:,:)
+      integer*2, allocatable    :: catmXX(:,:), catmYY(:,:)
+      integer*2, allocatable    :: downx(:,:), downy(:,:)
+      integer*1, allocatable    :: catmZZ(:,:)
+      integer*1, allocatable    :: catmZ100(:,:)
+      integer*1, allocatable    :: flwdir(:,:)  !! high-resolution flow-direction code
+      real, allocatable         :: flddif(:,:)
+      real, allocatable         :: grdare(:,:)
+      real, allocatable         :: elevtn(:,:)  !! elevation [m]
+      real, allocatable         :: uparea(:,:)
+      real, allocatable         :: rivwth(:,:)  !! channel width [m]
+      real, allocatable         :: hand(:,:)  !! height above nearest drainage [m]
+      integer*1, allocatable    :: visual(:,:)  !! high-resolution visualization class
 
 ! input hires map
-      integer*2,allocatable  ::  catmXX0(:,:), catmYY0(:,:), downx0(:,:), downy0(:,:)
-      integer*1,allocatable  ::  catmZZ0(:,:), catmZ100_0(:,:), flwdir0(:,:)
-      real,allocatable       ::  flddif0(:,:), grdare0(:,:)
-      real,allocatable       ::  elevtn0(:,:), uparea0(:,:), rivwth0(:,:), hand0(:,:)
-      integer*1,allocatable  ::  visual0(:,:) 
+      integer*2, allocatable    :: catmXX0(:,:)
+      integer*2, allocatable    :: catmYY0(:,:)
+      integer*2, allocatable    :: downx0(:,:)
+      integer*2, allocatable    :: downy0(:,:)
+      integer*1, allocatable    :: catmZZ0(:,:)
+      integer*1, allocatable    :: catmZ100_0(:,:)
+      integer*1, allocatable    :: flwdir0(:,:)
+      real, allocatable         :: flddif0(:,:)
+      real, allocatable         :: grdare0(:,:)
+      real, allocatable         :: elevtn0(:,:)
+      real, allocatable         :: uparea0(:,:)
+      real, allocatable         :: rivwth0(:,:)
+      real, allocatable         :: hand0(:,:)
+      integer*1, allocatable    :: visual0(:,:)
 
-      integer                ::  isDownXY, isFdir
+      integer                  :: isDownXY
+      integer                  :: isFdir
 
-      real,allocatable       ::  lon0(:), lat0(:)
+      real, allocatable         :: lon0(:), lat0(:)
 
 ! files
-      character*256          ::  rfile1, wfile1, fcheck
-      character*256          ::  hires, out_hdir
-      integer                ::  ios
-      character*256          ::  buf
+      character*256            :: rfile1
+      character*256            :: wfile1
+      character*256            :: fcheck
+      character*256            :: hires
+      character*256            :: out_hdir
+      integer                  :: ios  !! I/O status code
+      character*256            :: buf
 ! ===============================================
       call getarg(1,hires_tag)
 
+! ================================================
+! [1] Read regional geometry and select the high-resolution grid
+! ================================================
 ! Combine source high-resolution map areas for tag (for example, 1min)
 ! into the selected regional extent; available layer files are read by area.
 ! Load the regional crop metadata and use the requested high-resolution tag
@@ -124,6 +156,9 @@
       print '(a16,4i8)' , 'nx ny dXX dYY ', nx, ny, dXX, dYY
 
 
+! ================================================
+! [2] Combine intersecting source areas into one regional grid
+! ================================================
 ! For a non-tiled map, read each intersecting source area, place its pixels
 ! into the regional arrays, and write the regional layers and location.txt.
       isDownXY=0
@@ -436,6 +471,9 @@
 
 !###########################################################
 
+! ================================================
+! [3] Process large domains as geographic tiles
+! ================================================
 ! For large domains, process and write geographic tiles instead of one array.
       if( isTile==1 )then        !! Tiles High Resolution Data
         if( trim(hires_tag)=="30sec" )then
@@ -721,7 +759,7 @@ CONTAINS
       subroutine report_missing(filename)
 ! ===============================================
       implicit none
-      character*(*) :: filename
+      character*(*)            :: filename
 ! ===============================================
       print *, 'WARNING: could not open optional layer; continuing with missing values: ', trim(filename)
       end subroutine report_missing
@@ -730,12 +768,13 @@ CONTAINS
 ! ===============================================
       implicit none
 !
-      real*8          ::  lon, lat
+      real*8                   :: lon, lat  !! longitude/latitude [deg]
 
-      character*1     ::  ew, sn
-      character*2     ::  clat
-      character*3     ::  clon
-      character*7     ::  cname
+      character*1              :: ew
+      character*1              :: sn
+      character*2              :: clat
+      character*3              :: clon
+      character*7              :: cname
 ! ===============================================
       if( lon<0 )then
         ew='w'
