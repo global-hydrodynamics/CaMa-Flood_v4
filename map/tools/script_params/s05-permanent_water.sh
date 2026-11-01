@@ -40,11 +40,15 @@ trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
+# ----------------------------------------------------------------------
+# End of error handling.
+# ----------------------------------------------------------------------
+
 EXEC_PRMWAT="$CODE_DIR/param_water_calc_prmwat"
 
 # The program reads map inputs relative to the map root.
 cd "$MAP_DIR"
 STEP="Aggregate permanent-water pixels from $HIRES_TAG into unit catchments"
-printf '==================================================\n[STEP 1/1] Estimate permanent-water area (%s)\n==================================================\n' "$HIRES_TAG"
+printf '\n==================================================\n[STEP 1/1] Estimate permanent-water area (%s)\n==================================================\n\n' "$HIRES_TAG"
 "$EXEC_PRMWAT" "$HIRES_TAG"
-printf '==================================================\n[SUCCESS] %s\n==================================================\n' "$SCRIPT_NAME"
+printf '\n==================================================\n[SUCCESS] %s\n==================================================\n' "$SCRIPT_NAME"

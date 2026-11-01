@@ -56,6 +56,10 @@ trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
+# ----------------------------------------------------------------------
+# End of error handling.
+# ----------------------------------------------------------------------
+
 # Shared executables (build beforehand with map/tools/code/Makefile).
 EXEC_OUTCLM="$CODE_DIR/param_channel_calc_outclm"
 EXEC_RIVWTH="$CODE_DIR/param_channel_calc_rivwth"
@@ -64,17 +68,17 @@ EXEC_MERIT="$CODE_DIR/param_channel_set_merit_width"
 cd "$MAP_DIR"
 
 STEP="Calculate mean river discharge from annual runoff and the input matrix"
-printf '==================================================\n[STEP 1/3] Calculate mean river discharge\n==================================================\n'
+printf '\n==================================================\n[STEP 1/3] Calculate mean river discharge\n==================================================\n\n'
 "$EXEC_OUTCLM" "$TYPE" "$INTERP" "$INPDIM" "$CROFBIN"
 
 # 2. Estimate width, depth, roughness, and the no-floodplain depth field.
 STEP="Estimate channel width, depth, and roughness"
-printf '==================================================\n[STEP 2/3] Estimate channel parameters\n==================================================\n'
+printf '\n==================================================\n[STEP 2/3] Estimate channel parameters\n==================================================\n\n'
 "$EXEC_RIVWTH" "$TYPE" "$INPDIM" "$HC" "$HP" "$HO" "$HMIN" \
     "$WC" "$WP" "$WO" "$WMIN"
 
 # 3. Merge MERIT Hydro width estimates with the power-law river widths.
 STEP="Merge power-law channel widths with MERIT Hydro widths"
-printf '==================================================\n[STEP 3/3] Merge MERIT Hydro channel widths\n==================================================\n'
+printf '\n==================================================\n[STEP 3/3] Merge MERIT Hydro channel widths\n==================================================\n\n'
 "$EXEC_MERIT" "$INPDIM"
-printf '==================================================\n[SUCCESS] %s\n==================================================\n' "$SCRIPT_NAME"
+printf '\n==================================================\n[SUCCESS] %s\n==================================================\n' "$SCRIPT_NAME"

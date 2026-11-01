@@ -38,18 +38,23 @@ trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
+# ----------------------------------------------------------------------
+# End of error handling.
+# ----------------------------------------------------------------------
+
 EXEC_RIVINFO="$CODE_DIR/analysis_river_point_info"
 EXEC_UPBASIN="$CODE_DIR/analysis_upbasin"
 STATION_REPORT="$MAP_DIR/grdc_station_selection.txt"
 RIVER_INFO_REPORT="$MAP_DIR/grdc_river_info.txt"
 
 if [ ! -r "$GRDC_ALLOC" ]; then
-    printf '[ERROR] %s is not readable. Run t01-alloc_flow_gauge.sh or provide GRDC_alloc.txt.\n' "$GRDC_ALLOC" >&2
+    printf '\n[ERROR] %s is not readable. Run t01-alloc_flow_gauge.sh or provide GRDC_alloc.txt.\n' "$GRDC_ALLOC" >&2
     exit 1
 fi
 
 # GRDC_alloc.txt has a fixed column layout; strict > keeps the first station on ties.
 STEP="Select the largest valid allocated GRDC station"
+printf '\n==================================================\n[STEP 1/3] Select the largest valid allocated GRDC station\n==================================================\n\n'
 if ! SELECTED=$(awk '
 NR == 1 { next }
 $8 != -9 && $9 > 0 && $10 > 0 && $5 > max {
@@ -62,7 +67,7 @@ END {
     if (id == "") exit 1
     print id, ix, iy, max
 }' "$GRDC_ALLOC"); then
-    printf '[ERROR] %s contains no valid allocated station.\n' "$GRDC_ALLOC" >&2
+    printf '\n[ERROR] %s contains no valid allocated station.\n' "$GRDC_ALLOC" >&2
     exit 1
 fi
 
@@ -82,14 +87,14 @@ printf '%s\t%s\t%s\t%s\n' \
 # Use the allocation's primary grid cell; re-mapping lat/lon can select a different cell.
 cd "$SCRIPT_DIR"
 STEP="Write river information for GRDC $GRDC_ID at cell ($IX,$IY)"
-printf '==================================================\n[STEP 1/2] Inspect selected GRDC river cell\n==================================================\n'
+printf '\n==================================================\n[STEP 2/3] Inspect selected GRDC river cell\n==================================================\n\n'
 "$EXEC_RIVINFO" xy "$IX" "$IY" > "$RIVER_INFO_REPORT"
 
 STEP="Create the single-cell upstream-basin mask for GRDC $GRDC_ID"
-printf '==================================================\n[STEP 2/2] Create upstream-basin mask\n==================================================\n'
+printf '\n==================================================\n[STEP 3/3] Create upstream-basin mask\n==================================================\n\n'
 "$EXEC_UPBASIN" "$IX" "$IY" "$UPBASIN_OUTPUT"
 printf 'Selected GRDC station: %s; cell=(%s,%s); area_CaMa=%s km2\n' \
     "$GRDC_ID" "$IX" "$IY" "$AREA_CAMA"
 printf 'Station summary: %s\nRiver information: %s\nUpstream mask: %s\n' \
     "$STATION_REPORT" "$RIVER_INFO_REPORT" "$UPBASIN_OUTPUT"
-printf '==================================================\n[SUCCESS] %s\n==================================================\n' "$SCRIPT_NAME"
+printf '\n==================================================\n[SUCCESS] %s\n==================================================\n' "$SCRIPT_NAME"

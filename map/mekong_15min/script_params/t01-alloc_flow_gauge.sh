@@ -21,6 +21,7 @@ HIRES_TAG="1min"
 
 SCRIPT_NAME=${0##*/}
 STEP="Prepare flow-gauge allocation"
+# Report the failed stage with the original command status.
 trap '
     EXIT_STATUS=$?
     trap - 0
@@ -37,11 +38,18 @@ trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
+# ----------------------------------------------------------------------
+# End of error handling.
+# ----------------------------------------------------------------------
+
 EXEC_ALLOCATE="$CODE_DIR/allocate_flow_gauge"
 
 cd "$SCRIPT_DIR"
 STEP="Allocate gauges to the CaMa-Flood river network"
-printf '[STEP 1/1] Allocate flow gauges (%s, %s)\n' "$GAUGE_MODE" "$HIRES_TAG"
+printf '\n==================================================\n[STEP 1/2] Allocate flow gauges (%s, %s)\n==================================================\n\n' "$GAUGE_MODE" "$HIRES_TAG"
 "$EXEC_ALLOCATE" "$GAUGE_IN" "$GAUGE_MODE" "$HIRES_TAG"
+
+STEP="Move allocated flow-gauge table into the map root"
+printf '\n==================================================\n[STEP 2/2] Save GRDC_alloc.txt\n==================================================\n\n'
 mv ./gauge_alloc.txt "$GAUGE_OUT"
-printf '[SUCCESS] %s\n' "$SCRIPT_NAME"
+printf '\n==================================================\n[SUCCESS] %s\n==================================================\n' "$SCRIPT_NAME"

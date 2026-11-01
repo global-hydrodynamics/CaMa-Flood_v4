@@ -22,6 +22,7 @@ HIRES_TAG="1min"
 
 SCRIPT_NAME=${0##*/}
 STEP="Prepare dam-allocation workflow"
+# Report the failed stage with the original command status.
 trap '
     EXIT_STATUS=$?
     trap - 0
@@ -38,13 +39,20 @@ trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
+# ----------------------------------------------------------------------
+# End of error handling.
+# ----------------------------------------------------------------------
+
 EXEC_ALLOCATE="$CODE_DIR/allocate_dam"
 
 cd "$SCRIPT_DIR"
 STEP="Allocate dams and separate river, small, and error records"
-printf '[STEP 1/1] Allocate dams (%s)\n' "$HIRES_TAG"
+printf '\n==================================================\n[STEP 1/2] Allocate dams (%s)\n==================================================\n\n' "$HIRES_TAG"
 "$EXEC_ALLOCATE" "$DAM_IN" "$HIRES_TAG"
+
+STEP="Move allocated dam tables into the map root"
+printf '\n==================================================\n[STEP 2/2] Save GRanD allocation tables\n==================================================\n\n'
 mv ./dam_alloc_river.txt "$DAM_RIVER_OUT"
 mv ./dam_alloc_small.txt "$DAM_SMALL_OUT"
 mv ./dam_alloc_error.txt "$DAM_ERROR_OUT"
-printf '[SUCCESS] %s\n' "$SCRIPT_NAME"
+printf '\n==================================================\n[SUCCESS] %s\n==================================================\n' "$SCRIPT_NAME"

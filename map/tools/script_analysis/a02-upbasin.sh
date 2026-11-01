@@ -39,12 +39,16 @@ trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
+# ----------------------------------------------------------------------
+# End of error handling.
+# ----------------------------------------------------------------------
+
 EXEC_UPBASIN="$SCRIPT_DIR/analysis_upbasin"
 
 # The program reads map inputs via ../ from the map-local script directory.
 cd "$SCRIPT_DIR"
 STEP="Extract cells upstream of ($IX,$IY)"
-printf '==================================================\n[STEP 1/1] Create upstream-basin mask\n==================================================\n'
+printf '\n==================================================\n[STEP 1/1] Create upstream-basin mask\n==================================================\n\n'
 "$EXEC_UPBASIN" "$IX" "$IY" "$OUTPUT_FILE" > "$REPORT_FILE"
 printf 'Upstream-basin report: %s\nMask: %s\n' "$REPORT_FILE" "$OUTPUT_FILE"
-printf '==================================================\n[SUCCESS] %s\n==================================================\n' "$SCRIPT_NAME"
+printf '\n==================================================\n[SUCCESS] %s\n==================================================\n' "$SCRIPT_NAME"

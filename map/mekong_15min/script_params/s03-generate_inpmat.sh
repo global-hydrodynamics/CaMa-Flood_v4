@@ -47,6 +47,10 @@ trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
+# ----------------------------------------------------------------------
+# End of error handling.
+# ----------------------------------------------------------------------
+
 # Select the map-resolution input automatically when HIRES_TAG is not set.
 if [ -z "$HIRES_TAG" ]; then
     if [ -f "$MAP_DIR/1min/location.txt" ]; then
@@ -66,7 +70,7 @@ EXEC_INPMAT="$CODE_DIR/param_inpmat_generate"
 # For each river cell, find its runoff-grid source cell and write the matrix and descriptor.
 cd "$MAP_DIR"
 STEP="Map river cells to the configured runoff grid"
-printf '==================================================\n[STEP 1/1] Generate runoff input matrix\n==================================================\n'
+printf '\n==================================================\n[STEP 1/1] Generate runoff input matrix\n==================================================\n\n'
 "$EXEC_INPMAT" "$HIRES_TAG" "$GRSIZEIN" "$WESTIN" "$EASTIN" \
     "$NORTHIN" "$SOUTHIN" "$OLAT" "$INPDIM" "$INPMAT"
-printf '==================================================\n[SUCCESS] %s\n==================================================\n' "$SCRIPT_NAME"
+printf '\n==================================================\n[SUCCESS] %s\n==================================================\n' "$SCRIPT_NAME"

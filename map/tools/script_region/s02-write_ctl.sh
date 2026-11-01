@@ -27,13 +27,17 @@ do
   esac
 done
 
+# ----------------------------------------------------------------------
+# User settings end here. Program paths and processing steps follow.
+# ----------------------------------------------------------------------
+
 # Like s01, keep the map-local script directory as the working directory.
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd) || exit 1
 cd "$SCRIPT_DIR" || exit 1
 
 GENERATOR="../../tools/code/generate_ctl.py"
 if [ ! -f "$GENERATOR" ]; then
-  echo "Missing shared CTL generator: $GENERATOR" >&2
+  printf '\n[ERROR] Missing shared CTL generator: %s\n' "$GENERATOR" >&2
   exit 1
 fi
 
@@ -43,14 +47,28 @@ set --
 [ "$OVERWRITE" -eq 0 ] || set -- "$@" --overwrite
 
 # params.txt in the parent directory defines the base-resolution grid.
+printf '\n==================================================\n'
+printf '[STEP 1/2] Generate CTLs for the base map\n'
+printf '==================================================\n\n'
 python3 "$GENERATOR" --map-dir .. "$@" || STATUS=1
+printf '\n'
 
 # Each high-resolution directory provides its own grid through location.txt.
 for LOCATION in ../*/location.txt
 do
   [ -f "$LOCATION" ] || continue
   MAP_DIR=${LOCATION%/location.txt}
+  printf '\n==================================================\n'
+  printf '[STEP 2/2] Generate CTLs for high-resolution map %s\n' "$MAP_DIR"
+  printf '==================================================\n\n'
   python3 "$GENERATOR" --map-dir "$MAP_DIR" "$@" || STATUS=1
+  printf '\n'
 done
+
+if [ "$STATUS" -eq 0 ]; then
+  printf '\n==================================================\n'
+  printf '[SUCCESS] %s\n' "${0##*/}"
+  printf '==================================================\n'
+fi
 
 exit "$STATUS"

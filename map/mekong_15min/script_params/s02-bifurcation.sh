@@ -44,6 +44,10 @@ trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
+# ----------------------------------------------------------------------
+# End of error handling.
+# ----------------------------------------------------------------------
+
 # Shared executables (build beforehand with map/tools/code/Makefile).
 EXEC_SETPARAM="$CODE_DIR/param_bif_set_params"
 EXEC_SETBASIN="$CODE_DIR/param_bif_set_basin"
@@ -58,7 +62,7 @@ fi
 # 1. Filter bifurcation paths by channel width and estimate their bifurcation depth.
 cd "$MAP_DIR"
 STEP="Filter bifurcation paths and estimate bifurcation-channel depth"
-printf '==================================================\n[STEP 1/2] Estimate bifurcation parameters\n==================================================\n'
+printf '\n==================================================\n[STEP 1/2] Estimate bifurcation parameters\n==================================================\n\n'
 if [ "$CHECK_MAP" = check_map ]; then
     "$EXEC_SETPARAM" "$RIVHGT" "$BIFPRM" "$BIFLAYER" "$INPDIM" check_map
 else
@@ -68,10 +72,10 @@ fi
 # 2. Merge basins connected by the retained bifurcation pathways.
 cd "$SCRIPT_DIR"
 STEP="Merge basins connected by bifurcation pathways"
-printf '==================================================\n[STEP 2/2] Merge connected basins\n==================================================\n'
+printf '\n==================================================\n[STEP 2/2] Merge connected basins\n==================================================\n\n'
 if [ "$CHECK_MAP" = check_map ]; then
     "$EXEC_SETBASIN" check_map
 else
     "$EXEC_SETBASIN"
 fi
-printf '==================================================\n[SUCCESS] %s\n==================================================\n' "$SCRIPT_NAME"
+printf '\n==================================================\n[SUCCESS] %s\n==================================================\n' "$SCRIPT_NAME"

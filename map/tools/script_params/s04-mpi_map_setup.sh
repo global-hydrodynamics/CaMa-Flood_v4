@@ -45,6 +45,10 @@ trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
+# ----------------------------------------------------------------------
+# End of error handling.
+# ----------------------------------------------------------------------
+
 # Programs (compile these with the shared Makefile before running this script).
 EXEC_SETBASIN_MPI="$CODE_DIR/param_mpi_set_basin"
 EXEC_SETREGION_MPI="$CODE_DIR/param_mpi_set_region"
@@ -56,7 +60,7 @@ cd "$SCRIPT_DIR"
 
 # 1. Merge connected basins for MPI decomposition. bifprm.txt is read only.
 STEP="Aggregate basins for MPI mode $MPIMODE"
-printf '==================================================\n[STEP 1/3] Aggregate basins for MPI decomposition (%s)\n==================================================\n' "$MPIMODE"
+printf '\n==================================================\n[STEP 1/3] Aggregate basins for MPI decomposition (%s)\n==================================================\n\n' "$MPIMODE"
 if [ "${1:-}" = "check_map" ]; then
     "$EXEC_SETBASIN_MPI" "$MPIMODE" check_map
 else
@@ -66,13 +70,13 @@ fi
 # 2. Assign the merged basins to each requested number of regions.
 for N in $MPI_COUNTS; do
     STEP="Generate mpireg-$N.bin"
-    printf '==================================================\n[STEP 2/3] Generate mpireg-%s.bin\n==================================================\n' "$N"
+    printf '\n==================================================\n[STEP 2/3] Generate mpireg-%s.bin\n==================================================\n\n' "$N"
     "$EXEC_SETREGION_MPI" "$N"
 done
 
 # 3. Analyze bifurcation pathways for the selected default partition.
 STEP="Analyze bifurcation connectivity for mpireg-$DEFAULT_MPI.bin"
-printf '==================================================\n[STEP 3/3] Analyze default partition mpireg-%s.bin\n==================================================\n' "$DEFAULT_MPI"
+printf '\n==================================================\n[STEP 3/3] Analyze default partition mpireg-%s.bin\n==================================================\n\n' "$DEFAULT_MPI"
 (cd "$MAP_DIR" && "$EXEC_CHECKBIF" "mpireg-$DEFAULT_MPI.bin")
 
 # Optional manual visualization and analysis for another partition from the map root.
@@ -82,4 +86,4 @@ echo "  ./script_analysis/a05-check_mpi_bifurcation.sh mpireg-8.bin"
 echo "  ./script_analysis/a05-check_mpi_bifurcation.sh mpireg-8.bin --csv dropped_bifurcations.csv"
 STEP="Remove temporary MPI basin-group map"
 rm -f "$TEMP_BASIN"
-printf '==================================================\n[SUCCESS] %s\n==================================================\n' "$SCRIPT_NAME"
+printf '\n==================================================\n[SUCCESS] %s\n==================================================\n' "$SCRIPT_NAME"
