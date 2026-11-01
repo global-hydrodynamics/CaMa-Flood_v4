@@ -1,41 +1,42 @@
 # Mekong sample analysis examples
 
-This directory contains Mekong-configured command-line examples for map-analysis programs. Platform-specific compiled executables are not tracked. Programs are compiled centrally under [`map/tools/code/`](../../tools/code/); `a00-copy_codes.sh` copies available executables into this directory.
+This directory contains Mekong-configured command-line examples for the shared CaMa-Flood map-analysis programs. The Fortran executables are built centrally in `map/tools/code/`; the local `code` symlink points to those shared executables.
 
-Build the programs from the repository root, then prepare the Mekong-local binaries:
+Build the programs from the repository root, then create the relative link:
 
 ```sh
 make -C map/tools/code analysis
 cd map/mekong_15min/script_analysis
-./a00-copy_codes.sh
+./a00-link_codes.sh
 ```
 
-`a00-copy_codes.sh` locates the shared code directory relative to its own location and copies all regular executable files matching `analysis_*`, preserving their permissions. It prints the copied filenames and sizes. New `analysis_*` executables are included automatically, and the script never compiles programs. This map-local workflow requires the repository's `map/tools/code/` directory; a standalone map package without that tree cannot use `a00` to find the compiled programs.
+The sample link is `code -> ../../tools/code`. `a00-link_codes.sh` does not compile, copy, or delete executables. It can repair an incorrect or broken symlink, but refuses to replace a real file or directory. The link depends on the repository's shared `map/tools/code/` directory, so it is not portable to a standalone map package. Compiled executables remain ignored by Git.
 
-After the binaries have been copied, direct commands and the paired example scripts can be run from this directory:
+Previously copied executable files are not needed when using the link. Inspect any local `analysis_*` files with `ls -lh analysis_*` and remove only files confirmed as old copied build products; the setup script leaves them untouched.
+
+## Output directory
+
+`a01`–`a04` write their files under `script_analysis/out_analysis/` by default. `a05` prints its diagnostic to the terminal and writes a dropped-path CSV there when requested. Each relevant script has an editable `OUT_DIR="out_analysis"` setting and creates the selected directory when needed. Set `OUT_DIR="../out_analysis"` to use `map/mekong_15min/out_analysis/`. Both output locations are ignored by Git.
+
+- `a01-river_point_info.sh` writes the selected cell or geographic query report.
+- `a02-upbasin.sh` writes an exploratory outlet mask and report, separate from `upbasin-2569002.bin`.
+- `a03-subbasin.sh` writes a 50,000 km2 exploratory subbasin and color map, separate from `subbsn-30000.bin` and `subcol-30000.bin`.
+- `a04-river_node_latlon.sh` writes a text table for the configured Mekong-region bounds.
+- `a05-check_mpi_bifurcation.sh` optionally writes dropped pathways as CSV; a relative filename is placed in `OUT_DIR`.
+
+## Running examples
+
+Run from this directory:
 
 ```sh
 cd map/mekong_15min/script_analysis
-./analysis_river_point_info xy 62 93
-./analysis_upbasin 62 93
-./analysis_subbasin 50000
-./analysis_river_node_latlon 90 110 5 35 > river_node_latlon.txt
+./a01-river_point_info.sh
+./a02-upbasin.sh
+./a03-subbasin.sh
+./a04-river_node_latlon.sh
+./a05-check_mpi_bifurcation.sh mpireg-16.bin
 ```
 
-The direct commands above use the map-local `script_analysis/` working directory. The `a01`–`a05` shell examples show that directory, print the exact command before running it, and invoke the corresponding `./analysis_*` executable. You can copy the displayed command into a terminal. The MPI connectivity program is an exception to the map-local working-directory rule: it reads map inputs from the map root, so `a05` changes there and prints a `./script_analysis/analysis_check_mpi_bifurcation ...` command. The node-coordinate output begins with a header and then lists directed connections between CaMa-Flood cell representative points; it is not a high-resolution river centerline.
+Each example prints the working directory and actual command before execution. Most call `./code/analysis_*` from `script_analysis/`. The MPI connectivity program reads `params.txt` and map files relative to the map root, so `a05` runs there using `./script_analysis/code/analysis_check_mpi_bifurcation`.
 
-## Configured examples
-
-- [`a01-river_point_info.sh`](a01-river_point_info.sh) inspects the one-based cell `(62,93)`; edit its query mode to use geographic coordinates instead.
-- [`a02-upbasin.sh`](a02-upbasin.sh) writes an arbitrary-cell mask under `analysis/`, separate from `upbasin-2569002.bin`.
-- [`a03-subbasin.sh`](a03-subbasin.sh) uses a 50,000 km2 exploratory threshold and writes under `analysis/`, separate from the sample's `subbsn-30000.bin` and `subcol-30000.bin`.
-- [`a04-river_node_latlon.sh`](a04-river_node_latlon.sh) extracts Mekong-region river-node coordinate pairs to a text file.
-- [`a05-check_mpi_bifurcation.sh`](a05-check_mpi_bifurcation.sh) checks an existing MPI region map and optionally records dropped pathways in CSV.
-
-These examples do not compile programs. Their calculations are in the shared Fortran executables. Re-running an example replaces its same-named output. These outputs are optional analyses, not standard simulation inputs.
-
-## MPI connectivity wrapper
-
-[`a05-check_mpi_bifurcation.sh`](a05-check_mpi_bifurcation.sh) calls the map-local `analysis_check_mpi_bifurcation` executable for an existing `mpireg-N.bin`; `a00` copies it along with other compiled `analysis_*` programs.
-
-For standard 30,000 km2 Mekong subbasin and station-selected upstream products, use the independent `../script_params/s06-subbasin.sh` and `s07-upbasin.sh` workflows. See the [map-tools guide](../../tools/README.md) and [parameter workflow guide](../script_params/README.md#river-network-analysis).
+For standard subbasin and GRDC-selected upstream products, use the independent [`script_params/s06-subbasin.sh`](../script_params/s06-subbasin.sh) and [`s07-upbasin.sh`](../script_params/s07-upbasin.sh) workflows. See the [map-tools guide](../../tools/README.md) and [parameter workflow guide](../script_params/README.md#river-network-analysis).

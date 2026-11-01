@@ -1,69 +1,65 @@
 # Portable map-analysis toolkit
 
-`script_analysis/` is a portable, educational toolkit for map-analysis executables. Scientific calculations remain in the shared Fortran programs; `a01`–`a05` show editable settings and terminal commands that they print before running. Users can copy those displayed commands from the shown working directory.
+`script_analysis/` contains educational command-line examples and their generated outputs. Scientific calculations remain in the shared Fortran programs under `map/tools/code/`.
 
-## Build and prepare the portable directory
+## Build and link the shared executables
 
-Build the analysis programs in the shared code directory, then copy all compiled `analysis_*` executables into either the shared template or a map-local example directory:
+Build the analysis programs first, then create the local relative link to the shared code directory:
 
 ```sh
 make -C map/tools/code analysis
 cd map/tools/script_analysis
-./a00-copy_codes.sh
+./a00-link_codes.sh
 ```
 
-`a00-copy_codes.sh` locates `map/tools/code/` relative to its own location. It works from both `map/tools/script_analysis/` and `map/<map>/script_analysis/` inside this repository. It copies every regular executable matching `analysis_*`, preserves permissions, and lists only the files copied during that run with `ls -lh`. A new analysis executable is included automatically; no name list in `a00` needs updating. If the shared code directory is not present, or no compiled analysis executables are available, the script reports the issue and points to the shared Makefile. It never compiles programs.
+The canonical link is `code -> ../code`. In a map-local directory such as `map/mekong_15min/script_analysis/`, it is `code -> ../../tools/code`. `a00-link_codes.sh` works from either directory, does not compile or copy executables, and will repair a wrong or broken symlink. It refuses to replace a real file or directory. The link only works while its target exists; it is not suitable for a standalone map package without `map/tools/code/`.
 
-For the Mekong sample, the map-local copy can be prepared directly from the repository checkout:
+For the Mekong example:
 
 ```sh
 cd map/mekong_15min/script_analysis
-./a00-copy_codes.sh
+./a00-link_codes.sh
 ```
 
-This map-local route needs the repository's `map/tools/code/` directory. A standalone map-only package without that shared source/build directory cannot use `a00` to locate binaries.
+Compiled executables are platform-specific and remain excluded from Git. If you previously copied `analysis_*` executables into a map-local directory, inspect them with `ls -lh analysis_*` and remove only files you have confirmed were copied build products. The link script does not delete files.
 
-The copied executables are platform and architecture dependent. Rebuild and prepare them on a different or incompatible system. Compiled binaries are excluded from Git.
+## Output directory
+
+The `a01`–`a04` examples write their files under `script_analysis/out_analysis/` by default. `a05` prints its diagnostic to the terminal and writes a dropped-path CSV there when requested. Each script has an editable `OUT_DIR="out_analysis"` setting near the top and creates that directory when it writes output. Set `OUT_DIR="../out_analysis"` to save under the map root instead. The default and map-root output directories are ignored by Git.
+
+`a01` writes a text report; `a02` writes an outlet-specific upstream mask and report; `a03` writes threshold-labeled subbasin and color rasters; `a04` writes a text table of river-node coordinate pairs. Call `a05` with `--csv <filename>` to save dropped pathways; relative CSV filenames go under `OUT_DIR`.
 
 ## Direct command-line use
 
-Run the programs from a map-local `script_analysis/` directory so their `../` input paths resolve to the map root:
+Run most programs from the map-local `script_analysis/` directory so their `../` map-input paths resolve:
 
 ```sh
 cd map/mekong_15min/script_analysis
-./analysis_river_point_info xy 62 93
-./analysis_upbasin 62 93
-./analysis_subbasin 50000
-./analysis_river_node_latlon 90 110 5 35 > river_node_latlon.txt
+./code/analysis_river_point_info xy 62 93
+./code/analysis_upbasin 62 93
+./code/analysis_subbasin 50000
+./code/analysis_river_node_latlon 90 110 5 35
 ```
+
+`analysis_upbasin` and `analysis_subbasin` accept optional output paths; without them, the direct executables use their own documented analysis filenames. The example scripts provide explicit output paths under `OUT_DIR` so they do not replace standard products.
 
 | Executable | Arguments and output |
 | --- | --- |
 | `analysis_river_point_info` | `xy IX IY` or `latlon LAT LON`; prints cell and catchment details. Lat/lon lookup may use `15sec/` or `1min/` `catmxy.bin`. |
-| `analysis_upbasin` | `IX IY [OUTPUT]`; indices are one-based Fortran map cells. Without `OUTPUT`, writes `analysis_upbasin_IX_IY.bin` in the map root, keeping the standard `upbasin.bin` untouched. Values are 1 upstream of the selected cell, 0 for other mapped river cells, and -9999 outside the network. |
-| `analysis_subbasin` | `THRESHOLD_KM2 [SUBBSN_OUTPUT SUBCOL_OUTPUT]`; without output paths, writes threshold-labeled `analysis_subbsn_<threshold>.bin` and `analysis_subcol_<threshold>.bin` in the map root. The threshold applies to upstream-area increases across links, not a simple basin-area cutoff. |
-| `analysis_river_node_latlon` | `WEST EAST SOUTH NORTH` in degrees; prints a header followed by directed connections between CaMa-Flood river-cell representative points. A link is selected when either endpoint is inside the box. Terminal links (`-9`/`-10`) use `-999` for downstream coordinates. These points are not a high-resolution river centerline. |
-
-For `analysis_river_node_latlon`, the header is the first stdout line and remaining lines are data rows. Redirect stdout to retain both; no GIS export format is produced.
+| `analysis_upbasin` | `IX IY [OUTPUT]`; indices are one-based Fortran map cells. Its default output is a coordinate-labeled mask in the map root. |
+| `analysis_subbasin` | `THRESHOLD_KM2 [SUBBSN_OUTPUT SUBCOL_OUTPUT]`; its default outputs are threshold-labeled rasters in the map root. The threshold applies to upstream-area increases across links, not a simple basin-area cutoff. |
+| `analysis_river_node_latlon` | `WEST EAST SOUTH NORTH` in degrees; prints directed connections between CaMa-Flood river-cell representative points. These points are not a high-resolution river centerline. |
 
 ## Example shell scripts
 
-The examples change to their required working directory, print it, show the exact shell-quoted command, then invoke the local analysis executable directly. Most use `./analysis_*` from `script_analysis/`; `a05` uses `./script_analysis/analysis_check_mpi_bifurcation` from the map root to preserve that program's input-path contract. They do not compile programs:
+The `a01`–`a05` scripts show the working directory and print each command before running it through `./code/analysis_*`. Their settings are editable near the beginning. Most examples run from `script_analysis/`; `a05` runs from the map root because `analysis_check_mpi_bifurcation` reads `params.txt` and map files relative to its current directory. It invokes the executable through `./script_analysis/code/` and prints that exact command.
 
-- [`a01-river_point_info.sh`](a01-river_point_info.sh) demonstrates querying a configured cell or geographic point. `REPORT_FILE` optionally redirects output.
-- [`a02-upbasin.sh`](a02-upbasin.sh) writes an arbitrary-cell mask and report under the map's `analysis/` directory, separate from the station-selected product.
-- [`a03-subbasin.sh`](a03-subbasin.sh) demonstrates a 50,000 km2 threshold and writes both rasters under `analysis/`, separate from standard products.
-- [`a04-river_node_latlon.sh`](a04-river_node_latlon.sh) demonstrates extraction for a Mekong-region bounding box and saves the header plus data rows as text.
-- [`a05-check_mpi_bifurcation.sh`](a05-check_mpi_bifurcation.sh) checks an existing MPI region map and can save dropped pathways as CSV.
+- [`a01-river_point_info.sh`](a01-river_point_info.sh) demonstrates grid-index or geographic queries.
+- [`a02-upbasin.sh`](a02-upbasin.sh) creates an exploratory mask for one configured cell.
+- [`a03-subbasin.sh`](a03-subbasin.sh) demonstrates an exploratory 50,000 km2 threshold.
+- [`a04-river_node_latlon.sh`](a04-river_node_latlon.sh) extracts connections in a configured geographic rectangle.
+- [`a05-check_mpi_bifurcation.sh`](a05-check_mpi_bifurcation.sh) checks an existing `mpireg-N.bin` and can write dropped pathways as CSV.
 
-Edit the visible settings near the start of each script. Re-running replaces the same named example outputs. For scripts that accept file paths, the displayed command quotes paths so it can be copied safely even when the path contains spaces or shell-special characters.
+These independent examples do not replace standard preparation workflows. `script_params/s06-subbasin.sh` and `s07-upbasin.sh` use the shared executables directly and write their intended standard/sample products. See the [parameter workflow guide](../script_params/README.md#river-network-analysis).
 
-## Standard map-preparation workflows
-
-`script_params/s06-subbasin.sh` and `s07-upbasin.sh` are independent map-preparation scripts. They use executables from the shared `map/tools/code/` directory, not binaries copied into `script_analysis/`. `s06` writes the standard `subbsn.bin` and `subcol.bin`; `s07` selects the valid allocated GRDC gauge with the largest `area_CaMa` and writes `upbasin-<GRDC_ID>.bin` plus reports. The Mekong sample wrappers use a 30,000 km2 labeled subbasin example and GRDC ID 2569002. See [`script_params/README.md`](../script_params/README.md#river-network-analysis).
-
-## MPI diagnostics
-
-`a00` includes compiled MPI analysis executables such as `analysis_check_mpi_bifurcation` in its automatic copy. The `a05` example runs from the map root because that program reads `params.txt` and map inputs relative to the current directory; it prints this working directory and the corresponding `./script_analysis/analysis_check_mpi_bifurcation ...` command. `analysis_mpi_region_color` is a separate manual visualization utility that writes `bsncol_mpi-N.bin`; s04 does not invoke it. See the [MPI map-preparation guide](../script_params/README.md#mpi-map-preparation).
-
-Optional analysis outputs are not standard simulation inputs. Automatic CTL generation requires a matching filename row in `map/map_variables.csv`; it does not infer metadata for arbitrary output names.
+The separate `analysis_mpi_region_color` utility writes optional `bsncol_mpi-N.bin` maps; s04 does not invoke it. See the [MPI map-preparation guide](../script_params/README.md#mpi-map-preparation).

@@ -80,6 +80,10 @@ map/tools/code/analysis_*
 !map/tools/code/analysis_*.F90
 map/tools/script_analysis/analysis_*
 map/mekong_15min/script_analysis/analysis_*
+map/tools/script_analysis/out_analysis/
+map/mekong_15min/script_analysis/out_analysis/
+map/tools/out_analysis/
+map/mekong_15min/out_analysis/
 map/tools/code/*.o
 map/tools/code/*.mod
 map/tools/code/*.pyc

@@ -339,6 +339,7 @@ class MpiMapToolsTests(unittest.TestCase):
             (code_dir / "Makefile").write_text(".PHONY: analysis\nanalysis:\n\t@:\n", encoding="ascii")
             shutil.copy2(self.bin / "analysis_check_mpi_bifurcation", code_dir / "analysis_check_mpi_bifurcation")
             shutil.copy2(TOOLS / "script_analysis" / "a05-check_mpi_bifurcation.sh", script_dir)
+            (script_dir / "code").symlink_to("../../tools/code")
             for name in ("params.txt", "nextxy.bin", "bifprm.txt"):
                 shutil.copy2(MAP / name, map_root / name)
             (map_root / "mpireg-1.bin").write_bytes(struct.pack("<9600i", *([1] * 9600)))

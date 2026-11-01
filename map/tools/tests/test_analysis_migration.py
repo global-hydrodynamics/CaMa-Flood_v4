@@ -83,8 +83,7 @@ class AnalysisMigrationTests(unittest.TestCase):
         script_analysis.mkdir()
         code_link.parent.mkdir(parents=True)
         shutil.copytree(self.v5_dir, code_link)
-        for name in ("analysis_river_point_info", "analysis_upbasin", "analysis_subbasin", "analysis_river_node_latlon"):
-            shutil.copy2(self.v5_dir / name, script_analysis / name)
+        (script_analysis / "code").symlink_to("../../tools/code")
         for name in MAP_FILES:
             shutil.copy2(SAMPLE / name, map_dir / name)
         hires = map_dir / "1min"
@@ -271,14 +270,15 @@ class AnalysisMigrationTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         result = run([str(analysis / "a02-upbasin.sh")], self.root)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertFalse((map_dir / "analysis_upbasin_62_93.bin").samefile(map_dir / "upbasin-2569002.bin"))
+        analysis_output = analysis / "out_analysis"
+        self.assertFalse((analysis_output / "upbasin_62_93.bin").samefile(map_dir / "upbasin-2569002.bin"))
         result = run([str(analysis / "a03-subbasin.sh")], self.root)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertTrue((map_dir / "analysis" / "subbsn_50000km2.bin").exists())
-        self.assertTrue((map_dir / "analysis" / "subcol_50000km2.bin").exists())
+        self.assertTrue((analysis_output / "subbsn_50000km2.bin").exists())
+        self.assertTrue((analysis_output / "subcol_50000km2.bin").exists())
         result = run([str(analysis / "a04-river_node_latlon.sh")], self.root)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        vector_output = map_dir / "river_node_latlon_90_110_5_35.txt"
+        vector_output = analysis_output / "river_node_latlon_90_110_5_35.txt"
         self.assertTrue(vector_output.is_file())
         self.assertIn("ori-lat", vector_output.read_text(encoding="ascii").splitlines()[0])
 
@@ -319,42 +319,32 @@ class AnalysisMigrationTests(unittest.TestCase):
         self.assertFalse((map_dir / "subbsn.bin").exists())
         self.assertFalse((map_dir / "subcol.bin").exists())
 
-    def test_copy_codes_is_all_or_nothing_and_compilation_is_external(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="cmf-analysis-copy-") as temporary:
+    def test_link_codes_creates_relative_shared_code_symlinks(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="cmf-analysis-link-") as temporary:
             root = Path(temporary)
             code = root / "map" / "tools" / "code"
             template = root / "map" / "tools" / "script_analysis"
             code.mkdir(parents=True)
             template.mkdir(parents=True)
-            script = template / "a00-copy_codes.sh"
-            shutil.copy2(ANALYSIS_SCRIPTS / "a00-copy_codes.sh", script)
-            programs = ("analysis_river_point_info", "analysis_upbasin", "analysis_subbasin", "analysis_river_node_latlon")
-            for name in programs:
-                shutil.copy2(self.v5_dir / name, code / name)
+            script = template / "a00-link_codes.sh"
+            shutil.copy2(ANALYSIS_SCRIPTS / "a00-link_codes.sh", script)
             result = run([str(script)], self.root)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            for name in programs:
-                copied = template / name
-                self.assertTrue(copied.is_file())
-                self.assertTrue(os.access(copied, os.X_OK))
+            self.assertTrue((template / "code").is_symlink())
+            self.assertEqual(os.readlink(template / "code"), "../code")
 
-            missing_root = root / "missing" / "map" / "tools"
-            missing_code = missing_root / "code"
-            missing_template = missing_root / "script_analysis"
-            missing_code.mkdir(parents=True)
-            missing_template.mkdir()
-            shutil.copy2(script, missing_template / script.name)
-            for name in programs[:-1]:
-                shutil.copy2(self.v5_dir / name, missing_code / name)
-            result = run([str(missing_template / script.name)], self.root)
-            self.assertNotEqual(result.returncode, 0)
-            self.assertIn("make -C map/tools/code analysis", result.stderr)
-            self.assertFalse(any((missing_template / name).exists() for name in programs))
-            # The build command is shown only as an error message; a00 never invokes it.
-            self.assertNotRegex(
-                (ANALYSIS_SCRIPTS / "a00-copy_codes.sh").read_text(),
-                r"(?m)^\s*make(?:\s|$)",
-            )
+            # Re-running preserves the correct relative link.
+            result = run([str(script)], self.root)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(os.readlink(template / "code"), "../code")
+
+            # The same script resolves the map-local path from its own location.
+            sample_analysis = root / "map" / "mekong_15min" / "script_analysis"
+            sample_analysis.mkdir(parents=True)
+            shutil.copy2(script, sample_analysis / script.name)
+            result = run([str(sample_analysis / script.name)], self.root)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(os.readlink(sample_analysis / "code"), "../../tools/code")
 
     def test_missing_or_headerless_grdc_allocation_fails_clearly(self) -> None:
         map_dir, params = self.make_map("invalid-grdc")

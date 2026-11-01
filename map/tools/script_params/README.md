@@ -143,7 +143,7 @@ The general parameter input-matrix generator (`s03-generate_inpmat.sh`) and perm
 
 ## River-network analysis
 
-The shell layer sets locations and parameters; `analysis_river_point_info`, `analysis_upbasin`, `analysis_subbasin`, and other programs in `map/tools/code/` read and validate map data and perform the network calculations. Build them beforehand with `make -C map/tools/code analysis`. The standard s06/s07 workflows invoke the shared executables directly and do not depend on the optional copied binaries in `script_analysis/`.
+The shell layer sets locations and parameters; `analysis_river_point_info`, `analysis_upbasin`, `analysis_subbasin`, and other programs in `map/tools/code/` read and validate map data and perform the network calculations. Build them beforehand with `make -C map/tools/code analysis`. The standard s06/s07 workflows invoke the shared executables directly and do not depend on the example symlink in `script_analysis/`.
 
 [`s06-subbasin.sh`](s06-subbasin.sh) creates or replaces optional `subbsn.bin` and `subcol.bin` products in the map root. Its example setting is `AREA_THRESHOLD_KM2=30000`; this is not a calibrated universal threshold. Positive subbasin IDs identify segments, zero marks modeled network cells left below the threshold, and -9999 marks cells outside the modeled river network. In the preserved segmentation rule, a boundary is cut when the current upstream area exceeds the threshold and the valid downstream cell's upstream area exceeds the current value by more than the threshold. This is not a minimum catchment-area filter. The threshold is in km2. The Mekong sample uses the same threshold and renames both outputs to `subbsn-30000.bin` and `subcol-30000.bin` so the sample filenames record their threshold.
 
