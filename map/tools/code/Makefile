@@ -17,7 +17,8 @@ all: region params analysis
 
 region: $(REGION_BINS)
 
-# Parameter programs under param_*.F90 are built together by the shared target.
+# Parameter programs under param_*.F90, including param_water_calc_prmwat,
+# are discovered automatically and built together by the shared target.
 ifeq ($(strip $(PARAM_SOURCES)),)
 params:
 	@echo "No param_*.F90 sources are available yet (planned for Phase B2)."

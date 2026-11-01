@@ -1,6 +1,6 @@
 # Map parameterization and preparation workflows
 
-`script_params/` contains reusable map-local recipes for parameterization and related map preparation. The shell layer holds configuration, selects working directories, sequences commands, and reports progress; compiled programs in `map/tools/code/` perform scientific calculations, validate inputs, and report detailed errors. Build the required executables beforehand with the shared Makefile (for example, `make -C map/tools/code param analysis`); processing scripts do not compile or check them. Scripts s01-s04 use self-contained ASCII `[STEP]` and `[SUCCESS]` banners plus a prominent `ERROR` banner on failure, using POSIX exit traps; no shared message helper is required. Some migrated programs still have incomplete file-open/read diagnostics, a code-layer follow-up. See the [shell-script convention](../../../AGENTS.md#shell-script-design-principles).
+`script_params/` contains reusable map-local recipes for parameterization and related map preparation. The shell layer holds configuration, selects working directories, sequences commands, and reports progress; compiled programs in `map/tools/code/` perform scientific calculations, validate inputs, and report detailed errors. Build the required executables beforehand with the shared Makefile (for example, `make -C map/tools/code param analysis`); processing scripts do not compile or check them. Scripts s01-s05 use self-contained ASCII `[STEP]` and `[SUCCESS]` banners plus a prominent `ERROR` banner on failure, using POSIX exit traps; no shared message helper is required. Some migrated programs still have incomplete file-open/read diagnostics, a code-layer follow-up. See the [shell-script convention](../../../AGENTS.md#shell-script-design-principles).
 
 ```sh
 cd "$MAP_DIR"
@@ -22,7 +22,7 @@ The maintainer-approved organization follows the preferred map-preparation seque
 | `s02-bifurcation.sh` | Standard non-MPI bifurcation parameters and basin-connectivity products. | Implemented |
 | `s03-generate_inpmat.sh` | User-configured runoff-grid mapping matrix. | Implemented |
 | `s04-mpi_map_setup.sh` | MPI basin aggregation and coloring, region assignment, and default-N connectivity report; optional pre-partition basin diagnostic with `check_map`. | Implemented |
-| `s05-permanent_water.sh` | Permanent-water parameter generation. | Planned; not implemented here |
+| `s05-permanent_water.sh` | Aggregate high-resolution permanent-water area by unit catchment. | Implemented |
 | `s99-write_ctl.sh` | Final optional step: generate GrADS CTLs for existing registered base-map and high-resolution binaries. | Implemented |
 | `t01-alloc_flow_gauge.sh`, `t02-alloc_dams.sh`, `t03-alloc_level_gauge.sh` | Gauge and dam location allocation. | Planned; not implemented here |
 
@@ -45,6 +45,16 @@ Build the required shared executables beforehand, copy the script into the targe
 The standard channel workflow uses annual mean runoff. The historical `map/src/src_param/calc_outclmday.F90` remains legacy-only: it reflects the older maximum-30-day climatology approach associated with Yamazaki et al. (2011). The maintainer reports that later evaluation favored annual mean runoff. This migration does not revalidate the historical method scientifically.
 
 `rivwth.bin` is the power-law width and `rivwth_merit.bin` is the separately named merged width product; the latter is not simply a copy of `width.bin`. The merge algorithm and thresholds are preserved from the legacy tool. The current core map reader selects `rivwth.bin` and does not automatically choose `rivwth_merit.bin`; this workflow produces the alternate product but does not change model-reader selection. See [`map_variables.csv`](../../map_variables.csv) and the [Phase B2 migration plan](../../../docs/map_params_migration_plan.md) for product metadata and migration evidence.
+
+## Permanent-water area
+
+[`s05-permanent_water.sh`](s05-permanent_water.sh) runs `param_water_calc_prmwat` to create `prmwat.bin` from a base map and selected high-resolution map. Set `HIRES_TAG` near the top of the copied script; it defaults explicitly to `1min` and is not inferred from available directories. Build the shared executable beforehand with `make -C map/tools/code param`. The script can be run from any current working directory and does not run the preceding parameterization steps.
+
+The source layout must use the non-tiled `location.txt` format. Inputs are `params.txt`, `nextxy.bin`, and `ctmare.bin` in the map root, plus `<HIRES_TAG>/location.txt` and per-area `catmxy`, `rivwth`, and `flddif` binaries; `grdare.bin` is optional. The output is one float32 `NX x NY` record in m2. Non-network cells are `-9999`; network cells with no selected water pixels are zero. For valid catchment assignments, selected pixels satisfy `(rivwth > 0 OR rivwth == -1) AND flddif <= 5 m`; `rivwth == -1` denotes water surface outside the channel centerline. Their pixel areas are summed and capped by `ctmare`. The legacy `flddif <= 5` condition also accepts `flddif=-9999`; the migrated program warns and preserves that behavior rather than silently adding a new scientific filter.
+
+The elevation cutoff limits `prmwat` to permanent water within the flood area CaMa-Flood can reproduce. A permanent lake isolated high on a hill is outside the model's expected inundation domain, so its area must not be subtracted as pre-existing simulated floodwater. The maintainer described the intended criterion as `flddif < 5 m`. The legacy v4 and migrated v5 source use `flddif <= 5 m`, which includes pixels exactly at 5 m; this boundary difference is documented but has not been changed. The numerical derivation of the 5 m value remains unverified.
+
+`prmwat.bin` is an aggregated estimate of permanent-water surface area per unit catchment for post-processing, such as excluding pre-existing water from newly inundated area. It is not a pixel mask and is not read by the current simulation core. If `grdare.bin` is absent, the legacy scaled `rgetarea` fallback is used; this computes an area from a rectangle ten times larger in both directions and divides by 100 to reduce round-off fluctuations at fine resolution. The method is preserved, but its accuracy has not been independently quantified. See [`map_metadata_spec.md`](../../map_metadata_spec.md#permanent-water-area) and [`map_variables.csv`](../../map_variables.csv) for product metadata.
 
 ## Standard bifurcation workflow
 

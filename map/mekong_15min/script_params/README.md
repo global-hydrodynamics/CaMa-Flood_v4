@@ -1,6 +1,6 @@
 # Map parameterization and preparation workflows
 
-`script_params/` contains reusable map-local recipes for parameterization and related map preparation. The shell layer holds configuration, selects working directories, sequences commands, and reports progress; compiled programs in `map/tools/code/` perform scientific calculations, validate inputs, and report detailed errors. Build the required executables beforehand with the shared Makefile (for example, `make -C map/tools/code param analysis`); processing scripts do not compile or check them. Scripts s01-s04 use self-contained ASCII `[STEP]` and `[SUCCESS]` banners plus a prominent `ERROR` banner on failure, using POSIX exit traps; no shared message helper is required. Some migrated programs still have incomplete file-open/read diagnostics, a code-layer follow-up. See the [shell-script convention](../../../AGENTS.md#shell-script-design-principles).
+`script_params/` contains reusable map-local recipes for parameterization and related map preparation. The shell layer holds configuration, selects working directories, sequences commands, and reports progress; compiled programs in `map/tools/code/` perform scientific calculations, validate inputs, and report detailed errors. Build the required executables beforehand with the shared Makefile (for example, `make -C map/tools/code param analysis`); processing scripts do not compile or check them. Scripts s01-s05 use self-contained ASCII `[STEP]` and `[SUCCESS]` banners plus a prominent `ERROR` banner on failure, using POSIX exit traps; no shared message helper is required. Some migrated programs still have incomplete file-open/read diagnostics, a code-layer follow-up. See the [shell-script convention](../../../AGENTS.md#shell-script-design-principles).
 
 ```sh
 cd "$MAP_DIR"
@@ -22,11 +22,13 @@ The maintainer-approved organization follows the preferred map-preparation seque
 | `s02-bifurcation.sh` | Standard non-MPI bifurcation parameters and basin-connectivity products. | Implemented |
 | `s03-generate_inpmat.sh` | User-configured runoff-grid mapping matrix. | Implemented |
 | `s04-mpi_map_setup.sh` | MPI basin aggregation and coloring, region assignment, and default-N connectivity report; optional pre-partition basin diagnostic with `check_map`. | Implemented |
-| `s05-permanent_water.sh` | Permanent-water parameter generation. | Planned; not implemented here |
+| `s05-permanent_water.sh` | Estimate permanent-water area by unit catchment for post-processing. | Implemented |
 | `s99-write_ctl.sh` | Final optional step: generate GrADS CTLs for existing registered base-map and high-resolution binaries. | Implemented |
 | `t01-alloc_flow_gauge.sh`, `t02-alloc_dams.sh`, `t03-alloc_level_gauge.sh` | Gauge and dam location allocation. | Planned; not implemented here |
 
-Independent diagnostics belong in `script_analysis/`. No `script_allocate/` directory is part of the approved design.
+Independent diagnostics belong in `script_analysis/`. No `script_allocate/` directory is part of the approved design. These map-local scripts are examples for preparing the sample, not routine CI tests. See the shared [`map/tools/script_params/README.md`](../../tools/script_params/README.md) for workflow details.
+
+`s05-permanent_water.sh` uses `HIRES_TAG=1min` by default and writes `prmwat.bin` in the map root. It aggregates high-resolution water-surface pixels into unit catchments for post-processing; the current simulation core does not read this product. The elevation filter limits the area to water within terrain where CaMa-Flood can reproduce inundation, excluding isolated hilltop lakes that are outside the modeled flood extent. The maintainer describes the intended cutoff as `flddif < 5 m`; the legacy and v5 code currently use `flddif <= 5 m`, so exactly-5 m pixels are included pending clarification. Build the shared v5 parameter executable from `map/tools/code/` before invoking the script. The Mekong inputs were regression-compared with the legacy calculator in temporary work directories; this verifies compatibility for this sample, not independent scientific validity.
 
 ## Channel parameter workflow
 
@@ -81,7 +83,7 @@ The programs read standard map files `params.txt`, `basin.bin`, `bifprm.txt`, an
 
 Copy [`s99-write_ctl.sh`](s99-write_ctl.sh) into a map-local `script_params/` directory and run it there. Like the reusable [`script_region/s02-write_ctl.sh`](../script_region/s02-write_ctl.sh), it calls the shared `generate_ctl.py` and scans only `.bin` files that already exist directly in the map root and in immediate child directories containing `location.txt`. The generator creates CTLs only for files registered in `map_variables.csv` whose dimensions and binary sizes validate against `params.txt` or `location.txt`.
 
-The wrapper supports `--dry-run` and `--no-overwrite`; existing CTLs are replaced by default. It does not create, modify, or infer binary map data. For the optional MPI basin diagnostic, it creates `check_bif_bsnmod_mpi.ctl` only when `check_bif_bsnmod_mpi.bin` exists; the registry defines its two variables in record order. See the [map-tools guide](../README.md#grads-ctl-files) for registry, missing-value, and format details.
+The wrapper supports `--dry-run` and `--no-overwrite`; existing CTLs are replaced by default. It does not create, modify, or infer binary map data. For the optional MPI basin diagnostic, it creates `check_bif_bsnmod_mpi.ctl` only when `check_bif_bsnmod_mpi.bin` exists; the registry defines its two variables in record order. See the [map guide](../../README.md#grads-ctl-files) for registry, missing-value, and format details.
 
 ## General-purpose runoff input matrix
 
