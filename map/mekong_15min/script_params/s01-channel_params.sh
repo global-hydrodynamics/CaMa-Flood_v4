@@ -9,37 +9,38 @@
 set -eu
 
 # Paths
+# Command substitution stores the resolved path; CDPATH= keeps cd output predictable.
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 MAP_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd -P)
 CODE_DIR=$(CDPATH= cd "$SCRIPT_DIR/../../tools/code" && pwd -P)
 
-# Configuration (relative input paths are resolved from the map root).
-TYPE="bin"
-INTERP="inpmat"
-ROFFTAG="${ROFFTAG:-test-1deg}"
-INPDIM="inpdim_${ROFFTAG}.txt"
-INPMAT="inpmat_${ROFFTAG}.bin"
-CROFBIN="../data/ELSE_GPCC_clm-1981-2010.one" # Annual mean runoff [mm/s].
+# Runoff format, interpolation, and paired runoff-grid matrix files.
+TYPE="bin"                                     # Runoff format: bin for binary or cdf for NetCDF.
+INTERP="inpmat"                                # Runoff mapping: inpmat for input matrix or near for nearest-grid.
+ROFFTAG="test-1deg"                            # Runoff-grid identifier used in both matrix filenames.
+INPDIM="inpdim_${ROFFTAG}.txt"                 # Runoff-grid dimensions file derived from ROFFTAG.
+INPMAT="inpmat_${ROFFTAG}.bin"                 # Runoff input matrix file derived from ROFFTAG.
+CROFBIN="../data/ELSE_GPCC_clm-1981-2010.one"  # Annual-mean runoff input [mm/s], relative to the map root.
 # Source: Kim et al. (2009), https://doi.org/10.1029/2009GL039006
 
-# Channel cross-section coefficients from the standard workflow.
-HC=0.1
-HP=0.50
-HO=0.00
-HMIN=1.0
-WC=2.50
-WP=0.60
-WO=0.00
-WMIN=5.0
+# Channel cross-sections use H=max(HMIN,HC*Q**HP+HO) and W=max(WMIN,WC*Q**WP+WO), in m.
+HC=0.1    # Depth coefficient [m/(m3/s)^HP].
+HP=0.50   # Depth power-law exponent (dimensionless).
+HO=0.00   # Depth offset [m].
+HMIN=1.0  # Minimum channel depth [m].
+WC=2.50   # Width coefficient [m/(m3/s)^WP].
+WP=0.60   # Width power-law exponent (dimensionless).
+WO=0.00   # Width offset [m].
+WMIN=5.0  # Minimum channel width [m].
 
 # ----------------------------------------------------------------------
 # User settings end here. Program paths and processing steps follow.
 # ----------------------------------------------------------------------
 
-# Keep the script name and current step for the failure summary below.
+# ${0##*/} removes the directory portion of the script path for readable messages.
 SCRIPT_NAME=${0##*/}
 STEP="Prepare channel-parameter workflow"
-# On exit, report failures and return the original status; signals use standard nonzero statuses.
+# The exit trap reports failures and preserves status; signal traps use standard nonzero statuses.
 trap '
     EXIT_STATUS=$?
     trap - 0

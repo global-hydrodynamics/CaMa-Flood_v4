@@ -2,6 +2,7 @@
 # Copy compiled analysis executables from the shared code directory beside this toolkit.
 set -eu
 
+# Command substitution stores the resolved path; CDPATH= keeps cd output predictable.
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 
 # ----------------------------------------------------------------------
@@ -33,11 +34,13 @@ printf '==================================================\n\n'
 
 COPIED=0
 set --
+# The shell glob expands to matching names; the checks keep only regular executable files.
 for SRC in "$CODE_DIR"/analysis_*
 do
     [ -f "$SRC" ] && [ -x "$SRC" ] || continue
 
     cp -p "$SRC" "$SCRIPT_DIR/"
+    # ${SRC##*/} keeps only the executable filename for the copied-file listing.
     set -- "$@" "$SCRIPT_DIR/${SRC##*/}"
     COPIED=$((COPIED + 1))
 done

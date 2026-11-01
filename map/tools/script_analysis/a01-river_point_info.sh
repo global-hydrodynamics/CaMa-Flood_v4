@@ -5,21 +5,22 @@
 # Output: terminal text, or REPORT_FILE when configured.
 set -eu
 
+# Command substitution stores the resolved path; CDPATH= keeps cd output predictable.
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 
-# User settings: xy coordinates are one-based Fortran indices; lat/lon values are degrees.
-QUERY_MODE=xy
-IX=62
-IY=93
-LAT=11.579
-LON=104.946
-REPORT_FILE=""
+# Choose a query mode and location; grid indices are one-based, coordinates are degrees.
+QUERY_MODE=xy   # Query type: xy for grid indices or latlon for geographic coordinates.
+IX=62           # CaMa-Flood grid column for xy mode.
+IY=93           # CaMa-Flood grid row for xy mode.
+LAT=11.579      # Latitude for latlon mode (degrees north).
+LON=104.946     # Longitude for latlon mode (degrees east).
+REPORT_FILE=""  # Optional output text path; empty prints the report to the terminal.
 
 # ----------------------------------------------------------------------
 # User settings end here. Program paths and processing steps follow.
 # ----------------------------------------------------------------------
 
-# Quote report paths in the copyable command printed below.
+# The sed expression escapes apostrophes so printed paths can be pasted into a shell.
 quote_shell_arg() {
     printf "'"
     printf '%s' "$1" | sed "s/'/'\\\\''/g"

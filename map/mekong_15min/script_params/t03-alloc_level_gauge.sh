@@ -5,22 +5,24 @@
 set -eu
 
 # Paths
+# Command substitution stores the resolved path; CDPATH= keeps cd output predictable.
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 MAP_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd -P)
 CODE_DIR=$(CDPATH= cd "$SCRIPT_DIR/../../tools/code" && pwd -P)
 
-# User settings
-GAUGE_IN="../../data/MLIT_LevelGauge_allocated.csv"
-GAUGE_OUT="$MAP_DIR/MLIT_levelgauge.txt"
-HIRES_TAG="1min"
+# Water-level gauge allocation input and map-root output.
+GAUGE_IN="../../data/MLIT_LevelGauge_allocated.csv"  # MERIT Hydro-preallocated MLIT level-gauge table.
+GAUGE_OUT="$MAP_DIR/MLIT_levelgauge.txt"             # CaMa-Flood level-gauge table written in the map root.
+HIRES_TAG="1min"                                     # High-resolution map directory tag (for example, 1min or 15sec).
 
 # ----------------------------------------------------------------------
 # User settings end here. Program paths and processing steps follow.
 # ----------------------------------------------------------------------
 
+# ${0##*/} removes the directory portion of the script path for readable messages.
 SCRIPT_NAME=${0##*/}
 STEP="Prepare level-gauge allocation"
-# Report the failed stage with the original command status.
+# The exit trap reports the failed stage and preserves the original command status.
 trap '
     EXIT_STATUS=$?
     trap - 0

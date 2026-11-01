@@ -4,20 +4,21 @@
 # Inputs: params.txt, nextxy.bin, uparea.bin, elevtn.bin, and lonlat.bin.
 set -eu
 
+# Command substitution stores the resolved path; CDPATH= keeps cd output predictable.
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 
-# User settings: WEST EAST SOUTH NORTH in degrees; this rectangle covers Mekong.
-WEST=90
-EAST=110
-SOUTH=5
-NORTH=35
-OUTPUT_FILE="$SCRIPT_DIR/../river_node_latlon_${WEST}_${EAST}_${SOUTH}_${NORTH}.txt"
+# Geographic selection rectangle; bounds are in degrees.
+WEST=90                                                                               # Western longitude boundary.
+EAST=110                                                                              # Eastern longitude boundary.
+SOUTH=5                                                                               # Southern latitude boundary.
+NORTH=35                                                                              # Northern latitude boundary.
+OUTPUT_FILE="$SCRIPT_DIR/../river_node_latlon_${WEST}_${EAST}_${SOUTH}_${NORTH}.txt"  # Text output path; includes the selected bounds in its filename.
 
 # ----------------------------------------------------------------------
 # User settings end here. Program paths and processing steps follow.
 # ----------------------------------------------------------------------
 
-# Quote the output path in the copyable command printed below.
+# The sed expression escapes apostrophes so printed paths can be pasted into a shell.
 quote_shell_arg() {
     printf "'"
     printf '%s' "$1" | sed "s/'/'\\\\''/g"

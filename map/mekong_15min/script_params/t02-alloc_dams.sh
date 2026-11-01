@@ -5,24 +5,26 @@
 set -eu
 
 # Paths
+# Command substitution stores the resolved path; CDPATH= keeps cd output predictable.
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 MAP_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd -P)
 CODE_DIR=$(CDPATH= cd "$SCRIPT_DIR/../../tools/code" && pwd -P)
 
-# User settings
-DAM_IN="../../data/GRanD_allocated.csv"
-DAM_RIVER_OUT="$MAP_DIR/GRanD_river.txt"
-DAM_SMALL_OUT="$MAP_DIR/GRanD_small.txt"
-DAM_ERROR_OUT="$MAP_DIR/GRanD_error.txt"
-HIRES_TAG="1min"
+# Dam allocation input and map-root output tables; input path is relative to script_params/.
+DAM_IN="../../data/GRanD_allocated.csv"   # MERIT Hydro-preallocated GRanD reservoir table.
+DAM_RIVER_OUT="$MAP_DIR/GRanD_river.txt"  # Output table for dams mapped to the river network.
+DAM_SMALL_OUT="$MAP_DIR/GRanD_small.txt"  # Output table for dams classified as small by the legacy rule.
+DAM_ERROR_OUT="$MAP_DIR/GRanD_error.txt"  # Output table for dams that could not be mapped.
+HIRES_TAG="1min"                          # High-resolution map directory tag (for example, 1min or 15sec).
 
 # ----------------------------------------------------------------------
 # User settings end here. Program paths and processing steps follow.
 # ----------------------------------------------------------------------
 
+# ${0##*/} removes the directory portion of the script path for readable messages.
 SCRIPT_NAME=${0##*/}
 STEP="Prepare dam-allocation workflow"
-# Report the failed stage with the original command status.
+# The exit trap reports the failed stage and preserves the original command status.
 trap '
     EXIT_STATUS=$?
     trap - 0

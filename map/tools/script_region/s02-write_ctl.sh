@@ -14,8 +14,9 @@ Usage: ./s02-write_ctl.sh [--dry-run] [--no-overwrite | --overwrite]
 EOF
 }
 
-DRY_RUN=0
-OVERWRITE=1
+# These internal flags are set by the command-line options in usage().
+DRY_RUN=0    # Set to 1 by --dry-run.
+OVERWRITE=1  # Set to 0 by --no-overwrite; existing CTLs are replaced by default.
 for OPTION in "$@"
 do
   case "$OPTION" in
@@ -32,6 +33,7 @@ done
 # ----------------------------------------------------------------------
 
 # Like s01, keep the map-local script directory as the working directory.
+# Command substitution stores the resolved path; CDPATH= keeps cd output predictable.
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd) || exit 1
 cd "$SCRIPT_DIR" || exit 1
 
@@ -42,6 +44,7 @@ if [ ! -f "$GENERATOR" ]; then
 fi
 
 STATUS=0
+# set -- rebuilds the argument list passed to each generator invocation.
 set --
 [ "$DRY_RUN" -eq 0 ] || set -- "$@" --dry-run
 [ "$OVERWRITE" -eq 0 ] || set -- "$@" --overwrite
@@ -57,6 +60,7 @@ printf '\n'
 for LOCATION in ../*/location.txt
 do
   [ -f "$LOCATION" ] || continue
+  # Remove the /location.txt suffix to get the high-resolution map directory.
   MAP_DIR=${LOCATION%/location.txt}
   printf '\n==================================================\n'
   printf '[STEP 2/2] Generate CTLs for high-resolution map %s\n' "$MAP_DIR"
@@ -67,6 +71,7 @@ done
 
 if [ "$STATUS" -eq 0 ]; then
   printf '\n==================================================\n'
+  # ${0##*/} prints only this script's filename in the success message.
   printf '[SUCCESS] %s\n' "${0##*/}"
   printf '==================================================\n'
 fi

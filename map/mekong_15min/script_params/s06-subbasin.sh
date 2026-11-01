@@ -6,21 +6,22 @@
 set -eu
 
 # Paths
+# Command substitution stores the resolved path; CDPATH= keeps cd output predictable.
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 MAP_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd -P)
 CODE_DIR=$(CDPATH= cd "$SCRIPT_DIR/../../tools/code" && pwd -P)
 
-# Configuration: this is a practical sample setting, not a scientifically calibrated threshold.
-AREA_THRESHOLD_KM2=30000
+# Example segmentation threshold; this is not a universal scientific calibration.
+AREA_THRESHOLD_KM2=30000  # Upstream-area threshold for subbasin segmentation (km2).
 
 # ----------------------------------------------------------------------
 # User settings end here. Program paths and processing steps follow.
 # ----------------------------------------------------------------------
 
-# Keep the script name and current step for the failure summary below.
+# ${0##*/} removes the directory portion of the script path for readable messages.
 SCRIPT_NAME=${0##*/}
 STEP="Prepare subbasin segmentation"
-# On exit, report failures and return the original status; signals use standard nonzero statuses.
+# The exit trap reports failures and preserves status; signal traps use standard nonzero statuses.
 trap '
     EXIT_STATUS=$?
     trap - 0

@@ -9,23 +9,24 @@
 set -eu
 
 # Paths
+# Command substitution stores the resolved path; CDPATH= keeps cd output predictable.
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 MAP_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd -P)
 CODE_DIR=$(CDPATH= cd "$SCRIPT_DIR/../../tools/code" && pwd -P)
 
-# Configuration
-MPIMODE=normal                 # normal uses 6%; MaxMPI uses 3% for basin merging
-MPI_COUNTS="4 8 16"
-DEFAULT_MPI=16
+# MPI partition configuration for this map.
+MPIMODE=normal       # Basin merging mode: normal (6%) or MaxMPI (3%).
+MPI_COUNTS="4 8 16"  # Requested number of MPI regions; separate values with spaces.
+DEFAULT_MPI=16       # Partition count used for the connectivity analysis; include it above.
 
 # ----------------------------------------------------------------------
 # User settings end here. Program paths and processing steps follow.
 # ----------------------------------------------------------------------
 
-# Keep the script name and current step for the failure summary below.
+# ${0##*/} removes the directory portion of the script path for readable messages.
 SCRIPT_NAME=${0##*/}
 STEP="Prepare MPI map-preprocessing workflow"
-# On exit, remove the temporary basin map, report failures, and return the original status.
+# The exit trap removes the temporary basin map, reports failures, and preserves status. ${TEMP_BASIN:-} is empty if the path was not set before an early exit.
 trap '
     EXIT_STATUS=$?
     if [ -n "${TEMP_BASIN:-}" ]; then
@@ -68,6 +69,7 @@ else
 fi
 
 # 2. Assign the merged basins to each requested number of regions.
+# Split the space-separated configuration into one MPI count per loop.
 for N in $MPI_COUNTS; do
     STEP="Generate mpireg-$N.bin"
     printf '\n==================================================\n[STEP 2/3] Generate mpireg-%s.bin\n==================================================\n\n' "$N"

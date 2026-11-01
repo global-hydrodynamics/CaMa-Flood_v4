@@ -9,21 +9,22 @@
 set -eu
 
 # Paths
+# Command substitution stores the resolved path; CDPATH= keeps cd output predictable.
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 MAP_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd -P)
 CODE_DIR=$(CDPATH= cd "$SCRIPT_DIR/../../tools/code" && pwd -P)
 
-# Configuration: select the high-resolution map explicitly; no auto-detection.
-HIRES_TAG=${HIRES_TAG:-1min}
+# Select the high-resolution map used to estimate permanent-water area.
+HIRES_TAG="1min"  # Map directory tag containing location.txt (default: 1min).
 
 # ----------------------------------------------------------------------
 # User settings end here. Program paths and processing steps follow.
 # ----------------------------------------------------------------------
 
-# Keep the script name and current step for the failure summary below.
+# ${0##*/} removes the directory portion of the script path for readable messages.
 SCRIPT_NAME=${0##*/}
 STEP="Prepare permanent-water area calculation"
-# On exit, report failures and return the original status; signals use standard nonzero statuses.
+# The exit trap reports failures and preserves status; signal traps use standard nonzero statuses.
 trap '
     EXIT_STATUS=$?
     trap - 0

@@ -4,22 +4,21 @@ set -eu
 # Run from the map-local script_region directory. Regionalization programs use
 # paths relative to this working directory.
 
-# Configure the source map and requested regional bounds here.
-# SOURCE is relative to this directory or an absolute path; keep its trailing slash.
-SOURCE="../../glb_15min/"
-WEST="90.0"
-EAST="110.0"
-SOUTH="5.0"
-NORTH="35.0"
+# Regional source map and requested geographic extent.
+SOURCE="../../glb_15min/"  # Source map directory relative to the map-local script_region CWD; keep trailing /.
+WEST="90.0"                # Western boundary (degrees longitude).
+EAST="110.0"               # Eastern boundary (degrees longitude).
+SOUTH="5.0"                # Southern boundary (degrees latitude).
+NORTH="35.0"               # Northern boundary (degrees latitude).
 
 # ----------------------------------------------------------------------
 # User settings end here. Program paths and processing steps follow.
 # ----------------------------------------------------------------------
 
-# Keep the script name and current step for the failure summary below.
+# ${0##*/} removes the directory portion of the script path for readable messages.
 SCRIPT_NAME=${0##*/}
 STEP="Prepare regional map workflow"
-# On exit, report failures and return the original status; signals use standard nonzero statuses.
+# The exit trap reports failures and preserves status; signal traps use standard nonzero statuses.
 trap '
     EXIT_STATUS=$?
     trap - 0
@@ -70,6 +69,7 @@ printf '\n==================================================\n[STEP 4/6] Derive 
 "$EXEC_SET_MAP"
 
 # Crop each listed high-resolution source dataset when location.txt exists.
+# Split the supported source tags into one high-resolution directory per loop.
 HDIRS="1min 30sec 15sec 3sec"
 for HIRES in $HDIRS
 do

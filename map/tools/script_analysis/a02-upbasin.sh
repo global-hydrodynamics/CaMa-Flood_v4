@@ -6,23 +6,24 @@
 set -eu
 
 # Paths
+# Command substitution stores the resolved path; CDPATH= keeps cd output predictable.
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 MAP_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd -P)
 
-# Configuration: use one-based Fortran grid coordinates and choose a nonstandard output name.
-IX=62
-IY=93
-OUTPUT_FILE="$MAP_DIR/analysis_upbasin_${IX}_${IY}.bin"
-REPORT_FILE="$MAP_DIR/analysis_upbasin_${IX}_${IY}.txt"
+# Select a one-based CaMa-Flood river-grid cell and separate analysis outputs from standard products.
+IX=62                                                    # CaMa-Flood grid column (one-based Fortran index).
+IY=93                                                    # CaMa-Flood grid row (one-based Fortran index).
+OUTPUT_FILE="$MAP_DIR/analysis_upbasin_${IX}_${IY}.bin"  # Output path for the int32 upstream-basin raster.
+REPORT_FILE="$MAP_DIR/analysis_upbasin_${IX}_${IY}.txt"  # Text report path; the executable output is redirected here.
 
 # ----------------------------------------------------------------------
 # User settings end here. Program paths and processing steps follow.
 # ----------------------------------------------------------------------
 
-# Keep the script name and current step for the failure summary below.
+# ${0##*/} removes the directory portion of the script path for readable messages.
 SCRIPT_NAME=${0##*/}
 STEP="Prepare upstream-basin analysis"
-# On exit, report failures and return the original status; signals use standard nonzero statuses.
+# The exit trap reports failures and preserves status; signal traps use standard nonzero statuses.
 trap '
     EXIT_STATUS=$?
     trap - 0
@@ -43,7 +44,7 @@ trap 'exit 143' TERM
 # End of error handling.
 # ----------------------------------------------------------------------
 
-# Quote output paths in the copyable command printed below.
+# The sed expression escapes apostrophes so printed paths can be pasted into a shell.
 quote_shell_arg() {
     printf "'"
     printf '%s' "$1" | sed "s/'/'\\\\''/g"

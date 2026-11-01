@@ -7,21 +7,22 @@
 set -eu
 
 # Paths
+# Command substitution stores the resolved path; CDPATH= keeps cd output predictable.
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 MAP_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd -P)
 CODE_DIR=$(CDPATH= cd "$SCRIPT_DIR/../../tools/code" && pwd -P)
 
-# User settings: choose the GRDC allocation table if it is not in the map root.
-GRDC_ALLOC="$MAP_DIR/GRDC_alloc.txt"
+# GRDC allocation table used to select a station for the upstream-basin example.
+GRDC_ALLOC="$MAP_DIR/GRDC_alloc.txt"  # Map-local GRDC_alloc.txt; change this path to use another table.
 
 # ----------------------------------------------------------------------
 # User settings end here. Program paths and processing steps follow.
 # ----------------------------------------------------------------------
 
-# Keep the script name and current step for the failure summary below.
+# ${0##*/} removes the directory portion of the script path for readable messages.
 SCRIPT_NAME=${0##*/}
 STEP="Locate the GRDC allocation table"
-# On exit, report failures and return the original status; signals use standard nonzero statuses.
+# The exit trap reports failures and preserves status; signal traps use standard nonzero statuses.
 trap '
     EXIT_STATUS=$?
     trap - 0
@@ -55,6 +56,7 @@ fi
 # GRDC_alloc.txt has a fixed column layout; strict > keeps the first station on ties.
 STEP="Select the largest valid allocated GRDC station"
 printf '\n==================================================\n[STEP 1/3] Select the largest valid allocated GRDC station\n==================================================\n\n'
+# Command substitution captures the selected station fields printed by AWK.
 if ! SELECTED=$(awk '
 NR == 1 { next }
 $8 != -9 && $9 > 0 && $10 > 0 && $5 > max {
@@ -71,6 +73,7 @@ END {
     exit 1
 fi
 
+# AWK returns ID, IX, IY, and area as four whitespace-separated fields.
 set -- $SELECTED
 GRDC_ID=$1
 IX=$2

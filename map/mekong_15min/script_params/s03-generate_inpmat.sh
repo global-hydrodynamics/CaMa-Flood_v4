@@ -7,30 +7,31 @@
 set -eu
 
 # Paths
+# Command substitution stores the resolved path; CDPATH= keeps cd output predictable.
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 MAP_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd -P)
 CODE_DIR=$(CDPATH= cd "$SCRIPT_DIR/../../tools/code" && pwd -P)
 
-# Configuration: these values describe the runoff grid, not the map grid.
-ROFFTAG="${ROFFTAG:-test-15min_nc}"
-GRSIZEIN=0.25
-WESTIN=-180.0
-EASTIN=180.0
-NORTHIN=90.0
-SOUTHIN=-60.0
-OLAT="NtoS" # NtoS: north row first; StoN: south row first.
+# Runoff grid and output tag; these describe runoff data, not the CaMa-Flood map grid.
+ROFFTAG="test-15min_nc"  # Runoff-grid identifier for the paired output filenames.
+GRSIZEIN=0.25            # Runoff grid-cell size (degrees).
+WESTIN=-180.0            # Western runoff-grid boundary (degrees longitude).
+EASTIN=180.0             # Eastern runoff-grid boundary (degrees longitude).
+NORTHIN=90.0             # Northern runoff-grid boundary (degrees latitude).
+SOUTHIN=-60.0            # Southern runoff-grid boundary (degrees latitude).
+OLAT="NtoS"              # Runoff latitude row order: NtoS or StoN.
 
-# HIRES_TAG selects map-resolution input and is distinct from ROFFTAG.
-HIRES_TAG=${HIRES_TAG:-}
+# High-resolution map selection is independent of the runoff-grid tag.
+HIRES_TAG=""  # Map directory tag; empty selects an available 1min or 15sec grid.
 
 # ----------------------------------------------------------------------
 # User settings end here. Program paths and processing steps follow.
 # ----------------------------------------------------------------------
 
-# Keep the script name and current step for the failure summary below.
+# ${0##*/} removes the directory portion of the script path for readable messages.
 SCRIPT_NAME=${0##*/}
 STEP="Select high-resolution map input"
-# On exit, report failures and return the original status; signals use standard nonzero statuses.
+# The exit trap reports failures and preserves status; signal traps use standard nonzero statuses.
 trap '
     EXIT_STATUS=$?
     trap - 0

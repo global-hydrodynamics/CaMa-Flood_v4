@@ -3,6 +3,7 @@
 # The executable reads map inputs from the map root, so this example runs there.
 set -eu
 
+# Command substitution stores the resolved path; CDPATH= keeps cd output predictable.
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 MAP_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd -P)
 
@@ -12,6 +13,8 @@ if [ "$#" -lt 1 ] || [ "$#" -gt 3 ] || [ "$#" -eq 2 ]; then
     exit 2
 fi
 
+# The second and third positional arguments are optional; :- supplies an empty default.
+# Provide a region-map filename and, optionally, --csv plus a dropped-path output filename.
 REGION_MAP=$1
 CSV_OPTION=${2:-}
 CSV_FILE=${3:-}
@@ -20,7 +23,7 @@ CSV_FILE=${3:-}
 # User settings end here. Program paths and processing steps follow.
 # ----------------------------------------------------------------------
 
-# Quote input paths in the copyable command printed below.
+# The sed expression escapes apostrophes so printed paths can be pasted into a shell.
 quote_shell_arg() {
     printf "'"
     printf '%s' "$1" | sed "s/'/'\\\\''/g"
@@ -32,6 +35,7 @@ if [ "$#" -eq 3 ] && [ "$CSV_OPTION" != "--csv" ]; then
     exit 2
 fi
 
+# Keep absolute paths; resolve relative filenames from the map root.
 case "$REGION_MAP" in
     /*) ;;
     *) REGION_MAP="$MAP_DIR/$REGION_MAP" ;;

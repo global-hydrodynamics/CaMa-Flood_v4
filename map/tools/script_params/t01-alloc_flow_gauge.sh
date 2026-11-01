@@ -5,23 +5,25 @@
 set -eu
 
 # Paths
+# Command substitution stores the resolved path; CDPATH= keeps cd output predictable.
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 MAP_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd -P)
 CODE_DIR=$(CDPATH= cd "$SCRIPT_DIR/../../tools/code" && pwd -P)
 
-# User settings
-GAUGE_IN="../../data/GRDC_allocated.csv"
-GAUGE_OUT="$MAP_DIR/GRDC_alloc.txt"
-GAUGE_MODE="multi"
-HIRES_TAG="1min"
+# Flow-gauge allocation inputs and outputs; input path is relative to script_params/.
+GAUGE_IN="../../data/GRDC_allocated.csv"  # MERIT Hydro-preallocated GRDC station table.
+GAUGE_OUT="$MAP_DIR/GRDC_alloc.txt"       # CaMa-Flood allocation table written in the map root.
+GAUGE_MODE="multi"                        # Allocation mode: multi or single.
+HIRES_TAG="1min"                          # High-resolution map directory tag (for example, 1min or 15sec).
 
 # ----------------------------------------------------------------------
 # User settings end here. Program paths and processing steps follow.
 # ----------------------------------------------------------------------
 
+# ${0##*/} removes the directory portion of the script path for readable messages.
 SCRIPT_NAME=${0##*/}
 STEP="Prepare flow-gauge allocation"
-# Report the failed stage with the original command status.
+# The exit trap reports the failed stage and preserves the original command status.
 trap '
     EXIT_STATUS=$?
     trap - 0

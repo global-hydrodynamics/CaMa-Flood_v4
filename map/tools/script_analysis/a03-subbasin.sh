@@ -6,23 +6,24 @@
 set -eu
 
 # Paths
+# Command substitution stores the resolved path; CDPATH= keeps cd output predictable.
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 MAP_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd -P)
 
-# Configuration: this output directory keeps exploratory products separate from standard map products.
-AREA_THRESHOLD_KM2=50000
-OUTPUT_DIR="$MAP_DIR/analysis"
-SUBBSN_OUTPUT="$OUTPUT_DIR/subbsn_${AREA_THRESHOLD_KM2}km2.bin"
-SUBCOL_OUTPUT="$OUTPUT_DIR/subcol_${AREA_THRESHOLD_KM2}km2.bin"
+# Exploratory subbasin outputs are kept separate from standard map products.
+AREA_THRESHOLD_KM2=50000                                         # Example upstream-area threshold (km2); not calibrated universally.
+OUTPUT_DIR="$MAP_DIR/analysis"                                   # Directory for exploratory outputs under the map root.
+SUBBSN_OUTPUT="$OUTPUT_DIR/subbsn_${AREA_THRESHOLD_KM2}km2.bin"  # Output path for subbasin IDs, named with the threshold.
+SUBCOL_OUTPUT="$OUTPUT_DIR/subcol_${AREA_THRESHOLD_KM2}km2.bin"  # Output path for display colors, named with the threshold.
 
 # ----------------------------------------------------------------------
 # User settings end here. Program paths and processing steps follow.
 # ----------------------------------------------------------------------
 
-# Keep the script name and current step for the failure summary below.
+# ${0##*/} removes the directory portion of the script path for readable messages.
 SCRIPT_NAME=${0##*/}
 STEP="Prepare exploratory subbasin outputs"
-# On exit, report failures and return the original status; signals use standard nonzero statuses.
+# The exit trap reports failures and preserves status; signal traps use standard nonzero statuses.
 trap '
     EXIT_STATUS=$?
     trap - 0
@@ -43,7 +44,7 @@ trap 'exit 143' TERM
 # End of error handling.
 # ----------------------------------------------------------------------
 
-# Quote output paths in the copyable command printed below.
+# The sed expression escapes apostrophes so printed paths can be pasted into a shell.
 quote_shell_arg() {
     printf "'"
     printf '%s' "$1" | sed "s/'/'\\\\''/g"

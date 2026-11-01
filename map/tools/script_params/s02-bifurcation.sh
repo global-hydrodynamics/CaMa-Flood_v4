@@ -9,25 +9,26 @@
 set -eu
 
 # Paths
+# Command substitution stores the resolved path; CDPATH= keeps cd output predictable.
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 MAP_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd -P)
 CODE_DIR=$(CDPATH= cd "$SCRIPT_DIR/../../tools/code" && pwd -P)
 
-# Configuration
-BIFLAYER=5
-ROFFTAG="${ROFFTAG:-test-1deg}"
-INPDIM="inpdim_${ROFFTAG}.txt"
-RIVHGT="rivhgt.bin"
-BIFPRM="bifprm.txt"
+# Bifurcation inputs and runoff-grid matrix selection.
+BIFLAYER=5                      # Number of bifori.txt layers to process (1–10).
+ROFFTAG="test-1deg"             # Runoff-grid identifier used to derive INPDIM.
+INPDIM="inpdim_${ROFFTAG}.txt"  # Runoff-grid dimensions file derived from ROFFTAG.
+RIVHGT="rivhgt.bin"             # Channel-depth map used to estimate bifurcation depth.
+BIFPRM="bifprm.txt"             # Bifurcation parameter table written by this workflow.
 
 # ----------------------------------------------------------------------
 # User settings end here. Program paths and processing steps follow.
 # ----------------------------------------------------------------------
 
-# Keep the script name and current step for the failure summary below.
+# ${0##*/} removes the directory portion of the script path for readable messages.
 SCRIPT_NAME=${0##*/}
 STEP="Check optional check_map argument"
-# On exit, report failures and return the original status; signals use standard nonzero statuses.
+# The exit trap reports failures and preserves status; signal traps use standard nonzero statuses.
 trap '
     EXIT_STATUS=$?
     trap - 0
@@ -53,6 +54,7 @@ EXEC_SETPARAM="$CODE_DIR/param_bif_set_params"
 EXEC_SETBASIN="$CODE_DIR/param_bif_set_basin"
 
 # Keep the optional diagnostic switch explicit.
+# ${1:-} is empty when no optional check_map argument was supplied.
 CHECK_MAP=${1:-}
 if [ "$#" -gt 1 ] || { [ -n "$CHECK_MAP" ] && [ "$CHECK_MAP" != check_map ]; }; then
     echo "Usage: $0 [check_map]" >&2
