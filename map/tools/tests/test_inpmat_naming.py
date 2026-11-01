@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import os
-import shutil
 import subprocess
 import tempfile
 import unittest
@@ -13,7 +12,7 @@ WRAPPER = ROOT / "map" / "tools" / "script_params" / "s03-generate_inpmat.sh"
 
 
 class InputMatrixNamingTests(unittest.TestCase):
-    def test_rofftag_derives_pair_and_hires_tag_selects_map(self) -> None:
+    def test_user_configured_rofftag_derives_pair_and_hires_tag_selects_map(self) -> None:
         with tempfile.TemporaryDirectory(prefix="cmf-inpmat-name-") as temporary:
             root = Path(temporary)
             map_root = root / "map" / "sample"
@@ -38,12 +37,16 @@ class InputMatrixNamingTests(unittest.TestCase):
             )
             program.chmod(0o755)
             script = script_dir / WRAPPER.name
-            shutil.copy2(WRAPPER, script)
+            script_text = WRAPPER.read_text(encoding="utf-8")
+            script_text = script_text.replace(
+                'ROFFTAG="test-15min_nc"', 'ROFFTAG="rainfall-025"'
+            ).replace('HIRES_TAG=""', 'HIRES_TAG="15sec"')
+            script.write_text(script_text, encoding="utf-8")
             script.chmod(0o755)
 
             result = subprocess.run(
                 [str(script)], cwd=root,
-                env={**os.environ, "ROFFTAG": "rainfall-025", "HIRES_TAG": "15sec"},
+                env=os.environ.copy(),
                 text=True, capture_output=True, check=False,
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

@@ -59,10 +59,6 @@
 ! ===============================================
       call getarg(1,tag)
 
-! Combine source high-resolution map areas for tag (for example, 1min)
-! into the selected regional extent; available layer files are read by area.
-! Load the regional crop metadata and use the requested high-resolution tag
-! to locate source layers and define the output pixel size and dimensions.
       rfile1='./dim_change.txt'
       open(11,file=rfile1,form='formatted')
       read(11,'(a)') global_dir
@@ -112,7 +108,6 @@
       nx=int( (east-west)  *cnum )      !!  hires output nx*ny
       ny=int( (north-south)*cnum )
 
-! Large high-resolution extents are processed as tiles (except 1min).
       isTile=0
       if( trim(tag)/='1min' )then
         if( nx>16000 .or. ny>16000)then
@@ -124,8 +119,7 @@
       print '(a16,4i8)' , 'nx ny dXX dYY ', nx, ny, dXX, dYY
 
 
-! For a non-tiled map, read each intersecting source area, place its pixels
-! into the regional arrays, and write the regional layers and location.txt.
+! ###### calculation for non-tiled hires map
       isDownXY=0
       isFdir=0
       if( isTile==0 )then
@@ -168,20 +162,6 @@
           allocate(downx0(nx0,ny0),downy0(nx0,ny0))
           allocate(lon0(nx0),lat0(ny0))
 
-! Initialize optional source layers to their missing values for this area.
-          catmZZ0=-9
-          catmZ100_0=-9
-          flwdir0=-9
-          flddif0=-9999.
-          grdare0=-9999.
-          hand0=-9999.
-          elevtn0=-9999.
-          uparea0=-9999.
-          rivwth0=-9999.
-          visual0=-9
-          downx0=-9999
-          downy0=-9999
-
           rfile1=trim(hires)//trim(area)//'.catmxy.bin'
           print *, trim(rfile1)
           open(21,file=rfile1,form='unformatted',access='direct',recl=2*nx0*ny0,status='old',iostat=ios)
@@ -190,10 +170,12 @@
             read(21,rec=2) catmYY0
             close(21)
           else
-            print *, 'ERROR: required catmxy area is missing; continue with missing values: ', trim(rfile1)
+            print *, '*******************'
+            print *, 'no data: ', rfile1
             goto 1000
           endif
 
+          isDownXY=0
           rfile1=trim(hires)//trim(area)//'.downxy.bin'
           print *, trim(rfile1)
           open(21,file=rfile1,form='unformatted',access='direct',recl=2*nx0*ny0,status='old',iostat=ios)
@@ -203,10 +185,10 @@
             read(21,rec=2) downy0
             close(21)
           else
-            call report_missing(rfile1)
-            isDownXY=1
+            isDownXY=0
           endif
 
+          isFdir=0
           rfile1=trim(hires)//trim(area)//'.flwdir.bin'
           print *, trim(rfile1)
           open(21,file=rfile1,form='unformatted',access='direct',recl=1*nx0*ny0,status='old',iostat=ios)
@@ -215,8 +197,7 @@
             read(21,rec=1) flwdir0
             close(21)
           else
-            call report_missing(rfile1)
-            isFdir=1
+            isFdir=0
           endif
 
           rfile1=trim(hires)//trim(area)//'.catmzz.bin'
@@ -224,8 +205,6 @@
           if( ios==0 )then
             read(21,rec=1) catmZZ0
             close(21)
-          else
-            call report_missing(rfile1)
           endif
 
           rfile1=trim(hires)//trim(area)//'.catmz100.bin'
@@ -233,8 +212,6 @@
           if( ios==0 )then
             read(21,rec=1) catmZ100_0
             close(21)
-          else
-            call report_missing(rfile1)
           endif
 
           rfile1=trim(hires)//trim(area)//'.flddif.bin'
@@ -242,8 +219,6 @@
           if( ios==0 )then
             read(21,rec=1) flddif0
             close(21)
-          else
-            call report_missing(rfile1)
           endif
 
           rfile1=trim(hires)//trim(area)//'.grdare.bin'
@@ -251,8 +226,6 @@
           if( ios==0 )then
             read(21,rec=1) grdare0
             close(21)
-          else
-            call report_missing(rfile1)
           endif
 
           rfile1=trim(hires)//trim(area)//'.hand.bin'
@@ -260,8 +233,6 @@
           if( ios==0 )then
             read(21,rec=1) hand0
             close(21)
-          else
-            call report_missing(rfile1)
           endif
 
           rfile1=trim(hires)//trim(area)//'.elevtn.bin'
@@ -269,8 +240,6 @@
           if( ios==0 )then
             read(21,rec=1) elevtn0
             close(21)
-          else
-            call report_missing(rfile1)
           endif
 
           rfile1=trim(hires)//trim(area)//'.uparea.bin'
@@ -278,8 +247,6 @@
           if( ios==0 )then
             read(21,rec=1) uparea0
             close(21)
-          else
-            call report_missing(rfile1)
           endif
 
           rfile1=trim(hires)//trim(area)//'.rivwth.bin'
@@ -287,8 +254,6 @@
           if( ios==0 )then
             read(21,rec=1) rivwth0
             close(21)
-          else
-            call report_missing(rfile1)
           endif
 
           rfile1=trim(hires)//trim(area)//'.visual.bin'
@@ -296,8 +261,6 @@
           if( ios==0 )then
             read(21,rec=1) visual0
             close(21)
-          else
-            call report_missing(rfile1)
           endif
 
           do ix0=1, nx0
@@ -436,7 +399,6 @@
 
 !###########################################################
 
-! For large domains, process and write geographic tiles instead of one array.
       if( isTile==1 )then        !! Tiles High Resolution Data
         if( trim(tag)=="30sec" )then
           cnum=120
@@ -495,31 +457,14 @@ print *, nlon, nlat
               close(21)
               nloc=nloc+1
             else
-              print *, 'ERROR: required catmxy tile is missing; skip: ', trim(rfile1)
               goto 3000
             endif
-
-! Reset optional layers for every tile so a missing file cannot reuse
-! uninitialized values or data left over from the previous tile.
-            catmZZ=-9
-            catmZ100=-9
-            flddif=-9999.
-            hand=-9999.
-            elevtn=-9999.
-            uparea=-9999.
-            rivwth=-9999.
-            visual=-9
-            downx=-9999
-            downy=-9999
-            flwdir=-9
 
             rfile1=trim(hires)//trim(CCname)//'.catmzz.bin'
             open(21,file=rfile1,form='unformatted',access='direct',recl=1*nx*ny,status='old',iostat=ios)
             if( ios==0 )then
               read(21,rec=1) catmZZ
               close(21)
-            else
-              call report_missing(rfile1)
             endif
 
             rfile1=trim(hires)//trim(CCname)//'.catmz100.bin'
@@ -527,8 +472,6 @@ print *, nlon, nlat
             if( ios==0 )then
               read(21,rec=1) catmZ100
               close(21)
-            else
-              call report_missing(rfile1)
             endif
 
             rfile1=trim(hires)//trim(CCname)//'.flddif.bin'
@@ -536,8 +479,6 @@ print *, nlon, nlat
             if( ios==0 )then
               read(21,rec=1) flddif
               close(21)
-            else
-              call report_missing(rfile1)
             endif
 
             rfile1=trim(hires)//trim(CCname)//'.hand.bin'
@@ -545,8 +486,6 @@ print *, nlon, nlat
             if( ios==0 )then
               read(21,rec=1) hand
               close(21)
-            else
-              call report_missing(rfile1)
             endif
 
             rfile1=trim(hires)//trim(CCname)//'.elevtn.bin'
@@ -554,8 +493,6 @@ print *, nlon, nlat
             if( ios==0 )then
               read(21,rec=1) elevtn
               close(21)
-            else
-              call report_missing(rfile1)
             endif
 
             rfile1=trim(hires)//trim(CCname)//'.uparea.bin'
@@ -563,8 +500,6 @@ print *, nlon, nlat
             if( ios==0 )then
               read(21,rec=1) uparea
               close(21)
-            else
-              call report_missing(rfile1)
             endif
 
             rfile1=trim(hires)//trim(CCname)//'.rivwth.bin'
@@ -572,8 +507,6 @@ print *, nlon, nlat
             if( ios==0 )then
               read(21,rec=1) rivwth
               close(21)
-            else
-              call report_missing(rfile1)
             endif
 
             rfile1=trim(hires)//trim(CCname)//'.visual.bin'
@@ -581,10 +514,9 @@ print *, nlon, nlat
             if( ios==0 )then
               read(21,rec=1) visual
               close(21)
-            else
-              call report_missing(rfile1)
             endif
 
+            isDownXY=0
             rfile1=trim(hires)//trim(CCname)//'.downxy.bin'
             print *, trim(rfile1)
             open(21,file=rfile1,form='unformatted',access='direct',recl=2*nx*ny,status='old',iostat=ios)
@@ -594,10 +526,10 @@ print *, nlon, nlat
               read(21,rec=2) downy
               close(21)
             else
-              call report_missing(rfile1)
-              isDownXY=1
+              isDownXY=0
             endif
   
+            isFdir=0
             rfile1=trim(hires)//trim(CCname)//'.flwdir.bin'
             print *, trim(rfile1)
             open(21,file=rfile1,form='unformatted',access='direct',recl=1*nx*ny,status='old',iostat=ios)
@@ -606,8 +538,7 @@ print *, nlon, nlat
               read(21,rec=1) flwdir
               close(21)
             else
-              call report_missing(rfile1)
-              isFdir=1
+              isFdir=0
             endif
 
             do iy=1, ny
@@ -718,14 +649,6 @@ CONTAINS
 !+
 !+
 !+
-      subroutine report_missing(filename)
-! ===============================================
-      implicit none
-      character*(*) :: filename
-! ===============================================
-      print *, 'ERROR: could not open optional layer; continuing with missing values: ', trim(filename)
-      end subroutine report_missing
-
       subroutine set_name(lon,lat,cname)
 ! ===============================================
       implicit none

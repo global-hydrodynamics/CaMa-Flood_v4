@@ -305,7 +305,7 @@ class AnalysisMigrationTests(unittest.TestCase):
         )
         outputs = []
         for command in commands:
-            result = run([str(analysis / command[0]), *command[1:]], analysis)
+            result = run([str(analysis / "code" / command[0]), *command[1:]], analysis)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             outputs.append(result.stdout)
         self.assertIn("Point Information", outputs[0])
@@ -354,7 +354,7 @@ class AnalysisMigrationTests(unittest.TestCase):
         (map_dir / "GRDC_alloc.txt").write_text("ID lat lon\n", encoding="ascii")
         result = run([str(script)], self.root)
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("missing required column", result.stderr)
+        self.assertIn("contains no valid allocated station", result.stderr)
 
     def test_grdc_selection_filters_invalid_rows_and_keeps_first_tie(self) -> None:
         map_dir, params = self.make_map("grdc-tie")

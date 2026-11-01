@@ -31,7 +31,7 @@ The GitHub source checkout and map data are separate concerns. Download or other
 
 ## Quick Start
 
-The example below assumes a package or checkout root with `map/` and `adm/`, and a global source at `map/glb_15min/`. Replace the source path and bounds for your map.
+The example below assumes a package or checkout root with `map/` and `adm/`, and a global source at `map/glb_15min/`. The legacy script's built-in settings target CONUS from `glb_06min`; change the source path and bounds for the map you are preparing.
 
 ```sh
 cd map
@@ -64,11 +64,11 @@ The copy command in the Quick Start uses the package's ordinary source files. It
 Edit the settings near the beginning of `s01-regional_map.sh`:
 
 ```sh
-SOURCE="../../glb_15min/"
-WEST="90.0"
-EAST="110.0"
-SOUTH="5.0"
-NORTH="35.0"
+SOURCE="../../glb_06min/"
+WEST="-130.0"
+EAST="-60.0"
+SOUTH="20.0"
+NORTH="55.0"
 ```
 
 - `SOURCE` is the source map directory, relative to the current working directory or an absolute path. Keep the trailing slash: the Fortran program appends filenames directly to this value.
@@ -79,7 +79,7 @@ Run the script while your current directory is the map-local `src_region/`. The 
 
 Choose bounds inside the source map's coverage and on its grid boundaries, using the source resolution and longitude convention. The extraction code calculates grid indices from the source spacing and may adjust bounds close to a grid edge. It does not provide comprehensive validation for out-of-range, reversed, wrapped, or otherwise incompatible bounds. Do not assume that a region crossing the longitude wrap is supported. Confirm the resulting dimensions and bounds in `params.txt`.
 
-For example, the Mekong development domain uses a 15-minute parent map and bounds 90–110°E, 5–35°N. It is an example only; the same values are not appropriate for every source map.
+The committed Mekong development sample uses a separate v5 workflow, a 15-minute parent map, and bounds 90–110°E, 5–35°N. Those settings are not the defaults of this legacy v4 script and are not appropriate for every source map.
 
 ## Compile the tools
 

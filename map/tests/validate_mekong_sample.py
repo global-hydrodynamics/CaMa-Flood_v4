@@ -136,7 +136,12 @@ class MekongSampleTests(unittest.TestCase):
         dims["NY_HIRES"] = int(area[7])
 
         rows = registry_rows()
-        binary_paths = sorted(MAP.rglob("*.bin"))
+        # Analysis examples write user outputs under this ignored directory;
+        # validate only the distributed sample products, not those run results.
+        binary_paths = sorted(
+            path for path in MAP.rglob("*.bin")
+            if "out_analysis" not in path.relative_to(MAP).parts
+        )
         self.assertTrue(binary_paths, "no binary map products found")
         for path in binary_paths:
             relative = path.relative_to(MAP)

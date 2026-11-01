@@ -50,8 +50,6 @@
       integer                ::  icheck
 
 ! ==================================================
-! Read the source-map directory and requested west/east/south/north bounds.
-! The source params.txt supplies the grid size and global map dimensions.
       open(11,file=region_info,form='formatted')
       read(11,'(a)') global_dir       !!  global map directory
       read(11,*    ) west               !! regional map domain
@@ -83,7 +81,7 @@
       north2=north
       south2=south
 
-      !! Snap requested bounds to source-grid edges when they are not already aligned.
+      !! find optimum west, east, north, south, if the regionalized grid is offset from the original grid
       d1=1.e20
       d2=1.e20
       do ix=1, nx
@@ -125,8 +123,6 @@
       dx=nint( dble(west-lon_ori) /dble(gsize) )
       dy=nint( dble(lat_ori-north)/dble(gsize) )
 
-! Save source dimensions, regional dimensions, offsets, and final bounds for
-! the following regional-map programs; params.txt becomes the model map config.
       cut_param='./dim_change.txt'
       open(11,file=cut_param,form='formatted')
       write(11,'(a)') trim(global_dir)
@@ -175,7 +171,6 @@
 
       allocate(tmp0(nx,ny), tmp(mx,my))
 
-! Read the required source binary layers, then copy the selected rectangle.
       fnextxy0=trim(global_dir)//'nextxy.bin'
       fdownxy0=trim(global_dir)//'downxy.bin'
       felevtn0=trim(global_dir)//'elevtn.bin'
@@ -255,8 +250,6 @@ print *, 'cut domain'
 
       nextx(:,:)=-9999
       nexty(:,:)=-9999
-      downx(:,:)=-9999
-      downy(:,:)=-9999
       elevtn(:,:)=-9999.
       fldhgt(:,:,:)=-9999.
       ctmare(:,:)=-9999
@@ -269,8 +262,6 @@ print *, 'cut domain'
       width(:,:)=-9999
       lsmask(:,:)=0
 
-! Translate downstream indices into regional coordinates. Mark rivers whose
-! next cell falls outside the selected rectangle as regional boundary outlets.
       do iy=1, my
         do ix=1, mx
           jx=ix+dx
@@ -314,8 +305,6 @@ print *, 'cut domain'
 
 print *, 'write reagional maps'
 
-! Write the cropped map layers (nextxy/downxy, elevations, areas, coordinates,
-! distances, widths, and land-sea mask) in the regional map directory.
       fnextxy='../nextxy.bin'
       fdownxy='../downxy.bin'
       felevtn='../elevtn.bin'
@@ -395,8 +384,7 @@ print *, 'write reagional maps'
       write(21,rec=1) lsmask
       close(21)
 
-! Trace rivers touching the outer two-cell border and mask those paths in the
-! separate nextxy_noedge.bin used by regional processing tools.
+! mask out-of-domain rivers
       allocate(check(mx,my))
 
       check(:,:)=-9
