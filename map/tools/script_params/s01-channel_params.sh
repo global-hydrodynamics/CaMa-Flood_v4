@@ -1,36 +1,28 @@
 #!/bin/sh
-# Map-local template for annual-runoff channel parameter generation.
-# Copy into <map>/script_params/, edit configuration below, and run from any CWD.
+# Generate annual-runoff channel parameters for a map.
+# Copy to <map>/script_params/, configure the paths and coefficients, and run from any CWD.
 #
-# Inputs (relative paths are resolved from the map root):
-#   - inpdim_<ROFFTAG>.txt: runoff-grid dimensions and input-matrix metadata.
-#   - inpmat_<ROFFTAG>.bin: the paired map-to-runoff input matrix.
-#   - CROFBIN: annual-mean runoff climatology (default: ../data/ELSE_GPCC_clm-1981-2010.one).
-#   - nextxy.bin and ctmare.bin: river-network maps used by the parameter programs.
-#   - width.bin: MERIT Hydro channel-width estimates used for the MERIT merge.
-#
-# Outputs in the map root (existing files with these names may be replaced):
-#   - outclm.bin: climatological discharge calculated from runoff and the input matrix.
-#   - rivwth.bin, rivhgt.bin, rivman.bin, rivhgt_inf.bin: power-law channel parameters.
-#   - rivwth_merit.bin: width.bin estimates merged with the power-law river widths.
+# Inputs: inpdim_<ROFFTAG>.txt, inpmat_<ROFFTAG>.bin, annual runoff climatology,
+#         nextxy.bin, ctmare.bin, and width.bin.
+# Outputs: outclm.bin, rivwth.bin, rivhgt.bin, rivman.bin, rivhgt_inf.bin,
+#          and rivwth_merit.bin in the map root.
 set -eu
 
+# Paths
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 MAP_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd -P)
 CODE_DIR=$(CDPATH= cd "$SCRIPT_DIR/../../tools/code" && pwd -P)
 
-# Workflow configuration. Relative paths are interpreted from the map root.
-TYPE="bin"                                      # binary runoff input
-INTERP="inpmat"                                 # use the standard map input matrix
-ROFFTAG="${ROFFTAG:-test-1deg}"                # identifies runoff/input-grid configuration
+# Configuration (relative input paths are resolved from the map root).
+TYPE="bin"
+INTERP="inpmat"
+ROFFTAG="${ROFFTAG:-test-1deg}"
 INPDIM="inpdim_${ROFFTAG}.txt"
 INPMAT="inpmat_${ROFFTAG}.bin"
-CROFBIN="../data/ELSE_GPCC_clm-1981-2010.one"  # annual mean runoff [mm/s]
-# Runoff-climatology data source: Kim, Yeh, Oki, and Kanae (2009),
-# "Role of rivers in the seasonal variations of terrestrial water storage over global basins."
-# Geophysical Research Letters. https://doi.org/10.1029/2009GL039006
+CROFBIN="../data/ELSE_GPCC_clm-1981-2010.one" # Annual mean runoff [mm/s].
+# Source: Kim et al. (2009), https://doi.org/10.1029/2009GL039006
 
-# Channel cross-section coefficients from the legacy standard workflow.
+# Channel cross-section coefficients from the standard workflow.
 HC=0.1
 HP=0.50
 HO=0.00
@@ -40,63 +32,49 @@ WP=0.60
 WO=0.00
 WMIN=5.0
 
-OUTCLM="$CODE_DIR/param_calc_outclm"
-RIVWTH="$CODE_DIR/param_calc_rivwth"
-MERIT="$CODE_DIR/param_set_merit_width"
+# ----------------------------------------------------------------------
+# User settings end here. Program paths and processing steps follow.
+# ----------------------------------------------------------------------
 
-case $INPDIM in
-    /*) INPDIM_PATH=$INPDIM ;;
-    *) INPDIM_PATH="$MAP_DIR/$INPDIM" ;;
-esac
-
-fail() {
-    echo "s01-channel_params.sh: $*" >&2
-    exit 1
-}
-
-run_step() {
-    label=$1
-    shift
-    echo "@@@ $label"
-    if "$@"; then
-        return 0
-    else
-        status=$?
-        fail "$label failed (exit status $status)"
+# Keep the script name and current step for the failure summary below.
+SCRIPT_NAME=${0##*/}
+STEP="Prepare channel-parameter workflow"
+# On exit, report failures and return the original status; signals use standard nonzero statuses.
+trap '
+    EXIT_STATUS=$?
+    trap - 0
+    if [ "$EXIT_STATUS" -ne 0 ]; then
+        printf "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n" >&2
+        printf "!!! ERROR: %s FAILED !!!\n" "$SCRIPT_NAME" >&2
+        printf "!!! Step: %s\n" "$STEP" >&2
+        printf "!!! Exit status: %s\n" "$EXIT_STATUS" >&2
+        printf "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n" >&2
     fi
-}
+    exit "$EXIT_STATUS"
+' 0
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
-[ -x "$OUTCLM" ] || fail "shared executable missing: $OUTCLM (build with make -C map/tools/code param)"
-[ -x "$RIVWTH" ] || fail "shared executable missing: $RIVWTH (build with make -C map/tools/code param)"
-[ -x "$MERIT" ] || fail "shared executable missing: $MERIT (build with make -C map/tools/code param)"
-[ -s "$INPDIM_PATH" ] || fail "input-grid metadata missing: $INPDIM_PATH"
-[ -s "$MAP_DIR/nextxy.bin" ] || fail "map input missing: $MAP_DIR/nextxy.bin"
-[ -s "$MAP_DIR/ctmare.bin" ] || fail "map input missing: $MAP_DIR/ctmare.bin"
-[ -s "$MAP_DIR/width.bin" ] || fail "MERIT Hydro width input missing: $MAP_DIR/width.bin"
-
-# The seventh line is retained in the file format and must match the paired name.
-METADATA_INPMAT=$(awk 'NR == 7 { print $1; exit }' "$INPDIM_PATH")
-[ "$METADATA_INPMAT" = "$INPMAT" ] || fail "line 7 of $INPDIM does not name its paired matrix $INPMAT"
-case $INPMAT in
-    /*) INPMAT_PATH=$INPMAT ;;
-    *) INPMAT_PATH="$MAP_DIR/$INPMAT" ;;
-esac
-[ -s "$INPMAT_PATH" ] || fail "input matrix missing: $INPMAT_PATH"
-
-case $CROFBIN in
-    /*) CROFBIN_PATH=$CROFBIN ;;
-    *) CROFBIN_PATH="$MAP_DIR/$CROFBIN" ;;
-esac
-[ -s "$CROFBIN_PATH" ] || fail "annual runoff climatology missing: $CROFBIN_PATH (provide the package map/data input or edit CROFBIN)"
-[ "${#INPDIM}" -le 128 ] || fail "INPDIM exceeds the legacy Fortran argument limit of 128 characters; use a shorter path"
-[ "${#CROFBIN}" -le 128 ] || fail "CROFBIN exceeds the legacy Fortran argument limit of 128 characters; use a shorter path"
+# Shared executables (build beforehand with map/tools/code/Makefile).
+EXEC_OUTCLM="$CODE_DIR/param_calc_outclm"
+EXEC_RIVWTH="$CODE_DIR/param_calc_rivwth"
+EXEC_MERIT="$CODE_DIR/param_set_merit_width"
 
 cd "$MAP_DIR"
-run_step "param_calc_outclm" "$OUTCLM" "$TYPE" "$INTERP" "$INPDIM" "$CROFBIN"
-run_step "param_calc_rivwth" "$RIVWTH" "$TYPE" "$INPDIM" "$HC" "$HP" "$HO" "$HMIN" "$WC" "$WP" "$WO" "$WMIN"
-run_step "param_set_merit_width" "$MERIT" "$INPDIM"
 
-for output in outclm.bin rivwth.bin rivhgt.bin rivman.bin rivhgt_inf.bin rivwth_merit.bin; do
-    [ -s "$MAP_DIR/$output" ] || fail "expected output was not created: $MAP_DIR/$output"
-done
-echo "Created channel-parameter products in $MAP_DIR"
+STEP="Calculate mean river discharge from annual runoff and the input matrix"
+printf '==================================================\n[STEP 1/3] Calculate mean river discharge\n==================================================\n'
+"$EXEC_OUTCLM" "$TYPE" "$INTERP" "$INPDIM" "$CROFBIN"
+
+# 2. Estimate width, depth, roughness, and the no-floodplain depth field.
+STEP="Estimate channel width, depth, and roughness"
+printf '==================================================\n[STEP 2/3] Estimate channel parameters\n==================================================\n'
+"$EXEC_RIVWTH" "$TYPE" "$INPDIM" "$HC" "$HP" "$HO" "$HMIN" \
+    "$WC" "$WP" "$WO" "$WMIN"
+
+# 3. Merge MERIT Hydro width estimates with the power-law river widths.
+STEP="Merge power-law channel widths with MERIT Hydro widths"
+printf '==================================================\n[STEP 3/3] Merge MERIT Hydro channel widths\n==================================================\n'
+"$EXEC_MERIT" "$INPDIM"
+printf '==================================================\n[SUCCESS] %s\n==================================================\n' "$SCRIPT_NAME"

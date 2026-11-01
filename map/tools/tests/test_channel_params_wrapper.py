@@ -74,16 +74,17 @@ class ChannelParamsWrapperTests(unittest.TestCase):
                      "rivhgt_inf.bin", "rivwth_merit.bin"):
             self.assertTrue((self.map_root / name).is_file(), name)
 
-    def test_reports_missing_runoff_before_invoking_tools(self) -> None:
+    def test_missing_runoff_path_is_passed_to_the_compiled_program(self) -> None:
         (self.root / "map" / "data" / "ELSE_GPCC_clm-1981-2010.one").unlink()
         result = subprocess.run(
             [str(self.script)], cwd=self.root / "outside",
             env={**os.environ, "CALL_LOG": str(self.calls)},
             text=True, capture_output=True, check=False,
         )
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("annual runoff climatology missing", result.stderr)
-        self.assertFalse(self.calls.exists())
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        records = [line.split("|") for line in self.calls.read_text().splitlines()]
+        self.assertEqual(len(records), 3)
+        self.assertEqual(records[0][4], "../data/ELSE_GPCC_clm-1981-2010.one")
 
 
 if __name__ == "__main__":

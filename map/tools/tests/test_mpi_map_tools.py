@@ -81,7 +81,7 @@ class MpiMapToolsTests(unittest.TestCase):
             self.run_mpi(root)
             first = {n: (root / f"mpireg-{n}.bin").read_bytes() for n in (4, 8, 16)}
             self.assertEqual((root / "bifprm.txt").read_bytes(), bifprm_before)
-            self.assertTrue((root / ".bifbsn_mpi.tmp").exists())  # s04 removes this after all partitions are made
+            self.assertTrue((root / "bifbsn_mpi.tmp").exists())  # s04 removes this after all partitions are made
             for count in (4, 8, 16):
                 self.assertEqual((root / f"mpireg-{count}.bin").stat().st_size, 80 * 120 * 4)
             report = subprocess.run(
@@ -131,7 +131,7 @@ class MpiMapToolsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="cmf-mpi-max-") as tmp:
             root = self.make_map(Path(tmp) / "map")
             self.run_mpi(root, mode="MaxMPI", counts=(4, 8, 16))
-            self.assertEqual((root / ".bifbsn_mpi.tmp").stat().st_size, 80 * 120 * 4)
+            self.assertEqual((root / "bifbsn_mpi.tmp").stat().st_size, 80 * 120 * 4)
             for count in (4, 8, 16):
                 self.assertEqual((root / f"mpireg-{count}.bin").stat().st_size, 80 * 120 * 4)
 
@@ -190,7 +190,7 @@ class MpiMapToolsTests(unittest.TestCase):
                 )
                 if result.returncode:
                     raise AssertionError(f"Layer-3 sort case failed: {result.stdout}\n{result.stderr}")
-                outputs.append((root / ".bifbsn_mpi.tmp").read_bytes())
+                outputs.append((root / "bifbsn_mpi.tmp").read_bytes())
             self.assertEqual(outputs[0], outputs[1])
 
     def test_shell_entry_points_have_valid_syntax(self):

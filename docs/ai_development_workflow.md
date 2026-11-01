@@ -16,6 +16,10 @@ This document defines a reusable handoff process among the maintainer, ChatGPT, 
 6. **Escalation:** Return major unresolved scientific or architectural issues to the maintainer before dependent work proceeds. Do not silently choose an assumption that could change scientific behavior, interfaces, compatibility, data policy, or cause substantial rework. Record non-blocking questions and continue independent work as described in `AGENTS.md`.
 7. **Review after implementation:** Once Codex has completed the assigned scope, ChatGPT reviews the resulting code and documentation, the actual validation results, and related research records with the maintainer. Use that review to resolve gaps and decide the next task; do not treat successful execution alone as scientific validation.
 
+## Applying the shell-script convention
+
+Use the [`Shell Script Design Principles`](../AGENTS.md#shell-script-design-principles) as the community recommendation and the default for the current maintainer-led v5 modernization. Unless the maintainer explicitly requests otherwise, keep new and refactored scripts simple, keep scientific executable calls visible, and avoid defensive application-style logic. Print recognizable `[STEP]` headings and one final `[SUCCESS]` banner; on failure, print a prominent `[ERROR]` summary with script, current step, and original nonzero status. Use `set -eu` and a simple POSIX-compatible exit trap; preserve failure status and stop before later scientific steps. Keep message formatting self-contained in each script rather than adding a shared message helper. Put input validation and detailed diagnostics in `map/tools/code/` when practical. Preserve the separation between scientific algorithms and workflow orchestration, numerical behavior, and command interfaces. An explicit task-specific maintainer instruction takes precedence.
+
 ## Structured task for Codex
 
 Every implementation handoff should use these four sections. Keep the scope and acceptance criteria concrete, and state explicitly which decisions are approved versus still open.

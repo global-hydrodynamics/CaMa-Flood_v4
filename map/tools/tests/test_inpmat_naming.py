@@ -54,7 +54,8 @@ class InputMatrixNamingTests(unittest.TestCase):
             self.assertEqual((map_root / "called.args").read_text().splitlines(), [
                 "15sec", "inpdim_rainfall-025.txt", "inpmat_rainfall-025.bin"
             ])
-            self.assertIn("ROFFTAG=rainfall-025, HIRES_TAG=15sec", result.stdout)
+            self.assertIn("[STEP 1/1] Generate runoff input matrix", result.stdout)
+            self.assertEqual(result.stdout.count("[SUCCESS]"), 1)
 
 
 if __name__ == "__main__":

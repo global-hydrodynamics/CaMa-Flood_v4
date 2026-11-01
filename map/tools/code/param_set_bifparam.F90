@@ -61,13 +61,21 @@ print *, 'set_bifparam: read parameters from arguments'
 ! Arguments: river-depth binary, output parameter-table filename, number of
 ! bifurcation layers to retain, optional dimension-info text filename, and an
 ! optional "check_map" token to request the diagnostic map output.
-! The legacy implementation assumes 1 <= requested layers <= bifori.txt layers;
-! the wrapper checks the former upper bound, but this program does not check the
-! input file's layer count or validate each path's endpoint indices.
+! The requested layer count must be 1..10. If it exceeds the layer count in
+! bifori.txt, it is clamped to the available count below. Path endpoint checks
+! remain limited to the existing algorithm.
       call getarg(1,crivhgt)
       call getarg(2,cbifprm)
       call getarg(3,buf)
-       read(buf,*) nlev_new
+       read(buf,*,iostat=ios) nlev_new
+       if( ios/=0 )then
+         print *, 'ERROR: BIFLAYER must be an integer from 1 to 10'
+         stop 2
+       endif
+       if( nlev_new<1 .or. nlev_new>10 )then
+         print *, 'ERROR: BIFLAYER must be an integer from 1 to 10'
+         stop 2
+       endif
       call getarg(4,buf)
        if( buf/='' ) read(buf,'(a128)') diminfo
       write_check_map=.false.

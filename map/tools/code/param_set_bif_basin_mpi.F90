@@ -144,12 +144,12 @@ program param_set_bif_basin_mpi
   end do
 
   ! Temporary intermediate consumed by param_set_mpi_region; wrapper removes it.
-  open(newunit=u,file='../.bifbsn_mpi.tmp',form='unformatted',access='direct',recl=4*nx*ny,status='replace',iostat=ios)
-  if (ios/=0) call die('cannot create ../.bifbsn_mpi.tmp')
+  open(newunit=u,file='../bifbsn_mpi.tmp',form='unformatted',access='direct',recl=4*nx*ny,status='replace',iostat=ios)
+  if (ios/=0) call die('cannot create ../bifbsn_mpi.tmp')
   write(u,rec=1,iostat=ios) basin
   close(u)
-  if (ios/=0) call die('cannot write ../.bifbsn_mpi.tmp')
-  write(*,'(a)') 'Created temporary MPI basin groups: ../.bifbsn_mpi.tmp'
+  if (ios/=0) call die('cannot write ../bifbsn_mpi.tmp')
+  write(*,'(a)') 'Created temporary MPI basin groups: ../bifbsn_mpi.tmp'
 
 contains
   subroutine die(message)

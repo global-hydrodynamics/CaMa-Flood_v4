@@ -38,7 +38,7 @@ def run(command: list[str], *, cwd: Path) -> subprocess.CompletedProcess[str]:
 
 
 class S02InputGuardTests(unittest.TestCase):
-    def test_missing_channel_depth_reports_required_s01_step(self) -> None:
+    def test_missing_channel_depth_is_passed_to_the_program(self) -> None:
         with tempfile.TemporaryDirectory(prefix="cmf-s02-guard-") as temp:
             root = Path(temp)
             map_root = root / "map" / "sample"
@@ -53,7 +53,7 @@ class S02InputGuardTests(unittest.TestCase):
                 shutil.copy2(SAMPLE / name, map_root / name)
             for name in ("param_set_bifparam", "param_set_bif_basin"):
                 executable = code_dir / name
-                executable.write_text("#!/bin/sh\nexit 99\n", encoding="ascii")
+                executable.write_text("#!/bin/sh\necho parameter program invoked\nexit 99\n", encoding="ascii")
                 executable.chmod(0o755)
             script = script_dir / "s02-bifurcation.sh"
             shutil.copy2(S02_TEMPLATE, script)
@@ -62,7 +62,7 @@ class S02InputGuardTests(unittest.TestCase):
             result = run([str(script)], cwd=outside)
 
             self.assertNotEqual(result.returncode, 0, result.stdout)
-            self.assertIn("run s01-channel_params.sh first", result.stderr)
+            self.assertIn("parameter program invoked", result.stdout)
             for output in OUTPUTS:
                 self.assertFalse((map_root / output).exists(), output)
 
@@ -80,7 +80,7 @@ class S02InputGuardTests(unittest.TestCase):
 
             result = run([str(script), "unknown"], cwd=root)
             self.assertNotEqual(result.returncode, 0)
-            self.assertIn("unknown argument 'unknown'", result.stderr)
+            self.assertIn("Usage:", result.stderr)
 
 
 class BifurcationMigrationTests(unittest.TestCase):
@@ -159,6 +159,17 @@ class BifurcationMigrationTests(unittest.TestCase):
                      cwd=self.root / "outside")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("optional argument must be check_map", result.stdout)
+
+    def test_bifparam_program_rejects_biflayer_outside_supported_range(self) -> None:
+        for biflayer in ("0", "11", "not-a-number"):
+            with self.subTest(biflayer=biflayer):
+                result = run(
+                    [str(self.code_dir / "param_set_bifparam"), "rivhgt.bin", "bifprm.txt",
+                     biflayer, "inpdim_test-1deg.txt"],
+                    cwd=self.root,
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("BIFLAYER must be an integer from 1 to 10", result.stdout)
 
     def test_s02_matches_legacy_and_optional_check_map(self) -> None:
         v5 = self.create_map("v5")

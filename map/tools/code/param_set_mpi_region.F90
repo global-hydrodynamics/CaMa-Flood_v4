@@ -16,7 +16,7 @@ program param_set_mpi_region
   close(u)
   if(ios/=0 .or. nx<1 .or. ny<1) call die('invalid map dimensions in ../params.txt')
   allocate(basin(nx,ny),mpireg(nx,ny))
-  open(newunit=u,file='../.bifbsn_mpi.tmp',form='unformatted',access='direct',recl=4*nx*ny,status='old',iostat=ios)
+  open(newunit=u,file='../bifbsn_mpi.tmp',form='unformatted',access='direct',recl=4*nx*ny,status='old',iostat=ios)
   if(ios/=0) call die('temporary basin groups missing; run param_set_bif_basin_mpi first')
   read(u,rec=1,iostat=ios) basin; close(u)
   if(ios/=0) call die('cannot read temporary basin groups')

@@ -13,6 +13,18 @@ The Mekong map-local regionalization scripts are maintainer-operated **sample-pr
 
 All shared Fortran sources and executables remain centralized in `code/`. Executable prefixes identify tool families (`region_*`, `param_*`, `analysis_*`, `allocate_*`); allocation programs do not require a separate `script_allocate/` directory. These are the approved target organization for v5 work. `map/src/` is the historical v4 tool tree and is preserved as a legacy reference; new v5 migration work belongs under `map/tools/`.
 
+V5 shell scripts hold configuration, choose working directories, sequence commands, and show progress; compiled programs in `code/` perform scientific calculations, validate inputs, and report detailed processing errors. Build the executables required by a workflow beforehand with the shared Makefile, for example `make -C map/tools/code param analysis`. Processing scripts do not compile tools or check for standard map inputs and executables. The s01-s04 parameter templates use consistent ASCII `[STEP]` and `[SUCCESS]` banners and a prominent `ERROR` banner on failure. Each script formats messages itself with a POSIX exit trap; there is no shared message helper. Some migrated programs still have incomplete file-open/read diagnostics; this is a code-layer follow-up. See the [shell-script guidance](../AGENTS.md#shell-script-design-principles).
+
+For example, the channel workflow sets its parameters once, selects the map-root working directory, and calls each program directly:
+
+```sh
+cd "$MAP_DIR"
+"$OUTCLM" "$TYPE" "$INTERP" "$INPDIM" "$CROFBIN"
+"$RIVWTH" "$TYPE" "$INPDIM" "$HC" "$HP" "$HO" "$HMIN" \
+    "$WC" "$WP" "$WO" "$WMIN"
+"$MERIT" "$INPDIM"
+```
+
 The general-purpose runoff input-matrix generator is available as `param_generate_inpmat`, built with `make -C map/tools/code param`. Its map-local wrapper template is [`script_params/s03-generate_inpmat.sh`](script_params/s03-generate_inpmat.sh); copy it into a target map's `script_params/` directory before configuring and running it. One `ROFFTAG` derives the paired `inpdim_<ROFFTAG>.txt` and `inpmat_<ROFFTAG>.bin` names. `HIRES_TAG` independently selects the high-resolution map source. This generator supports user-selected regular runoff grids and is distinct from `region_default_inpmat`, which creates the standard climatology matrix distributed with prepared maps. See the [parameter workflow guide](script_params/README.md) for required inputs, configuration, outputs, and regression status.
 
 The v5 [`script_params/s01-channel_params.sh`](script_params/s01-channel_params.sh) runs annual mean discharge estimation, power-law channel parameterization, and MERIT Hydro width merging only. It derives the standard paired `inpdim_test-1deg.txt` and `inpmat_test-1deg.bin` from `ROFFTAG=test-1deg`. The v5 tools include `param_calc_outclm`, `param_calc_rivwth`, and `param_set_merit_width`; they preserve the legacy calculations and write the alternate merged width as `rivwth_merit.bin`. The legacy `gosh/` simulation scripts and the historical v4 tools under `map/src/` are preserved; v5 naming and workflow changes belong under `map/tools/`. The current model reader does not automatically select the v5 alternate output. The annual runoff climatology comes from the data-rich distribution package and is not included in the GitHub source repository because its redistribution terms are not established.

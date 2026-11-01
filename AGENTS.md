@@ -106,6 +106,12 @@ For optional schemes, identify initialization, state ownership, outer/adaptive t
 
 Preserve the separation between source development and downloadable data-rich distribution packages. Do not add large datasets, generated model outputs, build products, credentials, or local environment paths to commits. New test fixtures need a clear purpose, size, provenance, and redistribution permission.
 
+## Shell Script Design Principles
+
+The following are recommended, not mandatory, practices for community shell contributions: keep scripts human-readable as automated terminal-command sequences; make scientific settings easy to find; prefer direct executable calls; avoid unnecessary defensive boilerplate; and place validation and detailed errors primarily in the program that reads the data. Use recognizable progress headings, stop on fatal errors, report clear success or error summaries, and return nonzero status for fatal program errors where practical. These recommendations do not apply retroactively to community or historical scripts.
+
+For the current maintainer-led v5 modernization, AI agents should use these practices by default in new or refactored scripts under `map/tools/script_region/`, `script_params/`, and `script_analysis/`. Keep `set -eu`, simple argument handling and loops, and safe cleanup; do not sacrifice correctness or reproducibility for brevity. See [`docs/ai_development_workflow.md`](docs/ai_development_workflow.md) for the stronger agent defaults and workflow-message convention.
+
 ## Map metadata maintenance
 
 When adding or changing map-related readers, writers, preprocessing products, or model map interfaces, inspect and update [`map/map_variables.csv`](map/map_variables.csv) and the responsible module README. Keep verified facts distinct from provisional fields, and record distribution role separately from packages where a product was observed; see [`map/map_metadata_spec.md`](map/map_metadata_spec.md).
