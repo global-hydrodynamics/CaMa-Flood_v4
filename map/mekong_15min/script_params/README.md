@@ -22,13 +22,11 @@ The maintainer-approved organization follows the preferred map-preparation seque
 | `s02-bifurcation.sh` | Standard non-MPI bifurcation parameters and basin-connectivity products. | Implemented |
 | `s03-generate_inpmat.sh` | User-configured runoff-grid mapping matrix. | Implemented |
 | `s04-mpi_map_setup.sh` | MPI basin aggregation and coloring, region assignment, and default-N connectivity report; optional pre-partition basin diagnostic with `check_map`. | Implemented |
-| `s05-permanent_water.sh` | Estimate permanent-water area by unit catchment for post-processing. | Implemented |
+| `s05-permanent_water.sh` | Aggregate high-resolution permanent-water area by unit catchment. | Implemented |
 | `s99-write_ctl.sh` | Final optional step: generate GrADS CTLs for existing registered base-map and high-resolution binaries. | Implemented |
 | `t01-alloc_flow_gauge.sh`, `t02-alloc_dams.sh`, `t03-alloc_level_gauge.sh` | Gauge and dam location allocation. | Planned; not implemented here |
 
-Independent diagnostics belong in `script_analysis/`. No `script_allocate/` directory is part of the approved design. These map-local scripts are examples for preparing the sample, not routine CI tests. See the shared [`map/tools/script_params/README.md`](../../tools/script_params/README.md) for workflow details.
-
-`s05-permanent_water.sh` uses `HIRES_TAG=1min` by default and writes `prmwat.bin` in the map root. It aggregates high-resolution water-surface pixels into unit catchments for post-processing; the current simulation core does not read this product. The elevation filter limits the area to water within terrain where CaMa-Flood can reproduce inundation, excluding isolated hilltop lakes that are outside the modeled flood extent. The maintainer describes the intended cutoff as `flddif < 5 m`; the legacy and v5 code currently use `flddif <= 5 m`, so exactly-5 m pixels are included pending clarification. Build the shared v5 parameter executable from `map/tools/code/` before invoking the script. The Mekong inputs were regression-compared with the legacy calculator in temporary work directories; this verifies compatibility for this sample, not independent scientific validity.
+Independent diagnostics belong in `script_analysis/`. No `script_allocate/` directory is part of the approved design.
 
 ## Channel parameter workflow
 
@@ -47,6 +45,16 @@ Build the required shared executables beforehand, copy the script into the targe
 The standard channel workflow uses annual mean runoff. The historical `map/src/src_param/calc_outclmday.F90` remains legacy-only: it reflects the older maximum-30-day climatology approach associated with Yamazaki et al. (2011). The maintainer reports that later evaluation favored annual mean runoff. This migration does not revalidate the historical method scientifically.
 
 `rivwth.bin` is the power-law width and `rivwth_merit.bin` is the separately named merged width product; the latter is not simply a copy of `width.bin`. The merge algorithm and thresholds are preserved from the legacy tool. The current core map reader selects `rivwth.bin` and does not automatically choose `rivwth_merit.bin`; this workflow produces the alternate product but does not change model-reader selection. See [`map_variables.csv`](../../map_variables.csv) and the [Phase B2 migration plan](../../../docs/map_params_migration_plan.md) for product metadata and migration evidence.
+
+## Permanent-water area
+
+[`s05-permanent_water.sh`](s05-permanent_water.sh) runs `param_water_calc_prmwat` to create `prmwat.bin` from a base map and selected high-resolution map. Set `HIRES_TAG` near the top of the copied script; it defaults explicitly to `1min` and is not inferred from available directories. Build the shared executable beforehand with `make -C map/tools/code param`. The script can be run from any current working directory and does not run the preceding parameterization steps.
+
+The source layout must use the non-tiled `location.txt` format. Inputs are `params.txt`, `nextxy.bin`, and `ctmare.bin` in the map root, plus `<HIRES_TAG>/location.txt` and per-area `catmxy`, `rivwth`, and `flddif` binaries; `grdare.bin` is optional. The output is one float32 `NX x NY` record in m2. Non-network cells are `-9999`; network cells with no selected water pixels are zero. For valid catchment assignments, selected pixels satisfy `(rivwth > 0 OR rivwth == -1) AND flddif <= 5 m`; `rivwth == -1` denotes water surface outside the channel centerline. Their pixel areas are summed and capped by `ctmare`. The legacy `flddif <= 5` condition also accepts `flddif=-9999`; the migrated program warns and preserves that behavior rather than silently adding a new scientific filter.
+
+The elevation cutoff limits `prmwat` to permanent water within the flood area CaMa-Flood can reproduce. A permanent lake isolated high on a hill is outside the model's expected inundation domain, so its area must not be subtracted as pre-existing simulated floodwater. The maintainer described the intended criterion as `flddif < 5 m`. The legacy v4 and migrated v5 source use `flddif <= 5 m`, which includes pixels exactly at 5 m; this boundary difference is documented but has not been changed. The numerical derivation of the 5 m value remains unverified.
+
+`prmwat.bin` is an aggregated estimate of permanent-water surface area per unit catchment for post-processing, such as excluding pre-existing water from newly inundated area. It is not a pixel mask and is not read by the current simulation core. If `grdare.bin` is absent, the legacy scaled `rgetarea` fallback is used; this computes an area from a rectangle ten times larger in both directions and divides by 100 to reduce round-off fluctuations at fine resolution. The method is preserved, but its accuracy has not been independently quantified. See [`map_metadata_spec.md`](../../map_metadata_spec.md#permanent-water-area) and [`map_variables.csv`](../../map_variables.csv) for product metadata.
 
 ## Standard bifurcation workflow
 
@@ -83,7 +91,7 @@ The programs read standard map files `params.txt`, `basin.bin`, `bifprm.txt`, an
 
 Copy [`s99-write_ctl.sh`](s99-write_ctl.sh) into a map-local `script_params/` directory and run it there. Like the reusable [`script_region/s02-write_ctl.sh`](../script_region/s02-write_ctl.sh), it calls the shared `generate_ctl.py` and scans only `.bin` files that already exist directly in the map root and in immediate child directories containing `location.txt`. The generator creates CTLs only for files registered in `map_variables.csv` whose dimensions and binary sizes validate against `params.txt` or `location.txt`.
 
-The wrapper supports `--dry-run` and `--no-overwrite`; existing CTLs are replaced by default. It does not create, modify, or infer binary map data. For the optional MPI basin diagnostic, it creates `check_bif_bsnmod_mpi.ctl` only when `check_bif_bsnmod_mpi.bin` exists; the registry defines its two variables in record order. See the [map guide](../../README.md#grads-ctl-files) for registry, missing-value, and format details.
+The wrapper supports `--dry-run` and `--no-overwrite`; existing CTLs are replaced by default. It does not create, modify, or infer binary map data. For the optional MPI basin diagnostic, it creates `check_bif_bsnmod_mpi.ctl` only when `check_bif_bsnmod_mpi.bin` exists; the registry defines its two variables in record order. See the [map-tools guide](../README.md#grads-ctl-files) for registry, missing-value, and format details.
 
 ## General-purpose runoff input matrix
 

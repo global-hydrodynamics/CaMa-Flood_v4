@@ -1,6 +1,6 @@
 #!/bin/sh
 # Estimate permanent-water area per CaMa-Flood unit catchment.
-# Mekong sample workflow; run from any working directory.
+# Copy to <map>/script_params/ and run from any working directory.
 #
 # Inputs: params.txt, nextxy.bin, ctmare.bin, and
 #         <HIRES_TAG>/location.txt plus each area's catmxy, rivwth, flddif,

@@ -32,3 +32,6 @@ DR-0030,EV-0162,maintainer_task_instruction,Maintainer task and attachment in ac
 DR-0031,EV-0166,maintainer_instruction,Maintainer message in active task; no archive ID supplied,research/records/discussions/DR-0031.md,pending,restricted
 DR-0032,EV-0170,maintainer_task_instruction,Maintainer-provided task specification in active Codex task; no archive ID supplied,research/records/discussions/DR-0032.md,pending,restricted
 DR-0033,EV-0175,maintainer_clarification,Maintainer message in active Codex task; no archive ID supplied,research/records/discussions/DR-0033.md,pending,restricted
+DR-0034,EV-0181,maintainer_clarification and technical manual,"Maintainer clarification in active Codex task, no archive ID; AllocRiverGauge tool-repository manual v1.2 doc/Manual_AllocateRiverGauges.docx (updated 2024-11-22); package v1.1 copy dated 2024-04-16",research/records/discussions/DR-0034.md,pending,restricted
+DR-0035,EV-0184,maintainer_clarification,Maintainer message in active Codex task; no archive ID supplied,research/records/discussions/DR-0035.md,pending,restricted
+DR-0036,EV-0187,maintainer_instruction,Maintainer message in active task; no archive ID supplied; inventory of map/data list files,research/records/discussions/DR-0036.md,pending,restricted

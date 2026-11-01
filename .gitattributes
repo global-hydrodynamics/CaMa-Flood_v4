@@ -1,2 +1,9 @@
 # CaMa-Flood map products are raw binary records, not text files.
 *.bin binary
+
+# Keep the approved allocation lists readable as text while normalizing repository line endings.
+/map/data/GRDC_allocated.csv text
+/map/data/GRanD_allocated.csv text
+/map/data/GRanD_alloc+Mekong.csv text
+/map/data/MLIT_FlowGauge_alloc_final.csv text
+/map/data/MLIT_LevelGauge_allocated.csv text
