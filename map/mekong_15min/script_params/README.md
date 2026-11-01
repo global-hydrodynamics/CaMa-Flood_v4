@@ -24,7 +24,7 @@ The maintainer-approved organization follows the preferred map-preparation seque
 | `s04-mpi_map_setup.sh` | MPI basin aggregation and coloring, region assignment, and default-N connectivity report; optional pre-partition basin diagnostic with `check_map`. | Implemented |
 | `s05-permanent_water.sh` | Aggregate high-resolution permanent-water area by unit catchment. | Implemented |
 | `s99-write_ctl.sh` | Final optional step: generate GrADS CTLs for existing registered base-map and high-resolution binaries. | Implemented |
-| `t01-alloc_flow_gauge.sh`, `t02-alloc_dams.sh`, `t03-alloc_level_gauge.sh` | Gauge and dam location allocation. | Planned; not implemented here |
+| Shared `t01-alloc_flow_gauge.sh`, `t02-alloc_dams.sh`, `t03-alloc_level_gauge.sh` templates | Optional flow-gauge, reservoir, and water-level-gauge allocation from MERIT Hydro to this map. | Implemented in `map/tools/script_params/`; copy from the shared template when needed |
 
 Independent diagnostics belong in `script_analysis/`. No `script_allocate/` directory is part of the approved design.
 
@@ -91,7 +91,7 @@ The programs read standard map files `params.txt`, `basin.bin`, `bifprm.txt`, an
 
 Copy [`s99-write_ctl.sh`](s99-write_ctl.sh) into a map-local `script_params/` directory and run it there. Like the reusable [`script_region/s02-write_ctl.sh`](../script_region/s02-write_ctl.sh), it calls the shared `generate_ctl.py` and scans only `.bin` files that already exist directly in the map root and in immediate child directories containing `location.txt`. The generator creates CTLs only for files registered in `map_variables.csv` whose dimensions and binary sizes validate against `params.txt` or `location.txt`.
 
-The wrapper supports `--dry-run` and `--no-overwrite`; existing CTLs are replaced by default. It does not create, modify, or infer binary map data. For the optional MPI basin diagnostic, it creates `check_bif_bsnmod_mpi.ctl` only when `check_bif_bsnmod_mpi.bin` exists; the registry defines its two variables in record order. See the [map-tools guide](../README.md#grads-ctl-files) for registry, missing-value, and format details.
+The wrapper supports `--dry-run` and `--no-overwrite`; existing CTLs are replaced by default. It does not create, modify, or infer binary map data. For the optional MPI basin diagnostic, it creates `check_bif_bsnmod_mpi.ctl` only when `check_bif_bsnmod_mpi.bin` exists; the registry defines its two variables in record order. See the [map-tools guide](../../tools/README.md#grads-ctl-files) for registry, missing-value, and format details.
 
 ## General-purpose runoff input matrix
 
@@ -101,4 +101,8 @@ The target map must provide `params.txt`, a selected high-resolution directory w
 
 This configurable matrix is distinct from the standard `inpmat_test-1deg.bin` and `inpdim_test-1deg.txt` produced by `region_default_inpmat` and distributed with prepared v5 maps for the standard annual-runoff channel workflow. The configurable `inpmat` is expected to be needed by a future sample simulation, but the sample runoff/map dataset and GitHub-versus-package data selection remain open. Existing v4 maps may still carry `diminfo_<ROFFTAG>.txt`; those names are retained for legacy workflows. See the [Phase B2 migration plan](../../../docs/map_params_migration_plan.md) for migration evidence and limitations.
 
-The Python dam-parameter estimation workflow under legacy `map/src/src_dam/` is distinct from the future Fortran dam-location allocation recipe listed above.
+The Python dam-parameter estimation workflow under legacy `map/src/src_dam/` is distinct from the Fortran dam-location allocation workflow documented below.
+
+## Shared allocation tools
+
+Flow-gauge, dam, and level-gauge allocation wrappers are maintained centrally in [`map/tools/script_params/`](../../tools/script_params/README.md#allocation-workflows), not duplicated in this sample's script directory. They can be copied here to map records listed in the repository's sibling `map/data/` directory onto this map. The examples require an explicit `HIRES_TAG` and currently accept only single-area high-resolution maps. Their outputs are text allocation tables, not map binaries.

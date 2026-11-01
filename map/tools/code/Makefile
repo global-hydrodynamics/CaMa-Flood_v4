@@ -10,10 +10,13 @@ PARAM_BINS := $(patsubst %.F90,%,$(PARAM_SOURCES))
 # Region and basin display coloring share mod_map_color.o.
 ANALYSIS_SOURCES := $(wildcard $(CODE_DIR)/analysis_*.F90)
 ANALYSIS_BINS := $(patsubst %.F90,%,$(ANALYSIS_SOURCES))
+ALLOC_SOURCES := $(wildcard $(CODE_DIR)/allocate_*.F90)
+ALLOC_BINS := $(patsubst %.F90,%,$(ALLOC_SOURCES))
 COLOR_MODULE_OBJECT := $(CODE_DIR)/mod_map_color.o
+ALLOCATION_MODULE_OBJECT := $(CODE_DIR)/mod_allocation_map_io.o
 
-.PHONY: all region params param analysis clean
-all: region params analysis
+.PHONY: all region params param analysis allocate clean
+all: region params analysis allocate
 
 region: $(REGION_BINS)
 
@@ -41,6 +44,14 @@ $(CODE_DIR)/region_%: $(CODE_DIR)/region_%.F90
 $(CODE_DIR)/param_%: $(CODE_DIR)/param_%.F90
 	cd "$(CODE_DIR)" && $(FC) $(FFLAGS) $(LFLAGS) $(INC) $(LIB) "$(@F).F90" -o "$(@F)" $(LIB)
 
+allocate: $(ALLOC_BINS)
+
+$(ALLOCATION_MODULE_OBJECT): $(CODE_DIR)/mod_allocation_map_io.F90
+	cd "$(CODE_DIR)" && $(FC) $(FFLAGS) $(INC) -c mod_allocation_map_io.F90 -o mod_allocation_map_io.o
+
+$(CODE_DIR)/allocate_%: $(CODE_DIR)/allocate_%.F90 $(ALLOCATION_MODULE_OBJECT)
+	cd "$(CODE_DIR)" && $(FC) $(FFLAGS) $(LFLAGS) $(INC) $(LIB) mod_allocation_map_io.o "$(@F).F90" -o "$(@F)" $(LIB)
+
 $(COLOR_MODULE_OBJECT): $(CODE_DIR)/mod_map_color.F90
 	cd "$(CODE_DIR)" && $(FC) $(FFLAGS) $(INC) -c mod_map_color.F90 -o mod_map_color.o
 
@@ -57,5 +68,5 @@ $(CODE_DIR)/analysis_%: $(CODE_DIR)/analysis_%.F90
 	cd "$(CODE_DIR)" && $(FC) $(FFLAGS) $(LFLAGS) $(INC) $(LIB) "$(@F).F90" -o "$(@F)" $(LIB)
 
 clean:
-	cd "$(CODE_DIR)" && $(RM) $(notdir $(REGION_BINS)) $(notdir $(PARAM_BINS)) $(notdir $(ANALYSIS_BINS)) *.o *.mod *.pyc *.d *.s
+	cd "$(CODE_DIR)" && $(RM) $(notdir $(REGION_BINS)) $(notdir $(PARAM_BINS)) $(notdir $(ANALYSIS_BINS)) $(notdir $(ALLOC_BINS)) *.o *.mod *.pyc *.d *.s
 	cd "$(CODE_DIR)" && /bin/rm -rf __pycache__

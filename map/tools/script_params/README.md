@@ -24,7 +24,7 @@ The maintainer-approved organization follows the preferred map-preparation seque
 | `s04-mpi_map_setup.sh` | MPI basin aggregation and coloring, region assignment, and default-N connectivity report; optional pre-partition basin diagnostic with `check_map`. | Implemented |
 | `s05-permanent_water.sh` | Aggregate high-resolution permanent-water area by unit catchment. | Implemented |
 | `s99-write_ctl.sh` | Final optional step: generate GrADS CTLs for existing registered base-map and high-resolution binaries. | Implemented |
-| `t01-alloc_flow_gauge.sh`, `t02-alloc_dams.sh`, `t03-alloc_level_gauge.sh` | Gauge and dam location allocation. | Planned; not implemented here |
+| `t01-alloc_flow_gauge.sh`, `t02-alloc_dams.sh`, `t03-alloc_level_gauge.sh` | Flow-gauge, reservoir, and water-level-gauge mapping from MERIT Hydro to CaMa-Flood catchments. | Implemented |
 
 Independent diagnostics belong in `script_analysis/`. No `script_allocate/` directory is part of the approved design.
 
@@ -101,4 +101,34 @@ The target map must provide `params.txt`, a selected high-resolution directory w
 
 This configurable matrix is distinct from the standard `inpmat_test-1deg.bin` and `inpdim_test-1deg.txt` produced by `region_default_inpmat` and distributed with prepared v5 maps for the standard annual-runoff channel workflow. The configurable `inpmat` is expected to be needed by a future sample simulation, but the sample runoff/map dataset and GitHub-versus-package data selection remain open. Existing v4 maps may still carry `diminfo_<ROFFTAG>.txt`; those names are retained for legacy workflows. See the [Phase B2 migration plan](../../../docs/map_params_migration_plan.md) for migration evidence and limitations.
 
-The Python dam-parameter estimation workflow under legacy `map/src/src_dam/` is distinct from the future Fortran dam-location allocation recipe listed above.
+The Python dam-parameter estimation workflow under legacy `map/src/src_dam/` is separate from the Fortran dam-location allocation workflows listed below.
+
+## Allocation workflows
+
+The three optional wrappers use the shared `allocate_*` executables in `map/tools/code/`. Build them beforehand with `make -C map/tools/code allocate`. Copy the wrappers into a map-local `script_params/` directory, configure the input path and `HIRES_TAG`, then run from any directory. Each program requires a high-resolution map containing exactly one area; it reads that tag's `location.txt` and reports an error for multi-area/tiled layouts. `HIRES_TAG` is explicit and does not fall back between `1min` and `15sec`.
+
+The input tables are expected to have already been matched and reviewed on the high-resolution MERIT Hydro network using [AllocRiverGauge](../../../doc/Manual_AllocateRiverGauges.docx). CaMa-Flood performs the second-stage mapping from those allocated coordinates and drainage areas to its own unit catchments. This consistency rationale does not establish that each individual station or dam is correct. Inspect the outputs before using them in analysis.
+
+| Wrapper | Default input | Required map files | Outputs in the map root |
+| --- | --- | --- | --- |
+| [`t01-alloc_flow_gauge.sh`](t01-alloc_flow_gauge.sh) | `../../data/GRDC_allocated.csv` | `params.txt`, `uparea.bin`, `nextxy.bin`; `<HIRES_TAG>/location.txt`, `.uparea.bin`, `.catmxy.bin`, `.downxy.bin` | `GRDC_alloc.txt` |
+| [`t02-alloc_dams.sh`](t02-alloc_dams.sh) | `../../data/GRanD_allocated.csv` | Flow-gauge files plus `ctmare.bin` | `GRanD_river.txt`, `GRanD_small.txt`, `GRanD_error.txt` |
+| [`t03-alloc_level_gauge.sh`](t03-alloc_level_gauge.sh) | `../../data/MLIT_LevelGauge_allocated.csv` | Flow-gauge files plus `elevtn.bin` and `<HIRES_TAG>/<HIRES_TAG>.elevtn.bin` | `MLIT_levelgauge.txt` |
+
+The Fortran readers skip one header row and read fields positionally; they do not implement general CSV quoting. Expected leading columns are `ID,lat_alloc,lon_alloc,area_alloc` for gauges and `ID,lat_alloc,lon_alloc,area_alloc,DamName,RiverName,CAP_MCM,YEAR` for GRanD. Coordinates are degrees and allocated drainage areas are km2. GRanD capacity is MCM and the year is passed through as an integer.
+
+Output tables are whitespace-delimited fixed-width text, not CSV. They retain the legacy schemas and meanings:
+
+- **Flow gauges (`GRDC_alloc.txt`):** `ID`, `lat`, `lon`, `area_Input`, `area_CaMa`, `error`, `diff`, `Type`, `ix1`, `iy1`, `ix2`, `iy2`, `area1`, `area2`. Coordinates are degrees; areas and `diff` are km2; `error` is the signed dimensionless relative area difference; indices are one-based CaMa-Flood grid indices. `area_CaMa` is the selected aggregate upstream area; `area1`/`area2` are the primary and optional secondary substitute areas. `Type` is the number of upstream substitute catchments (0–2). Unallocated rows use `Type=-9`, indices `-999`, and CaMa area/error/difference/substitute-area fields `-999`. Out-of-domain rows are omitted.
+- **Dams (`GRanD_river.txt`, `GRanD_small.txt`, `GRanD_error.txt`):** `ID`, `lat`, `lon`, `area_CaMa`, `area_Input`, `error`, `diff`, `ix`, `iy`, `cap_mcm`, `year`, `damname`, `rivname`. Coordinates are degrees, areas and `diff` are km2, `error` is dimensionless, `cap_mcm` is MCM, and indices are one-based. `area_CaMa` is the selected upstream area; `diff=area_CaMa-area_Input`. The `small` class uses the legacy catchment-area criterion; it is not a verified physical mainstem/tributary class. Its sentinel is `-888` (`error=-8`). The error file uses `-999` for unmapped area/index/error fields. Out-of-domain rows and rows with negative capacity are skipped, matching v4.
+- **Level gauges (`MLIT_levelgauge.txt`):** `ID`, `lat`, `lon`, `area`, `Type`, `ix1`, `iy1`, `ix2`, `iy2`, `elv_outlet`, `elv_gauge`, `elv_upst`, `dst_outlet`, `dst_upst`, `upa_outlet`. Coordinates are degrees, `area` and `upa_outlet` are km2, elevations are metres, distances along the river network are km, and indices are one-based. `ix1/iy1` identify the assigned catchment; `ix2/iy2` identify its selected upstream reference catchment where applicable. The elevation fields are CaMa outlet, high-resolution gauge, and upstream catchment-outlet elevations; `dst_outlet` and `dst_upst` are the corresponding along-network distances. `Type=1/2/3` denotes the legacy mainstem/tributary/small-stream path classes; `Type=-9` is unallocated. Missing index, elevation, distance, and outlet-area values use `-999` in unmatched rows; upstream-reference fields are also `-999` for Type 3.
+
+For all three products, row order, formatting precision, classifications, and sentinels preserve legacy behavior. The dam input capacity and year columns pass through into the corresponding output fields.
+
+Run the migration regression with:
+
+```sh
+python3 -B -m unittest map.tools.tests.test_allocation_regression -v
+```
+
+It compiles v4 and v5 programs in temporary directories, compares all six output products to the committed legacy snapshots, checks classifications and high-resolution selection, rejects a multi-area layout, and verifies that the Mekong inputs were not modified. Regression demonstrates parity for this sample/compiler, not independent scientific validation. Threshold rationale remains open; see the [allocation migration plan](../../../docs/map_allocation_migration_plan.md#knowledge-gaps-and-maintainer-questions).

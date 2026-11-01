@@ -7,3 +7,6 @@
 /map/data/GRanD_alloc+Mekong.csv text
 /map/data/MLIT_FlowGauge_alloc_final.csv text
 /map/data/MLIT_LevelGauge_allocated.csv text
+
+# Legacy fixed-width allocation baselines intentionally retain trailing field padding.
+/map/tools/tests/data/allocation/legacy_gfortran_14_2/*.txt whitespace=-blank-at-eol
