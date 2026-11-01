@@ -81,4 +81,5 @@ printf '\n==================================================\n[STEP 2/3] Estimat
 STEP="Merge power-law channel widths with MERIT Hydro widths"
 printf '\n==================================================\n[STEP 3/3] Merge MERIT Hydro channel widths\n==================================================\n\n'
 "$EXEC_MERIT" "$INPDIM"
+
 printf '\n==================================================\n[SUCCESS] %s\n==================================================\n' "$SCRIPT_NAME"

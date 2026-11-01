@@ -44,6 +44,7 @@ trap 'exit 143' TERM
 EXEC_ALLOCATE="$CODE_DIR/allocate_level_gauge"
 
 cd "$SCRIPT_DIR"
+
 STEP="Allocate water-level gauges and calculate river-path attributes"
 printf '\n==================================================\n[STEP 1/2] Allocate level gauges (%s)\n==================================================\n\n' "$HIRES_TAG"
 "$EXEC_ALLOCATE" "$GAUGE_IN" "$HIRES_TAG"
@@ -51,4 +52,5 @@ printf '\n==================================================\n[STEP 1/2] Allocat
 STEP="Move allocated level-gauge table into the map root"
 printf '\n==================================================\n[STEP 2/2] Save MLIT_levelgauge.txt\n==================================================\n\n'
 mv ./gauge_alloc.txt "$GAUGE_OUT"
+
 printf '\n==================================================\n[SUCCESS] %s\n==================================================\n' "$SCRIPT_NAME"

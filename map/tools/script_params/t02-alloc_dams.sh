@@ -46,6 +46,7 @@ trap 'exit 143' TERM
 EXEC_ALLOCATE="$CODE_DIR/allocate_dam"
 
 cd "$SCRIPT_DIR"
+
 STEP="Allocate dams and separate river, small, and error records"
 printf '\n==================================================\n[STEP 1/2] Allocate dams (%s)\n==================================================\n\n' "$HIRES_TAG"
 "$EXEC_ALLOCATE" "$DAM_IN" "$HIRES_TAG"
@@ -55,4 +56,5 @@ printf '\n==================================================\n[STEP 2/2] Save GR
 mv ./dam_alloc_river.txt "$DAM_RIVER_OUT"
 mv ./dam_alloc_small.txt "$DAM_SMALL_OUT"
 mv ./dam_alloc_error.txt "$DAM_ERROR_OUT"
+
 printf '\n==================================================\n[SUCCESS] %s\n==================================================\n' "$SCRIPT_NAME"

@@ -11,7 +11,7 @@ MAP_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd -P)
 CODE_DIR=$(CDPATH= cd "$SCRIPT_DIR/../../tools/code" && pwd -P)
 
 # Configuration: this is a practical sample setting, not a scientifically calibrated threshold.
-AREA_THRESHOLD_KM2=50000
+AREA_THRESHOLD_KM2=30000
 
 # ----------------------------------------------------------------------
 # User settings end here. Program paths and processing steps follow.
@@ -45,7 +45,9 @@ EXEC_SUBBASIN="$CODE_DIR/analysis_subbasin"
 
 # The program reads map inputs and writes the standard products via ../.
 cd "$SCRIPT_DIR"
+
 STEP="Segment the river network at the ${AREA_THRESHOLD_KM2} km2 example threshold"
 printf '\n==================================================\n[STEP 1/1] Generate subbasin maps (%s km2)\n==================================================\n\n' "$AREA_THRESHOLD_KM2"
 "$EXEC_SUBBASIN" "$AREA_THRESHOLD_KM2" ../subbsn.bin ../subcol.bin
+
 printf '\n==================================================\n[SUCCESS] %s\n==================================================\n' "$SCRIPT_NAME"

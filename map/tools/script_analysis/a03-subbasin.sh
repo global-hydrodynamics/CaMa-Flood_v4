@@ -48,8 +48,10 @@ mkdir -p "$OUTPUT_DIR"
 
 # The executable reads map inputs through ../ from this map-local directory.
 cd "$SCRIPT_DIR"
+
 STEP="Generate exploratory subbasins at ${AREA_THRESHOLD_KM2} km2"
 printf '\n==================================================\n[STEP 1/1] Generate exploratory subbasin maps (%s km2)\n==================================================\n\n' "$AREA_THRESHOLD_KM2"
 "$EXEC_SUBBASIN" "$AREA_THRESHOLD_KM2" "$SUBBSN_OUTPUT" "$SUBCOL_OUTPUT"
 printf 'Subbasin IDs: %s\nDisplay colors: %s\n' "$SUBBSN_OUTPUT" "$SUBCOL_OUTPUT"
+
 printf '\n==================================================\n[SUCCESS] %s\n==================================================\n' "$SCRIPT_NAME"

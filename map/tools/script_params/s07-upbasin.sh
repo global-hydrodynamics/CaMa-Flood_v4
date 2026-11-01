@@ -86,6 +86,7 @@ printf '%s\t%s\t%s\t%s\n' \
 
 # Use the allocation's primary grid cell; re-mapping lat/lon can select a different cell.
 cd "$SCRIPT_DIR"
+
 STEP="Write river information for GRDC $GRDC_ID at cell ($IX,$IY)"
 printf '\n==================================================\n[STEP 2/3] Inspect selected GRDC river cell\n==================================================\n\n'
 "$EXEC_RIVINFO" xy "$IX" "$IY" > "$RIVER_INFO_REPORT"
@@ -97,4 +98,5 @@ printf 'Selected GRDC station: %s; cell=(%s,%s); area_CaMa=%s km2\n' \
     "$GRDC_ID" "$IX" "$IY" "$AREA_CAMA"
 printf 'Station summary: %s\nRiver information: %s\nUpstream mask: %s\n' \
     "$STATION_REPORT" "$RIVER_INFO_REPORT" "$UPBASIN_OUTPUT"
+
 printf '\n==================================================\n[SUCCESS] %s\n==================================================\n' "$SCRIPT_NAME"

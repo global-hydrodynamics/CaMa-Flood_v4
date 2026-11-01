@@ -45,6 +45,7 @@ trap 'exit 143' TERM
 EXEC_ALLOCATE="$CODE_DIR/allocate_flow_gauge"
 
 cd "$SCRIPT_DIR"
+
 STEP="Allocate gauges to the CaMa-Flood river network"
 printf '\n==================================================\n[STEP 1/2] Allocate flow gauges (%s, %s)\n==================================================\n\n' "$GAUGE_MODE" "$HIRES_TAG"
 "$EXEC_ALLOCATE" "$GAUGE_IN" "$GAUGE_MODE" "$HIRES_TAG"
@@ -52,4 +53,5 @@ printf '\n==================================================\n[STEP 1/2] Allocat
 STEP="Move allocated flow-gauge table into the map root"
 printf '\n==================================================\n[STEP 2/2] Save GRDC_alloc.txt\n==================================================\n\n'
 mv ./gauge_alloc.txt "$GAUGE_OUT"
+
 printf '\n==================================================\n[SUCCESS] %s\n==================================================\n' "$SCRIPT_NAME"

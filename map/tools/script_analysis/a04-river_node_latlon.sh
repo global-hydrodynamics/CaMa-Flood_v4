@@ -19,12 +19,14 @@ OUTPUT_FILE="$SCRIPT_DIR/../river_node_latlon_${WEST}_${EAST}_${SOUTH}_${NORTH}.
 
 EXEC_RIVER_NODE="$SCRIPT_DIR/analysis_river_node_latlon"
 cd "$SCRIPT_DIR"
+
 printf '\n==================================================\n'
 printf '[STEP 1/1] Extract river-node coordinate pairs in %s %s %s %s\n' \
     "$WEST" "$EAST" "$SOUTH" "$NORTH"
 printf '==================================================\n\n'
 "$EXEC_RIVER_NODE" "$WEST" "$EAST" "$SOUTH" "$NORTH" > "$OUTPUT_FILE"
 printf 'Output includes one header line followed by data rows: %s\n' "$OUTPUT_FILE"
+
 printf '\n==================================================\n'
 printf '[SUCCESS] River-node coordinate extraction complete.\n'
 printf '==================================================\n'

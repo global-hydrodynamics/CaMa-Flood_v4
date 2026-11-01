@@ -61,6 +61,7 @@ fi
 
 # 1. Filter bifurcation paths by channel width and estimate their bifurcation depth.
 cd "$MAP_DIR"
+
 STEP="Filter bifurcation paths and estimate bifurcation-channel depth"
 printf '\n==================================================\n[STEP 1/2] Estimate bifurcation parameters\n==================================================\n\n'
 if [ "$CHECK_MAP" = check_map ]; then
@@ -71,6 +72,7 @@ fi
 
 # 2. Merge basins connected by the retained bifurcation pathways.
 cd "$SCRIPT_DIR"
+
 STEP="Merge basins connected by bifurcation pathways"
 printf '\n==================================================\n[STEP 2/2] Merge connected basins\n==================================================\n\n'
 if [ "$CHECK_MAP" = check_map ]; then
@@ -78,4 +80,5 @@ if [ "$CHECK_MAP" = check_map ]; then
 else
     "$EXEC_SETBASIN"
 fi
+
 printf '\n==================================================\n[SUCCESS] %s\n==================================================\n' "$SCRIPT_NAME"

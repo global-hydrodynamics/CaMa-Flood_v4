@@ -21,6 +21,7 @@ REPORT_FILE=""
 
 EXEC_RIVER_INFO="$SCRIPT_DIR/analysis_river_point_info"
 cd "$SCRIPT_DIR"
+
 printf '\n==================================================\n'
 printf '[STEP 1/1] Inspect river information using %s coordinates\n' "$QUERY_MODE"
 printf '==================================================\n\n'
@@ -46,6 +47,7 @@ case "$QUERY_MODE" in
         exit 2
         ;;
 esac
+
 printf '\n==================================================\n'
 printf '[SUCCESS] River-point inspection complete.\n'
 printf '==================================================\n'
