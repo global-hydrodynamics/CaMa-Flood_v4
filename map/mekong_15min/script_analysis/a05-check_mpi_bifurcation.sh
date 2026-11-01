@@ -5,10 +5,13 @@ set -eu
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 MAP_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd -P)
 CODE_DIR=$(CDPATH= cd "$SCRIPT_DIR/../../tools/code" && pwd -P)
+[ -x "$CODE_DIR/analysis_check_mpi_bifurcation" ] || {
+    echo "Missing shared executable: $CODE_DIR/analysis_check_mpi_bifurcation" >&2
+    echo "Build it beforehand with: make -C map/tools/code analysis" >&2
+    exit 1
+}
 [ "$#" -ge 1 ] || { echo "Usage: $0 <region-map.bin> [--csv <dropped.csv>]" >&2; exit 2; }
 [ "$#" -le 3 ] || { echo "Usage: $0 <region-map.bin> [--csv <dropped.csv>]" >&2; exit 2; }
-make -C "$CODE_DIR" analysis || { echo "Failed to build analysis tool" >&2; exit 1; }
-[ -x "$CODE_DIR/analysis_check_mpi_bifurcation" ] || { echo "Missing shared executable: $CODE_DIR/analysis_check_mpi_bifurcation" >&2; exit 1; }
 case $1 in
     /*) REGION_MAP=$1 ;;
     *) REGION_MAP="$MAP_DIR/$1" ;;

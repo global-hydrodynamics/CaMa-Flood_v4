@@ -78,8 +78,8 @@ printf '==================================================\n[STEP 3/3] Analyze d
 # Optional manual visualization and analysis for another partition from the map root.
 echo "To visualize and analyze another partition from the map root:"
 echo "  ../tools/code/analysis_mpi_region_color mpireg-8.bin"
-echo "  ./script_analysis/a01-check_mpi_bifurcation.sh mpireg-8.bin"
-echo "  ./script_analysis/a01-check_mpi_bifurcation.sh mpireg-8.bin --csv dropped_bifurcations.csv"
+echo "  ./script_analysis/a05-check_mpi_bifurcation.sh mpireg-8.bin"
+echo "  ./script_analysis/a05-check_mpi_bifurcation.sh mpireg-8.bin --csv dropped_bifurcations.csv"
 STEP="Remove temporary MPI basin-group map"
 rm -f "$TEMP_BASIN"
 printf '==================================================\n[SUCCESS] %s\n==================================================\n' "$SCRIPT_NAME"

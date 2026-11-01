@@ -1,47 +1,65 @@
-# Map analysis and diagnostic scripts
+# Portable map-analysis toolkit
 
-`script_analysis/` contains standalone checks and diagnostics that operate on prepared maps. The analysis tools are separate from map generation so they can inspect partitions or input maps produced by other workflows.
+`script_analysis/` is a portable collection of four compiled analysis programs and readable example scripts. Scientific calculations remain in the shared Fortran programs; scripts show editable settings and invocation examples. Use a copied map-local directory either by running an executable directly or by editing and running its paired shell example.
 
-## MPI bifurcation connectivity
+## Build and prepare the portable directory
 
-[`a01-check_mpi_bifurcation.sh`](a01-check_mpi_bifurcation.sh) analyzes any MPI region raster against the map's standard `bifprm.txt`. It does not run s04 or change map data. Build the shared executable with `make -C map/tools/code analysis`, copy the wrapper into `<map>/script_analysis/`, and run from any working directory; relative input/output paths are interpreted at the map root.
-
-```sh
-./script_analysis/a01-check_mpi_bifurcation.sh mpireg-16.bin
-./script_analysis/a01-check_mpi_bifurcation.sh mpireg-8.bin --csv dropped_bifurcations.csv
-```
-
-The binary reader expects one direct-access int32 `NX x NY` record in the host-compatible CaMa-Flood map layout. The diagnostic reads `params.txt`, `nextxy.bin`, `bifprm.txt`, and the selected region map. It reproduces the endpoint membership logic from `src/cmf_ctrl_maps_mod.F90:CALC_1D_SEQ`: in-region river cells are traversed in upstream order, and downstream traversal can add an out-of-region downstream cell because that step does not re-check the region label. This is an effective downstream vector extension; the inspected code does not establish a general ghost-cell exchange system. `READ_BIFPARAM` counts a pathway when both endpoints have positive vector indices on the same rank.
-
-The report separates:
-
-- **Retained:** both endpoints receive positive vector indices on at least one rank. They may have different assigned region IDs if the downstream vector extension makes them coexist on one rank.
-- **Dropped:** both endpoints have valid vector indices on their assigned ranks, but no single rank has both endpoints.
-- **Invalid/unassigned:** an endpoint is outside the map, not a modeled river/outlet cell, or receives no vector index on its assigned rank.
-
-It reports totals, percentages, channel (`width(1)>0`) versus floodplain-only (`width(1)<=0`) subtotals, and the count retained across differing assigned region IDs by downstream vector extension. Optional CSV output contains only dropped pathways with endpoint coordinates, region IDs, elevation, geographic coordinates, path type, and first-layer width. Without `--csv`, the tool writes no persistent diagnostic file.
-
-The dropped fraction describes connections omitted by the selected domain partition. It is not an estimate of discharge, storage, or inundation error, and it does not independently validate the scientific quality of the map or simulation.
-
-The s04 map-generation script invokes this tool for its selected `DEFAULT_MPI` map and prints the summary in the run log. The same standalone command can inspect any compatible externally generated map. See the [parameter workflow guide](../script_params/README.md#mpi-map-preparation) for basin merging, threshold rationale, generated files, and regression evidence.
-
-
-## MPI region coloring
-
-`analysis_mpi_region_color` is an independent visualization tool. From a map root, pass an existing numbered region map; it reads `params.txt` for dimensions and global-wrap geometry, then writes the matching color raster:
+Build the analysis programs in the shared code directory, then copy the four required executables into this template:
 
 ```sh
-../tools/code/analysis_mpi_region_color mpireg-8.bin
+make -C map/tools/code analysis
+cd map/tools/script_analysis
+./a00-copy_codes.sh
 ```
 
-This creates `bsncol_mpi-8.bin`, a single int32 `NX x NY` record with `-9999` outside assigned regions. It colors region IDs using the legacy size-prioritized, adjacency-aware palette logic (large regions first; then small regions, with singleton regions assigned color 1). The palette and tie/order behavior follow `set_color` in `map/src/src_param/set_bif_basin_mpi.F90`; the utility applies that logic to the supplied MPI region raster. It does not alter the region map and is not called by s04. Invoke it manually for any existing partition when visualization is useful. `bifcol_mpi.bin`, produced during s04 basin aggregation, is a separate visualization of MPI-aggregated basin IDs.
+`a00-copy_codes.sh` checks that all four source programs exist and are executable before copying any, then preserves their executable permissions. It never compiles programs. Run it in this canonical template before copying the prepared directory; a copied map-local directory may not have access to the shared `map/tools/code/` path.
 
-## River-cell and basin analysis
+```sh
+cp -a map/tools/script_analysis map/mekong_15min/
+```
 
-The shared `analysis_get_rivinfo`, `analysis_get_upbasin`, and `analysis_get_subbasin` executables are wrapped by the scripts below. Build them first with `make -C map/tools/code analysis`. Copy a template into a map-local `script_analysis/`; scripts resolve map paths relative to their own location and write outputs in the documented map or `analysis/` directory.
+The copied executables are platform and architecture dependent. Rebuild and prepare them on a different or incompatible system. Compiled binaries are excluded from Git.
 
-- [`a01-river_info.sh`](a01-river_info.sh) queries configured grid indices (`IX`, `IY`) or geographic coordinates and can save the textual result.
-- [`a02-upstream_basin.sh`](a02-upstream_basin.sh) extracts the upstream mask for configured `IX`, `IY` to a configurable analysis filename. It does not overwrite standard `upbasin.bin`.
-- [`a03-subbasin.sh`](a03-subbasin.sh) runs the same segmentation algorithm as `script_params/s06-subbasin.sh` with a configurable km2 threshold, writing threshold-named files under `analysis/` rather than standard products.
+## Direct command-line use
 
-Grid indices are one-based CaMa-Flood map indices. `get_upbasin` marks selected upstream river cells as 1, other mapped river cells as 0, and cells outside the network as -9999. `get_subbasin` applies an upstream-area-increase boundary rule; the threshold is not a simple minimum or maximum basin-area filter. See [standard parameter workflows](../script_params/README.md#river-network-analysis) for the GRDC-based `s07` example and standard product meanings. Optional analysis outputs are not required for model execution. Automatic CTL generation requires registered filenames and does not infer metadata for arbitrary names.
+Run the programs from a map-local `script_analysis/` directory so their `../` input paths resolve to the map root:
+
+```sh
+cd map/mekong_15min/script_analysis
+./analysis_river_point_info xy 62 93
+./analysis_upbasin 62 93
+./analysis_subbasin 50000
+./analysis_river_node_latlon 90 110 5 35 > river_node_latlon.txt
+```
+
+| Executable | Arguments and output |
+| --- | --- |
+| `analysis_river_point_info` | `xy IX IY` or `latlon LAT LON`; prints cell and catchment details. Lat/lon lookup may use `15sec/` or `1min/` `catmxy.bin`. |
+| `analysis_upbasin` | `IX IY [OUTPUT]`; indices are one-based Fortran map cells. Without `OUTPUT`, writes `analysis_upbasin_IX_IY.bin` in the map root, keeping the standard `upbasin.bin` untouched. Values are 1 upstream of the selected cell, 0 for other mapped river cells, and -9999 outside the network. |
+| `analysis_subbasin` | `THRESHOLD_KM2 [SUBBSN_OUTPUT SUBCOL_OUTPUT]`; without output paths, writes threshold-labeled `analysis_subbsn_<threshold>.bin` and `analysis_subcol_<threshold>.bin` in the map root. The threshold applies to upstream-area increases across links, not a simple basin-area cutoff. |
+| `analysis_river_node_latlon` | `WEST EAST SOUTH NORTH` in degrees; prints a header followed by directed connections between CaMa-Flood river-cell representative points. A link is selected when either endpoint is inside the box. Terminal links (`-9`/`-10`) use `-999` for downstream coordinates. These points are not a high-resolution river centerline. |
+
+For `analysis_river_node_latlon`, the header is the first stdout line and remaining lines are data rows. Redirect stdout to retain both; no GIS export format is produced.
+
+## Example shell scripts
+
+Each example uses the executable stored beside it, changes to its own directory before execution, and does not compile programs:
+
+- [`a01-river_point_info.sh`](a01-river_point_info.sh) demonstrates querying a configured cell or geographic point.
+- [`a02-upbasin.sh`](a02-upbasin.sh) writes an arbitrary-cell mask and report under the map's `analysis/` directory, separate from the station-selected product.
+- [`a03-subbasin.sh`](a03-subbasin.sh) demonstrates a 50,000 km2 threshold and writes both rasters under `analysis/`, separate from standard products.
+- [`a04-river_node_latlon.sh`](a04-river_node_latlon.sh) demonstrates extraction for a Mekong-region bounding box and saves the header plus data rows as text.
+
+Edit the visible settings near the start of each script. Re-running replaces the same named example outputs.
+
+## Standard map-preparation workflows
+
+`script_params/s06-subbasin.sh` and `s07-upbasin.sh` are independent map-preparation scripts. They use executables from the shared `map/tools/code/` directory, not binaries copied into `script_analysis/`. `s06` writes the standard `subbsn.bin` and `subcol.bin`; `s07` selects the valid allocated GRDC gauge with the largest `area_CaMa` and writes `upbasin-<GRDC_ID>.bin` plus reports. The Mekong sample wrappers use a 30,000 km2 labeled subbasin example and GRDC ID 2569002. See [`script_params/README.md`](../script_params/README.md#river-network-analysis).
+
+## MPI diagnostics
+
+The additional [`a05-check_mpi_bifurcation.sh`](a05-check_mpi_bifurcation.sh) inspects an existing MPI region raster and uses the shared `analysis_check_mpi_bifurcation` executable. Build it beforehand with `make -C map/tools/code analysis`. It is separate from the four-program portable bundle copied by `a00` and requires access to the shared tools directory.
+
+`analysis_mpi_region_color` is a separate manual visualization utility that writes `bsncol_mpi-N.bin`; s04 does not invoke it. The MPI color raster and basin aggregation products are documented in the [MPI map-preparation guide](../script_params/README.md#mpi-map-preparation).
+
+Optional analysis outputs are not standard simulation inputs. Automatic CTL generation requires a matching filename row in `map/map_variables.csv`; it does not infer metadata for arbitrary output names.

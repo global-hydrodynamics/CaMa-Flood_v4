@@ -1,6 +1,6 @@
 #!/bin/sh
 # Create a single-outlet upstream-basin mask for a configured river-grid cell.
-# Copy to <map>/script_analysis/ and run from any working directory.
+# Run from a prepared map-local script_analysis/; the copied executable reads map inputs through ../.
 # Inputs: params.txt, nextxy.bin, upgrid.bin, and uparea.bin.
 # Output: a configurable int32 NX x NY mask, separate from the standard upbasin.bin.
 set -eu
@@ -8,7 +8,6 @@ set -eu
 # Paths
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 MAP_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd -P)
-CODE_DIR=$(CDPATH= cd "$SCRIPT_DIR/../../tools/code" && pwd -P)
 
 # Configuration: use one-based Fortran grid coordinates and choose a nonstandard output name.
 IX=62
@@ -40,7 +39,7 @@ trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
-EXEC_UPBASIN="$CODE_DIR/analysis_get_upbasin"
+EXEC_UPBASIN="$SCRIPT_DIR/analysis_upbasin"
 
 # The program reads map inputs via ../ from the map-local script directory.
 cd "$SCRIPT_DIR"

@@ -1,8 +1,8 @@
 #!/bin/sh
 # Generate standard subbasin segmentation and display-color maps.
 # Copy to <map>/script_params/ and run from any working directory.
-# Inputs: params.txt, nextxy.bin, uparea.bin.
-# Outputs: subbsn.bin and subcol.bin in the map root; existing files are overwritten.
+# Inputs: params.txt, nextxy.bin, uparea.bin in the map root.
+# Outputs: subbsn-30000.bin and subcol-30000.bin in the map root; existing files are overwritten.
 set -eu
 
 # Paths
@@ -11,7 +11,7 @@ MAP_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd -P)
 CODE_DIR=$(CDPATH= cd "$SCRIPT_DIR/../../tools/code" && pwd -P)
 
 # Configuration: this is a practical sample setting, not a scientifically calibrated threshold.
-AREA_THRESHOLD_KM2=50000
+AREA_THRESHOLD_KM2=30000
 
 # ----------------------------------------------------------------------
 # User settings end here. Program paths and processing steps follow.
@@ -37,11 +37,13 @@ trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
-EXEC_SUBBASIN="$CODE_DIR/analysis_get_subbasin"
+EXEC_SUBBASIN="$CODE_DIR/analysis_subbasin"
 
 # The legacy program reads map inputs via ../ and writes the standard products there.
 cd "$SCRIPT_DIR"
 STEP="Segment the river network at the ${AREA_THRESHOLD_KM2} km2 example threshold"
 printf '==================================================\n[STEP 1/1] Generate subbasin maps (%s km2)\n==================================================\n' "$AREA_THRESHOLD_KM2"
-"$EXEC_SUBBASIN" "$AREA_THRESHOLD_KM2"
+"$EXEC_SUBBASIN" "$AREA_THRESHOLD_KM2" ../subbsn.bin ../subcol.bin
+mv "$MAP_DIR/subbsn.bin" "$MAP_DIR/subbsn-${AREA_THRESHOLD_KM2}.bin"
+mv "$MAP_DIR/subcol.bin" "$MAP_DIR/subcol-${AREA_THRESHOLD_KM2}.bin"
 printf '==================================================\n[SUCCESS] %s\n==================================================\n' "$SCRIPT_NAME"

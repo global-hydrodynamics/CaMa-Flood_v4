@@ -109,6 +109,25 @@ class MekongSampleTests(unittest.TestCase):
         actual_high = {path.name for path in (MAP / "1min").glob("*.bin")}
         self.assertTrue(required_high <= actual_high, f"missing high-resolution products: {sorted(required_high - actual_high)}")
 
+    def test_named_river_analysis_sample_products_match_network_and_registry(self) -> None:
+        dims = read_map_dimensions()
+        cells = dims["NX"] * dims["NY"]
+        nextx = struct.unpack("<" + "i" * cells, (MAP / "nextxy.bin").read_bytes()[:cells * 4])
+        subbasins = struct.unpack("<" + "i" * cells, (MAP / "subbsn-30000.bin").read_bytes())
+        colors = struct.unpack("<" + "i" * cells, (MAP / "subcol-30000.bin").read_bytes())
+        upstream = struct.unpack("<" + "i" * cells, (MAP / "upbasin-2569002.bin").read_bytes())
+        self.assertTrue(all(value == -9999 for value, downstream in zip(subbasins, nextx) if downstream == -9999))
+        self.assertTrue(all(value >= 0 for value, downstream in zip(subbasins, nextx) if downstream != -9999))
+        self.assertIn(0, subbasins)
+        self.assertTrue(any(value > 0 for value in subbasins))
+        self.assertTrue(all(value == -9999 or 1 <= value <= 10 for value in colors))
+        self.assertEqual(set(upstream), {-9999, 0, 1})
+
+        rows = registry_rows()
+        self.assertEqual(len(rows_for_sample_file(MAP / "subbsn-30000.bin", rows)), 1)
+        self.assertEqual(len(rows_for_sample_file(MAP / "subcol-30000.bin", rows)), 1)
+        self.assertEqual(len(rows_for_sample_file(MAP / "upbasin-2569002.bin", rows)), 1)
+
     def test_sample_binary_sizes_match_registry_types_and_dimensions(self) -> None:
         dims = read_map_dimensions()
         location_lines = (MAP / "1min" / "location.txt").read_text().splitlines()

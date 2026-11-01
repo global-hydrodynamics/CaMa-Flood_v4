@@ -1,36 +1,43 @@
-# Map analysis and diagnostic scripts
+# Mekong sample analysis examples
 
-`script_analysis/` contains standalone checks and diagnostics that operate on prepared maps. The analysis tools are separate from map generation so they can inspect partitions or input maps produced by other workflows.
+This directory holds the four portable analysis examples configured for the Mekong map, plus the optional MPI connectivity wrapper. Platform-specific compiled executables are not tracked. The four analysis programs are compiled centrally under [`map/tools/code/`](../../tools/code/) and copied into the canonical [`map/tools/script_analysis/`](../../tools/script_analysis/) template before that prepared directory is copied into a map.
 
-## MPI bifurcation connectivity
-
-[`a01-check_mpi_bifurcation.sh`](a01-check_mpi_bifurcation.sh) analyzes any MPI region raster against the map's standard `bifprm.txt`. It does not run s04 or change map data. Build the shared executable with `make -C map/tools/code analysis`, copy the wrapper into `<map>/script_analysis/`, and run from any working directory; relative input/output paths are interpreted at the map root.
+Build and prepare the local binaries from the repository root:
 
 ```sh
-./script_analysis/a01-check_mpi_bifurcation.sh mpireg-16.bin
-./script_analysis/a01-check_mpi_bifurcation.sh mpireg-8.bin --csv dropped_bifurcations.csv
+make -C map/tools/code analysis
+cd map/tools/script_analysis
+./a00-copy_codes.sh
+for program in analysis_river_point_info analysis_upbasin analysis_subbasin analysis_river_node_latlon; do
+  cp -p "$program" ../../mekong_15min/script_analysis/
+done
 ```
 
-The binary reader expects one direct-access int32 `NX x NY` record in the host-compatible CaMa-Flood map layout. The diagnostic reads `params.txt`, `nextxy.bin`, `bifprm.txt`, and the selected region map. It reproduces the endpoint membership logic from `src/cmf_ctrl_maps_mod.F90:CALC_1D_SEQ`: in-region river cells are traversed in upstream order, and downstream traversal can add an out-of-region downstream cell because that step does not re-check the region label. This is an effective downstream vector extension; the inspected code does not establish a general ghost-cell exchange system. `READ_BIFPARAM` counts a pathway when both endpoints have positive vector indices on the same rank.
+`a00-copy_codes.sh` is a template-preparation step. Do not run the copy inside this map-local directory: it may not have the canonical `../code/` source directory. Rebuild executables on other operating systems or incompatible architectures.
 
-The report separates:
+After the four binaries have been copied, direct commands and the paired example scripts can be run from this directory:
 
-- **Retained:** both endpoints receive positive vector indices on at least one rank. They may have different assigned region IDs if the downstream vector extension makes them coexist on one rank.
-- **Dropped:** both endpoints have valid vector indices on their assigned ranks, but no single rank has both endpoints.
-- **Invalid/unassigned:** an endpoint is outside the map, not a modeled river/outlet cell, or receives no vector index on its assigned rank.
+```sh
+cd map/mekong_15min/script_analysis
+./analysis_river_point_info xy 62 93
+./analysis_upbasin 62 93
+./analysis_subbasin 50000
+./analysis_river_node_latlon 90 110 5 35 > river_node_latlon.txt
+```
 
-It reports totals, percentages, channel (`width(1)>0`) versus floodplain-only (`width(1)<=0`) subtotals, and the count retained across differing assigned region IDs by downstream vector extension. Optional CSV output contains only dropped pathways with endpoint coordinates, region IDs, elevation, geographic coordinates, path type, and first-layer width. Without `--csv`, the tool writes no persistent diagnostic file.
+The executables read map inputs through `../`. Run them from this map-local `script_analysis/` directory. The node-coordinate output begins with a header and then lists directed connections between CaMa-Flood cell representative points; it is not a high-resolution river centerline.
 
-The dropped fraction describes connections omitted by the selected domain partition. It is not an estimate of discharge, storage, or inundation error, and it does not independently validate the scientific quality of the map or simulation.
+## Configured examples
 
-The s04 map-generation script invokes this tool for its selected `DEFAULT_MPI` map and prints the summary in the run log. The same standalone command can inspect any compatible externally generated map. See the [parameter workflow guide](../script_params/README.md#mpi-map-preparation) for basin merging, threshold rationale, generated files, and regression evidence.
+- [`a01-river_point_info.sh`](a01-river_point_info.sh) inspects the one-based cell `(62,93)`; edit its query mode to use geographic coordinates instead.
+- [`a02-upbasin.sh`](a02-upbasin.sh) writes an arbitrary-cell mask under `analysis/`, separate from `upbasin-2569002.bin`.
+- [`a03-subbasin.sh`](a03-subbasin.sh) uses a 50,000 km2 exploratory threshold and writes under `analysis/`, separate from the sample's `subbsn-30000.bin` and `subcol-30000.bin`.
+- [`a04-river_node_latlon.sh`](a04-river_node_latlon.sh) extracts Mekong-region river-node coordinate pairs to a text file.
 
-## Mekong river-analysis examples
+These examples do not compile programs. Their calculations are in the shared Fortran executables. Re-running an example replaces its same-named output. These outputs are optional analyses, not standard simulation inputs.
 
-These configured examples call the shared `analysis_get_*` executables in `map/tools/code/`. Build them before use with `make -C map/tools/code analysis`; the scripts do not compile programs.
+## MPI connectivity wrapper
 
-- `a01-river_info.sh` reports river information for the configured one-based cell `(62,93)` and saves `river_info.txt`.
-- `a02-upstream_basin.sh` writes an upstream mask to `analysis_upbasin_62_93.bin` and a text report. It does not replace the standard `upbasin.bin`.
-- `a03-subbasin.sh` uses the example 50,000 km2 threshold and writes `analysis/subbsn_50000km2.bin` and `analysis/subcol_50000km2.bin`, separate from the standard products.
+[`a05-check_mpi_bifurcation.sh`](a05-check_mpi_bifurcation.sh) calls the shared `analysis_check_mpi_bifurcation` executable for an existing `mpireg-N.bin`. Build that separate diagnostic with `make -C map/tools/code analysis`; it is not one of the four binaries copied by `a00`.
 
-Edit the visible settings near the beginning of a copied script to choose a cell, query mode, threshold, or output location. Grid indices are one-based. The subbasin threshold is applied to an upstream-area increase across a valid downstream link; it is not a simple basin-area cutoff. These workflows overwrite their same-named output files when run again. Optional results are not simulation inputs. Automatic CTL generation requires an entry in `map/map_variables.csv` for the exact filename; arbitrary analysis names are not registered by default.
+For standard 30,000 km2 Mekong subbasin and station-selected upstream products, use the independent `../script_params/s06-subbasin.sh` and `s07-upbasin.sh` workflows. See the [map-tools guide](../../tools/README.md) and [parameter workflow guide](../script_params/README.md#river-network-analysis).

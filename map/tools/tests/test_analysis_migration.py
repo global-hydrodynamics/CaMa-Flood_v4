@@ -47,19 +47,26 @@ class AnalysisMigrationTests(unittest.TestCase):
             directory.mkdir()
         flags = ["-O2", "-ffree-line-length-none", "-fimplicit-none"]
         debug_flags = [*flags, "-fcheck=bounds"]
-        for stem in ("get_rivinfo", "get_upbasin", "get_subbasin"):
-            for source_dir, out_dir, prefix, compile_flags in (
-                (LEGACY, cls.legacy_dir, "", flags),
-                (CODE, cls.v5_dir, "analysis_", flags),
-                (CODE, cls.debug_dir, "analysis_", debug_flags),
+        programs = (
+            ("get_rivinfo", "analysis_river_point_info"),
+            ("get_upbasin", "analysis_upbasin"),
+            ("get_subbasin", "analysis_subbasin"),
+            ("get_vecmap", "analysis_river_node_latlon"),
+        )
+        for legacy_stem, v5_stem in programs:
+            for source_dir, out_dir, compile_flags in (
+                (LEGACY, cls.legacy_dir, flags),
+                (CODE, cls.v5_dir, flags),
+                (CODE, cls.debug_dir, debug_flags),
             ):
+                stem = legacy_stem if source_dir == LEGACY else v5_stem
                 result = run(
-                    [cls.compiler, *compile_flags, str(source_dir / f"{prefix}{stem}.F90"),
-                     "-o", str(out_dir / f"{prefix}{stem}")], ROOT,
+                    [cls.compiler, *compile_flags, str(source_dir / f"{stem}.F90"),
+                     "-o", str(out_dir / stem)], ROOT,
                 )
                 if result.returncode:
                     cls.tmp.cleanup()
-                    raise RuntimeError(f"Could not compile {prefix}{stem}:\n{result.stdout}{result.stderr}")
+                    raise RuntimeError(f"Could not compile {stem}:\n{result.stdout}{result.stderr}")
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -76,6 +83,8 @@ class AnalysisMigrationTests(unittest.TestCase):
         script_analysis.mkdir()
         code_link.parent.mkdir(parents=True)
         shutil.copytree(self.v5_dir, code_link)
+        for name in ("analysis_river_point_info", "analysis_upbasin", "analysis_subbasin", "analysis_river_node_latlon"):
+            shutil.copy2(self.v5_dir / name, script_analysis / name)
         for name in MAP_FILES:
             shutil.copy2(SAMPLE / name, map_dir / name)
         hires = map_dir / "1min"
@@ -99,15 +108,15 @@ class AnalysisMigrationTests(unittest.TestCase):
         for label, executable_dir, workdir in (
             ("v5", self.v5_dir, v5_params), ("legacy", self.legacy_dir, legacy_params),
         ):
-            program_prefix = "analysis_" if label == "v5" else ""
-            result = run([str(executable_dir / f"{program_prefix}get_rivinfo"), "xy", "62", "93"], workdir)
+            rivinfo = "analysis_river_point_info" if label == "v5" else "get_rivinfo"
+            result = run([str(executable_dir / rivinfo), "xy", "62", "93"], workdir)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             if label == "v5":
                 v5_river_info = result.stdout
             else:
                 self.assertEqual(result.stdout, v5_river_info)
             result = run(
-                [str(executable_dir / f"{program_prefix}get_rivinfo"), "latlon", "11.579", "104.946"],
+                [str(executable_dir / rivinfo), "latlon", "11.579", "104.946"],
                 workdir,
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -116,42 +125,87 @@ class AnalysisMigrationTests(unittest.TestCase):
             else:
                 self.assertEqual(result.stdout, v5_geo_info)
 
-            result = run([str(executable_dir / f"{program_prefix}get_upbasin"), "62", "93"], workdir)
+            upbasin = "analysis_upbasin" if label == "v5" else "get_upbasin"
+            upbasin_args = [str(executable_dir / upbasin), "62", "93"]
+            if label == "v5":
+                upbasin_args.append("../upbasin.bin")
+            result = run(upbasin_args, workdir)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             if label == "v5":
                 v5_upbasin = (v5_map / "upbasin.bin").read_bytes()
             else:
                 self.assertEqual((legacy_map / "upbasin.bin").read_bytes(), v5_upbasin)
 
-            result = run([str(executable_dir / f"{program_prefix}get_subbasin"), "50000"], workdir)
+            subbasin = "analysis_subbasin" if label == "v5" else "get_subbasin"
+            subbasin_args = [str(executable_dir / subbasin), "50000"]
+            if label == "v5":
+                subbasin_args.extend(("../subbsn.bin", "../subcol.bin"))
+            result = run(subbasin_args, workdir)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             if label == "v5":
                 v5_subbsn = (v5_map / "subbsn.bin").read_bytes()
                 v5_subcol = (v5_map / "subcol.bin").read_bytes()
             else:
-                self.assertEqual((legacy_map / "subbsn.bin").read_bytes(), v5_subbsn)
+                legacy_subbsn = (legacy_map / "subbsn.bin").read_bytes()
+                old_values = struct.unpack("<" + "i" * (80 * 120), legacy_subbsn)
+                new_values = struct.unpack("<" + "i" * (80 * 120), v5_subbsn)
+                nextx_values = struct.unpack("<" + "i" * (80 * 120),
+                                             (v5_map / "nextxy.bin").read_bytes()[:80 * 120 * 4])
+                for old, new, downstream_x in zip(old_values, new_values, nextx_values):
+                    if old > 0:
+                        self.assertEqual(new, old)
+                    elif downstream_x == -9999:
+                        self.assertEqual(new, -9999)
+                    else:
+                        self.assertEqual(new, 0)
                 self.assertEqual((legacy_map / "subcol.bin").read_bytes(), v5_subcol)
+
+        legacy_analysis = legacy_map / "script_analysis"
+        legacy_analysis.mkdir()
+        for label, executable, workdir in (
+            ("v5", self.v5_dir / "analysis_river_node_latlon", v5_map / "script_analysis"),
+            ("legacy", self.legacy_dir / "get_vecmap", legacy_analysis),
+        ):
+            result = run([str(executable), "90", "110", "5", "35"], workdir)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            if label == "v5":
+                v5_vector_text = result.stdout
+            else:
+                self.assertEqual(result.stdout, v5_vector_text)
+                self.assertIn("ori-lat", result.stdout.splitlines()[0])
+
+        # The legacy threshold of 30,000 km2 aborts after basin-color setup on
+        # this compiler; verify the sample threshold through the v5-only wrapper.
+        result = run(
+            [str(self.v5_dir / "analysis_subbasin"), "30000",
+             str(v5_map / "subbsn-30000.bin"), str(v5_map / "subcol.bin")],
+            v5_params,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        v5_subbsn_30000 = (v5_map / "subbsn-30000.bin").read_bytes()
 
         record_bytes = 80 * 120 * 4
         self.assertEqual(len(v5_upbasin), record_bytes)
         self.assertEqual(len(v5_subbsn), record_bytes)
         self.assertEqual(len(v5_subcol), record_bytes)
         upstream_values = struct.unpack("<" + "i" * (80 * 120), v5_upbasin)
-        subbasin_values = struct.unpack("<" + "i" * (80 * 120), v5_subbsn)
+        subbasin_values = struct.unpack("<" + "i" * (80 * 120), v5_subbsn_30000)
         color_values = struct.unpack("<" + "i" * (80 * 120), v5_subcol)
         self.assertTrue({-9999, 0, 1}.issubset(set(upstream_values)))
-        self.assertIn(-999, subbasin_values)
+        self.assertIn(-9999, subbasin_values)
         self.assertIn(0, subbasin_values)
         self.assertTrue(any(value > 0 for value in subbasin_values))
         self.assertIn(-9999, color_values)
         self.assertTrue(all(value == -9999 or 1 <= value <= 10 for value in color_values))
         ctl_dir = self.root / "ctl"
         ctl_dir.mkdir()
-        for name in ("params.txt", "upbasin.bin", "subbsn.bin", "subcol.bin"):
+        shutil.copy2(v5_map / "upbasin.bin", v5_map / "upbasin-2569002.bin")
+        shutil.copy2(v5_map / "subcol.bin", v5_map / "subcol-30000.bin")
+        for name in ("params.txt", "upbasin-2569002.bin", "subbsn-30000.bin", "subcol-30000.bin"):
             shutil.copy2(v5_map / name, ctl_dir / name)
         result = generate_directory(ctl_dir, ROOT / "map" / "map_variables.csv")
         self.assertEqual(result.generated, 3, result)
-        for stem, variable in (("upbasin", "upbasin"), ("subbsn", "subbsn"), ("subcol", "subcol")):
+        for stem, variable in (("upbasin-2569002", "upbasin"), ("subbsn-30000", "subbsn"), ("subcol-30000", "subcol")):
             ctl = (ctl_dir / f"{stem}.ctl").read_text(encoding="utf-8")
             self.assertIn(f"{variable} 1", ctl)
             self.assertIn("undef", ctl)
@@ -160,9 +214,21 @@ class AnalysisMigrationTests(unittest.TestCase):
         map_dir, script_params = self.make_map("bounds")
         standard_subbsn = b"prior-subbasin"
         standard_subcol = b"prior-colors"
+        standard_upbasin = b"prior-upstream-mask"
         (map_dir / "subbsn.bin").write_bytes(standard_subbsn)
         (map_dir / "subcol.bin").write_bytes(standard_subcol)
-        result = run([str(self.debug_dir / "analysis_get_subbasin"), "50000", "explore.bin", "explore-col.bin"], script_params)
+        (map_dir / "upbasin.bin").write_bytes(standard_upbasin)
+        result = run([str(self.debug_dir / "analysis_subbasin"), "30000"], script_params)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual((map_dir / "subbsn.bin").read_bytes(), standard_subbsn)
+        self.assertEqual((map_dir / "subcol.bin").read_bytes(), standard_subcol)
+        self.assertEqual((map_dir / "analysis_subbsn_30000.bin").stat().st_size, 80 * 120 * 4)
+        self.assertEqual((map_dir / "analysis_subcol_30000.bin").stat().st_size, 80 * 120 * 4)
+        result = run([str(self.debug_dir / "analysis_upbasin"), "62", "93"], script_params)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual((map_dir / "upbasin.bin").read_bytes(), standard_upbasin)
+        self.assertEqual((map_dir / "analysis_upbasin_62_93.bin").stat().st_size, 80 * 120 * 4)
+        result = run([str(self.debug_dir / "analysis_subbasin"), "30000", "explore.bin", "explore-col.bin"], script_params)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual((map_dir / "subbsn.bin").read_bytes(), standard_subbsn)
         self.assertEqual((map_dir / "subcol.bin").read_bytes(), standard_subcol)
@@ -175,9 +241,10 @@ class AnalysisMigrationTests(unittest.TestCase):
         for source, target in (
             (PARAM_SCRIPTS / "s06-subbasin.sh", params / "s06-subbasin.sh"),
             (PARAM_SCRIPTS / "s07-upbasin.sh", params / "s07-upbasin.sh"),
-            (ANALYSIS_SCRIPTS / "a01-river_info.sh", analysis / "a01-river_info.sh"),
-            (ANALYSIS_SCRIPTS / "a02-upstream_basin.sh", analysis / "a02-upstream_basin.sh"),
+            (ANALYSIS_SCRIPTS / "a01-river_point_info.sh", analysis / "a01-river_point_info.sh"),
+            (ANALYSIS_SCRIPTS / "a02-upbasin.sh", analysis / "a02-upbasin.sh"),
             (ANALYSIS_SCRIPTS / "a03-subbasin.sh", analysis / "a03-subbasin.sh"),
+            (ANALYSIS_SCRIPTS / "a04-river_node_latlon.sh", analysis / "a04-river_node_latlon.sh"),
         ):
             shutil.copy2(source, target)
             target.chmod(0o755)
@@ -194,19 +261,100 @@ class AnalysisMigrationTests(unittest.TestCase):
         selection = (map_dir / "grdc_station_selection.txt").read_text(encoding="utf-8")
         self.assertIn("2569002", selection)
         self.assertIn("\t62\t93", selection)
-        self.assertEqual((map_dir / "upbasin.bin").stat().st_size, 80 * 120 * 4)
-        mask_values = struct.unpack("<" + "i" * (80 * 120), (map_dir / "upbasin.bin").read_bytes())
+        station_mask = map_dir / "upbasin-2569002.bin"
+        self.assertEqual(station_mask.stat().st_size, 80 * 120 * 4)
+        self.assertFalse((map_dir / "upbasin.bin").exists())
+        mask_values = struct.unpack("<" + "i" * (80 * 120), station_mask.read_bytes())
         self.assertTrue({-9999, 0, 1}.issubset(set(mask_values)))
 
-        result = run([str(analysis / "a01-river_info.sh")], self.root)
+        result = run([str(analysis / "a01-river_point_info.sh")], self.root)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        result = run([str(analysis / "a02-upstream_basin.sh")], self.root)
+        result = run([str(analysis / "a02-upbasin.sh")], self.root)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertFalse((map_dir / "analysis_upbasin_62_93.bin").samefile(map_dir / "upbasin.bin"))
+        self.assertFalse((map_dir / "analysis_upbasin_62_93.bin").samefile(map_dir / "upbasin-2569002.bin"))
         result = run([str(analysis / "a03-subbasin.sh")], self.root)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertTrue((map_dir / "analysis" / "subbsn_50000km2.bin").exists())
         self.assertTrue((map_dir / "analysis" / "subcol_50000km2.bin").exists())
+        result = run([str(analysis / "a04-river_node_latlon.sh")], self.root)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        vector_output = map_dir / "river_node_latlon_90_110_5_35.txt"
+        self.assertTrue(vector_output.is_file())
+        self.assertIn("ori-lat", vector_output.read_text(encoding="ascii").splitlines()[0])
+
+    def test_mekong_sample_subbasin_wrapper_labels_threshold_output(self) -> None:
+        map_dir, params = self.make_map("sample-script")
+        script = params / "s06-subbasin.sh"
+        shutil.copy2(SAMPLE / "script_params" / "s06-subbasin.sh", script)
+        script.chmod(0o755)
+        result = run([str(script)], self.root)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual((map_dir / "subbsn-30000.bin").stat().st_size, 80 * 120 * 4)
+        self.assertFalse((map_dir / "subbsn.bin").exists())
+        self.assertEqual((map_dir / "subcol-30000.bin").stat().st_size, 80 * 120 * 4)
+        self.assertFalse((map_dir / "subcol.bin").exists())
+
+    def test_direct_cli_runs_from_map_local_script_analysis(self) -> None:
+        map_dir, _ = self.make_map("portable-cli")
+        analysis = map_dir / "script_analysis"
+        commands = (
+            ("analysis_river_point_info", "xy", "62", "93"),
+            ("analysis_upbasin", "62", "93"),
+            ("analysis_subbasin", "50000"),
+            ("analysis_river_node_latlon", "90", "110", "5", "35"),
+        )
+        outputs = []
+        for command in commands:
+            result = run([str(analysis / command[0]), *command[1:]], analysis)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            outputs.append(result.stdout)
+        self.assertIn("Point Information", outputs[0])
+        self.assertIn("Upstream Area", outputs[1])
+        self.assertIn("SET_MAP color basin", outputs[2])
+        self.assertIn("ori-lat", outputs[3].splitlines()[0])
+        self.assertTrue((map_dir / "analysis_upbasin_62_93.bin").is_file())
+        self.assertTrue((map_dir / "analysis_subbsn_50000.bin").is_file())
+        self.assertTrue((map_dir / "analysis_subcol_50000.bin").is_file())
+        self.assertFalse((map_dir / "upbasin.bin").exists())
+        self.assertFalse((map_dir / "subbsn.bin").exists())
+        self.assertFalse((map_dir / "subcol.bin").exists())
+
+    def test_copy_codes_is_all_or_nothing_and_compilation_is_external(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="cmf-analysis-copy-") as temporary:
+            root = Path(temporary)
+            code = root / "map" / "tools" / "code"
+            template = root / "map" / "tools" / "script_analysis"
+            code.mkdir(parents=True)
+            template.mkdir(parents=True)
+            script = template / "a00-copy_codes.sh"
+            shutil.copy2(ANALYSIS_SCRIPTS / "a00-copy_codes.sh", script)
+            programs = ("analysis_river_point_info", "analysis_upbasin", "analysis_subbasin", "analysis_river_node_latlon")
+            for name in programs:
+                shutil.copy2(self.v5_dir / name, code / name)
+            result = run([str(script)], self.root)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            for name in programs:
+                copied = template / name
+                self.assertTrue(copied.is_file())
+                self.assertTrue(os.access(copied, os.X_OK))
+
+            missing_root = root / "missing" / "map" / "tools"
+            missing_code = missing_root / "code"
+            missing_template = missing_root / "script_analysis"
+            missing_code.mkdir(parents=True)
+            missing_template.mkdir()
+            shutil.copy2(script, missing_template / script.name)
+            for name in programs[:-1]:
+                shutil.copy2(self.v5_dir / name, missing_code / name)
+            result = run([str(missing_template / script.name)], self.root)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("make -C map/tools/code analysis", result.stderr)
+            self.assertFalse(any((missing_template / name).exists() for name in programs))
+            # The build command is shown only as an error message; a00 never invokes it.
+            self.assertNotRegex(
+                (ANALYSIS_SCRIPTS / "a00-copy_codes.sh").read_text(),
+                r"(?m)^\s*make(?:\s|$)",
+            )
 
     def test_missing_or_headerless_grdc_allocation_fails_clearly(self) -> None:
         map_dir, params = self.make_map("invalid-grdc")

@@ -2,7 +2,7 @@
 # Select the largest valid allocated GRDC gauge, report its river cell, and create its upstream mask.
 # Copy to <map>/script_params/ and run from any working directory.
 # Input: map-local GRDC_alloc.txt from t01-alloc_flow_gauge.sh; standard river-map files.
-# Outputs: upbasin.bin, grdc_station_selection.txt, and grdc_river_info.txt in the map root.
+# Outputs: upbasin-<GRDC_ID>.bin plus station-selection and river-information text reports.
 # Existing output files are overwritten. This script does not run t01 automatically.
 set -eu
 
@@ -38,11 +38,10 @@ trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
-EXEC_RIVINFO="$CODE_DIR/analysis_get_rivinfo"
-EXEC_UPBASIN="$CODE_DIR/analysis_get_upbasin"
+EXEC_RIVINFO="$CODE_DIR/analysis_river_point_info"
+EXEC_UPBASIN="$CODE_DIR/analysis_upbasin"
 STATION_REPORT="$MAP_DIR/grdc_station_selection.txt"
 RIVER_INFO_REPORT="$MAP_DIR/grdc_river_info.txt"
-UPBASIN_OUTPUT="$MAP_DIR/upbasin.bin"
 
 if [ ! -r "$GRDC_ALLOC" ]; then
     printf '[ERROR] %s is not readable. Run t01-alloc_flow_gauge.sh or provide GRDC_alloc.txt.\n' "$GRDC_ALLOC" >&2
@@ -102,6 +101,7 @@ AREA_CAMA=$5
 TYPE=$6
 IX=$7
 IY=$8
+UPBASIN_OUTPUT="$MAP_DIR/upbasin-${GRDC_ID}.bin"
 
 STEP="Save the selected station record"
 printf 'ID\tlat\tlon\tarea_Input_km2\tarea_CaMa_km2\tType\tix1\tiy1\n' > "$STATION_REPORT"

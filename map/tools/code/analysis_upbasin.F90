@@ -1,11 +1,12 @@
 ! Create a categorical mask for cells whose downstream paths reach one outlet cell.
-! Usage: analysis_get_upbasin IX IY [OUTPUT]
+! Usage: analysis_upbasin IX IY [OUTPUT]
 ! Working directory: a directory directly under the map root; map inputs are read via ../.
-! IX and IY are one-based Fortran grid indices; OUTPUT defaults to ../upbasin.bin.
+! IX and IY are one-based Fortran grid indices; OUTPUT defaults to a
+! coordinate-labeled analysis filename in the map root to protect upbasin.bin.
 ! Output is one int32 NX x NY record: 1 upstream of the selected cell, 0 other
 ! mapped river cells, and -9999 outside the river network.
 ! A multi-catchment gauge allocation may cover more than this single-cell mask.
-      program analysis_get_upbasin
+      program analysis_upbasin
 ! ================================================
       implicit none
 ! ===================
@@ -36,9 +37,9 @@
 ! ================================================
 ! read parameters from arguments
       print *, '######################################################'
-      print *, 'USAGE: Input IX, IY, OutFile :   ./get_upbasin $IX  $IY $OUTFILE'
-      print *, '    (Use Fortran IX,IY coordinate)'
-      print *, 'OUTPUT: upbasin.bin (upstream basin of [IX,IY])'
+      print *, 'USAGE: analysis_upbasin IX IY [OUTPUT]'
+      print *, '    (Use one-based Fortran IX,IY grid indices)'
+      print *, 'OUTPUT: selected upstream mask; default ../analysis_upbasin_IX_IY.bin'
       print *, '######################################################'
 
       call getarg(1,buf)
@@ -46,7 +47,9 @@
       call getarg(2,buf)
       read(buf,*) iy0
       call getarg(3,fout)
-      if( trim(fout)=='' ) fout='../upbasin.bin'
+      if( trim(fout)=='' ) then
+        write(fout,'("../analysis_upbasin_",i0,"_",i0,".bin")') ix0, iy0
+      endif
 
 
       fparam='../params.txt'
@@ -145,4 +148,4 @@
 
 !!================================================
 
-      end program analysis_get_upbasin
+      end program analysis_upbasin

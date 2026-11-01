@@ -338,12 +338,12 @@ class MpiMapToolsTests(unittest.TestCase):
             script_dir.mkdir(parents=True)
             (code_dir / "Makefile").write_text(".PHONY: analysis\nanalysis:\n\t@:\n", encoding="ascii")
             shutil.copy2(self.bin / "analysis_check_mpi_bifurcation", code_dir / "analysis_check_mpi_bifurcation")
-            shutil.copy2(TOOLS / "script_analysis" / "a01-check_mpi_bifurcation.sh", script_dir)
+            shutil.copy2(TOOLS / "script_analysis" / "a05-check_mpi_bifurcation.sh", script_dir)
             for name in ("params.txt", "nextxy.bin", "bifprm.txt"):
                 shutil.copy2(MAP / name, map_root / name)
             (map_root / "mpireg-1.bin").write_bytes(struct.pack("<9600i", *([1] * 9600)))
             result = subprocess.run(
-                [str(script_dir / "a01-check_mpi_bifurcation.sh"), "mpireg-1.bin"],
+                [str(script_dir / "a05-check_mpi_bifurcation.sh"), "mpireg-1.bin"],
                 cwd=tmp,
                 check=True,
                 capture_output=True,
@@ -389,7 +389,7 @@ class MpiMapToolsTests(unittest.TestCase):
     def test_shell_entry_points_have_valid_syntax(self):
         for script in (
             TOOLS / "script_params" / "s04-mpi_map_setup.sh",
-            TOOLS / "script_analysis" / "a01-check_mpi_bifurcation.sh",
+            TOOLS / "script_analysis" / "a05-check_mpi_bifurcation.sh",
         ):
             subprocess.run(["sh", "-n", str(script)], check=True)
 

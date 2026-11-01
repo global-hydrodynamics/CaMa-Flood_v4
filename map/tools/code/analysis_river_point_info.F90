@@ -1,11 +1,11 @@
 ! Report river-network and unit-catchment information for one map cell.
-! Usage: analysis_get_rivinfo xy IX IY | latlon LAT LON
+! Usage: analysis_river_point_info xy IX IY | latlon LAT LON
 ! Working directory: a directory directly under the map root; map inputs are read via ../.
 ! xy indices are one-based Fortran grid indices. latlon arguments are degrees.
 ! Reads params, nextxy, basin, upgrid, uparea, ctmare, elevtn, and lonlat.
 ! latlon mode prefers a 15sec catmxy map, then 1min, when available.
 ! Prints cell, immediate upstream/downstream, and catchment attributes; writes no files.
-      program analysis_get_rivinfo
+      program analysis_river_point_info
 ! ================================================
       implicit none
 ! ===================
@@ -61,10 +61,10 @@
         read(buf,*) lon
       else
         print *, '######################################################'
-        print *, 'USAGE(1) Input IX  and IY :   ./get_rivinfo xy $IX  $IY    '
+        print *, 'USAGE(1) Input IX  and IY :   ./analysis_river_point_info xy $IX  $IY    '
         print *, '    (Use Fortran IX,IY coordinate)'
         print *, ''
-        print *, 'USAGE(2) Input lat and lon:   ./get_rivinfo latlon $LAT $LON'
+        print *, 'USAGE(2) Input lat and lon:   ./analysis_river_point_info latlon $LAT $LON'
         print *, '######################################################'
         stop
       endif
@@ -276,4 +276,4 @@
 
 !!================================================
 
-      end program analysis_get_rivinfo
+      end program analysis_river_point_info

@@ -1,6 +1,6 @@
 #!/bin/sh
 # Generate subbasin segmentation for an exploratory threshold without replacing standard products.
-# Copy to <map>/script_analysis/ and run from any working directory.
+# Run from a prepared map-local script_analysis/; the copied executable reads map inputs through ../.
 # Inputs: params.txt, nextxy.bin, and uparea.bin.
 # Outputs: threshold-named subbsn/subcol maps in OUTPUT_DIR; existing same-name files are overwritten.
 set -eu
@@ -8,7 +8,6 @@ set -eu
 # Paths
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 MAP_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd -P)
-CODE_DIR=$(CDPATH= cd "$SCRIPT_DIR/../../tools/code" && pwd -P)
 
 # Configuration: this output directory keeps exploratory products separate from standard map products.
 AREA_THRESHOLD_KM2=50000
@@ -40,10 +39,10 @@ trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
-EXEC_SUBBASIN="$CODE_DIR/analysis_get_subbasin"
+EXEC_SUBBASIN="$SCRIPT_DIR/analysis_subbasin"
 mkdir -p "$OUTPUT_DIR"
 
-# Run from a map-local child directory so the Fortran program reads ../ map inputs.
+# The executable reads map inputs through ../ from this map-local directory.
 cd "$SCRIPT_DIR"
 STEP="Generate exploratory subbasins at ${AREA_THRESHOLD_KM2} km2"
 printf '==================================================\n[STEP 1/1] Generate exploratory subbasin maps (%s km2)\n==================================================\n' "$AREA_THRESHOLD_KM2"

@@ -37,11 +37,11 @@ trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
-EXEC_SUBBASIN="$CODE_DIR/analysis_get_subbasin"
+EXEC_SUBBASIN="$CODE_DIR/analysis_subbasin"
 
-# The legacy program reads map inputs via ../ and writes the standard products there.
+# The program reads map inputs and writes the standard products via ../.
 cd "$SCRIPT_DIR"
 STEP="Segment the river network at the ${AREA_THRESHOLD_KM2} km2 example threshold"
 printf '==================================================\n[STEP 1/1] Generate subbasin maps (%s km2)\n==================================================\n' "$AREA_THRESHOLD_KM2"
-"$EXEC_SUBBASIN" "$AREA_THRESHOLD_KM2"
+"$EXEC_SUBBASIN" "$AREA_THRESHOLD_KM2" ../subbsn.bin ../subcol.bin
 printf '==================================================\n[SUCCESS] %s\n==================================================\n' "$SCRIPT_NAME"

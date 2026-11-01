@@ -1,11 +1,14 @@
 ! Divide the directed river network at sufficiently large adjacent drainage-area increases.
-! Usage: analysis_get_subbasin THRESHOLD_KM2 [SUBBSN_OUTPUT SUBCOL_OUTPUT]
+! Usage: analysis_subbasin THRESHOLD_KM2 [SUBBSN_OUTPUT SUBCOL_OUTPUT]
 ! Working directory: a directory directly under the map root; map inputs are read via ../.
 ! The threshold is applied to the increase in upstream area between a cell and
 ! its downstream cell, not as a simple test of whether either cell exceeds it.
-! Outputs are one int32 NX x NY record each: ../subbsn.bin (segment IDs) and
-! ../subcol.bin (display colors). These are optional map products, not runtime inputs.
-      program analysis_get_subbasin
+! Outputs are one int32 NX x NY record each: parameter-labeled analysis files
+! in the map root by default, unless output paths are supplied. In subbsn,
+! positive IDs are segments, zero marks modeled river cells below the threshold,
+! and -9999 marks cells outside the modeled river network. These optional
+! products are not runtime inputs.
+      program analysis_subbasin
 ! ================================================
       implicit none
 ! ===================
@@ -42,8 +45,8 @@
 ! ================================================
 ! read parameters from arguments
       print *, '######################################################'
-      print *, 'USAGE: analysis_get_subbasin THRESHOLD_KM2 [SUBBSN_OUTPUT SUBCOL_OUTPUT]'
-      print *, '    Output path arguments are an optional pair; defaults are ../subbsn.bin and ../subcol.bin.'
+      print *, 'USAGE: analysis_subbasin THRESHOLD_KM2 [SUBBSN_OUTPUT SUBCOL_OUTPUT]'
+      print *, '    Output path arguments are an optional pair; defaults are parameter-labeled analysis files in ../.'
 
       upa_thrs=100000.
       if( command_argument_count()/=1 .and. command_argument_count()/=3 )then
@@ -57,8 +60,8 @@
       else
         read(buf,*) upa_thrs
       endif
-      fout_subbsn='../subbsn.bin'
-      fout_subcol='../subcol.bin'
+      fout_subbsn='../analysis_subbsn_'//trim(adjustl(buf))//'.bin'
+      fout_subcol='../analysis_subcol_'//trim(adjustl(buf))//'.bin'
       if( command_argument_count()==3 )then
         call get_command_argument(2,fout_subbsn)
         call get_command_argument(3,fout_subcol)
@@ -126,7 +129,14 @@
         end do
       end do
 
-      basin(:,:)=0
+      ! Keep sea/outside-network cells distinct from small modeled catchments.
+      ! -999 is an internal unassigned marker; output small catchments become 0.
+      basin(:,:)=-9999
+      do iy=1, ny
+        do ix=1, nx
+          if( nextx(ix,iy)/=-9999 ) basin(ix,iy)=-999
+        end do
+      end do
       ibsn=0
 
       do iy=1, ny
@@ -136,7 +146,7 @@
               ibsn=ibsn+1
               basin(ix,iy)=ibsn
             else
-              basin(ix,iy)=-999
+              basin(ix,iy)=0
             endif
           endif
         end do
@@ -145,10 +155,10 @@
 
       do iy=1, ny
         do ix=1, nx
-          if( nextx(ix,iy)>0 .and. basin(ix,iy)==0 ) then
+          if( nextx(ix,iy)>0 .and. basin(ix,iy)==-999 ) then
             jx=ix
             jy=iy
-            do while( nextx(jx,jy)>0 .and. basin(jx,jy)==0 )
+            do while( nextx(jx,jy)>0 .and. basin(jx,jy)==-999 )
               kx=nextx(jx,jy)
               ky=nexty(jx,jy)
               jx=kx
@@ -158,7 +168,7 @@
 
             jx=ix
             jy=iy
-            do while( nextx(jx,jy)>0 .and. basin(jx,jy)==0 )
+            do while( nextx(jx,jy)>0 .and. basin(jx,jy)==-999 )
               basin(jx,jy)=jbsn
               kx=nextx(jx,jy)
               ky=nexty(jx,jy)
@@ -174,7 +184,7 @@
       allocate(basin_new(nbsn))
       do iy=1, ny
         do ix=1, nx
-          ! Keep only assigned subbasin IDs; -999 marks below-threshold outlets.
+          ! Keep only positive assigned subbasin IDs for the unused diagnostics.
           if( nextx(ix,iy)<0 .and. nextx(ix,iy)/=-9999 .and. basin(ix,iy)>0 ) then
             ibsn=basin(ix,iy)
             basin_size(ibsn)=uparea(ix,iy)
@@ -357,4 +367,4 @@ print *, 'SET_MAP color basin'
 
 !!================================================
 
-      end program analysis_get_subbasin
+      end program analysis_subbasin

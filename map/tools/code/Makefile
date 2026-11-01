@@ -10,6 +10,8 @@ PARAM_BINS := $(patsubst %.F90,%,$(PARAM_SOURCES))
 # Region and basin display coloring share mod_map_color.o.
 ANALYSIS_SOURCES := $(wildcard $(CODE_DIR)/analysis_*.F90)
 ANALYSIS_BINS := $(patsubst %.F90,%,$(ANALYSIS_SOURCES))
+# Remove stale executables from the pre-Phase-C analysis naming convention.
+RETIRED_ANALYSIS_BINS := analysis_get_rivinfo analysis_get_upbasin analysis_get_subbasin analysis_get_vecmap
 ALLOC_SOURCES := $(wildcard $(CODE_DIR)/allocate_*.F90)
 ALLOC_BINS := $(patsubst %.F90,%,$(ALLOC_SOURCES))
 COLOR_MODULE_OBJECT := $(CODE_DIR)/mod_map_color.o
@@ -68,5 +70,5 @@ $(CODE_DIR)/analysis_%: $(CODE_DIR)/analysis_%.F90
 	cd "$(CODE_DIR)" && $(FC) $(FFLAGS) $(LFLAGS) $(INC) $(LIB) "$(@F).F90" -o "$(@F)" $(LIB)
 
 clean:
-	cd "$(CODE_DIR)" && $(RM) $(notdir $(REGION_BINS)) $(notdir $(PARAM_BINS)) $(notdir $(ANALYSIS_BINS)) $(notdir $(ALLOC_BINS)) *.o *.mod *.pyc *.d *.s
+	cd "$(CODE_DIR)" && $(RM) $(notdir $(REGION_BINS)) $(notdir $(PARAM_BINS)) $(notdir $(ANALYSIS_BINS)) $(notdir $(ALLOC_BINS)) $(RETIRED_ANALYSIS_BINS) *.o *.mod *.pyc *.d *.s
 	cd "$(CODE_DIR)" && /bin/rm -rf __pycache__

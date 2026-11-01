@@ -76,6 +76,10 @@ map/tools/code/region_*
 !map/tools/code/region_*.F90
 map/tools/code/param_*
 !map/tools/code/param_*.F90
+map/tools/code/analysis_*
+!map/tools/code/analysis_*.F90
+map/tools/script_analysis/analysis_*
+map/mekong_15min/script_analysis/analysis_*
 map/tools/code/*.o
 map/tools/code/*.mod
 map/tools/code/*.pyc
