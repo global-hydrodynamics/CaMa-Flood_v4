@@ -102,3 +102,45 @@ These are investigation targets, not final ownership assignments:
 ## Planning boundary
 
 This planning phase created the project overview and a branch-local status registration. It did not change source code, map data, scripts, numerical behavior, or public interfaces, and it does not authorize implementation. Before implementation begins, the maintainer should review this proposal, approve the initial scope and checks, and reconcile the project row into the master development-status registry using [AGENTS.md](../AGENTS.md). Issue #122 records the project proposal. Issues are optional for substantial work; if a future task proceeds without one, keep coordination details in the project status and technical specifications here or in the appropriate component documentation.
+
+## High-resolution area handling contract
+
+**Current v5 design contract, verified from source unless explicitly marked maintainer context.** A high-resolution `location.txt` may describe one or several areas. The number of areas accepted depends on the operation; it is not a property of the map format that every tool must impose identically.
+
+| Workflow | Current high-resolution area contract | Source evidence | Status |
+| --- | --- | --- | --- |
+| Flow-gauge allocation | Exactly one area; v5 reports an error for any other count. | `map/tools/code/mod_allocation_map_io.F90:read_allocation_hires`; regression in `map/tools/tests/test_allocation_regression.py`. | Intentional design contract, not a missing feature for the current migration. |
+| Dam allocation | Exactly one area. | Shared reader `read_allocation_hires`, used by `allocate_dam`. | Same allocation contract. |
+| Level-gauge allocation | Exactly one area. | Shared reader `read_allocation_hires`, used by `allocate_level_gauge`. | Same allocation contract. |
+| Parameter input-matrix generation | Multiple areas, processed sequentially and accumulated into one output matrix. | `map/tools/code/param_inpmat_generate.F90`; legacy `map/src/src_param/generate_inpmat.F90`. | Implemented; large multi-area integration validation is pending. |
+| Regional default input matrix | Multiple areas, processed sequentially and accumulated into one output matrix. | `map/tools/code/region_default_inpmat.F90`; legacy `map/src/src_region/generate_inpmat.F90`. | Implemented; large multi-area integration validation is pending. |
+| Permanent-water aggregation | Multiple areas, processed sequentially into base-map catchments. | `map/tools/code/param_water_calc_prmwat.F90`; legacy `map/src/src_param/calc_prmwat.F90`. | Implemented; large multi-area integration validation is pending. |
+| Regional high-resolution map combination | Reads the listed areas and crops/combines available source layers. | `map/tools/code/region_combine_hires.F90`. | Implemented by source inspection; package-scale integration validation is pending. |
+
+### Allocation rationale and resolution context
+
+The allocation programs map station or reservoir locations from an already reviewed high-resolution river network to CaMa-Flood unit catchments. The [AllocRiverGauge v1.2 manual](../doc/Manual_AllocateRiverGauges.docx) documents a first-stage allocation and QA/QC on high-resolution networks before CaMa-Flood's second-stage mapping; it describes the first-stage global MERIT Hydro network at 30 arcsec and Japan J-FlwDir at 5 arcsec. Those first-stage grids are distinct from the high-resolution layers packaged with CaMa-Flood maps; the maintainer further explained that this preparation addresses location and drainage-area discrepancies and is intended to make the two network representations correspond. Allocation therefore needs river topology and catchment correspondence, including downstream-path traversal for level gauges. It does not require the finest floodplain inundation-topography grid merely because that grid has a finer nominal resolution.
+
+The v5 single-area restriction preserves the reader/traversal contract used by the migrated allocation programs. This is a deliberate design, not evidence that a particular resolution is adequate for every basin or application. The v4.30 distribution package provides one global `1min` area in `map/glb_15min/1min/location.txt` (21600 x 10800) and one Japan `15sec` area in `map/tej_01min/15sec/location.txt` (6000 x 5280; bounds 123–148 E, 24–46 N). The Japan directory contains 22 files (11 binary layers, 10 CTLs, and `location.txt`); its binary data total about 1.11 GB. Both `location.txt` files declare one area. These are CaMa-Flood high-resolution map layers, and the maintainer identifies them as the intended global and Japan allocation inputs.
+
+Keep these distributed CaMa-Flood layers distinct from the separate high-resolution maps used for the first-stage allocation documented by AllocRiverGauge: global MERIT Hydro at 30 arcsec and Japan J-FlwDir at 5 arcsec. Those are allocation-specific input maps, not the global `1min` and Japan `15sec` layers in the CaMa-Flood v4.30 package. The package structure and the manual describe separate workflow inputs; no derivation relationship between the differently resolved grids is asserted here. Multi-area allocation is not a required task for the initial v5 migration; reconsider it only for a separately approved use case.
+
+### Remaining verification items
+
+- The allocation-map resolution distinction is documented from the AllocRiverGauge manual, package inspection, and maintainer clarification. This does not establish that any particular station or dam allocation is scientifically correct.
+- Run the documented multi-area integration procedure against a distribution dataset whose `location.txt` declares multiple areas, if such data are available. This is pending validation, not a missing implementation or a claim of scientific correctness.
+
+### Implemented capability, automated checks, and large-data validation
+
+These are separate evidence levels. The source loops establish implemented multi-area processing; they do not by themselves prove package-scale correctness. The committed Mekong sample has one high-resolution area, so routine sample tests do not exercise multi-area aggregation. Allocation regression explicitly verifies that multi-area allocation is rejected. Existing `param_water_calc_prmwat` tests use a small single-area fixture. The high-resolution CTL test's multi-area `location.txt` fixture checks descriptor generation only, not map-processing behavior.
+
+A maintainer-operated large-data integration check remains pending. Use an isolated writable copy of a distribution dataset whose high-resolution `location.txt` actually declares multiple areas, if such a dataset is available; do not assume the inspected global `1min` or Japan `15sec` data is multi-area, and do not run against or overwrite the packaged source or tracked Mekong sample. Record the exact package version, map tag, environment, command lines, and outputs after execution.
+
+1. Identify the available high-resolution map tag with more than one declared area, if present, and check every listed area identifier, dimensions, cell size, and required layer file against the package inventory.
+2. Build the already implemented tools with the repository's shared Makefile. Configure copied map-local wrappers to select `HIRES_TAG=15sec` where applicable.
+3. In the isolated map copy, run the parameter input-matrix workflow (`script_params/s03-generate_inpmat.sh`) and permanent-water workflow (`script_params/s05-permanent_water.sh`). If validating regional combination, configure and run the reusable `script_region/s01-regional_map.sh` from its documented map-local working directory against the isolated global source.
+4. Confirm that every declared area is processed exactly once, no area is silently skipped, expected products are created, and dimensions, byte sizes, record counts, missing values, and finite/range checks match the output contracts. Review all warnings and per-area summaries.
+5. Where inputs and settings are compatible, compare v5 output against the corresponding preserved v4 program. Record exact or tolerance-based comparisons and any differences; do not treat parity alone as scientific validation.
+6. Record elapsed time, peak memory if available, compiler/runtime settings, and any dataset-dependent limitation.
+
+No package-scale multi-area run is claimed by this document. Successful file generation or parity checks establish software behavior for the tested data only, not scientific validity of the regional river network or aggregated products.

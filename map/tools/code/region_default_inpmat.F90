@@ -133,6 +133,7 @@ print *, 'REGION_DEFAULT_INPMAT:'
       read(11,*) narea
       read(11,*)
 
+! Accumulate the standard runoff matrix across every listed high-resolution area.
       do i=1, narea
         read(11,*) buf, area, lon_ori, buf, buf, lat_ori, nx, ny, csize
 

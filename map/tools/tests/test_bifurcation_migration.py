@@ -1,8 +1,8 @@
 """Regression checks for standard s02 outputs and its s01 depth dependency.
 
 The byte-comparison test uses the official Mekong sample and its committed
-channel-depth product. The optional end-to-end test regenerates that product
-with s01 when CMF_RUNOFF_CLIMATOLOGY points to a compatible runoff file.
+channel-depth product. The end-to-end test uses the Git-tracked runoff sample
+by default; CMF_RUNOFF_CLIMATOLOGY can select a compatible alternate input.
 All generated files live in temporary workspaces.
 """
 from __future__ import annotations
@@ -235,9 +235,11 @@ class BifurcationMigrationTests(unittest.TestCase):
             self.assertEqual((map_root / name).read_bytes(), content, name)
 
     def test_s01_produces_depth_consumed_by_s02(self) -> None:
-        runoff = os.environ.get("CMF_RUNOFF_CLIMATOLOGY")
-        if not runoff or not Path(runoff).is_file():
-            self.skipTest("set CMF_RUNOFF_CLIMATOLOGY to compatible distribution runoff data")
+        runoff = Path(os.environ.get(
+            "CMF_RUNOFF_CLIMATOLOGY",
+            ROOT / "map" / "data" / "ELSE_GPCC_clm-1981-2010.one",
+        ))
+        self.assertTrue(runoff.is_file(), f"runoff climatology input not found: {runoff}")
 
         map_root = self.create_map("s01_to_s02", channel_inputs=True, include_depth=False)
         data_dir = self.root / "map" / "data"

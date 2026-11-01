@@ -47,10 +47,12 @@ Assign `A`, `B`, or `C` only when evidence supports the role. Do not classify fr
 | 23 | `input_matrix` | User-configured input-matrix products and paired configuration. |
 | 24 | `MPI` / `bifurcation` | MPI-specific basin aggregation and region products. `bifcol_mpi.bin` colors aggregated basin IDs independent of process count; optional `bsncol_mpi-N.bin` colors N computational regions. |
 | 25 | Unassigned | No current product uses this ID. |
-| 29 | `dam_reservoir` / `inflow_scheme` | Specialized dam/reservoir and inflow-boundary products in the current registry. |
+| 29 | Unassigned in the current registry | No current row uses this ID. |
+| 31 | `dam_reservoir` / `gauge_alloc` | Allocation workflow text products, including dam, flow-gauge, and level-gauge outputs. |
+| 41 | `inflow_scheme` | Specialized inflow-boundary map variants. |
 | 52 | Unassigned | No current product uses this ID. |
 | 62–63 | `river_map_supplement` | Supporting or specialized map products. |
-| 81 | `gauge_alloc` | Gauge allocation and verification data. |
+| 81 | Unassigned in the current registry | No current row uses this ID. |
 | 99 | `netCDF parameter` | NetCDF parameter product records. |
 | 900 | `hires_metadata` | High-resolution area metadata. |
 | 901 | `hires_data` | High-resolution map layers. |
@@ -239,7 +241,7 @@ The current `map/tools/code/generate_ctl.py` reads the common CSV, scans only th
 
 The repository provides tools for deriving channel geometry for a target map. They are separate from the distributed core river-network maps.
 
-1. **Runoff sample:** the data-rich package workflow expects `map/data/ELSE_GPCC_clm-1981-2010.one`, a 360 x 180, single-record little-endian binary with runoff in mm/s according to its CTL. The CTL's variable comment calls it "daily runoff climatology," while the file has one record and the standard channel workflow uses it as annual-mean runoff; this is an existing metadata inconsistency. The package manual identifies the standard climatology as ELSE_GPCC (Kim et al., 2009). This local package sample was used for the migration regression, but its redistribution license was not established; it was not added to GitHub. A source checkout needs the package dataset or a compatible runoff input.
+1. **Runoff sample:** the repository tracks `map/data/ELSE_GPCC_clm-1981-2010.one`, a 360 x 180, single-record little-endian binary with runoff in mm/s according to its CTL. The CTL's variable comment calls it "daily runoff climatology," while the file has one record and the standard channel workflow uses it as annual-mean runoff; this is an existing metadata inconsistency. The package manual identifies the standard climatology as ELSE_GPCC (Kim et al., 2009). The maintainer directed that this sample be tracked for reproducible channel-tool testing; upstream terms for other ELSE_GPCC products or derivatives have not been established. A source checkout can run the channel regression with the tracked sample.
 2. **Annual mean discharge:** the v5 [`s01-channel_params.sh`](tools/script_params/README.md) runs `param_channel_calc_outclm` with binary runoff and `inpmat` interpolation. The migrated `param_channel_calc_outclm.F90` uses the runoff grid metadata and existing standard input matrix, maps runoff to map catchments, and accumulates flow downstream using `nextxy.bin`; it also reads `ctmare.bin`. It writes/replaces `outclm.bin`, one direct-access float32 record of mean discharge in m³/s. Binary input is used by the supplied wrapper; the source retains optional NetCDF input support when built with the corresponding macro and libraries.
 3. **Empirical channel parameters:** the v5 script passes its configurable coefficients and minima to `param_channel_calc_rivwth`. The formulas are `H = max(HMIN, HC × Q̄^HP + HO)` and `W = max(WMIN, WC × Q̄^WP + WO)`, where `Q̄` is mean discharge. The standard wrapper values are `HC=0.1`, `HP=0.50`, `HO=0`, `HMIN=1`, `WC=2.50`, `WP=0.60`, `WO=0`, and `WMIN=5`; they are preserved from the legacy sample workflow, not universal constants or executable defaults. The program writes/replaces power-law `rivhgt.bin`, `rivwth.bin`, `rivman.bin`, and `rivhgt_inf.bin`. It assigns `rivman=0.03` on network cells and `-9999` elsewhere.
 4. **MERIT Hydro width merge:** v5 `param_channel_set_merit_width` reads power-law `rivwth.bin`, MERIT Hydro width `width.bin`, and `nextxy.bin`, then writes the separately named `rivwth_merit.bin`. It preserves the legacy width-merging rules and thresholds; it does not replace `rivwth.bin` or `rivhgt.bin`. The v4 `set_gwdlr.F90` remains unchanged and continues to write `rivwth_gwdlr.bin`. The current model reader selects `rivwth.bin` and does not automatically select the v5 alternate output.

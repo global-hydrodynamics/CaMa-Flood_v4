@@ -190,6 +190,7 @@
         read(11,*) narea
         read(11,*)
 
+! Read and combine the requested source layers from each listed high-resolution area.
         do i=1, narea
           read(11,*) buf, area, west0, east0, south0, north0, nx0, ny0, buf
 

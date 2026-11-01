@@ -53,6 +53,8 @@ contains
     end if
   end subroutine read_allocation_base
 
+  ! Allocation traces one selected river network; this reader intentionally rejects multiple areas.
+  ! High-resolution terrain resolution is a separate concern from network correspondence.
   subroutine read_allocation_hires(map_dir, tag, nx, ny, west, east, south, north, &
                                    uparea, catmx, catmy, downx, downy, elevtn)
     character(len=*), intent(in) :: map_dir, tag

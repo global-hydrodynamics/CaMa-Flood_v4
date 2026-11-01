@@ -156,6 +156,7 @@ print *, 'CALC_INPMAT:'
       read(11,*) narea
       read(11,*)
 
+! Accumulate pixel-to-input-grid correspondence from every listed high-resolution area.
       do i=1, narea
         read(11,*) buf, area, lon_ori, buf, buf, lat_ori, nx, ny, csize
 

@@ -213,6 +213,7 @@ if (io_status /= 0 .or. narea <= 0) call fail('Invalid area count in ' // trim(l
 read(location_unit, '(a)', iostat=io_status) unused_header
 if (io_status /= 0) call fail('Cannot read column header from ' // trim(location_file))
 
+! Aggregate selected permanent-water pixels from each listed high-resolution area.
 do area_index = 1, narea
     read(location_unit, *, iostat=io_status) area_id, area_name, west0, east0, &
          south0, north0, nx0, ny0, location_cell_size

@@ -1,5 +1,6 @@
 # CaMa-Flood map products are raw binary records, not text files.
 *.bin binary
+/map/data/ELSE_GPCC_clm-1981-2010.one binary
 
 # Keep the approved allocation lists readable as text while normalizing repository line endings.
 /map/data/GRDC_allocated.csv text
