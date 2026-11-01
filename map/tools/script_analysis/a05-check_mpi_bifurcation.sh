@@ -1,37 +1,71 @@
 #!/bin/sh
-# Independently inspect bifurcation connectivity for an existing MPI region map.
-# Copy into <map>/script_analysis/. Relative filenames are interpreted at map root.
+# Example: inspect bifurcation connectivity for an existing MPI region map.
+# The executable reads map inputs from the map root, so this example runs there.
 set -eu
 
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 MAP_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd -P)
-CODE_DIR=$(CDPATH= cd "$SCRIPT_DIR/../../tools/code" && pwd -P)
 
-[ -x "$CODE_DIR/analysis_check_mpi_bifurcation" ] || {
-    printf '\n[ERROR] Missing shared executable: %s\n' "$CODE_DIR/analysis_check_mpi_bifurcation" >&2
-    echo "Build it beforehand with: make -C map/tools/code analysis" >&2
-    exit 1
+# Command-line inputs: an existing region map and optional dropped-path CSV.
+if [ "$#" -lt 1 ] || [ "$#" -gt 3 ] || [ "$#" -eq 2 ]; then
+    printf '\n[ERROR] Usage: %s <region-map.bin> [--csv <dropped.csv>]\n' "$0" >&2
+    exit 2
+fi
+
+REGION_MAP=$1
+CSV_OPTION=${2:-}
+CSV_FILE=${3:-}
+
+# ----------------------------------------------------------------------
+# User settings end here. Program paths and processing steps follow.
+# ----------------------------------------------------------------------
+
+# Quote input paths in the copyable command printed below.
+quote_shell_arg() {
+    printf "'"
+    printf '%s' "$1" | sed "s/'/'\\\\''/g"
+    printf "'"
 }
 
-[ "$#" -ge 1 ] || { printf '\n[ERROR] Usage: %s <region-map.bin> [--csv <dropped.csv>]\n' "$0" >&2; exit 2; }
-[ "$#" -le 3 ] || { printf '\n[ERROR] Usage: %s <region-map.bin> [--csv <dropped.csv>]\n' "$0" >&2; exit 2; }
+if [ "$#" -eq 3 ] && [ "$CSV_OPTION" != "--csv" ]; then
+    printf '\n[ERROR] Usage: %s <region-map.bin> [--csv <dropped.csv>]\n' "$0" >&2
+    exit 2
+fi
 
-case $1 in
-    /*) REGION_MAP=$1 ;;
-    *) REGION_MAP="$MAP_DIR/$1" ;;
+case "$REGION_MAP" in
+    /*) ;;
+    *) REGION_MAP="$MAP_DIR/$REGION_MAP" ;;
 esac
 
-[ -s "$REGION_MAP" ] || { printf '\n[ERROR] Region map not found: %s\n' "$REGION_MAP" >&2; exit 1; }
+if [ ! -s "$REGION_MAP" ]; then
+    printf '\n[ERROR] Region map not found: %s\n' "$REGION_MAP" >&2
+    exit 1
+fi
 
+# This diagnostic reads params.txt and map files relative to the map root.
 cd "$MAP_DIR"
 
+printf '\nWorking directory: %s\n' "$PWD"
+
+STEP="Check bifurcation connectivity for $REGION_MAP"
 printf '\n==================================================\n'
-printf '[STEP 1/1] Check bifurcation connectivity for %s\n' "$REGION_MAP"
+printf '[STEP 1/1] Check bifurcation connectivity\n'
 printf '==================================================\n\n'
-if [ "$#" -eq 1 ]; then
-    "$CODE_DIR/analysis_check_mpi_bifurcation" "$REGION_MAP"
+
+if [ "$#" -ge 3 ]; then
+    printf './script_analysis/analysis_check_mpi_bifurcation '
+    quote_shell_arg "$REGION_MAP"
+    printf ' '
+    quote_shell_arg "$CSV_OPTION"
+    printf ' '
+    quote_shell_arg "$CSV_FILE"
+    printf '\n'
+    ./script_analysis/analysis_check_mpi_bifurcation "$REGION_MAP" "$CSV_OPTION" "$CSV_FILE"
 else
-    "$CODE_DIR/analysis_check_mpi_bifurcation" "$REGION_MAP" "$2" "$3"
+    printf './script_analysis/analysis_check_mpi_bifurcation '
+    quote_shell_arg "$REGION_MAP"
+    printf '\n'
+    ./script_analysis/analysis_check_mpi_bifurcation "$REGION_MAP"
 fi
 
 printf '\n==================================================\n'

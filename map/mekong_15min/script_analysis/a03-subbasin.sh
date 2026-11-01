@@ -1,6 +1,6 @@
 #!/bin/sh
-# Generate subbasin segmentation for an exploratory threshold without replacing standard products.
-# Run from a prepared map-local script_analysis/; the copied executable reads map inputs through ../.
+# Example: generate exploratory subbasin maps without replacing standard products.
+# Run from the map-local script_analysis/ directory; a00 prepares its local executable.
 # Inputs: params.txt, nextxy.bin, and uparea.bin.
 # Outputs: threshold-named subbsn/subcol maps in OUTPUT_DIR; existing same-name files are overwritten.
 set -eu
@@ -43,15 +43,28 @@ trap 'exit 143' TERM
 # End of error handling.
 # ----------------------------------------------------------------------
 
-EXEC_SUBBASIN="$SCRIPT_DIR/analysis_subbasin"
+# Quote output paths in the copyable command printed below.
+quote_shell_arg() {
+    printf "'"
+    printf '%s' "$1" | sed "s/'/'\\\\''/g"
+    printf "'"
+}
+
 mkdir -p "$OUTPUT_DIR"
 
 # The executable reads map inputs through ../ from this map-local directory.
 cd "$SCRIPT_DIR"
 
+printf '\nWorking directory: %s\n' "$PWD"
+
 STEP="Generate exploratory subbasins at ${AREA_THRESHOLD_KM2} km2"
 printf '\n==================================================\n[STEP 1/1] Generate exploratory subbasin maps (%s km2)\n==================================================\n\n' "$AREA_THRESHOLD_KM2"
-"$EXEC_SUBBASIN" "$AREA_THRESHOLD_KM2" "$SUBBSN_OUTPUT" "$SUBCOL_OUTPUT"
+printf './analysis_subbasin %s ' "$AREA_THRESHOLD_KM2"
+quote_shell_arg "$SUBBSN_OUTPUT"
+printf ' '
+quote_shell_arg "$SUBCOL_OUTPUT"
+printf '\n'
+./analysis_subbasin "$AREA_THRESHOLD_KM2" "$SUBBSN_OUTPUT" "$SUBCOL_OUTPUT"
 printf 'Subbasin IDs: %s\nDisplay colors: %s\n' "$SUBBSN_OUTPUT" "$SUBCOL_OUTPUT"
 
 printf '\n==================================================\n[SUCCESS] %s\n==================================================\n' "$SCRIPT_NAME"

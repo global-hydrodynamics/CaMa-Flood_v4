@@ -1,6 +1,6 @@
 #!/bin/sh
-# Create a single-outlet upstream-basin mask for a configured river-grid cell.
-# Run from a prepared map-local script_analysis/; the copied executable reads map inputs through ../.
+# Example: create a single-outlet upstream-basin mask for a river-grid cell.
+# Run from the map-local script_analysis/ directory; a00 prepares its local executable.
 # Inputs: params.txt, nextxy.bin, upgrid.bin, and uparea.bin.
 # Output: a configurable int32 NX x NY mask, separate from the standard upbasin.bin.
 set -eu
@@ -43,14 +43,26 @@ trap 'exit 143' TERM
 # End of error handling.
 # ----------------------------------------------------------------------
 
-EXEC_UPBASIN="$SCRIPT_DIR/analysis_upbasin"
+# Quote output paths in the copyable command printed below.
+quote_shell_arg() {
+    printf "'"
+    printf '%s' "$1" | sed "s/'/'\\\\''/g"
+    printf "'"
+}
 
 # The program reads map inputs via ../ from the map-local script directory.
 cd "$SCRIPT_DIR"
 
+printf '\nWorking directory: %s\n' "$PWD"
+
 STEP="Extract cells upstream of ($IX,$IY)"
 printf '\n==================================================\n[STEP 1/1] Create upstream-basin mask\n==================================================\n\n'
-"$EXEC_UPBASIN" "$IX" "$IY" "$OUTPUT_FILE" > "$REPORT_FILE"
+printf './analysis_upbasin %s %s ' "$IX" "$IY"
+quote_shell_arg "$OUTPUT_FILE"
+printf ' > '
+quote_shell_arg "$REPORT_FILE"
+printf '\n'
+./analysis_upbasin "$IX" "$IY" "$OUTPUT_FILE" > "$REPORT_FILE"
 printf 'Upstream-basin report: %s\nMask: %s\n' "$REPORT_FILE" "$OUTPUT_FILE"
 
 printf '\n==================================================\n[SUCCESS] %s\n==================================================\n' "$SCRIPT_NAME"

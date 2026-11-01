@@ -1,10 +1,10 @@
 # Portable map-analysis toolkit
 
-`script_analysis/` is a portable collection of four compiled analysis programs and readable example scripts. Scientific calculations remain in the shared Fortran programs; scripts show editable settings and invocation examples. Use a copied map-local directory either by running an executable directly or by editing and running its paired shell example.
+`script_analysis/` is a portable, educational toolkit for map-analysis executables. Scientific calculations remain in the shared Fortran programs; `a01`–`a05` show editable settings and terminal commands that they print before running. Users can copy those displayed commands from the shown working directory.
 
 ## Build and prepare the portable directory
 
-Build the analysis programs in the shared code directory, then copy the four required executables into this template:
+Build the analysis programs in the shared code directory, then copy all compiled `analysis_*` executables into either the shared template or a map-local example directory:
 
 ```sh
 make -C map/tools/code analysis
@@ -12,11 +12,16 @@ cd map/tools/script_analysis
 ./a00-copy_codes.sh
 ```
 
-`a00-copy_codes.sh` checks that all four source programs exist and are executable before copying any, then preserves their executable permissions. It never compiles programs. Run it in this canonical template before copying the prepared directory; a copied map-local directory may not have access to the shared `map/tools/code/` path.
+`a00-copy_codes.sh` locates `map/tools/code/` relative to its own location. It works from both `map/tools/script_analysis/` and `map/<map>/script_analysis/` inside this repository. It copies every regular executable matching `analysis_*`, preserves permissions, and lists only the files copied during that run with `ls -lh`. A new analysis executable is included automatically; no name list in `a00` needs updating. If the shared code directory is not present, or no compiled analysis executables are available, the script reports the issue and points to the shared Makefile. It never compiles programs.
+
+For the Mekong sample, the map-local copy can be prepared directly from the repository checkout:
 
 ```sh
-cp -a map/tools/script_analysis map/mekong_15min/
+cd map/mekong_15min/script_analysis
+./a00-copy_codes.sh
 ```
+
+This map-local route needs the repository's `map/tools/code/` directory. A standalone map-only package without that shared source/build directory cannot use `a00` to locate binaries.
 
 The copied executables are platform and architecture dependent. Rebuild and prepare them on a different or incompatible system. Compiled binaries are excluded from Git.
 
@@ -43,14 +48,15 @@ For `analysis_river_node_latlon`, the header is the first stdout line and remain
 
 ## Example shell scripts
 
-Each example uses the executable stored beside it, changes to its own directory before execution, and does not compile programs:
+The examples change to their required working directory, print it, show the exact shell-quoted command, then invoke the local analysis executable directly. Most use `./analysis_*` from `script_analysis/`; `a05` uses `./script_analysis/analysis_check_mpi_bifurcation` from the map root to preserve that program's input-path contract. They do not compile programs:
 
-- [`a01-river_point_info.sh`](a01-river_point_info.sh) demonstrates querying a configured cell or geographic point.
+- [`a01-river_point_info.sh`](a01-river_point_info.sh) demonstrates querying a configured cell or geographic point. `REPORT_FILE` optionally redirects output.
 - [`a02-upbasin.sh`](a02-upbasin.sh) writes an arbitrary-cell mask and report under the map's `analysis/` directory, separate from the station-selected product.
 - [`a03-subbasin.sh`](a03-subbasin.sh) demonstrates a 50,000 km2 threshold and writes both rasters under `analysis/`, separate from standard products.
 - [`a04-river_node_latlon.sh`](a04-river_node_latlon.sh) demonstrates extraction for a Mekong-region bounding box and saves the header plus data rows as text.
+- [`a05-check_mpi_bifurcation.sh`](a05-check_mpi_bifurcation.sh) checks an existing MPI region map and can save dropped pathways as CSV.
 
-Edit the visible settings near the start of each script. Re-running replaces the same named example outputs.
+Edit the visible settings near the start of each script. Re-running replaces the same named example outputs. For scripts that accept file paths, the displayed command quotes paths so it can be copied safely even when the path contains spaces or shell-special characters.
 
 ## Standard map-preparation workflows
 
@@ -58,8 +64,6 @@ Edit the visible settings near the start of each script. Re-running replaces the
 
 ## MPI diagnostics
 
-The additional [`a05-check_mpi_bifurcation.sh`](a05-check_mpi_bifurcation.sh) inspects an existing MPI region raster and uses the shared `analysis_check_mpi_bifurcation` executable. Build it beforehand with `make -C map/tools/code analysis`. It is separate from the four-program portable bundle copied by `a00` and requires access to the shared tools directory.
-
-`analysis_mpi_region_color` is a separate manual visualization utility that writes `bsncol_mpi-N.bin`; s04 does not invoke it. The MPI color raster and basin aggregation products are documented in the [MPI map-preparation guide](../script_params/README.md#mpi-map-preparation).
+`a00` includes compiled MPI analysis executables such as `analysis_check_mpi_bifurcation` in its automatic copy. The `a05` example runs from the map root because that program reads `params.txt` and map inputs relative to the current directory; it prints this working directory and the corresponding `./script_analysis/analysis_check_mpi_bifurcation ...` command. `analysis_mpi_region_color` is a separate manual visualization utility that writes `bsncol_mpi-N.bin`; s04 does not invoke it. See the [MPI map-preparation guide](../script_params/README.md#mpi-map-preparation).
 
 Optional analysis outputs are not standard simulation inputs. Automatic CTL generation requires a matching filename row in `map/map_variables.csv`; it does not infer metadata for arbitrary output names.
