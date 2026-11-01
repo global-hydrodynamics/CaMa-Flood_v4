@@ -1,6 +1,6 @@
 # CaMa-Flood v5 Parameter and Analysis Tools Migration Plan
 
-**Status:** Phases B2.1, B2.2, the standard bifurcation workflow in Phase B2.3 and MPI preprocessing/analysis in Phase B2.4, and the v5 runoff-pair naming convention are implemented. `map/src/` remains the preserved historical v4 tool tree, and `gosh/` simulation scripts remain unchanged. The v5 workflows under `map/tools/` derive `inpdim_<ROFFTAG>.txt` and `inpmat_<ROFFTAG>.bin`; legacy workflows retain `diminfo_` names. Other parameter, allocation, and independent analysis migrations remain pending.
+**Status:** The scoped v5 parameter-tool migration (Phases B2.1–B2.6) and river-network analysis migration (Phase C) are complete. Allocation migration details are in [`docs/map_allocation_migration_plan.md`](map_allocation_migration_plan.md). This records completion of these map-tool workflows, not completion of the broader map data/tools modernization project; further work is deferred in [`docs/map_data_tools_plan.md`](map_data_tools_plan.md). `map/src/` remains the preserved historical v4 tool tree, and `gosh/` simulation scripts remain unchanged. The v5 workflows under `map/tools/` derive `inpdim_<ROFFTAG>.txt` and `inpmat_<ROFFTAG>.bin`; legacy workflows retain `diminfo_` names.
 
 ## Scope and evidence
 
@@ -56,11 +56,11 @@ The checked-in sample uses years 2000–2001 and is explicitly a demonstration s
 
 ## Approved shell-family organization
 
-The maintainer approved merging the previously proposed allocation shell family into `script_params/`. Gauge and dam allocation are part of map preparation typically performed when creating a map, so the script templates belong with parameterization workflows. The three shell families are `script_region/` (regional map generation), `script_params/` (channel parameterization, runoff matrices, bifurcation/MPI setup, gauge and dam allocation), and `script_analysis/` (independent analysis and diagnostics). All Fortran sources and executables remain in `map/tools/code/`; executable prefixes may remain `region_*`, `param_*`, `analysis_*`, and `allocate_*`. This is an organizational decision only: it authorizes no implementation or algorithm/interface changes, and legacy tools under `map/src/` remain unchanged.
+The maintainer approved merging the previously proposed allocation shell family into `script_params/`. Gauge and dam allocation are part of map preparation typically performed when creating a map, so the script templates belong with parameterization workflows. The three shell families are `script_region/` (regional map generation), `script_params/` (channel parameterization, runoff matrices, bifurcation/MPI setup, gauge and dam allocation), and `script_analysis/` (independent analysis and diagnostics). All Fortran sources and executables remain in `map/tools/code/`; executable prefixes are `region_*`, `param_*`, `analysis_*`, and `allocate_*`. The v5 workflows are now implemented under this organization; legacy tools under `map/src/` remain unchanged.
 
 ## Current shared v5 tools and regional comparison
 
-`map/tools/code/Makefile` builds the `region_*` programs, including `region_default_inpmat`, migrated parameter tools under `param_*`, and MPI connectivity analysis under `analysis_*`; allocation tools under `allocate_*` remain pending. `generate_ctl.py` is a Python tool in the shared code directory. `map/tools/script_region/` holds generic regionalization and CTL scripts. The maintainer-approved target organization places channel parameters, user-configured input matrices, bifurcation/MPI setup, and gauge/dam allocation wrappers in `script_params/`; independent diagnostics belong in `script_analysis/`. The implemented v5 parameter templates are `s01-channel_params.sh`, `s02-bifurcation.sh`, `s03-generate_inpmat.sh`, and `s04-mpi_map_setup.sh`.
+`map/tools/code/Makefile` builds the `region_*`, `param_*`, `analysis_*`, and `allocate_*` programs. The v5 wrappers are organized under `map/tools/script_region/`, `map/tools/script_params/`, and `map/tools/script_analysis/`; the CTL generator is Python code in the shared code directory. Implemented parameter/preparation wrappers include `s01`–`s07`, `s99-write_ctl.sh`, and allocation examples `t01`–`t03`. Independent diagnostics are available through `script_analysis/`. Allocation migration details and its validation limits are maintained in [`docs/map_allocation_migration_plan.md`](map_allocation_migration_plan.md).
 
 ### Three `generate_inpmat` implementations are not interchangeable
 
@@ -146,7 +146,7 @@ The following table inventories legacy shell scripts under `map/src/src_param/`;
 | `era5_hour_s02-generate_inpmat.sh`, `u01_era5_hour_generate_inpmat.sh` | ERA5 hourly matrix variants with substantially overlapping 0.1-degree grid configuration. | Both derive paired `inpdim_ERA5_hour.txt` / `inpmat_ERA5_hour.bin` by default and use map/high-res files. Their duplication appears configuration-level; compare exact settings before consolidating. |
 | `u02_ERA5_sixmin_generate_inpmat.sh` | ERA5 six-minute forcing variant; uses a 0.1-degree global grid and a different longitude extent/origin convention from the other ERA5 scripts. | Derives the `ERA5_sixmin` pair and uses map/high-res files. Do not merge settings by script-name similarity. |
 | `sample_tej_s02-generate_inpmat.sh` | Regional input-grid example for the Tej/Tapi-area setup (123–148°E, 24–46°N, 1/60-degree input spacing). | Same executable; map-specific high-res data required. Its bounds and grid are not a general default. |
-| `s03-mpi_map_setup.sh` | Builds bifurcation/MPI support products, invokes bifurcation preparation, optionally selects `MaxMPI`, uses system `sort`, then creates several processor-count products and selects `mpireg.bin`. | The current script still references the legacy `diminfo_test-1deg.txt`; migration to `inpdim_<ROFFTAG>.txt` remains pending. Launch from map-local `src_param/`; it does not use runoff-matrix generation as a mandatory predecessor. |
+| `s03-mpi_map_setup.sh` | Legacy v4 MPI setup example: builds bifurcation/MPI support products, optionally selects `MaxMPI`, and creates processor-count products. | The historical script uses `diminfo_test-1deg.txt` and writes the legacy `mpireg.bin` alias. This v4 behavior is intentionally preserved under `map/src/`; the separate v5 MPI workflow and its `inpdim_<ROFFTAG>.txt` convention are implemented under `map/tools/`. |
 | `t01-alloc_flow_gauge.sh` | Flow-gauge allocation. | Expects configured external gauge list under the map copy's relative `../../data`; invokes allocator in `src_param/`, then moves the allocation output into map data. |
 | `t02-alloc_dams.sh` | Dam-list allocation. | Expects configured external dam list; invokes `allocate_dam`, then moves selected output(s) into map root. `dam_alloc_error.txt` under `src_param/` is an existing diagnostic/example file, not a Fortran source. |
 | `t03-alloc_level_gauge.sh` | Level-gauge allocation. | Expects configured external level-gauge list under relative data path; invokes allocator and moves output to map root. |
@@ -163,22 +163,22 @@ The v5 input-matrix wrapper was renumbered from `s02-generate_inpmat.sh` to `s03
 
 The three grid-specific input-matrix scripts and the three allocation scripts are separate runnable examples, not a single ordered pipeline. Shell comments, executable relative paths and `cd` operations should be checked together when porting each wrapper; comments alone are not reliable CWD evidence.
 
-## Migration mapping and deferred tools
+## Migration mapping: implemented and deferred tools
 
-The table records implemented v5 names as well as deferred target names. Future entries remain proposals unless explicitly marked as approved decisions. Legacy source files and map-local v4 copies remain intact.
+The table records implemented v5 names and the few tools that remain outside this migration. Any future entries remain proposals unless explicitly marked as approved decisions. Legacy source files and map-local v4 copies remain intact.
 
-| Legacy source | Proposed shared source / executable | Wrapper area | Notes |
+| Legacy source | Shared v5 source / executable | Wrapper area / status | Notes |
 | --- | --- | --- | --- |
 | `generate_inpmat` (general `src_param`) | `param_inpmat_generate.F90` / `param_inpmat_generate` | `script_params/s03-generate_inpmat.sh` | Implemented in B2.1. User-selected runoff grids; distinct from the standard matrix produced by `region_default_inpmat`. |
 | `calc_outclm` | `param_channel_calc_outclm.F90` / `param_channel_calc_outclm` | `script_params/s01-channel_params.sh` | Implemented in B2.2; preserves CLI and conditional NetCDF paths. The standard wrapper uses annual mean ELSE_GPCC runoff and the existing standard input matrix. |
 | `calc_outclmday` | Legacy-only source | None | The maintainer approved keeping the historical daily/maximum-30-day implementation only under `map/src/`; it is not migrated or invoked by v5. |
 | `calc_rivwth` | `param_channel_calc_rivwth.F90` / `param_channel_calc_rivwth` | `script_params/s01-channel_params.sh` | Implemented in B2.2; the wrapper's explicit coefficients and binary outputs match the legacy workflow. |
 | Legacy `set_gwdlr` | `param_channel_set_merit_width.F90` / `param_channel_set_merit_width` | `script_params/s01-channel_params.sh` | Implemented in B2.2. v4 writes `rivwth_gwdlr.bin`; v5 writes `rivwth_merit.bin` using the unchanged merge calculation. |
-| `calc_prmwat` | `param_calc_prmwat` | Future `script_params/s05-permanent_water.sh` | Not included in B2.2. |
+| `calc_prmwat` | `param_water_calc_prmwat.F90` / `param_water_calc_prmwat` | `script_params/s05-permanent_water.sh`; implemented in B2.5 | Preserves the legacy calculation and output behavior; rationale and scientific limits are in the permanent-water documentation. |
 | `set_bifparam`, `set_bif_basin` | `param_bif_set_params.F90` / `param_bif_set_basin.F90` | `script_params/s02-bifurcation.sh` | Implemented in B2.3 for ordinary non-MPI processing; preserves the legacy layer default and output order. |
 | `set_bif_basin_mpi`, `set_mpi_region` | `param_mpi_set_basin`, `param_mpi_set_region` | Implemented `script_params/s04-mpi_map_setup.sh` | Consumes standard `bifprm.txt`, internally sorts parsed basin IDs/elevation, creates temporary basin groups and persistent region maps; no MPI-specific pathway tables are retained. |
 | `get_rivinfo`, `get_upbasin`, `get_subbasin`, `get_vecmap` | `analysis_river_point_info`, `analysis_upbasin`, `analysis_subbasin`, `analysis_river_node_latlon` | `script_params/s06-subbasin.sh`, `s07-upbasin.sh`; portable `script_analysis/a00`–`a04` | Implemented in Phase C; legacy source under `map/src/src_param/` remains unchanged. |
-| `allocate_flow_gauge`, `allocate_level_gauge`, `allocate_dam` | `allocate_*` | `script_params/` | Allocation recipes are part of map preparation; preserve input schemas and generated filenames. |
+| `allocate_flow_gauge`, `allocate_level_gauge`, `allocate_dam` | Shared programs plus `mod_allocation_map_io.F90` | `script_params/t01`–`t03`; implemented in Phase B2.6 | Regression and data-policy details are in [`docs/map_allocation_migration_plan.md`](map_allocation_migration_plan.md). |
 | `wrte_ctl_map` | Retain under `map/src/`; no B2.2 migration | none | Python CTL generator is the v5 tool; the legacy program remains untouched. |
 | `src_dam` Python scripts | No Fortran binary mapping | Keep the legacy workflow under `map/src/src_dam/`; any future `script_params/` recipe must remain distinct from allocation | Dam parameter estimation consumes simulation results and has external-data requirements; no migration is approved. |
 

@@ -30,8 +30,6 @@ For the channel workflow, `s01-channel_params.sh` first produces `outclm.bin` fr
 
 The `s02-generate_inpmat.sh` sample sets input-grid spacing, bounds, latitude ordering, and output names in the script. The Fortran implementation is for a regular linear grid; a curvilinear or otherwise different coordinate system may need a different implementation. An input matrix belongs to a particular map and forcing-grid definition, so dimensions, bounds, orientation, and file format must match the forcing used by the model.
 
-For the separate workflow that composes an existing CaMa input matrix with a remapping operator for native-grid forcing, see [`native_inpmat/README.md`](native_inpmat/README.md). That workflow has its own assumptions and validation steps; it is not interchangeable with the direct matrix-generation sample without checking the relevant grid definitions.
-
 ## Map-local files and external inputs
 
 The sample scripts refer to inputs such as runoff climatology, interpolation weights, gauge/reservoir lists, and high-resolution map layers. Some names and paths are hard-coded examples. Edit them for the target map and verify source-data terms. `s01-channel_params.sh` uses a `diminfo` file and runoff input to calculate climatological discharge; `calc_prmwat` selects available high-resolution data by tag. `s03-mpi_map_setup.sh` includes an optional `MaxMPI` mode whose comments note that some inter-basin connections may be neglected, so inspect that trade-off before selecting it.

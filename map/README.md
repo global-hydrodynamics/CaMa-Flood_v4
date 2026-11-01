@@ -35,7 +35,7 @@ Cloning the GitHub repository provides the legacy v4 source templates under `map
 | `map/src/src_dam/` | Legacy v4 reusable source template for preparing dam/reservoir locations and parameters for a target map. | Has an existing [reservoir-preparation README](src/src_dam/ReadMe.md). |
 | `map/src/` | Historical v4 map-preparation tools, retained for users of the v4 workflows. | Contains `src_param/`, `src_region/`, and `src_dam/`; new v5 map-tool development belongs under `map/tools/`. It is separate from the model's numerical `src/`. |
 | `map/<map-tag>/` | A map instance: downloaded map data, metadata, derived products, and any map-local processing copies needed for that workflow. | Examples include `glb_15min` and `conus_06min`; these datasets are supplied through distribution packages or separate map downloads. |
-| `map/data/` | Optional supporting datasets in some data-rich packages. | Some reservoir and levee workflows use supporting data here, including GRSAD and ReGeom. Availability and terms depend on the dataset and package release. |
+| `map/data/` | Tracked reference inputs and supporting data for map-preparation workflows. | Git tracks the curated `GRDC_allocated.csv`, `GRanD_allocated.csv`, `GRanD_alloc+Mekong.csv`, `MLIT_FlowGauge_alloc_final.csv`, and `MLIT_LevelGauge_allocated.csv` tables, plus the ELSE_GPCC runoff climatology used by the sample channel workflow. These processed tables are the approved allocation inputs; this does not imply unrestricted redistribution of source workbooks or databases. Other data such as GRSAD and ReGeom samples may be package-specific; check their availability and terms separately. |
 
 ### Reusable sources and map-local working copies
 

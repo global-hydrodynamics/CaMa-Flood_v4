@@ -12,9 +12,9 @@ cd "$MAP_DIR"
 
 `map/src/` is preserved as the historical v4 tree; v5 migrations belong under `map/tools/` and do not rewrite those legacy workflows. Legacy callers retain their `diminfo_` names; the shared v5 workflows use the `ROFFTAG`-derived pair.
 
-## Planned workflow organization
+## Implemented workflow organization
 
-The maintainer-approved organization follows the preferred map-preparation sequence. Numbering communicates a useful order for the standard workflow; it does not make every step mandatory or imply that every map uses every tool.
+The v5 parameter and map-preparation workflows listed below are implemented. Numbering communicates a useful order for the standard workflow; it does not make every step mandatory or imply that every map uses every tool.
 
 | Script | Purpose | Status |
 | --- | --- | --- |
