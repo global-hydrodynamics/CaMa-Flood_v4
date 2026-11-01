@@ -35,3 +35,13 @@ The s04 map-generation script invokes this tool for its selected `DEFAULT_MPI` m
 ```
 
 This creates `bsncol_mpi-8.bin`, a single int32 `NX x NY` record with `-9999` outside assigned regions. It colors region IDs using the legacy size-prioritized, adjacency-aware palette logic (large regions first; then small regions, with singleton regions assigned color 1). The palette and tie/order behavior follow `set_color` in `map/src/src_param/set_bif_basin_mpi.F90`; the utility applies that logic to the supplied MPI region raster. It does not alter the region map and is not called by s04. Invoke it manually for any existing partition when visualization is useful. `bifcol_mpi.bin`, produced during s04 basin aggregation, is a separate visualization of MPI-aggregated basin IDs.
+
+## River-cell and basin analysis
+
+The shared `analysis_get_rivinfo`, `analysis_get_upbasin`, and `analysis_get_subbasin` executables are wrapped by the scripts below. Build them first with `make -C map/tools/code analysis`. Copy a template into a map-local `script_analysis/`; scripts resolve map paths relative to their own location and write outputs in the documented map or `analysis/` directory.
+
+- [`a01-river_info.sh`](a01-river_info.sh) queries configured grid indices (`IX`, `IY`) or geographic coordinates and can save the textual result.
+- [`a02-upstream_basin.sh`](a02-upstream_basin.sh) extracts the upstream mask for configured `IX`, `IY` to a configurable analysis filename. It does not overwrite standard `upbasin.bin`.
+- [`a03-subbasin.sh`](a03-subbasin.sh) runs the same segmentation algorithm as `script_params/s06-subbasin.sh` with a configurable km2 threshold, writing threshold-named files under `analysis/` rather than standard products.
+
+Grid indices are one-based CaMa-Flood map indices. `get_upbasin` marks selected upstream river cells as 1, other mapped river cells as 0, and cells outside the network as -9999. `get_subbasin` applies an upstream-area-increase boundary rule; the threshold is not a simple minimum or maximum basin-area filter. See [standard parameter workflows](../script_params/README.md#river-network-analysis) for the GRDC-based `s07` example and standard product meanings. Optional analysis outputs are not required for model execution. Automatic CTL generation requires registered filenames and does not infer metadata for arbitrary names.

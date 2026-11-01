@@ -1,6 +1,6 @@
 # Map parameterization and preparation workflows
 
-`script_params/` contains reusable map-local recipes for parameterization and related map preparation. The shell layer holds configuration, selects working directories, sequences commands, and reports progress; compiled programs in `map/tools/code/` perform scientific calculations, validate inputs, and report detailed errors. Build the required executables beforehand with the shared Makefile (for example, `make -C map/tools/code param analysis`); processing scripts do not compile or check them. Scripts s01-s05 use self-contained ASCII `[STEP]` and `[SUCCESS]` banners plus a prominent `ERROR` banner on failure, using POSIX exit traps; no shared message helper is required. Some migrated programs still have incomplete file-open/read diagnostics, a code-layer follow-up. See the [shell-script convention](../../../AGENTS.md#shell-script-design-principles).
+`script_params/` contains reusable map-local recipes for parameterization and related map preparation. The shell layer holds configuration, selects working directories, sequences commands, and reports progress; compiled programs in `map/tools/code/` perform scientific calculations, validate inputs, and report detailed errors. Build the required executables beforehand with the shared Makefile (for example, `make -C map/tools/code param analysis`); processing scripts do not compile or check them. The s01-s07 parameter scripts use self-contained ASCII `[STEP]` and `[SUCCESS]` banners plus a prominent `ERROR` banner on failure, using POSIX exit traps; no shared message helper is required. Some migrated programs still have incomplete file-open/read diagnostics, a code-layer follow-up. See the [shell-script convention](../../../AGENTS.md#shell-script-design-principles).
 
 ```sh
 cd "$MAP_DIR"
@@ -23,6 +23,8 @@ The maintainer-approved organization follows the preferred map-preparation seque
 | `s03-generate_inpmat.sh` | User-configured runoff-grid mapping matrix. | Implemented |
 | `s04-mpi_map_setup.sh` | MPI basin aggregation and coloring, region assignment, and default-N connectivity report; optional pre-partition basin diagnostic with `check_map`. | Implemented |
 | `s05-permanent_water.sh` | Aggregate high-resolution permanent-water area by unit catchment. | Implemented |
+| `s06-subbasin.sh` | Generate standard optional subbasin IDs and display colors using the configured upstream-area-increase threshold. | Implemented |
+| `s07-upbasin.sh` | Use the largest valid allocated GRDC station for river lookup and upstream-mask generation. | Implemented |
 | `s99-write_ctl.sh` | Final optional step: generate GrADS CTLs for existing registered base-map and high-resolution binaries. | Implemented |
 | `t01-alloc_flow_gauge.sh`, `t02-alloc_dams.sh`, `t03-alloc_level_gauge.sh` | Flow-gauge, reservoir, and water-level-gauge mapping from MERIT Hydro to CaMa-Flood catchments. | Implemented |
 
@@ -138,3 +140,13 @@ It compiles v4 and v5 programs in temporary directories, compares all six output
 ## High-resolution areas in aggregation workflows
 
 The general parameter input-matrix generator (`s03-generate_inpmat.sh`) and permanent-water aggregator (`s05-permanent_water.sh`) read all rows in the selected `HIRES_TAG/location.txt` and accumulate across areas. This multi-area behavior is distinct from the intentional single-area allocation contract above. Source inspection confirms the loops; the Mekong sample and current focused fixtures do not validate full-package multi-area behavior. The [map-tools plan](../../../docs/map_data_tools_plan.md#high-resolution-area-handling-contract) gives the maintainer-operated large-data integration procedure.
+
+## River-network analysis
+
+The shell layer sets locations and parameters; `analysis_get_*` programs in `map/tools/code/` read and validate map data and perform the network calculations. Build them beforehand with `make -C map/tools/code analysis`.
+
+[`s06-subbasin.sh`](s06-subbasin.sh) creates or replaces the optional standard products `subbsn.bin` and `subcol.bin` in the map root. Its configurable default, `AREA_THRESHOLD_KM2=50000`, is a maintainer-approved example, not a calibrated universal threshold. In the preserved algorithm, a segment boundary is cut when the current upstream area exceeds the threshold and the valid downstream cell's upstream area exceeds the current value by more than the threshold. It is not a simple classification of all cells above or below 50,000 km2. The threshold is in km2.
+
+[`s07-upbasin.sh`](s07-upbasin.sh) requires map-local `GRDC_alloc.txt` (normally produced by `t01-alloc_flow_gauge.sh`). It filters unallocated/invalid records, chooses the largest positive `area_CaMa` (first file row wins a tie), and uses that row's primary `ix1,iy1` cell. It writes `grdc_station_selection.txt`, `grdc_river_info.txt`, and standard `upbasin.bin`; repeated execution overwrites those files. The primary-cell upstream mask is not guaranteed to represent the complete aggregate drainage area of a gauge mapped to multiple catchments, so do not treat its cell count/area as equal to `area_CaMa` or observed drainage area.
+
+These are independent map-preparation recipes; neither requires the other. They create optional diagnostics, not simulation inputs. Afterward, `s99-write_ctl.sh` can create CTLs for registered products. See [`script_analysis/README.md`](../script_analysis/README.md) for arbitrary-cell analysis that keeps exploratory outputs separate from standard names. User-selected filenames need an additional registry entry to use automatic CTL generation.

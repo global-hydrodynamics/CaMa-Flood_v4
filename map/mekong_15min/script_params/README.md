@@ -1,6 +1,6 @@
 # Map parameterization and preparation workflows
 
-`script_params/` contains reusable map-local recipes for parameterization and related map preparation. The shell layer holds configuration, selects working directories, sequences commands, and reports progress; compiled programs in `map/tools/code/` perform scientific calculations, validate inputs, and report detailed errors. Build the required executables beforehand with the shared Makefile (for example, `make -C map/tools/code param analysis`); processing scripts do not compile or check them. Scripts s01-s05 use self-contained ASCII `[STEP]` and `[SUCCESS]` banners plus a prominent `ERROR` banner on failure, using POSIX exit traps; no shared message helper is required. Some migrated programs still have incomplete file-open/read diagnostics, a code-layer follow-up. See the [shell-script convention](../../../AGENTS.md#shell-script-design-principles).
+`script_params/` contains reusable map-local recipes for parameterization and related map preparation. The shell layer holds configuration, selects working directories, sequences commands, and reports progress; compiled programs in `map/tools/code/` perform scientific calculations, validate inputs, and report detailed errors. Build the required executables beforehand with the shared Makefile (for example, `make -C map/tools/code param analysis`); processing scripts do not compile or check them. The s01-s07 parameter scripts use self-contained ASCII `[STEP]` and `[SUCCESS]` banners plus a prominent `ERROR` banner on failure, using POSIX exit traps; no shared message helper is required. Some migrated programs still have incomplete file-open/read diagnostics, a code-layer follow-up. See the [shell-script convention](../../../AGENTS.md#shell-script-design-principles).
 
 ```sh
 cd "$MAP_DIR"
@@ -91,7 +91,7 @@ The programs read standard map files `params.txt`, `basin.bin`, `bifprm.txt`, an
 
 Copy [`s99-write_ctl.sh`](s99-write_ctl.sh) into a map-local `script_params/` directory and run it there. Like the reusable [`script_region/s02-write_ctl.sh`](../script_region/s02-write_ctl.sh), it calls the shared `generate_ctl.py` and scans only `.bin` files that already exist directly in the map root and in immediate child directories containing `location.txt`. The generator creates CTLs only for files registered in `map_variables.csv` whose dimensions and binary sizes validate against `params.txt` or `location.txt`.
 
-The wrapper supports `--dry-run` and `--no-overwrite`; existing CTLs are replaced by default. It does not create, modify, or infer binary map data. For the optional MPI basin diagnostic, it creates `check_bif_bsnmod_mpi.ctl` only when `check_bif_bsnmod_mpi.bin` exists; the registry defines its two variables in record order. See the [map-tools guide](../README.md#grads-ctl-files) for registry, missing-value, and format details.
+The wrapper supports `--dry-run` and `--no-overwrite`; existing CTLs are replaced by default. It does not create, modify, or infer binary map data. For the optional MPI basin diagnostic, it creates `check_bif_bsnmod_mpi.ctl` only when `check_bif_bsnmod_mpi.bin` exists; the registry defines its two variables in record order. See the [map-tools guide](../../tools/README.md#grads-ctl-files) for registry, missing-value, and format details.
 
 ## General-purpose runoff input matrix
 
@@ -132,3 +132,11 @@ python3 -B -m unittest map.tools.tests.test_allocation_regression -v
 ```
 
 It compiles v4 and v5 programs in temporary directories, compares all six output products to the committed legacy snapshots, checks classifications and high-resolution selection, rejects a multi-area layout, and verifies that the Mekong inputs were not modified. Regression demonstrates parity for this sample/compiler, not independent scientific validation. Threshold rationale remains open; see the [allocation migration plan](../../../docs/map_allocation_migration_plan.md#knowledge-gaps-and-maintainer-questions).
+
+## River-network analysis examples
+
+The Mekong sample includes the standard v5 analysis examples `s06-subbasin.sh` and `s07-upbasin.sh`, which call the shared executables in `../../tools/code/` after they have been built with `make -C map/tools/code analysis`.
+
+`s06-subbasin.sh` uses the maintainer-approved 50,000 km2 example threshold and writes optional `subbsn.bin` and `subcol.bin` in the map root. The threshold identifies large upstream-area increases between adjacent network cells; it is not a minimum catchment-size setting. The outputs are not simulation inputs.
+
+`s07-upbasin.sh` reads the committed `GRDC_alloc.txt`, selects the valid station with the largest `area_CaMa` (first row wins ties), and uses the allocation's primary cell. The selected Mekong example is GRDC ID `2569002`, cell `(62,93)`, with `area_Input=663168.75 km2`, `area_CaMa=663000.25 km2`, and `Type=1`. It writes station and river-information text reports plus `upbasin.bin`. This single-primary-cell mask is not guaranteed to include all catchments aggregated for a multi-catchment allocation. Re-running overwrites these outputs. For arbitrary-cell analysis that preserves the standard products, use the separate examples in `../script_analysis/`.

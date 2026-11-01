@@ -39,3 +39,4 @@ DR-0037,EV-0190,maintainer_clarification,Maintainer message in active task; no a
 DR-0038,EV-0193,maintainer_task_instruction and implementation evidence,Phase B task in active Codex conversation; no archive ID supplied; implementation/test evidence in repository,research/records/discussions/DR-0038.md,pending,restricted
 DR-0039,EV-0201,maintainer_task_clarification and repository evidence,Maintainer task in active Codex conversation; no archive ID; package/source paths are documented in KG-0014 and VR-0066,research/records/discussions/DR-0039.md,pending,restricted
 DR-0040,EV-0204,maintainer clarification and read-only package inspection,Maintainer message in active task; no archive ID supplied; package observations detailed in VR-0067,research/records/discussions/DR-0040.md,pending,restricted
+DR-0041,EV-0208,Codex conversation,Maintainer task and explicit answers in the active Phase C conversation,research/records/discussions/DR-0041.md,pending,restricted

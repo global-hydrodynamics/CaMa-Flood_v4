@@ -1,0 +1,51 @@
+#!/bin/sh
+# Create a single-outlet upstream-basin mask for a configured river-grid cell.
+# Copy to <map>/script_analysis/ and run from any working directory.
+# Inputs: params.txt, nextxy.bin, upgrid.bin, and uparea.bin.
+# Output: a configurable int32 NX x NY mask, separate from the standard upbasin.bin.
+set -eu
+
+# Paths
+SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
+MAP_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd -P)
+CODE_DIR=$(CDPATH= cd "$SCRIPT_DIR/../../tools/code" && pwd -P)
+
+# Configuration: use one-based Fortran grid coordinates and choose a nonstandard output name.
+IX=62
+IY=93
+OUTPUT_FILE="$MAP_DIR/analysis_upbasin_${IX}_${IY}.bin"
+REPORT_FILE="$MAP_DIR/analysis_upbasin_${IX}_${IY}.txt"
+
+# ----------------------------------------------------------------------
+# User settings end here. Program paths and processing steps follow.
+# ----------------------------------------------------------------------
+
+# Keep the script name and current step for the failure summary below.
+SCRIPT_NAME=${0##*/}
+STEP="Prepare upstream-basin analysis"
+# On exit, report failures and return the original status; signals use standard nonzero statuses.
+trap '
+    EXIT_STATUS=$?
+    trap - 0
+    if [ "$EXIT_STATUS" -ne 0 ]; then
+        printf "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n" >&2
+        printf "!!! ERROR: %s FAILED !!!\n" "$SCRIPT_NAME" >&2
+        printf "!!! Step: %s\n" "$STEP" >&2
+        printf "!!! Exit status: %s\n" "$EXIT_STATUS" >&2
+        printf "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n" >&2
+    fi
+    exit "$EXIT_STATUS"
+' 0
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+EXEC_UPBASIN="$CODE_DIR/analysis_get_upbasin"
+
+# The program reads map inputs via ../ from the map-local script directory.
+cd "$SCRIPT_DIR"
+STEP="Extract cells upstream of ($IX,$IY)"
+printf '==================================================\n[STEP 1/1] Create upstream-basin mask\n==================================================\n'
+"$EXEC_UPBASIN" "$IX" "$IY" "$OUTPUT_FILE" > "$REPORT_FILE"
+printf 'Upstream-basin report: %s\nMask: %s\n' "$REPORT_FILE" "$OUTPUT_FILE"
+printf '==================================================\n[SUCCESS] %s\n==================================================\n' "$SCRIPT_NAME"

@@ -24,3 +24,13 @@ It reports totals, percentages, channel (`width(1)>0`) versus floodplain-only (`
 The dropped fraction describes connections omitted by the selected domain partition. It is not an estimate of discharge, storage, or inundation error, and it does not independently validate the scientific quality of the map or simulation.
 
 The s04 map-generation script invokes this tool for its selected `DEFAULT_MPI` map and prints the summary in the run log. The same standalone command can inspect any compatible externally generated map. See the [parameter workflow guide](../script_params/README.md#mpi-map-preparation) for basin merging, threshold rationale, generated files, and regression evidence.
+
+## Mekong river-analysis examples
+
+These configured examples call the shared `analysis_get_*` executables in `map/tools/code/`. Build them before use with `make -C map/tools/code analysis`; the scripts do not compile programs.
+
+- `a01-river_info.sh` reports river information for the configured one-based cell `(62,93)` and saves `river_info.txt`.
+- `a02-upstream_basin.sh` writes an upstream mask to `analysis_upbasin_62_93.bin` and a text report. It does not replace the standard `upbasin.bin`.
+- `a03-subbasin.sh` uses the example 50,000 km2 threshold and writes `analysis/subbsn_50000km2.bin` and `analysis/subcol_50000km2.bin`, separate from the standard products.
+
+Edit the visible settings near the beginning of a copied script to choose a cell, query mode, threshold, or output location. Grid indices are one-based. The subbasin threshold is applied to an upstream-area increase across a valid downstream link; it is not a simple basin-area cutoff. These workflows overwrite their same-named output files when run again. Optional results are not simulation inputs. Automatic CTL generation requires an entry in `map/map_variables.csv` for the exact filename; arbitrary analysis names are not registered by default.

@@ -46,7 +46,8 @@ Assign `A`, `B`, or `C` only when evidence supports the role. Do not classify fr
 | 22 | `bifurcation` | Standard non-MPI bifurcation parameters and basin-connectivity products. |
 | 23 | `input_matrix` | User-configured input-matrix products and paired configuration. |
 | 24 | `MPI` / `bifurcation` | MPI-specific basin aggregation and region products. `bifcol_mpi.bin` colors aggregated basin IDs independent of process count; optional `bsncol_mpi-N.bin` colors N computational regions. |
-| 25 | Unassigned | No current product uses this ID. |
+| 25 | `river_map_supplement` | Permanent-water area aggregated for post-processing. |
+| 26 | `river_map_supplement` | Optional river-network analysis products: `subbsn.bin`, `subcol.bin`, and `upbasin.bin`. |
 | 29 | Unassigned in the current registry | No current row uses this ID. |
 | 31 | `dam_reservoir` / `gauge_alloc` | Allocation workflow text products, including dam, flow-gauge, and level-gauge outputs. |
 | 41 | `inflow_scheme` | Specialized inflow-boundary map variants. |
