@@ -44,9 +44,10 @@ Assign `A`, `B`, or `C` only when evidence supports the role. Do not classify fr
 | 20 | Unassigned | No current product uses this ID. |
 | 21 | `param_cross-section` | Channel-discharge and cross-section parameter products, including outputs of the `s01` workflow and alternate width products. |
 | 22 | `bifurcation` | Standard non-MPI bifurcation parameters and basin-connectivity products. |
-| 23 | `inflow_scheme` | Inflow-boundary products and supporting masks. |
+| 23 | `MPI` / `bifurcation` | MPI region maps and MPI-specific bifurcation preparation products. |
 | 24 | `dam_reservoir` | Dam and reservoir parameter products. |
-| 25 | `MPI` | MPI-specific bifurcation variants and partitioning products. |
+| 25 | Unassigned | No current product uses this ID. |
+| 29 | `dam_reservoir` / `inflow_scheme` | Specialized dam/reservoir and inflow-boundary products in the current registry. |
 | 52 | `input_matrix` | User-configured input-matrix products and paired configuration. |
 | 62–63 | `river_map_supplement` | Supporting or specialized map products. |
 | 81 | `gauge_alloc` | Gauge allocation and verification data. |
@@ -103,6 +104,8 @@ Sort rows by ascending numeric `category_id`, then `binary_filename` (case-insen
 The fields deliberately separate two questions: `distribution_status` describes the product's role in the workflow, while `sample_availability` records where it was actually observed. Package observations do not prove universal distribution. A source program that writes a file does not establish that a corresponding product is shipped. These distinctions should be preserved when adding entries.
 
 The v5 bifurcation workflow distinguishes regular supporting output from optional diagnostics. `bifcol.bin` is generated on every standard run because it is routinely used to visualize the merged basin map. With `check_map`, `param_set_bifparam` writes `check_bif_dphwth.bin` (float32 records `bifdph`, then `bifwth`), and `param_set_bif_basin` writes `check_bif_bsnmod.bin` (int32 records `bifmod`, then `bpoint`). Each diagnostic file has two `NX × NY` direct-access records and is not a model runtime input. The corresponding registry rows use `sub_id=C` to mark these outputs as opt-in: the programs emit them only when `check_map` is requested. This is distinct from `runtime_requirement`, which records whether a product is consumed during model execution. The v5 basin utility no longer writes separate `bifmod.bin` and `bpoint.bin`; those names belong to the unchanged v4 workflow. The legacy v4 `set_bifparam.F90` continues to write `bifdph.bin`, while v5 does not create or replace it. `biftag.bin` is excluded from the v5 product registry; any package or legacy occurrences remain untouched. The registry uses two variable rows per multi-record diagnostic file, preserving record indexes and order.
+
+The v5 MPI preparation workflow adds the persistent model inputs `mpireg-N.bin` and the selected-default alias `mpireg.bin`. Each is a single int32 `NX × NY` direct-access record; `-9999` marks cells outside an assigned river basin. The on-disk ordinary `bifprm.txt` remains the shared input to serial and MPI runs. The v5 workflow's `.bifbsn_mpi.tmp` is a temporary basin-group raster removed after partition generation and is not a registry product. Historical `bifprm_mpi.txt`, `bifprm-N.txt`, `bifbsn_mpi.bin`, `bifmod_mpi.bin`, `bpoint_mpi.bin`, and `bifcol_mpi.bin` rows describe v4-only intermediates or diagnostics; v5 s04 does not produce them as persistent products. Its connectivity report is printed to the log, with a dropped-path CSV written only when explicitly requested by the standalone analysis wrapper.
 
 ## Maintenance rules
 
