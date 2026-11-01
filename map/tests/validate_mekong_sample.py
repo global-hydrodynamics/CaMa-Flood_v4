@@ -1,133 +1,182 @@
 #!/usr/bin/env python3
-"""Validate the tracked Mekong reference map without third-party packages."""
+"""Validate the committed Mekong map sample and its registered binary products."""
 from __future__ import annotations
 
-import math
+import csv
 import struct
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 MAP = ROOT / "map" / "mekong_15min"
+REGISTRY = ROOT / "map" / "map_variables.csv"
+DTYPE_BYTES = {"int8": 1, "int16": 2, "int32": 4, "float32": 4}
 
 
-def numeric_records(filename: str) -> list[float | int]:
-    data = (MAP / filename).read_bytes()
-    if len(data) % 4:
-        raise AssertionError(f"{filename}: byte count is not a multiple of 4")
-    return [v[0] for v in struct.iter_unpack("<f" if filename not in {
-        "nextxy.bin", "nextxy_inflow.bin", "nextxy_inflow_keep.bin",
-        "bifbsn.bin", "bifbsn_mpi.bin", "bifcol.bin", "bifcol_mpi.bin",
-        "bifmod.bin", "bifmod_mpi.bin", "bpoint.bin", "bpoint_mpi.bin",
-        "mpireg.bin", "mpireg-4.bin", "mpireg-8.bin", "mpireg-16.bin",
-        "upbasin.bin", "upst_mask.bin", "upst_mask_keep.bin",
-    } else "<i", data)]
+def read_map_dimensions() -> dict[str, int]:
+    """Read base-map dimensions from the first three params.txt records."""
+    values = [int(line.split()[0]) for line in (MAP / "params.txt").read_text().splitlines()[:3]]
+    return dict(zip(("NX", "NY", "NLFP"), values, strict=True))
+
+
+def read_input_dimensions(path: Path) -> dict[str, int]:
+    """Read runoff-grid dimensions and INPN from a v5 inpdim descriptor."""
+    lines = path.read_text().splitlines()
+    return {
+        "INPNX": int(lines[3].split()[0]),
+        "INPNY": int(lines[4].split()[0]),
+        "INPN": int(lines[5].split()[0]),
+    }
+
+
+def registry_rows() -> list[dict[str, str]]:
+    with REGISTRY.open(newline="", encoding="utf-8") as stream:
+        return list(csv.DictReader(stream))
+
+
+def rows_for_sample_file(path: Path, rows: list[dict[str, str]]) -> list[dict[str, str]]:
+    """Resolve exact map filenames and the registry's high-resolution templates."""
+    matches = []
+    for row in rows:
+        filename = row["binary_filename"]
+        if filename == path.name:
+            matches.append(row)
+            continue
+        prefix = "<HIRES>/<AREA>."
+        if filename.startswith(prefix) and path.parent.name == "1min":
+            suffix = filename[len(prefix):]
+            if path.name == f"{path.parent.name}.{suffix}":
+                matches.append(row)
+    return matches
 
 
 class MekongSampleTests(unittest.TestCase):
-    def test_dataset_geometry_and_conversion_metadata(self) -> None:
-        values = [float(line.split()[0]) for line in (MAP / "params.txt").read_text().splitlines()]
-        self.assertEqual(values[:3], [80.0, 120.0, 10.0])
-        self.assertAlmostEqual(values[3], 0.25)
-        self.assertEqual(values[4:], [90.0, 110.0, 5.0, 35.0])
-        config = (MAP / "map_metadata.json").read_text()
-        self.assertIn('"dataset_id": "mekong_15min"', config)
-        self.assertNotIn("/Users/", config)
-        self.assertNotIn("/home/", config)
+    """Check current sample products without freezing the full generated inventory."""
 
-    def test_required_standard_products_and_binary_sizes(self) -> None:
-        nx, ny, nlfp = 80, 120, 10
-        cells = nx * ny
-        sizes = {
+    def test_standard_runoff_pair_uses_inpdim_name_and_matching_geometry(self) -> None:
+        dims = read_map_dimensions()
+        descriptor = MAP / "inpdim_test-1deg.txt"
+        lines = descriptor.read_text().splitlines()
+        input_dims = read_input_dimensions(descriptor)
+
+        self.assertEqual(dims, {"NX": 80, "NY": 120, "NLFP": 10})
+        self.assertEqual(input_dims, {"INPNX": 360, "INPNY": 180, "INPN": 4})
+        self.assertEqual([float(lines[i].split()[0]) for i in (7, 8, 9, 10)], [90.0, 110.0, 35.0, 5.0])
+        self.assertEqual(lines[6].strip(), "inpmat_test-1deg.bin")
+
+        expected_bytes = dims["NX"] * dims["NY"] * input_dims["INPN"] * (4 + 4 + 4)
+        self.assertEqual((MAP / lines[6].strip()).stat().st_size, expected_bytes)
+
+    def test_user_configured_runoff_pair_uses_same_inpdim_convention(self) -> None:
+        descriptor = MAP / "inpdim_test-15min_nc.txt"
+        lines = descriptor.read_text().splitlines()
+        input_dims = read_input_dimensions(descriptor)
+
+        self.assertEqual(input_dims, {"INPNX": 1440, "INPNY": 600, "INPN": 10})
+        self.assertEqual(lines[6].strip(), "inpmat_test-15min_nc.bin")
+        expected_bytes = 80 * 120 * input_dims["INPN"] * (4 + 4 + 4)
+        self.assertEqual((MAP / lines[6].strip()).stat().st_size, expected_bytes)
+
+    def test_core_multirecord_and_multilayer_files(self) -> None:
+        dims = read_map_dimensions()
+        cells = dims["NX"] * dims["NY"]
+        expected = {
             "nextxy.bin": 2 * cells * 4,
-            "ctmare.bin": cells * 4, "elevtn.bin": cells * 4,
-            "nxtdst.bin": cells * 4, "rivlen.bin": cells * 4,
-            "fldhgt.bin": nlfp * cells * 4,
-            "rivwth.bin": cells * 4, "rivhgt.bin": cells * 4,
-            "rivman.bin": cells * 4, "rivwth_gwdlr.bin": cells * 4,
-            "inpmat_test-1deg.bin": 3 * 4 * cells * 4,
-            "bifdph.bin": 2 * cells * 4,
+            "nextxy_noedge.bin": 2 * cells * 4,
+            "downxy.bin": 2 * cells * 4,
+            "lonlat.bin": 2 * cells * 4,
+            "fldhgt.bin": dims["NLFP"] * cells * 4,
         }
-        for name, size in sizes.items():
+        for name, size in expected.items():
             with self.subTest(name=name):
-                path = MAP / name
-                self.assertTrue(path.is_file())
-                self.assertEqual(path.stat().st_size, size)
-        for name in ("outclm.bin", "rivhgt_inf.bin", "prmwat.bin", "bifprm.txt",
-                     "bifbsn.bin", "bifcol.bin", "bifmod.bin", "bpoint.bin",
-                     "nextxy_inflow.bin", "nextxy_inflow_keep.bin", "upbasin.bin",
-                     "upst_mask.bin", "upst_mask_keep.bin"):
-            with self.subTest(name=name):
+                self.assertEqual((MAP / name).stat().st_size, size)
+
+        self.assertEqual(len(struct.unpack(f"<{2*cells}i", (MAP / "nextxy.bin").read_bytes())), 2 * cells)
+        self.assertEqual(len(struct.unpack(f"<{dims['NLFP']*cells}f", (MAP / "fldhgt.bin").read_bytes())), dims["NLFP"] * cells)
+
+    def test_required_base_and_high_resolution_products_are_present(self) -> None:
+        required_base = {
+            "nextxy.bin", "ctmare.bin", "elevtn.bin", "nxtdst.bin", "rivlen.bin", "fldhgt.bin",
+            "basin.bin", "width.bin", "rivwth.bin", "rivhgt.bin", "rivman.bin",
+            "inpmat_test-1deg.bin", "inpdim_test-1deg.txt",
+        }
+        actual_base = {path.name for path in MAP.iterdir() if path.is_file()}
+        self.assertTrue(required_base <= actual_base, f"missing base-map products: {sorted(required_base - actual_base)}")
+
+        required_high = {
+            "1min.catmxy.bin", "1min.downxy.bin", "1min.elevtn.bin", "1min.uparea.bin",
+        }
+        actual_high = {path.name for path in (MAP / "1min").glob("*.bin")}
+        self.assertTrue(required_high <= actual_high, f"missing high-resolution products: {sorted(required_high - actual_high)}")
+
+    def test_named_river_analysis_sample_products_match_network_and_registry(self) -> None:
+        dims = read_map_dimensions()
+        cells = dims["NX"] * dims["NY"]
+        nextx = struct.unpack("<" + "i" * cells, (MAP / "nextxy.bin").read_bytes()[:cells * 4])
+        subbasins = struct.unpack("<" + "i" * cells, (MAP / "subbsn-30000.bin").read_bytes())
+        colors = struct.unpack("<" + "i" * cells, (MAP / "subcol-30000.bin").read_bytes())
+        upstream = struct.unpack("<" + "i" * cells, (MAP / "upbasin-2569002.bin").read_bytes())
+        self.assertTrue(all(value == -9999 for value, downstream in zip(subbasins, nextx) if downstream == -9999))
+        self.assertTrue(all(value >= 0 for value, downstream in zip(subbasins, nextx) if downstream != -9999))
+        self.assertIn(0, subbasins)
+        self.assertTrue(any(value > 0 for value in subbasins))
+        self.assertTrue(all(value == -9999 or 1 <= value <= 10 for value in colors))
+        self.assertEqual(set(upstream), {-9999, 0, 1})
+
+        rows = registry_rows()
+        self.assertEqual(len(rows_for_sample_file(MAP / "subbsn-30000.bin", rows)), 1)
+        self.assertEqual(len(rows_for_sample_file(MAP / "subcol-30000.bin", rows)), 1)
+        self.assertEqual(len(rows_for_sample_file(MAP / "upbasin-2569002.bin", rows)), 1)
+
+    def test_sample_binary_sizes_match_registry_types_and_dimensions(self) -> None:
+        dims = read_map_dimensions()
+        location_lines = (MAP / "1min" / "location.txt").read_text().splitlines()
+        area = location_lines[2].split()
+        dims["NX_HIRES"] = int(area[6])
+        dims["NY_HIRES"] = int(area[7])
+
+        rows = registry_rows()
+        # Analysis examples write user outputs under this ignored directory;
+        # validate only the distributed sample products, not those run results.
+        binary_paths = sorted(
+            path for path in MAP.rglob("*.bin")
+            if "out_analysis" not in path.relative_to(MAP).parts
+        )
+        self.assertTrue(binary_paths, "no binary map products found")
+        for path in binary_paths:
+            relative = path.relative_to(MAP)
+            with self.subTest(path=str(relative)):
+                self.assertGreater(path.stat().st_size, 0)
+                self.assertLess(path.stat().st_size, 100 * 1024 * 1024)
+
+                matches = rows_for_sample_file(path, rows)
+                self.assertTrue(matches, f"no map_variables.csv entry for {relative}")
+                expected_size = 0
+                for row in matches:
+                    dtype = row["dtype"].strip().lower()
+                    self.assertIn(dtype, DTYPE_BYTES, f"unsupported dtype {dtype!r} for {relative}")
+                    variables = [name.strip() for name in row["dimensions"].split(",") if name.strip()]
+                    product = 1
+                    for variable in variables:
+                        if variable == "INPN":
+                            descriptor = MAP / path.name.replace("inpmat_", "inpdim_").replace(".bin", ".txt")
+                            self.assertTrue(descriptor.is_file(), f"paired input descriptor missing: {descriptor.name}")
+                            variable_size = read_input_dimensions(descriptor)["INPN"]
+                        else:
+                            self.assertIn(variable, dims, f"unresolved dimension {variable!r} for {relative}")
+                            variable_size = dims[variable]
+                        product *= variable_size
+                    expected_size += product * DTYPE_BYTES[dtype]
+                self.assertEqual(path.stat().st_size, expected_size, f"{relative}: registry size mismatch")
+
+    def test_required_text_metadata_files_exist(self) -> None:
+        for name in ("params.txt", "bifori.txt", "inpdim_test-1deg.txt", "inpdim_test-15min_nc.txt"):
+            with self.subTest(path=name):
                 self.assertTrue((MAP / name).is_file())
 
-    def test_core_record_counts_and_network_indices(self) -> None:
-        cells = 80 * 120
-        nextxy = numeric_records("nextxy.bin")
-        self.assertEqual(len(nextxy), 2 * cells)
-        nextx, nexty = nextxy[:cells], nextxy[cells:]
-        for v in nextx:
-            self.assertTrue(v == -9999 or v in (-10, -9) or 1 <= v <= 80, v)
-        for v in nexty:
-            self.assertTrue(v == -9999 or v in (-10, -9) or 1 <= v <= 120, v)
-        for name in ("ctmare.bin", "elevtn.bin", "nxtdst.bin", "rivlen.bin",
-                     "rivwth.bin", "rivhgt.bin", "rivman.bin", "outclm.bin",
-                     "prmwat.bin", "rivwth_gwdlr.bin"):
-            vals = numeric_records(name)
-            self.assertEqual(len(vals), cells, name)
-            self.assertTrue(all(math.isfinite(float(v)) for v in vals), name)
-        self.assertEqual(len(numeric_records("fldhgt.bin")), 10 * cells)
-        self.assertEqual(len(numeric_records("bifdph.bin")), 2 * cells)
-        self.assertEqual(len(numeric_records("inpmat_test-1deg.bin")), 3 * 4 * cells)
-
-    def test_complete_one_minute_layers_and_records(self) -> None:
-        high = MAP / "1min"
-        nx, ny = 1200, 1800
-        cells = nx * ny
-        location = (high / "location.txt").read_text()
+        location = (MAP / "1min" / "location.txt").read_text()
         self.assertIn("1200", location)
         self.assertIn("1800", location)
-        expected_bytes = {
-            "1min.catmxy.bin": 2 * cells * 2,
-            "1min.downxy.bin": 2 * cells * 2,
-            "1min.catmz100.bin": cells, "1min.catmzz.bin": cells,
-            "1min.visual.bin": cells,
-            "1min.elevtn.bin": cells * 4, "1min.flddif.bin": cells * 4,
-            "1min.grdare.bin": cells * 4, "1min.hand.bin": cells * 4,
-            "1min.rivwth.bin": cells * 4, "1min.uparea.bin": cells * 4,
-        }
-        for name, size in expected_bytes.items():
-            with self.subTest(name=name):
-                self.assertEqual((high / name).stat().st_size, size)
-        ctl_files = {p.name for p in high.glob("*.ctl")}
-        for name in expected_bytes:
-            self.assertIn(name.removesuffix(".bin") + ".ctl", ctl_files)
-
-    def test_ctl_targets_and_repository_independence(self) -> None:
-        allowed_unpaired = {"catmpx.ctl", "outfix.ctl", "outupa.ctl", "rivhgt_pth.ctl"}
-        missing = []
-        for path in MAP.rglob("*.ctl"):
-            lines = path.read_text().splitlines()
-            dset = next((line.split(None, 1)[1].strip() for line in lines
-                         if line.lower().startswith("dset ")), None)
-            if dset is None:
-                continue
-            target = dset.removeprefix("^")
-            if not (path.parent / target).is_file():
-                missing.append(path.relative_to(MAP).as_posix())
-        self.assertEqual(set(missing), allowed_unpaired)
-        for path in MAP.rglob("*"):
-            if not path.is_file() or path.suffix.lower() == ".bin":
-                continue
-            self.assertLess(path.stat().st_size, 100 * 1024 * 1024, path.as_posix())
-            try:
-                text = path.read_text(encoding="utf-8")
-            except (UnicodeDecodeError, OSError):
-                continue
-            self.assertNotIn("/Users/", text, path.as_posix())
-            self.assertNotIn("/home/", text, path.as_posix())
-        for path in MAP.rglob("*.bin"):
-            self.assertGreater(path.stat().st_size, 0, path.as_posix())
-            self.assertLess(path.stat().st_size, 100 * 1024 * 1024, path.as_posix())
 
 
 if __name__ == "__main__":

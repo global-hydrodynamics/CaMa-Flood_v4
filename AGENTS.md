@@ -21,6 +21,8 @@ Obtain explicit maintainer approval before:
 
 State the concrete proposed change and its compatibility or numerical consequences when requesting approval. Continue independent work already within scope while a decision is pending. Testing does not authorize an intentional numerical change or a scope expansion. Report out-of-scope findings in the project issue when one exists, or in the project status/completion report; do not silently fix them.
 
+For multi-stage work coordinated by the maintainer, ChatGPT, and Codex, use the reusable review and handoff protocol in [`docs/ai_development_workflow.md`](docs/ai_development_workflow.md).
+
 ## 2. One project, one persistent working branch
 
 Use one registered working branch per project across tasks, commits, developers, and AI sessions. Do not create a branch for every task or session. Historical branches need not be renamed or reorganized.
@@ -85,6 +87,8 @@ Investigate technical questions using documentation, source code, and available 
 
 Record non-blocking questions in the relevant technical document under **Open Questions**, explaining why each answer matters and what work can continue. Group related questions and avoid repeated interruptions. Continue unrelated work while a blocking decision is pending. When the maintainer answers, record confirmed facts and rationale, update or remove resolved questions, and do not ask again unless new evidence reveals a contradiction.
 
+At completion of a substantial task or development stage, run the brief **Knowledge-gap review** in [`docs/ai_development_workflow.md`](docs/ai_development_workflow.md). Record material questions before resolving them, including source references and why the answer matters. At handoff, list unresolved scientific or architectural questions; unrelated work need not wait for non-blocking answers. Link resolved questions to their discovery trigger, evidence, interpretation, and formalization. Record a completed review with no material new gaps; never invent questions or findings.
+
 ## 5. Technical boundaries for CaMa-Flood
 
 Preserve the existing architecture unless the approved task justifies changing it:
@@ -104,9 +108,33 @@ For optional schemes, identify initialization, state ownership, outer/adaptive t
 
 Preserve the separation between source development and downloadable data-rich distribution packages. Do not add large datasets, generated model outputs, build products, credentials, or local environment paths to commits. New test fixtures need a clear purpose, size, provenance, and redistribution permission.
 
+## Shell Script Design Principles
+
+The following are recommended, not mandatory, practices for community shell contributions: keep scripts human-readable as automated terminal-command sequences; make scientific settings easy to find; prefer direct executable calls; avoid unnecessary defensive boilerplate; and place validation and detailed errors primarily in the program that reads the data. Use recognizable progress headings, stop on fatal errors, report clear success or error summaries, and return nonzero status for fatal program errors where practical. These recommendations do not apply retroactively to community or historical scripts.
+
+For the current maintainer-led v5 modernization, AI agents should use these practices by default in all new or refactored scripts under `map/tools/script_region/`, `script_params/`, and `script_analysis/`, including their map-local examples. Group commands into meaningful blocks with blank lines and short comments. Keep user settings near the top, then mark the transition to implementation with the three-line `User settings end here` separator; leave a blank line before and after major separators. Keep error traps distinct from processing logic and add an `End of error handling.` separator after signal traps where a trap block exists.
+
+Separate logically distinct operations with a blank line, even when a block contains only one or two commands. Keep the commands belonging to one processing step together. Use three-line comment separators for major sections and simple whitespace for smaller transitions. For visible workflows, use accurate `[STEP n/N]`, `[SUCCESS]`, and `[ERROR]` messages. Start step and success banners with a newline, leave a blank line between major stages, and keep useful program output visible without reformatting it. Preserve the original command order and avoid extra comments, decorative separators, or abstractions added only for appearance. These conventions apply to future v5 scripts as well as readability updates to existing scripts. Keep `set -eu`, simple argument handling and loops, and safe cleanup; do not sacrifice correctness or reproducibility for brevity. See [`docs/ai_development_workflow.md`](docs/ai_development_workflow.md) for the agent defaults and workflow-message convention.
+
+For user-editable settings, use one introductory comment per related group and concise, aligned inline comments for each assignment. Include units, allowed values, and coordinate/index conventions where relevant. Keep related settings together and leave blank lines between different groups; use preceding full-line comments only when the explanation is too long for an inline note. Prefer simple literal example assignments over undocumented environment-variable defaults. Retain and document an environment override only when it is an intentional interface. Clearly separate user settings from internal paths and runtime variables.
+
+Explain non-obvious shell syntax with short practical comments, including command substitution, `${VAR:-default}`, `${VAR##*/}`, `set --`, `trap`, and `CDPATH= cd ...` when they appear. Prefer explicit POSIX shell expressions over clever compact forms, without sacrificing correctness, portability, safe cleanup, or intentional interfaces.
+
+Within `script_analysis/`, use `a00-link_codes.sh` to create a relative `code` symlink to the shared `map/tools/code/` directory; it must not copy or compile executables, overwrite real files/directories, or delete old local files. Treat `a01`–`aXX` as command-line examples: show the working directory and print the exact, safely quoted command immediately before invoking the shared executable through `./code/analysis_*` where the program's working directory allows. Keep `OUT_DIR="out_analysis"` as the default for generated example outputs, create it when needed, and ensure both the script-local default and map-root alternative output directories are ignored by Git. Respect program-specific working-directory requirements and explain any necessary path exception in the example and its README.
+
 ## Map metadata maintenance
 
 When adding or changing map-related readers, writers, preprocessing products, or model map interfaces, inspect and update [`map/map_variables.csv`](map/map_variables.csv) and the responsible module README. Keep verified facts distinct from provisional fields, and record distribution role separately from packages where a product was observed; see [`map/map_metadata_spec.md`](map/map_metadata_spec.md).
+
+The maintainer manually controls the map registry's workflow-status column, currently named `workflow_stage` in `map/map_variables.csv`. Codex may read it but must not edit its values, including when adding or revising registry rows. If the status appears stale or a new row needs a status, leave it unchanged or blank and report the suggested update to the maintainer. Preserve the existing column values during CSV edits and do not infer or set `default` from file presence.
+
+## Shared Fortran Module Naming (`map/tools/code/`)
+
+Name shared Fortran module source files in `map/tools/code/` with the `mod_` prefix (for example, `mod_map_color.F90`). This convention is limited to shared module source files in this directory; it does not apply to main-model files under `src/`, programs, or files in other directories. A source filename rename does not require renaming its internal Fortran module or procedures unless a task explicitly approves that interface change.
+
+## Fortran Source Readability
+
+Fortran declarations are a human-readable inventory of a program's data structures. Prioritize human understanding over compactness: group declarations by scientific or computational purpose, keep closely related values together (for example, `nx, ny` or `ix, iy`), and use separate declarations for variables with different meanings even when this adds lines. Use short comments and blank lines between groups. Add concise inline notes for variable roles, physical units, and important classifications when established by code or maintainer decisions; do not guess at unknown meaning. Align declarations reasonably. Use concise comments for major calculations and assumptions, not trivial operations. Long programs should use numbered headings such as `[1]`, `[2]`, and `[3]` with visible separators (`! ================================================`) to mark major stages. Keep scientific expressions and decision rules visible, and avoid helper abstractions that hide them. These are community recommendations, not strict formatting requirements for every contributor. In the current maintainer-led v5 modernization, apply them by default while preserving numerical behavior and keeping formatting changes focused.
 
 ## Cross-project research logging for the v5 case study
 

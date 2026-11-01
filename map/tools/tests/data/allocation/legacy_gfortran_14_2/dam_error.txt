@@ -1,0 +1,3 @@
+        ID       lat       lon   area_CaMa  area_Input       error        diff      ix      iy     cap_mcm  year  damname                         rivname
+      5165    13.212   100.979      -999.0        80.8      -999.0      -999.0    -999    -999       110.0  1975                        BangPhra                          NoName
+      5791    18.679   109.946      -999.0        82.5      -999.0      -999.0    -999    -999        49.0  1975                         Xiaomei                         Duzuong

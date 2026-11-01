@@ -1,2 +1,44 @@
 discussion_id,event_id,source_type,source_reference,summary_path,review_status,source_access
 DR-0001,EV-0001,Codex conversation,"Maintainer instructions in active Codex conversation, 2026-10-28; no stable archive ID",research/records/discussions/DR-0001.md,pending,restricted
+DR-0002,EV-0059,Codex conversation,"Maintainer request and clarification in active Codex conversation, 2026-10-30; no stable archive ID",research/records/discussions/DR-0002.md,pending,restricted
+DR-0003,EV-0062,repository history and research records,EV-0020..EV-0031; commits ad7d544/c2b1aac/ea14d6b; VR-0005..VR-0008; maintainer clarification in Codex conversation 2026-10-30,research/records/discussions/DR-0003.md,pending,public_and_restricted
+DR-0004,EV-0072,Codex conversation,"Maintainer Phase B2 task instruction in active Codex conversation, 2026-10-31; no stable archive ID",research/records/discussions/DR-0004.md,pending,restricted
+DR-0005,EV-0073,Codex conversation,"Maintainer-approved rename task in active Codex conversation, 2026-10-31; no stable archive ID",research/records/discussions/DR-0005.md,pending,restricted
+DR-0006,EV-0076,Codex conversation,"Maintainer-approved script-family organization in active Codex conversation, 2026-10-31; no stable archive ID",research/records/discussions/DR-0006.md,pending,restricted
+DR-0007,EV-0079,Codex conversation,"Maintainer-approved Phase B2.1 task attachment in active conversation, 2026-10-31; no stable archive ID",research/records/discussions/DR-0007.md,pending,restricted
+DR-0008,EV-0082,Codex conversation,"Maintainer clarification on the B2.1 sample simulation in the active conversation, 2026-10-31; no stable archive ID",research/records/discussions/DR-0008.md,pending,restricted
+DR-0009,EV-0085,Codex conversation,"Maintainer-approved Phase B2.2 MERIT width naming and compatibility instruction, active conversation, 2026-10-31; no stable archive ID",research/records/discussions/DR-0009.md,pending,restricted
+DR-0010,EV-0088,Codex task instruction,"Maintainer-provided Phase B2.2 task specification in active conversation, 2026-10-31; no stable archive ID",research/records/discussions/DR-0010.md,pending,restricted
+DR-0011,EV-0092,Codex conversation,"Maintainer clarification in active conversation, 2026-10-31; no stable archive ID",research/records/discussions/DR-0011.md,pending,restricted
+DR-0012,EV-0093,Codex task instruction,"Maintainer-approved Phase B2.3 task instruction in active Codex conversation, 2026-10-31; no stable archive ID",research/records/discussions/DR-0012.md,pending,restricted
+DR-0013,EV-0097,Codex task instruction,"Maintainer-approved sub_id task in active conversation, 2026-10-31; no stable archive ID",research/records/discussions/DR-0013.md,pending,restricted
+DR-0014,EV-0100,Codex conversation,"Maintainer instruction in active conversation, 2026-11-01; no stable archive ID",research/records/discussions/DR-0014.md,pending,restricted
+DR-0015,EV-0102,Codex task instruction,"Maintainer-approved task instruction in active conversation, 2026-11-01; no stable archive ID",research/records/discussions/DR-0015.md,pending,restricted
+DR-0016,EV-0105,Codex task instruction,"Maintainer-approved follow-up in active conversation, 2026-11-01; no stable archive ID",research/records/discussions/DR-0016.md,pending,restricted
+DR-0017,EV-0111,Codex task instruction,"Maintainer-approved task in active conversation, 2026-11-01; no stable archive ID",research/records/discussions/DR-0017.md,pending,restricted
+DR-0018,EV-0115,Maintainer-approved task instruction,"Maintainer-approved task in active conversation, 2026-11-01; no stable archive ID",research/records/discussions/DR-0018.md,pending,restricted
+DR-0019,EV-0119,Maintainer instruction,"Maintainer clarification in active conversation, 2026-11-01; no stable archive ID",research/records/discussions/DR-0019.md,pending,restricted
+DR-0020,EV-0122,Maintainer decision and report,"Maintainer update in active conversation, 2026-11-01; no stable archive ID",research/records/discussions/DR-0020.md,pending,restricted
+DR-0021,EV-0126,Maintainer-approved task specification,"Current Phase B2.4 instructions in active conversation, 2026-11-01; no stable archive ID",research/records/discussions/DR-0021.md,pending,restricted
+DR-0022,EV-0131,Maintainer scope clarification,"Maintainer clarification in active conversation, 2026-11-01; no stable archive ID",research/records/discussions/DR-0022.md,pending,restricted
+DR-0023,EV-0132,Maintainer-approved task instruction,"Maintainer instruction in active conversation, 2026-11-01; no stable archive ID",research/records/discussions/DR-0023.md,pending,restricted
+DR-0024,EV-0144,Maintainer-approved task instruction,"Issue #122 and maintainer task attachment in active conversation, 2026-11-01; no stable archive ID",research/records/discussions/DR-0024.md,pending,restricted
+DR-0025,EV-0147,Maintainer instruction,"Maintainer follow-up in active Codex conversation, 2026-11-01; no stable archive ID",research/records/discussions/DR-0025.md,pending,restricted
+DR-0026,EV-0150,Maintainer instruction,"Maintainer instruction in active Codex conversation, 2026-11-01; no stable archive ID",research/records/discussions/DR-0026.md,pending,restricted
+DR-0027,EV-0153,maintainer_task_instruction,Maintainer-provided task attachment in active Codex task; transcript not copied,research/records/discussions/DR-0027.md,pending,restricted
+DR-0028,EV-0156,maintainer_instruction,Maintainer instruction in active Codex task; transcript not copied,research/records/discussions/DR-0028.md,pending,restricted
+DR-0029,EV-0159,maintainer_task_instruction,Maintainer-provided task specification in active Codex task; no transcript copied,research/records/discussions/DR-0029.md,pending,restricted
+DR-0030,EV-0162,maintainer_task_instruction,Maintainer task and attachment in active Codex task; no archive ID supplied,research/records/discussions/DR-0030.md,pending,restricted
+DR-0031,EV-0166,maintainer_instruction,Maintainer message in active task; no archive ID supplied,research/records/discussions/DR-0031.md,pending,restricted
+DR-0032,EV-0170,maintainer_task_instruction,Maintainer-provided task specification in active Codex task; no archive ID supplied,research/records/discussions/DR-0032.md,pending,restricted
+DR-0033,EV-0175,maintainer_clarification,Maintainer message in active Codex task; no archive ID supplied,research/records/discussions/DR-0033.md,pending,restricted
+DR-0034,EV-0181,maintainer_clarification and technical manual,"Maintainer clarification in active Codex task, no archive ID; AllocRiverGauge tool-repository manual v1.2 doc/Manual_AllocateRiverGauges.docx (updated 2024-11-22); package v1.1 copy dated 2024-04-16",research/records/discussions/DR-0034.md,pending,restricted
+DR-0035,EV-0184,maintainer_clarification,Maintainer message in active Codex task; no archive ID supplied,research/records/discussions/DR-0035.md,pending,restricted
+DR-0036,EV-0187,maintainer_instruction,Maintainer message in active task; no archive ID supplied; inventory of map/data list files,research/records/discussions/DR-0036.md,pending,restricted
+DR-0037,EV-0190,maintainer_clarification,Maintainer message in active task; no archive ID supplied,research/records/discussions/DR-0037.md,pending,restricted
+DR-0038,EV-0193,maintainer_task_instruction and implementation evidence,Phase B task in active Codex conversation; no archive ID supplied; implementation/test evidence in repository,research/records/discussions/DR-0038.md,pending,restricted
+DR-0039,EV-0201,maintainer_task_clarification and repository evidence,Maintainer task in active Codex conversation; no archive ID; package/source paths are documented in KG-0014 and VR-0066,research/records/discussions/DR-0039.md,pending,restricted
+DR-0040,EV-0204,maintainer clarification and read-only package inspection,Maintainer message in active task; no archive ID supplied; package observations detailed in VR-0067,research/records/discussions/DR-0040.md,pending,restricted
+DR-0041,EV-0208,Codex conversation,Maintainer task and explicit answers in the active Phase C conversation,research/records/discussions/DR-0041.md,pending,restricted
+DR-0042,EV-0211,maintainer clarification and implementation instruction,Active Codex conversation on feature/map-data-tools; no archive ID supplied,research/records/discussions/DR-0042.md,pending,restricted
+DR-0043,EV-0215,maintainer_task_instruction,Active Phase C specification update in Codex conversation; no archive ID supplied,research/records/discussions/DR-0043.md,pending,restricted

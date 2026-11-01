@@ -12,6 +12,15 @@
 *.mod
 out/
 /.venv/
+# Package reference data copied locally; selectively unignore files as they are approved for tracking.
+/map/data/*
+!/map/data/ELSE_GPCC_clm-1981-2010.one
+!/map/data/ELSE_GPCC_clm-1981-2010.ctl
+!/map/data/GRDC_allocated.csv
+!/map/data/GRanD_allocated.csv
+!/map/data/GRanD_alloc+Mekong.csv
+!/map/data/MLIT_LevelGauge_allocated.csv
+!/map/data/MLIT_FlowGauge_alloc_final.csv
 # The official Mekong sample is distributed as complete reference data.
 !map/mekong_15min/**
 # Keep only reference inputs and source/configuration; omit local build and run artifacts.
@@ -62,3 +71,24 @@ map/mekong_15min/src_param/set_bifparam
 map/mekong_15min/src_param/set_gwdlr
 map/mekong_15min/src_param/set_mpi_region
 map/mekong_15min/src_param/wrte_ctl_map
+# Shared v5 map-tool executables (keep prefixed Fortran sources tracked).
+map/tools/code/region_*
+!map/tools/code/region_*.F90
+map/tools/code/param_*
+!map/tools/code/param_*.F90
+map/tools/code/analysis_*
+!map/tools/code/analysis_*.F90
+map/tools/script_analysis/analysis_*
+map/mekong_15min/script_analysis/analysis_*
+map/tools/script_analysis/out_analysis/
+map/mekong_15min/script_analysis/out_analysis/
+map/tools/out_analysis/
+map/mekong_15min/out_analysis/
+map/tools/code/*.o
+map/tools/code/*.mod
+map/tools/code/*.pyc
+map/tools/code/*.d
+map/tools/code/*.s
+map/tools/code/__pycache__/
+map/tools/**/__pycache__/
+map/tools/**/*.pyc
