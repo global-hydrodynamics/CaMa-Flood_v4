@@ -102,6 +102,8 @@ Prefer small, independently reviewable changes. Existing Fortran, namelists, Mak
 
 Treat the following as established contracts: public driver/coupler routines, namelist names and defaults, script entry points, paths expected by workflows, variable names/units/meaning, binary layouts, NetCDF conventions, restart precision and contents, and distribution formats. Preserve legacy aliases unless a compatibility change has been approved.
 
+For the approved v5 model-source and simulation-workflow project, preserve `src/` and `gosh/` as legacy reference implementations. New model-source and example-workflow development belongs in `src_main/` and `gosh_sample/`; do not copy over or edit the legacy paths. The project-specific boundaries, Phase 0 plan, and persistent branch are recorded in [`docs/model_source_workflow_plan.md`](docs/model_source_workflow_plan.md) and [`docs/dev_status.md`](docs/dev_status.md).
+
 For numerical refactoring, preserve precision kinds, arithmetic and reduction order, limiters, adaptive time stepping, state-update order, and coupling/restart timing. Storage is intentionally double precision in important paths even when other calculations use single precision. Moving a call can change the numerical method. Do not mix numerical changes with cosmetic cleanup.
 
 For optional schemes, identify initialization, state ownership, outer/adaptive time-step hooks, forcing, output, restart, and unsupported combinations. Test disabled-scheme behavior as well as enabled behavior where data permit. Do not assume compile-time flags and runtime switches are interchangeable.

@@ -1,0 +1,139 @@
+! CaMa-Flood heatlink example: global 15-minute simulation for the year 2000.
+! Expected hydrology links in the run directory:
+!   ./input/map     -> CaMa-Flood global 15-minute map
+!   ./input/runoff  -> daily runoff files
+! Atmospheric input definitions are appended from atm_GSWP3.nml.
+
+&NRUNVER
+LADPSTP  = .TRUE.
+LPTHOUT  = .TRUE.
+LDAMOUT  = .FALSE.
+LOUTPUT  = .TRUE.
+LRESTART = .FALSE.
+LHEATLINK = .TRUE.
+LWEVAP    = .FALSE.
+/
+
+&NDIMTIME
+CDIMINFO = './input/map/diminfo_test-1deg.txt'
+DT       = 3600
+IFRQ_INP = 24
+/
+
+&NPARAM
+PMANRIV = 0.03D0
+PMANFLD = 0.10D0
+PDSTMTH = 10000.D0
+PCADP   = 0.7
+/
+
+&NHEATLINK
+LICE = .FALSE.
+NNEWTON_MAX_ICE = 4
+/
+
+&NSIMTIME
+SYEAR = 2000
+SMON  = 1
+SDAY  = 1
+SHOUR = 0
+EYEAR = 2001
+EMON  = 1
+EDAY  = 1
+EHOUR = 0
+/
+
+&NMAP
+LMAPCDF = .FALSE.
+CNEXTXY = './input/map/nextxy.bin'
+CGRAREA = './input/map/ctmare.bin'
+CELEVTN = './input/map/elevtn.bin'
+CNXTDST = './input/map/nxtdst.bin'
+CRIVLEN = './input/map/rivlen.bin'
+CFLDHGT = './input/map/fldhgt.bin'
+CRIVWTH = './input/map/rivwth_gwdlr.bin'
+CRIVHGT = './input/map/rivhgt.bin'
+CRIVMAN = './input/map/rivman.bin'
+CPTHOUT = './input/map/bifprm.txt'
+/
+
+&NRESTART
+CRESTSTO = ''
+CRESTDIR = './'
+CVNREST  = 'restart'
+LRESTCDF = .FALSE.
+LRESTDBL = .TRUE.
+IFRQ_RST = 0
+/
+
+&NFORCE
+LINPCDF  = .FALSE.
+LINTERP  = .TRUE.
+CINPMAT  = './input/map/inpmat_test-1deg.bin'
+DROFUNIT = 86400000
+CROFDIR  = './input/runoff'
+CROFPRE  = 'Roff____'
+CROFSUF  = '.one'
+/
+
+&NOUTPUT
+COUTDIR  = './'
+CVARSOUT = 'rivout,rivsto,rivdph,rivvel,fldout,fldsto,flddph,fldfrc,fldare,sfcelv,outflw,storge,pthflw,pthout,maxsto,maxflw,maxdph'
+COUTTAG  = '2000'
+LOUTVEC  = .FALSE.
+LOUTCDF  = .FALSE.
+NDLEVEL  = 0
+IFRQ_OUT = 24
+/
+
+&output_default
+dt = 86400
+/
+
+! Atmospheric forcing is averaged over each output interval.
+&nml_out item='LWDN', path='./lwdn2000', is_mean=.true. &end
+&nml_out item='PSRF', path='./psrf2000', is_mean=.true. &end
+&nml_out item='QAIR', path='./qair2000', is_mean=.true. &end
+&nml_out item='SWDN', path='./swdn2000', is_mean=.true. &end
+&nml_out item='TAIR', path='./tair2000', is_mean=.true. &end
+&nml_out item='TROF', path='./trof2000', is_mean=.true. &end
+&nml_out item='WIND', path='./wind2000', is_mean=.true. &end
+
+! Applied heat fluxes are averaged over each output interval.
+&nml_out item='RAW_HFLX_LWD', path='./rawhflxlwd2000', is_mean=.true. &end
+&nml_out item='RAW_HFLX_LWU', path='./rawhflxlwu2000', is_mean=.true. &end
+&nml_out item='RAW_HFLX_SHF', path='./rawhflxshf2000', is_mean=.true. &end
+&nml_out item='RAW_HFLX_LHF', path='./rawhflxlhf2000', is_mean=.true. &end
+&nml_out item='RAW_HFLX_SRF', path='./rawhflxsrf2000', is_mean=.true. &end
+&nml_out item='RAW_HFLX_SWA', path='./rawhflxswa2000', is_mean=.true. &end
+&nml_out item='RAW_HFLX_FRC', path='./rawhflxfrc2000', is_mean=.true. &end
+&nml_out item='RAW_HFLX_BDY', path='./rawhflxbdy2000', is_mean=.true. &end
+&nml_out item='RIVICE_COND_FLX', path='./rivicecondflx2000', is_mean=.true. &end
+&nml_out item='RIVICE_ATM_FLX', path='./riviceatmflx2000', is_mean=.true. &end
+&nml_out item='RIVICE_EXCESS_ATM_FLX', path='./riviceexcessatmflx2000', is_mean=.true. &end
+&nml_out item='SWDN_TO_WATER', path='./swdntowater2000', is_mean=.true. &end
+
+! Prognostic states and skin temperatures retain the final time-step value.
+&nml_out item='RIVWAT_TMP', path='./rivwattmp2000', is_mean=.false. &end
+&nml_out item='RIVICE_VOL', path='./rivicevol2000', is_mean=.false. &end
+&nml_out item='RIVICE_ARE', path='./riviceare2000', is_mean=.false. &end
+&nml_out item='RIVICE_THK', path='./rivicethk2000', is_mean=.false. &end
+&nml_out item='RIVICE_FRC', path='./rivicefrc2000', is_mean=.false. &end
+&nml_out item='RIVICE_VOL_EXCESS', path='./rivicevolexcess2000', is_mean=.false. &end
+&nml_out item='RIVICE_EXCESS_ARE', path='./riviceexcessare2000', is_mean=.false. &end
+&nml_out item='RIVICE_EXCESS_THK', path='./riviceexcessthk2000', is_mean=.false. &end
+&nml_out item='RIVICE_SRF_TMP', path='./rivicetmpsrf2000', is_mean=.false. &end
+&nml_out item='RIVICE_EXCESS_TMP', path='./riviceexcesstmp2000', is_mean=.false. &end
+
+! Conservation diagnostics retain the final local-update value.
+&nml_out item='RIVICE_MASS_RESIDUAL', path='./rivicemassresidual2000', is_mean=.false. &end
+&nml_out item='RIVICE_ENERGY_RESIDUAL', path='./riviceenergyresidual2000', is_mean=.false. &end
+&nml_out item='RIVICE_ENERGY_UNAPPLIED', path='./riviceenergyunapplied2000', is_mean=.false. &end
+
+&restart_default
+initial_state_is_dumped = .false.
+/
+
+&restart_config item='RIVWAT_TMP', file='.heatlink.bin', recnum=1, mapfmt=.true. &end
+&restart_config item='RIVICE_VOL', file='.heatlink.bin', recnum=2, mapfmt=.true. &end
+&restart_config item='RIVICE_VOL_EXCESS', file='.heatlink.bin', recnum=3, mapfmt=.true. &end

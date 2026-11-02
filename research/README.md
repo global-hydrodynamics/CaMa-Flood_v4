@@ -53,3 +53,5 @@ Public repository records should contain public metadata and reviewed summaries 
 - [`stages/`](stages/README.md): evidence-based development-stage narratives.
 - [`analysis/`](analysis/): later analysis guidance; no comparative study results are claimed.
 - [`analysis/knowledge_recovery_protocol.md`](analysis/knowledge_recovery_protocol.md): reproducible method for prospective knowledge-gap review and later v4/v5 knowledge-recovery analysis.
+
+The v5 model-source and simulation-workflow modernization is a cross-project stage on feature/gosh-refactor. Phase 0 authorization, implementation, and build evidence are indexed in events.csv and summarized in stages/model-source-workflow.md; the technical plan is docs/model_source_workflow_plan.md. Preserve this research history across branch transitions.

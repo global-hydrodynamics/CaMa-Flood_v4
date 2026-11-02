@@ -1,0 +1,4 @@
+! NHEATLINK is optional. Its absence must retain the defaults.
+&NRUNVER
+LHEATLINK = .TRUE.
+/
