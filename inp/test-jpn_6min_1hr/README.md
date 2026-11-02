@@ -22,10 +22,10 @@ The original source `runoff.ctl` says `mm/day`; the maintainer identifies that l
 Ensure the source link is present and points to the v4.30 package's `inp/test_jpn_1hr/` directory. NumPy is the only non-standard Python dependency. Run the shell entry point by path from any working directory:
 
 ```sh
-/path/to/CaMa-Flood_v4/inp/test_jpn_6min_1hr/s01-aggregate_runoff.sh
+/path/to/CaMa-Flood_v4/inp/test-jpn_6min_1hr/s01-aggregate_runoff.sh
 ```
 
-The source directory is configurable at the top of `s01-aggregate_runoff.sh`; its default `../test_jpn_1hr` is resolved relative to the script, not the caller's current directory. The script writes only into this real `inp/test_jpn_6min_1hr/` directory. The adjacent `aggregate_runoff.py` checks the source CTL, dates, grid, byte order, record count, and file sizes before reading. It applies an area-weighted average over each 6 × 6 source-cell block, using latitude-dependent spherical cell areas (`R² Δλ [sin(φnorth) − sin(φsouth)]`). Longitude widths are equal within each block; the complete cell-area weights are used in the mean. No temporal averaging, interpolation, or unit scaling is performed.
+The source directory is configurable at the top of `s01-aggregate_runoff.sh`; its default `../test_jpn_1hr` is resolved relative to the script, not the caller's current directory. The script writes only into this real `inp/test-jpn_6min_1hr/` directory. The adjacent `aggregate_runoff.py` checks the source CTL, dates, grid, byte order, record count, and file sizes before reading. It applies an area-weighted average over each 6 × 6 source-cell block, using latitude-dependent spherical cell areas (`R² Δλ [sin(φnorth) − sin(φsouth)]`). Longitude widths are equal within each block; the complete cell-area weights are used in the mean. No temporal averaging, interpolation, or unit scaling is performed.
 
 The run also checks output names and sizes, the output CTL grid/time metadata, source-file size and modification times, source value anomalies, integrated runoff conservation for every hour, and selected block means calculated independently with scalar loops. Conservation is expected to numerical precision when source blocks are complete; the helper compares like-for-like areas if missing blocks occur.
 
@@ -53,7 +53,7 @@ LINPDAY = .TRUE.
 LINTERP = .TRUE.
 IFRQ_INP = 1
 DROFUNIT = 3600000  # mm/hour to m/s; source unit per maintainer assessment
-CROFDIR = inp/test_jpn_6min_1hr
+CROFDIR = inp/test-jpn_6min_1hr
 CROFPRE = runoff_
 CROFSUF = .bin
 CINPMAT = map/<selected-map>/inpmat_test-jpn-6min-1hr.bin

@@ -170,7 +170,7 @@ The registry [`inp/runoff_datasets.csv`](../runoff_datasets.csv) indexes CaMa-Fl
 The script `t03-convert-global-2day-bin.sh` demonstrates conversion of the local two-record source file `ERA5land-glb-nc/ERA5-Land_runoff_20000101-02.nc` into daily plain-binary files and a matching `runoff.ctl`. Run it from any current directory:
 
 ```bash
-/path/to/CaMa-Flood_v4/inp/download_ERA5-Land/t03-convert-global-2day-bin.sh
+/path/to/CaMa-Flood_v4/inp/ERA5-Land_download/t03-convert-global-2day-bin.sh
 ```
 
 It calls the existing `convert_CMF_bin.py`; it does not download data or implement a second conversion algorithm. The single NetCDF contains both timestamps, so the wrapper supplies its literal filename through the converter's monthly file-selection interface. The converter writes `runoff_20000101.bin` and `runoff_20000102.bin` plus `runoff.ctl` in the Git-ignored `ERA5land-glb-bin/` directory. Each binary is expected to contain one 3,600 × 1,801 little-endian float32 grid (25,934,400 bytes), ordered west-to-east and north-to-south. The CTL describes the same grid and two daily records (`tdef 2 ... 1dy`); it uses `yrev`, `template`, and `little_endian`, and declares `undef=1.0e20`. The converter expresses values as millimetres per daily record, retaining its current accumulation-differencing behavior.
