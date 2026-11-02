@@ -2,11 +2,11 @@
 
 ## Status
 
-**Phase 0 is implemented:** the complete tracked `src/` and `gosh/` trees were copied to `src_main/` and `gosh_sample/`; `src_main/` builds independently with the existing default compiler configuration. Phase 1 has not been run. The Mekong test is the next step, after the maintainer's next instruction.
+**Phase 0 and the initial Phase 1 Mekong run are implemented and operationally validated.** The complete tracked `src/` and `gosh/` trees were copied to `src_main/` and `gosh_sample/`; `src_main/` builds independently with the existing default compiler configuration. The 2000 Mekong annual run completed with bifurcation enabled. This is an operational smoke test, not independent scientific validation or a v4 numerical comparison.
 
 **Persistent branch:** `feature/gosh-refactor`, created from current `origin/master` at `2841239` on 2026-11-03. No GitHub Issue was requested or created.
 
-The maintainer approved an incremental v5 source and simulation workflow. Keep the legacy `src/` and `gosh/` trees unchanged as v4 references. All source subdirectories are preserved in the v5 copy, including `ICI/`, `sediment/`, `heatlink/`, and supporting libraries. Bifurcation is a standard CaMa-Flood feature and is to be enabled in the first Mekong runtime check. The current task stops after Phase 0's independent compile; Phase 1 runtime execution is deferred.
+The maintainer approved an incremental v5 source and simulation workflow. Keep the legacy `src/` and `gosh/` trees unchanged as v4 references. All source subdirectories are preserved in the v5 copy, including `ICI/`, `sediment/`, `heatlink/`, and supporting libraries. Bifurcation is enabled for the first Mekong runtime check through its namelist setting; the model-wide Fortran initializer is unchanged.
 
 ## Phase 0: completed work and evidence
 
@@ -57,25 +57,26 @@ The root `src_main/Makefile` builds the standard stand-alone target. Preserving 
 
 The original `gosh/compile.sh` assumes it is run from `gosh/`; it clean/builds `util/`, legacy `map/src/` tools, and `src/`, and places `MAIN_cmf` in `src/`. It must not be used by v5. The copied `gosh_sample/compile.sh` now builds only `src_main/`.
 
-The remaining `gosh_sample/test*.sh`, options, and development examples are initial copies and have not yet been migrated into v5-ready execution examples. Several point to package-only maps/forcing, use current-working-directory-relative paths, clear existing result files, and still contain legacy executable paths. They must not be run as v5 samples until each is explicitly migrated and its paths/output isolation reviewed. Phase 1 should add or prepare a dedicated minimal Mekong example rather than invoke a global/CONUS/Japan legacy recipe.
+The other copied `test*.sh`, options, and development examples have not yet been migrated into v5-ready execution examples. Several point to package-only maps/forcing, use current-working-directory-relative paths, clear existing result files, and still contain legacy executable paths. They must not be run as v5 samples until each is explicitly migrated and its paths/output isolation reviewed.
 
-## Phase 1: Mekong smoke run (approved target, not yet executed)
+## Phase 1: Mekong default simulation (completed)
 
-The first runtime check is to use:
+The first v5 model run uses the committed Mekong map and runoff sample:
 
-- Map: `map/mekong_15min/` (80 × 120 cells, 10 floodplain layers).
-- Runoff: `inp/test-mek_1deg/` (20 × 30 cells, daily float32 `mm/day`, 1980-01-01 onward).
-- Parallel mode: non-MPI.
-- Bifurcation: enabled, using the sample map's `bifprm.txt` and model map inputs.
-- Simulation period: a short period beginning 1980-01-01.
+- Map: `map/mekong_15min/` (80 × 120 river cells, 10 floodplain layers).
+- Runoff: `inp/test-mek_1deg/` (20 × 30 daily float32 grid, `mm/day`; 1980 onward).
+- Simulation: 2000-01-01 00:00 through 2001-01-01 00:00, 366 days.
+- Execution: non-MPI, one OpenMP thread, adaptive timestep enabled, bifurcation enabled, reservoir operation disabled, zero initial storage.
+- Channel width: `rivwth_merit.bin`; bifurcation table: `bifprm.txt`.
+- Runoff conversion: `DROFUNIT=86400000`; daily files use `Roff____YYYYMMDD.one`.
+- Outputs: daily binary `outflw`, `storge`, `sfcelv`, and `flddph`; bifurcation `pthflw`; final restart.
+- Run directory: ignored `out/mek01-default_run/`.
 
-The model time controller computes the step count from end time minus start time. Exact end timestamp, output cadence, and selected outputs will be set in the Phase 1 run configuration and checked against the namelist reader before execution.
+The map-local [`mek03-generate_inpmat-mek1deg.sh`](../map/mekong_15min/script_params/mek03-generate_inpmat-mek1deg.sh) generated `inpdim_test-mek_1deg.txt` and `inpmat_test-mek_1deg.bin` with the existing `param_inpmat_generate` utility. The descriptor records 80 × 120 map cells, 10 floodplain layers, a 20 × 30 runoff grid, maximum input count 4, and bounds 90–110°E / 5–35°N. The binary matrix is 460,800 bytes: 12 32-bit direct-access records (four x-index, four y-index, four overlap-area records). Both products are retained with the GitHub-tracked Mekong sample.
 
-The map currently has input matrices for `test-glb_1deg` and `test-E2O_15min_nc`, but not `inpdim_test-mek_1deg.txt` / `inpmat_test-mek_1deg.bin`. The map-local `s03-generate_inpmat.sh` defaults to the E2O grid. Generate the matching 1-degree matrix with the documented domain (90–110°E, 5–35°N, `NtoS`) on a temporary copy of the map. Do not overwrite or add generated matrix files to the tracked sample during the first test. The map and runoff sample are read-only inputs; place model logs/results in a dedicated ignored run directory.
+[`gosh_sample/mek01-default_run.sh`](../gosh_sample/mek01-default_run.sh) writes the namelist and runs `src_main/MAIN_cmf` from the experiment directory. The successful model log reports the requested dimensions and interval, reads the binary matrix and all 366 runoff files from `Roff____20000101.one` through `Roff____20001231.one`, and reports `LPTHOUT=T`. `cmf_ctrl_maps_mod.F90` reads the configured bifurcation table when that flag is true. The source namelist initializer remains false; this sample explicitly enables bifurcation as the maintainer directed. No Fortran algorithm or model default was changed.
 
-Source inspection confirms that `LPTHOUT` enables bifurcation; when true, `cmf_ctrl_maps_mod.F90` reads the formatted bifurcation table named by `CPTHOUT` (whose source default is `./bifprm.txt`). The Mekong map contains `bifprm.txt`, and the legacy standard example explicitly sets `LPTHOUT=".TRUE."`. The current namelist initializer sets `LPTHOUT=.FALSE.`, however. For the approved first Mekong test, set it explicitly to true; this task does not change the model-wide default. The difference between the maintainer's “standard/default ON” description and the source initializer remains a point to clarify before changing any default.
-
-Practical acceptance checks: the process exits successfully; the log shows the requested map, runoff, matrix, and time range; expected steps and output records are present; output files are nonempty with expected dimensions/time coverage; and no obvious non-finite or structurally implausible result appears. This is an operational smoke test, not a scientific validation or proof of numerical equivalence with v4. Since the numerical source has not been changed, strict v4 comparison is not required unless later evidence or scope warrants it.
+The process completed with 8,784 model steps and 366 daily records for each gridded output. Each 80 × 120 float32 output is 14,054,400 bytes; `pthflw2000.pth` and the final restart products were also nonempty. All values in the four gridded files and bifurcation output were finite; the gridded outputs contain the model's finite `1e20` fill value on missing cells. `outflw` and `pthflw` contain negative values; the routing source permits backflow, so sign alone was not treated as an error. Existing map and runoff inputs were not modified; the generated input descriptor and matrix are the only new map products. This establishes operational behavior for this build and sample, not scientific validity or numerical equivalence with v4. See VR-0083 for evidence and limitations.
 
 ## Incremental feature migration order
 
@@ -83,7 +84,7 @@ The current legacy examples indicate distinct profiles; their numbering is not a
 
 | Legacy example | Main feature/data profile | Suggested v5 migration checkpoint |
 | --- | --- | --- |
-| `test1-glb_15min.sh` | Global binary maps, daily binary runoff, bifurcation, adaptive step, multi-year/restart. | Start with the short Mekong non-MPI/bifurcation run; later migrate longer runs and restart as separate checks. |
+| `test1-glb_15min.sh` | Global binary maps, daily binary runoff, bifurcation, adaptive step, multi-year/restart. | The initial Mekong non-MPI/bifurcation run completed; longer runs and restart remain separate checks. |
 | `test2-conus_06min_netcdf.sh` | CONUS and NetCDF runoff. | After required NetCDF map/runoff data and the supported model input contract are confirmed. |
 | `test3-jpn_fcast.sh` | Japan high-resolution hourly forcing and forecast/restart directories. | After a tracked/reproducible dataset and restart behavior are established. |
 | `test4-e2o_glb_15min.sh` | Global NetCDF runoff, binary model output. | After NetCDF forcing configuration is checked independently. |
@@ -92,23 +93,18 @@ The current legacy examples indicate distinct profiles; their numbering is not a
 | `options_full.sh` | Practical compile/runtime option examples. | Migrate only options verified available in v5 and document compile-time versus runtime controls. |
 | `dev_ERA5_hour.sh`, `gosh/etc/` | Development forcing and specialized heat-link configuration. | Later, after dependencies, provenance, and supported combinations are established. |
 
-## Phase 0 validation and remaining limits
+## Phase 0 and Phase 1 validation and remaining limits
 
 Completed:
 
 - Full tracked-tree copies present, retaining all source and workflow subdirectories.
 - All tracked source/workflow files match except the intentionally updated v5 build Makefile/wrapper and added READMEs.
 - `make -C src_main all` completed and produced `src_main/MAIN_cmf`.
-- No v4 source, workflow, build setting, map data, or runoff data was changed.
+- The 2000 Mekong annual simulation completed; the model read the configured input matrix and all expected daily runoff files, and wrote the requested daily output records.
+- No legacy `src/` or `gosh/` content, shared build setting, or existing map/runoff product was changed. The two newly generated Mekong `test-mek_1deg` matrix files were added to the sample.
 
 Not performed:
 
-- No model simulation (including Phase 1 Mekong) was run.
 - No optional MPI, NetCDF, sediment, heatlink, or ICI build was attempted.
-- No v4/v5 numerical comparison or scientific validation was performed.
-
-## Open questions for Phase 1 configuration
-
-1. Confirm the exact short-run end timestamp, output cadence, and output variables. The first forcing record begins 1980-01-01 and the source computes duration as end minus start, but this plan does not choose an unreviewed output contract.
-2. Confirm whether the first successful runtime smoke test is sufficient as the v5 baseline before a longer or restart test. Restart and multi-year behavior remain separate validation stages.
+- No v4/v5 numerical comparison or independent scientific validation was performed.
 

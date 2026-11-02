@@ -12,12 +12,14 @@ make -C src_main all succeeded with GNU Fortran 14.2.0 and the default OpenMP/Si
 
 Phase 0 performed no simulation or numerical comparison. It does not validate optional MPI, NetCDF, sediment, heatlink, or ICI configurations.
 
-## Phase 1: next approved runtime stage
+## Phase 1: initial Mekong annual simulation (completed)
 
-The maintainer approved a short non-MPI simulation beginning 1980-01-01 with bifurcation enabled, using map/mekong_15min/ and inp/test-mek_1deg/. That runtime work is deliberately deferred to the next instruction. A matching test-mek_1deg input matrix is absent and must be generated on a disposable map copy. Exact run end time and output contract remain to be specified after checking namelist/time-controller behavior. Successful execution will be evidence of operational behavior, not independent scientific validation.
+At Phase 0 close, the planned smoke run had been deferred to a later instruction; the initial short-run settings in that planning snapshot were superseded by the maintainer's Phase 1 task. Phase 1 then specified a 2000-01-01 through 2001-01-01 run. The maintainer's task and its implementation/validation are recorded in EV-0265 through EV-0267, DT-0042, and VR-0083.
+
+The map-local `mek03-generate_inpmat-mek1deg.sh` created the 20 x 30 runoff mapping for the 80 x 120 Mekong map and the generated `inpdim_test-mek_1deg.txt` / `inpmat_test-mek_1deg.bin` are retained with the sample. `gosh_sample/mek01-default_run.sh` ran one non-MPI 2000 simulation with adaptive timestep, bifurcation enabled, zero initial storage, and reservoir operation disabled. It read 366 daily runoff files, completed 8,784 timesteps through 2001-01-01 00:00, wrote 366 records for four gridded variables and bifurcation flow, and wrote a final restart. The checked output values were finite, including the model's finite `1e20` fill values. Negative flow values are permitted by the source's backflow calculation. This is operational evidence for this sample and build, not scientific validation or v4 numerical equivalence.
 
 The detailed technical boundaries and phased migration order are in docs/model_source_workflow_plan.md.
 
 The new wrapper exposed an incremental build issue during repeated use; the v5-only Makefile dependency guard resolved it. Details and limits are recorded in VR-0082 and the Phase 0 plan.
 
-A final tracked-file comparison confirms all copied files match byte-for-byte except the intended v5 Makefile/wrapper and READMEs. The wrapper also builds when invoked from outside the repository directory. Source inspection found LPTHOUT initializes false, although the approved first test and legacy standard sample set it true; the first v5 run will set it explicitly without changing the model default.
+A final tracked-file comparison confirms all copied files match byte-for-byte except the intended v5 Makefile/wrapper and READMEs. The wrapper also builds when invoked from outside the repository directory. Source inspection found LPTHOUT initializes false, although the approved first test and legacy standard sample set it true; the Phase 1 v5 run set it explicitly without changing the model default.
