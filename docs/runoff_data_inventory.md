@@ -18,9 +18,9 @@ This inventory covers `inp/`, the standard model forcing reader, the v5 channel 
 
 Key evidence:
 
-- Repository files: [`inp/README.md`](../inp/README.md), [`inp/download_ERA5-Land/ReadMe.md`](../inp/download_ERA5-Land/ReadMe.md), scripts and sample files under [`inp/download_ERA5-Land/`](../inp/download_ERA5-Land/).
-- Download request and dataset name: [`download_era5land.py`](../inp/download_ERA5-Land/download_era5land.py#L63) and its request builder at lines 259–340.
-- Conversion logic: [`convert_CMF_nc.py`](../inp/download_ERA5-Land/convert_CMF_nc.py#L236) and [`convert_CMF_bin.py`](../inp/download_ERA5-Land/convert_CMF_bin.py#L236).
+- Repository files: [`inp/README.md`](../inp/README.md), [`inp/download_ERA5-Land/ReadMe.md`](../inp/ERA5-Land_download/ReadMe.md), scripts and sample files under [`inp/download_ERA5-Land/`](../inp/ERA5-Land_download/).
+- Download request and dataset name: [`download_era5land.py`](../inp/ERA5-Land_download/download_era5land.py#L63) and its request builder at lines 259–340.
+- Conversion logic: [`convert_CMF_nc.py`](../inp/ERA5-Land_download/convert_CMF_nc.py#L236) and [`convert_CMF_bin.py`](../inp/ERA5-Land_download/convert_CMF_bin.py#L236).
 - Model forcing contract: [`cmf_ctrl_forcing_mod.F90`](../src/cmf_ctrl_forcing_mod.F90#L35) (namelist and defaults), lines 336–490 (input-matrix readers), and lines 790–855 (runoff conversion/interpolation).
 - Channel parameterization: [`s01-channel_params.sh`](../map/tools/script_params/s01-channel_params.sh#L17) and [`param_channel_calc_outclm.F90`](../map/tools/code/param_channel_calc_outclm.F90#L29).
 - Existing lightweight tests: `map/tools/tests/test_channel_params_wrapper.py`, `test_inpmat_naming.py`, `test_bifurcation_migration.py`, and `test_mekong_ctl_integration.py`. No runoff converter-specific tests or `inp/` test directory were found.
@@ -192,7 +192,7 @@ The package-only `test_1deg` CTL also declares 1000 time records while the inspe
 
 ## Phase B registry correction and Phase C ERA5-Land review — 2026-11-02
 
-The maintainer clarified that `inp/runoff_datasets.csv` is an inventory of CaMa-Flood-ready runoff products, not raw downloaded sources. The `era5land_japan_source_200001` entry was removed. The tracked `ori_japan/` NetCDF remains unchanged and its provenance, download procedure, source units, and conversion role are documented in [`inp/download_ERA5-Land/ReadMe.md`](../inp/download_ERA5-Land/ReadMe.md). The registry validator now rejects raw-source-only entries; the converted NetCDF and binary product entries remain.
+The maintainer clarified that `inp/runoff_datasets.csv` is an inventory of CaMa-Flood-ready runoff products, not raw downloaded sources. The `era5land_japan_source_200001` entry was removed. The tracked `ori_japan/` NetCDF remains unchanged and its provenance, download procedure, source units, and conversion role are documented in [`inp/download_ERA5-Land/ReadMe.md`](../inp/ERA5-Land_download/ReadMe.md). The registry validator now rejects raw-source-only entries; the converted NetCDF and binary product entries remain.
 
 The maintainer subsequently simplified the registry by removing the redundant `ROFFTAG` column and memo-oriented `product_role` and `time_semantics` columns. Use each product's `dataset_id` as its `ROFFTAG` when generating the paired input-matrix filenames. The validator checks that identifiers are unique and safe to use as tags; it validates the remaining grid and configuration fields.
 
@@ -232,7 +232,7 @@ The maintainer confirmed the 1-arcmin Japan sample originates from Today's Japan
 
 The new `inp/test_jpn_6min_1hr/` workflow uses latitude-dependent spherical cell areas to compute each 6 × 6 spatial mean. It does no time resampling or unit conversion. If any source cell in a block is missing, that target cell is marked missing (`-9999`); the inspected input had no missing blocks. The output has seven files of 24 records each on a 250 × 220, 0.1-degree grid, 36,960,000 raw bytes total. The all-hour area-integral comparison had maximum relative difference 1.285e-8 and mean 2.160e-9 after float32 output rounding; nine independently calculated block means passed. The source files remained unchanged by the run. These are technical conservation and layout checks, not independent validation of the original runoff science.
 
-The original source CTL called values `mm/day`; the maintainer has since identified that label as erroneous and assesses the values as `mm/hour`, consistent with the existing `gosh/test3-jpn_fcast.sh` setup. The output preserves numeric values and the new CTL and registry use `mm/hour`; this interpretation is not independently verified against source-product documentation (KG-0022). The recommended input-matrix geometry is 0.1°, edges 123–148°E and 24–46°N, 250 × 220, NtoS, with distinct `ROFFTAG=test-jpn-6min-1hr`. No matrix or model run was generated. The compact sample is prepared for repository tracking under the maintainer-confirmed redistribution permission; the large source symlink and files remain excluded. See [the sample guide](../inp/test_jpn_6min_1hr/README.md).
+The original source CTL called values `mm/day`; the maintainer has since identified that label as erroneous and assesses the values as `mm/hour`, consistent with the existing `gosh/test3-jpn_fcast.sh` setup. The output preserves numeric values and the new CTL and registry use `mm/hour`; this interpretation is not independently verified against source-product documentation (KG-0022). The recommended input-matrix geometry is 0.1°, edges 123–148°E and 24–46°N, 250 × 220, NtoS, with distinct `ROFFTAG=test-jpn-6min-1hr`. No matrix or model run was generated. The compact sample is prepared for repository tracking under the maintainer-confirmed redistribution permission; the large source symlink and files remain excluded. See [the sample guide](../inp/test-jpn_6min_1hr/README.md).
 
 ## Global ERA5-Land profile and linked lab product — 2026-11-02
 

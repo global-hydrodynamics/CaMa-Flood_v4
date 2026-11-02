@@ -26,6 +26,8 @@ Start with the [main manual](doc/Manual_CaMa-Flood_v420.docx) and [user guidelin
 
 This repository provides source code, build configurations, execution scripts, and preprocessing and analysis tools for development, customization, and source-code access. **Cloning it alone does not supply all the river-map and forcing datasets needed for the standard simulations.** Obtain the required data separately through the official distribution.
 
+For the current v5 preparation tools, use [`map/tools/`](map/tools/README.md) for river-map processing, parameters, and input matrices, and [`inp/`](inp/README.md) for runoff acquisition and conversion. The older implementations under [`map/src/`](map/src/) are preserved as v4 legacy tools. Existing [`gosh/`](gosh/) simulation examples remain available; their modernization is a separate upcoming task, and the v5 preparation tools do not imply a completed new simulation workflow.
+
 Build settings are in [adm/Mkinclude](adm/Mkinclude), with compiler-specific examples in [adm/](adm/). The [compilation script](gosh/compile.sh) and [sample experiments](gosh/) provide execution entry points. Configure paths, libraries, and options for your environment before building or running; the presence of a configuration example does not establish that it has been tested on your system.
 
 ### Python utilities
@@ -46,8 +48,8 @@ The optional ERA5-Land downloader also requires CDS account credentials and data
 | [src/](src/) | Fortran numerical model, drivers, shared state, I/O, and optional extensions. |
 | [gosh/](gosh/) | Compilation and execution scripts, example experiments, and namelist templates. |
 | [adm/](adm/) | Compiler, library, precision, parallelization, and build configuration. |
-| [map/](map/) | River-map preprocessing, regionalization, river parameters, input mapping, and gauge/reservoir allocation. |
-| [inp/](inp/) | Runoff forcing download and preparation tools. |
+| [map/](map/) | Recommended v5 workflow for river-map preparation, regionalization, parameters, input matrices, allocation, and analysis is under `map/tools/`; v4 tools remain under `map/src/`. |
+| [inp/](inp/) | Runoff dataset guidance, acquisition and conversion tools, and tracked or regenerable examples. |
 | [etc/](etc/) | Optional-scheme workflows, parameter preparation, downscaling, validation, and analysis. |
 | [util/](util/) | Supporting utilities used by scripts. |
 | [doc/](doc/) | Scientific manuals, user documentation, and package-preparation guidance. |
@@ -65,9 +67,9 @@ The existing manuals remain the detailed scientific and workflow references. The
 | Topic | Documentation |
 | --- | --- |
 | Model formulation, basic setup, standard input/output, and execution | [Main manual, v4.20 (Word)](doc/Manual_CaMa-Flood_v420.docx); [user guideline](doc/CaMa-Flood_Guideline.md) |
-| River parameters and runoff input matrices | [Map-parameter tools](map/src/src_param/README.md) |
-| Native-grid runoff remapping | [Composed remapping tools, assumptions, and validation](map/src/src_param/native_inpmat/README.md) |
-| Runoff forcing preparation | [ERA5-Land download and conversion](inp/download_ERA5-Land/ReadMe.md) |
+| v5 river-map and parameter preparation | [Map tools overview](map/tools/README.md); [parameter workflows](map/tools/script_params/README.md) |
+| v5 runoff data preparation | [Runoff input guide](inp/README.md); [ERA5-Land download and conversion](inp/ERA5-Land_download/ReadMe.md) |
+| v4 map-preparation implementation (legacy) | [Legacy parameter tools](map/src/src_param/README.md); [legacy dam parameters](map/src/src_dam/ReadMe.md) |
 | Reservoir operation | [Reservoir manual, v4.20 (Word)](doc/Manual_ReservoirOperation_v420.docx); [parameter-preparation workflow](map/src/src_dam/ReadMe.md) |
 | Levee parameters | [Levee guide](doc/levee.md); [Word manual](doc/LeveeParameter.docx) |
 | Upstream inflow | [Upstream inflow manual (Word)](doc/Mannual_UpstreamInflowScheme.docx) |
@@ -78,7 +80,7 @@ The existing manuals remain the detailed scientific and workflow references. The
 | Comparison with observations | [Validation examples](etc/validation/ReadMe.md) |
 | Distribution preparation | [Package-creation guide](doc/HowTo_Make_Package.md) |
 
-Small tests are located under [src/common/test/](src/common/test/), [src/mod/test/](src/mod/test/), [src/io/test/](src/io/test/), [src/phys/test/](src/phys/test/), and [src/heatlink/test/](src/heatlink/test/). Check their Makefiles and runners for dependencies and execution steps: some `test` targets only build executables. Native-grid remapping tests and integration-validation instructions are documented in its guide above.
+Small model tests are located under [src/common/test/](src/common/test/), [src/mod/test/](src/mod/test/), [src/io/test/](src/io/test/), [src/phys/test/](src/phys/test/), and [src/heatlink/test/](src/heatlink/test/). Check their Makefiles and runners for dependencies and execution steps: some `test` targets only build executables. The v5 map-tool checks are documented under [map/tools/](map/tools/README.md).
 
 ## Development and Contributions
 

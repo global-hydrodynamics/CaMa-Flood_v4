@@ -1,10 +1,10 @@
 # CaMa-Flood Map Data and Tools Modernization
 
-**Status:** Planning proposal. The detailed implementation scope and architecture are not yet approved.
+**Status (2026-11-03):** The first v5 map-tools implementation tranche was merged into `master` through [PR #125](https://github.com/global-hydrodynamics/CaMa-Flood_v4/pull/125) (`bf82017`). Issue [#122](https://github.com/global-hydrodynamics/CaMa-Flood_v4/issues/122) remains open and paused between stages; the broader modernization is not complete. This document preserves the initial planning rationale and candidate architecture. Future work, including model-facing NetCDF contracts, optional-scheme coverage, and additional validation, still requires its own approved scope.
 
 - **Persistent working branch:** `feature/map-data-tools` (based on `master`).
 - **Owner:** Dai Yamazaki (maintainer); Codex supports tasks assigned by the owner.
-- **Approval recorded:** The maintainer authorized this project branch and planning task in the Codex conversation. This document prepares the project plan; it does not authorize implementation changes.
+- **Approval recorded:** The initial authorization covered planning; subsequent bounded map-tools implementation was separately assigned and merged in PR #125. This plan does not authorize additional implementation.
 - **Development policy:** Follow the repository's [AGENTS.md](../AGENTS.md). Project coordination and current progress are summarized in [docs/dev_status.md](dev_status.md). GitHub Issue: [#122](https://github.com/global-hydrodynamics/CaMa-Flood_v4/issues/122). Issues are recommended for substantial development but optional; when none is used, record approved scope, assignments, and checks in this plan and the project status.
 
 ## Purpose
@@ -101,7 +101,7 @@ These are investigation targets, not final ownership assignments:
 
 ## Planning boundary
 
-This planning phase created the project overview and a branch-local status registration. It did not change source code, map data, scripts, numerical behavior, or public interfaces, and it does not authorize implementation. Before implementation begins, the maintainer should review this proposal, approve the initial scope and checks, and reconcile the project row into the master development-status registry using [AGENTS.md](../AGENTS.md). Issue #122 records the project proposal. Issues are optional for substantial work; if a future task proceeds without one, keep coordination details in the project status and technical specifications here or in the appropriate component documentation.
+The initial planning phase created this project overview and its branch-local status registration; it did not itself change source code, map data, scripts, numerical behavior, or public interfaces. Later, separately scoped map-tool implementation was merged through PR #125. The phases, candidate areas, and questions in this document preserve the original proposal and identify topics for future review; they are not all active assignments. Before any further implementation, obtain approval for its specific scope and checks, then update coordination in Issue #122 and [`docs/dev_status.md`](dev_status.md) under [`AGENTS.md`](../AGENTS.md).
 
 ## High-resolution area handling contract
 
