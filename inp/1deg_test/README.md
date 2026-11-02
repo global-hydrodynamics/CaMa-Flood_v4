@@ -13,7 +13,13 @@ The tracked source CTL `inp/ELSE_GPCC/Roff.ctl` declares 7,671 daily records beg
 
 ## Reproduce and validate
 
-The user-editable settings are at the beginning of [`s01-extract_ELSE_GPCC.sh`](s01-extract_ELSE_GPCC.sh): the source directory and CTL are relative to the script, and the default dates are 2000-01-01 through 2001-12-31. Run by path from any working directory:
+The user-editable settings are at the beginning of [`s01-extract_ELSE_GPCC.sh`](s01-extract_ELSE_GPCC.sh): the source directory and CTL are relative to the script, and the default dates are 2000-01-01 through 2001-12-31. Run from the repository root with:
+
+```sh
+sh inp/1deg_test/s01-extract_ELSE_GPCC.sh
+```
+
+Alternatively, invoke the shell script by its absolute path from any working directory:
 
 ```sh
 /path/to/CaMa-Flood_v4/inp/1deg_test/s01-extract_ELSE_GPCC.sh
@@ -21,7 +27,7 @@ The user-editable settings are at the beginning of [`s01-extract_ELSE_GPCC.sh`](
 
 The shell workflow invokes the adjacent standard-library-only [`extract_ELSE_GPCC.py`](extract_ELSE_GPCC.py). It checks the source CTL grid, row order, missing-value sentinel, every requested date and file size, then copies each source file byte-for-byte to `Roff/`. It checks the output date set and sizes, compares every output file with its source, verifies the generated CTL geometry/time axis, and confirms source file sizes and modification times did not change. No external Python packages or model executable are required.
 
-The generated `runoff.ctl` describes the selected 731 daily records and points to `Roff/Roff____%y4%m2%d2.one`. The grid, `mm/day` unit, `-999` undefined value, and little-endian N-to-S binary layout match the source metadata and CaMa-Flood's legacy daily-file forcing convention. For the existing legacy run script, use `CROFDIR` pointing to `inp/1deg_test/Roff`, `CROFPRE="Roff____"`, `CROFSUF=".one"`, `IFRQ_INP=24`, and `DROFUNIT=86400000`. This new sample does not alter the legacy `gosh/` script or its `inp/test_1deg/runoff/` path.
+The generated `runoff.ctl` describes the selected 731 daily records and points to `Roff/Roff____%y4%m2%d2.one`. The grid, `mm/day` unit, `-999` undefined value, and little-endian N-to-S binary layout match the source metadata and CaMa-Flood's legacy daily-file forcing convention. For model configuration, use `IFRQ_INP=24`, `DROFUNIT=86400000`, `LINPDAY=.TRUE.`, `CROFPRE="Roff____"`, and `CROFSUF=".one"`. The runoff grid settings are `GRSIZEIN=1`, `WESTIN=-180`, `EASTIN=180`, `SOUTHIN=-90`, `NORTHIN=90`, and `OLAT=NtoS`; the input matrix remains map-specific. For the existing legacy run script, set `CROFDIR` to `inp/1deg_test/Roff`. This new sample does not alter the legacy `gosh/` script or its `inp/test_1deg/runoff/` path.
 
 ## Git and distribution
 
