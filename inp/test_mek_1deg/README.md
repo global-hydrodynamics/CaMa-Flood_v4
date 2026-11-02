@@ -40,7 +40,7 @@ The output CTL uses `Roff____YYYYMMDD.one`, `float32`, little-endian, `undef -99
 
 ## CaMa-Flood configuration
 
-For the Mekong sample map, generate an input matrix for this runoff grid with `ROFFTAG="test-mek-1deg"` and the following settings in `map/mekong_15min/script_params/s03-generate_inpmat.sh`:
+For the Mekong sample map, generate an input matrix for this runoff grid with `ROFFTAG="test-mek_1deg"` (matching the registry `dataset_id`) and the following settings in `map/mekong_15min/script_params/s03-generate_inpmat.sh`:
 
 ```sh
 GRSIZEIN=1

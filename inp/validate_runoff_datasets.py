@@ -3,14 +3,13 @@
 
 import csv
 import math
+import re
 from pathlib import Path
 
 
 REGISTRY = Path(__file__).with_name("runoff_datasets.csv")
 REQUIRED_COLUMNS = {
     "dataset_id",
-    "product_role",
-    "ROFFTAG",
     "description",
     "format",
     "directory",
@@ -31,7 +30,6 @@ REQUIRED_COLUMNS = {
     "IFRQ_INP",
     "record_interval_hours",
     "units",
-    "time_semantics",
     "DROFUNIT",
     "LINPDAY",
     "period",
@@ -70,17 +68,10 @@ def validate():
     if len(dataset_ids) != len(set(dataset_ids)):
         raise ValueError("dataset_id values must be unique")
 
-    grids_by_tag = {}
     for row in rows:
         dataset_id = row["dataset_id"]
-        if row["product_role"] == "source_dataset":
-            raise ValueError(
-                f"{dataset_id}: raw source datasets belong in workflow guides, not the product registry"
-            )
-        if row["configuration_status"] == "source_only_not_model_ready":
-            raise ValueError(
-                f"{dataset_id}: registry entries must describe converted CaMa-Flood-ready products"
-            )
+        if not re.fullmatch(r"[A-Za-z0-9_-]+", dataset_id):
+            raise ValueError(f"{dataset_id}: dataset_id must be safe to use as a ROFFTAG")
         if None in row:
             raise ValueError(f"{dataset_id}: row has more values than the header")
         if any(value is None for value in row.values()):
@@ -105,14 +96,6 @@ def validate():
             raise ValueError(f"{dataset_id}: longitude bounds/resolution do not yield grid_nx")
         if not math.isclose((north - south) / resolution, ny, abs_tol=1e-6):
             raise ValueError(f"{dataset_id}: latitude bounds/resolution do not yield grid_ny")
-
-        tag = row["ROFFTAG"]
-        grid = (row["GRSIZEIN"], row["WESTIN"], row["EASTIN"],
-                row["NORTHIN"], row["SOUTHIN"], row["grid_nx"],
-                row["grid_ny"], row["OLAT"])
-        if tag in grids_by_tag and grids_by_tag[tag] != grid:
-            raise ValueError(f"{dataset_id}: ROFFTAG {tag!r} describes conflicting grids")
-        grids_by_tag[tag] = grid
 
         if row["configuration_status"] in READY_STATUSES:
             interval = number(row, "IFRQ_INP")

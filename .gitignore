@@ -94,3 +94,4 @@ map/tools/code/*.s
 map/tools/code/__pycache__/
 map/tools/**/__pycache__/
 map/tools/**/*.pyc
+/inp/download_ERA5-Land/runoff_global_sample_bin/
