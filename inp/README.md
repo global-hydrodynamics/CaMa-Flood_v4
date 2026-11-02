@@ -7,6 +7,8 @@ The `inp/` directory contains tools for preparing runoff forcing used by CaMa-Fl
 | Path | Purpose and contents |
 | --- | --- |
 | `download_ERA5/` | Shell and Python tools to download ERA5-Land runoff from the Copernicus Climate Data Store (CDS), convert it to CaMa-Flood NetCDF or plain binary, and write a configuration summary. See the [detailed ERA5-Land guide](download_ERA5/ReadMe.md). |
+| `ELSE_GPCC/Roff/` | Long-term global 1-degree ELSE_GPCC runoff product attributed to Kim et al. (2009). Its data files are supplied outside Git; the workstation data directory is ignored by Git, while the tracked `ELSE_GPCC/Roff.ctl` describes a daily 360 × 180 grid. The package `test_1deg/` sample is a two-year extraction from this product. See [Kim et al. (2009)](https://doi.org/10.1029/2009GL039006). |
+| `test_mek_1deg/` | Reproducible 1-degree Mekong runoff extraction scripts and documentation; generated daily binary files remain local pending redistribution review. See the [sample README](test_mek_1deg/README.md). |
 
 ## Runoff Dataset Registry
 
@@ -20,7 +22,8 @@ The table below summarizes the sample locations and review state. The CSV is the
 
 | Package directory | Format and grid/time coverage | Unit evidence and relevant example |
 | --- | --- | --- |
-| `test_1deg/` | Plain binary (`Roff____YYYYMMDD.one`) plus `runoff.ctl`; global 1-degree grid (360 × 180; edges 180°W–180°E, 90°S–90°N); daily files from 2000-01-01 through 2001-12-31. | The `.ctl` declares runoff in `mm/day`. `gosh/test1-glb_15min.sh` uses `IFRQ_INP=24` and `DROFUNIT=86400000`. |
+| `test_1deg/` | Plain binary (`Roff____YYYYMMDD.one`) plus `runoff.ctl`; global 1-degree grid (360 × 180; edges 180°W–180°E, 90°S–90°N); daily files from 2000-01-01 through 2001-12-31. The maintainer identifies it as a two-year test extraction from the long-term `ELSE_GPCC/Roff/` product (Kim et al., 2009). | The `.ctl` declares runoff in `mm/day`. `gosh/test1-glb_15min.sh` uses `IFRQ_INP=24` and `DROFUNIT=86400000`. |
+| `test_mek_1deg/` | Mekong 20 × 30 global-grid subset (90–110°E, 5–35°N); 11,323 daily files for 1980-01-01 through 2010-12-31, generated from `ELSE_GPCC/Roff/`. | Source values remain float32 `mm/day`, `NtoS`, `undef=-999`; use the local README for extraction and model settings. Binary data are not Git-tracked pending redistribution review. |
 | `test_15min_nc/` | NetCDF files for 2000 and 2001; `Runoff(time, lat, lon)` on a 0.25-degree grid (1440 × 600; edges 180°W–180°E, 60°S–90°N), daily time coordinate. | The sample NetCDF metadata declares `units="mm day-1"`. `gosh/test2-conus_06min_netcdf.sh` uses `IFRQ_INP=24` and `DROFUNIT=86400000`. |
 | `test_jpn_1hr/` | Plain binary daily files (`runoff_YYYYMMDD.bin`) plus `runoff.ctl`; Japan grid at 1/60 degree (1500 × 1320), 1-hour records for 2007-09-03 through 2007-09-09. | `gosh/test3-jpn_fcast.sh` sets `IFRQ_INP=1` and `DROFUNIT=3600000`, so each stored value is interpreted as runoff depth in mm per 1-hour record (equivalent to a 1-hour mean rate for conversion to m/s). The package CTL comment says `mm/day`, which conflicts with the run configuration. |
 | `download_ERA5/runoff_japan_nc/` | Converted monthly CaMa-Flood NetCDF sample with variable `runoff`. | Tracked in the repository; time labels follow ERA5-Land valid-time semantics. First-record attribution and period-boundary coverage are not independently validated (KG-0019). |

@@ -52,11 +52,11 @@ The following were inspected in the maintainer-provided v4.30 distribution packa
 
 | Package directory | Observed format and coverage | Unit/configuration evidence |
 | --- | --- | --- |
-| `test_1deg/` | Global 360×180 daily plain-binary files `Roff____YYYYMMDD.one`, 2000-01-01 through 2001-12-31, plus CTL; approximately 183 MiB total. | CTL declares mm/day; `gosh/test1-glb_15min.sh` uses `IFRQ_INP=24`, `DROFUNIT=86400000`. |
+| `test_1deg/` | Global 360×180 daily plain-binary files `Roff____YYYYMMDD.one`, 2000-01-01 through 2001-12-31, plus CTL; approximately 183 MiB total. The maintainer confirms it is a two-year test extraction from the long-term 1-degree ELSE_GPCC runoff product under `inp/ELSE_GPCC/Roff/` (Kim et al., 2009; [DOI](https://doi.org/10.1029/2009GL039006)). | CTL declares mm/day; `gosh/test1-glb_15min.sh` uses `IFRQ_INP=24`, `DROFUNIT=86400000`. |
 | `test_15min_nc/` | `Runoff(time,lat,lon)` in yearly NetCDF files, 1440×600 at 0.25 degree, 60°S–90°N, daily time; approximately 522 MiB total. | NetCDF says `mm day-1`; `gosh/test2-conus_06min_netcdf.sh` uses `IFRQ_INP=24`, `DROFUNIT=86400000`. This sample is not the ERA5-Land Japan sample. |
 | `test_jpn_1hr/` | Japan 1500×1320 at 1/60 degree, 1-hour records in daily binary files over 2007-09-03–2007-09-09; approximately 1.2 GiB total. | `gosh/test3-jpn_fcast.sh` uses `IFRQ_INP=1`, `DROFUNIT=3600000`, implying mm per 1-hour record. The package CTL's `mm/day` comment conflicts with this model setup. |
 
-These data demonstrate package workflows and units. They are too large for automatic inclusion in a small GitHub fixture and have a separate distribution role.
+These data demonstrate package workflows and units. They are too large for automatic inclusion in a small GitHub fixture and have a separate distribution role. The full ELSE_GPCC source directory is an external, Git-ignored data tree in this workstation; only its `Roff.ctl` metadata file is tracked. That CTL describes a daily global 1-degree grid and declares 7,671 time samples beginning 1981-01-01. This metadata count is not an independent inventory of the available source files.
 
 ## 4. Existing processing workflow
 
@@ -211,3 +211,11 @@ The invalid `s01-download.sh` interpreter line was corrected so the Bash-specifi
 3. Confirm the intended accepted policy for forecast resets/negative increments and missing cells before any scientific behavior changes. The compatibility suite pins the current implementation only.
 
 The current assignment was bounded to review, readability, non-scientific corrections, synthetic tests, documentation, the registry correction, and a local commit. It did not authorize any scientific algorithm change, sample replacement, CDS download, push, or pull request.
+
+## Phase D provenance clarification and Mekong 1-degree sample — 2026-11-02
+
+The maintainer confirmed that `ELSE_GPCC/Roff/` is the internal long-term global 1-degree runoff product associated with Kim et al. (2009), [doi:10.1029/2009GL039006](https://doi.org/10.1029/2009GL039006). The package-only `test_1deg/` data are a two-year (2000–2001) test extraction from that source. The original source data remain outside Git; the source CTL is tracked, while the local data directory is ignored.
+
+The v4.30 package NetCDF attributes identify `test_15min_nc` as eartH2Observe WRR2 runoff produced by ECMWF HTESSEL. Its global attributes describe WRR2/HTESSEL, MSWEP precipitation forcing, and an Open Database License statement; the `references` attribute is only “to be defined.” No direct original download URL or dataset-specific publication reference was established from the file metadata, so the registry leaves the source URL blank rather than guessing.
+
+The new `test_mek_1deg` workflow extracts the fixed 90–110°E, 5–35°N domain for 1980–2010 from the original daily ELSE_GPCC binary files. It validates the 360×180 input CTL geometry, each requested date and source file size, the 20×30 output shape, 2,400-byte output file sizes, and exact float32 byte equality for every extracted source window. The generated regional data remain Git-ignored pending redistribution review; the script, helper, README, CTL, and registry metadata are separate reviewable artifacts. The source directory contained all 11,323 requested date files; source filenames span 1979-01-01 to 2011-01-01, while the source CTL declares 7,671 records starting 1981-01-01, so the CTL time count is not treated as authoritative file coverage. Format checks do not constitute independent scientific validation, and no model simulation was performed.
