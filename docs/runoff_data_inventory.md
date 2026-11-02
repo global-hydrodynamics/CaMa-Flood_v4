@@ -10,7 +10,7 @@ The repository has an ERA5-Land-specific download and conversion workflow, not a
 
 The model converts runoff values to a depth rate using `DROFUNIT`, then applies catchment area or the input matrix to form discharge. The v5 channel-parameter workflow separately consumes a one-record annual-mean runoff climatology in mm/s and an input matrix to derive annual mean discharge. These two uses of runoff have different time semantics and must not be conflated.
 
-The highest-priority issue for maintainer review is temporal interpretation. The downloader requests timestamps beginning at 00:00; ECMWF documents ERA5-Land accumulations valid at 00:00 as the preceding day's accumulation. The converter groups by the timestamp's calendar day, treats the first accumulated value of each day as an increment, and labels output with that same time coordinate. The existing sample and source code establish that behavior, but not whether the intended CaMa-Flood date labels align with the physical accumulation periods. This is documented as open question KG-0019; no correction is proposed or made in Phase A.
+The maintainer confirmed that CaMa-Flood forcing dates follow the selected runoff dataset's time labels; the model does not impose a separate date convention. ECMWF documents ERA5-Land accumulations valid at 00:00 as the preceding 24 hours. The converter preserves the source labels and applies its current per-UTC-day differencing rule. Physical attribution of the first accumulated value and requested-period boundary coverage remain unvalidated (KG-0019).
 
 ## 2. Scope and sources inspected
 
@@ -42,7 +42,7 @@ Key evidence:
 | `runoff_japan_nc/runoff_200001.nc` | Converted Japan sample, `runoff(time,lat,lon)`, 31 daily-labelled records, 221×321, float32; output units `mm` per configured 24-hour step, missing data encoded as `1e20`. | Tracked, approximately 1.3 MiB. |
 | `runoff_japan_nc/runoff_info_CaMaFlood.txt` | Configuration report for the converted NetCDF sample. | Tracked. |
 | `runoff_japan_bin/runoff.ctl` | CTL describing the binary grid/time layout. | Tracked, but the daily binary records are not tracked. This workstation has 31 ignored files; their two-record-per-file layout conflicts with the CTL/report metadata. |
-| `runoff_japan_bin/runoff_info_CaMaFlood.txt` | Binary configuration report; records that 31 files were found when it was generated. | Tracked. Its 24-hour settings and 62-record summary do not reconcile with two grid records in each of 31 ignored local files. |
+| `runoff_japan_bin/runoff_info_CaMaFlood.txt` | Binary configuration report; records the locally observed two-record daily layout. | Tracked. The report now records 12-hour records and corresponding `DROFUNIT`; the binary files remain workstation-local and ignored. |
 
 The small tracked Japan samples total about 2.3 MiB for the raw and converted NetCDF data. The binary directory contains metadata only. The generated report is evidence of a prior conversion state, not proof that binary samples are currently distributable from Git.
 
@@ -54,7 +54,7 @@ The following were inspected in the maintainer-provided v4.30 distribution packa
 | --- | --- | --- |
 | `test_1deg/` | Global 360×180 daily plain-binary files `Roff____YYYYMMDD.one`, 2000-01-01 through 2001-12-31, plus CTL; approximately 183 MiB total. | CTL declares mm/day; `gosh/test1-glb_15min.sh` uses `IFRQ_INP=24`, `DROFUNIT=86400000`. |
 | `test_15min_nc/` | `Runoff(time,lat,lon)` in yearly NetCDF files, 1440×600 at 0.25 degree, 60°S–90°N, daily time; approximately 522 MiB total. | NetCDF says `mm day-1`; `gosh/test2-conus_06min_netcdf.sh` uses `IFRQ_INP=24`, `DROFUNIT=86400000`. This sample is not the ERA5-Land Japan sample. |
-| `test_jpn_1hr/` | Japan 1500×1320 at 1/60 degree, 1-hour records in daily binary files over 2007-09-03–2007-09-09; approximately 1.2 GiB total. | CTL says mm/hr; `gosh/test3-jpn_fcast.sh` uses `IFRQ_INP=1`, `DROFUNIT=3600000`. |
+| `test_jpn_1hr/` | Japan 1500×1320 at 1/60 degree, 1-hour records in daily binary files over 2007-09-03–2007-09-09; approximately 1.2 GiB total. | `gosh/test3-jpn_fcast.sh` uses `IFRQ_INP=1`, `DROFUNIT=3600000`, implying mm per 1-hour record. The package CTL's `mm/day` comment conflicts with this model setup. |
 
 These data demonstrate package workflows and units. They are too large for automatic inclusion in a small GitHub fixture and have a separate distribution role.
 
@@ -105,10 +105,10 @@ The present code establishes the downstream calculation contract, but not the un
 
 ### Important implementation risks to resolve before Phase C
 
-1. **ERA5-Land time alignment (KG-0019):** official valid-time semantics and the converter's date grouping/first-value rule can shift the meaning of daily labels or misinterpret a boundary value. The source sample and one successful conversion do not prove temporal correctness.
+1. **ERA5-Land first-record and period-boundary attribution (KG-0019):** source labels follow ERA5-Land valid times, but the converter's first-value and daily-group rules have not been validated as physically correct.
 2. **Missing data / noleap calendars:** source NaNs become `1e20` in outputs; aggregation uses `skipna=False`. The root PR #120 is open and concerns 365_day/noleap forcing calendars. Integration requirements should be coordinated without changing PR #120 here.
 3. **Runoff metadata are split across file formats:** units may be in a CTL or NetCDF attributes, while temporal accumulation/reset semantics are partly in documentation and converter assumptions. The model itself relies on user-configured `IFRQ_INP`, `DROFUNIT`, and variable name.
-4. **Binary sample inconsistency:** binary records are not Git-tracked although the CTL and report are. This workstation has 31 ignored records, but their observed two-record-per-file layout conflicts with the documented 24-hour/62-record metadata; a GitHub clone still cannot run this binary example.
+4. **Binary sample reproducibility:** binary records are not Git-tracked although the CTL and report are. This workstation has 31 ignored files with two float32 grids each; the corrected CTL describes these as 62 records at 12-hour spacing. The current tracked 24-hour wrapper and 31-time NetCDF sample do not reproduce that local binary layout; a GitHub clone cannot run this binary example.
 5. **Downloader portability:** fix the malformed shebang and choose/document supported shell invocation. This is a shell portability issue, not an algorithm issue.
 
 ### Phase B registry design proposed in Phase A
@@ -139,7 +139,7 @@ No Phase A test was run against external data or the model. Existing tracked sam
 
 | Phase | Proposed work | Review/validation checkpoint |
 | --- | --- | --- |
-| **B — Dataset metadata** | The initial registry and `inp/README.md` have been prepared on the assigned branch. Unresolved configuration values remain blank and are listed below. | Review the registry fields, confirm the two conflicting unit/layout cases, and preserve KG-0019 as open before finalizing those values. |
+| **B — Dataset metadata** | The registry and `inp/README.md` are implemented; the maintainer-confirmed test_jpn unit convention and local binary CTL layout are recorded. | Preserve the distinction between configured metadata, observed file layout, and scientific validation. |
 | **C — ERA5-Land download/conversion** | After time-alignment decision, improve downloader/converter interfaces, shell portability, and error/overwrite behavior only where approved. Keep ERA5 distinct from ERA5-Land; do not change scientific interpretation silently. | Synthetic tests for daily boundaries, first/last samples, reset handling, negative values, missing values, output periods, NetCDF and binary layouts; compare documented command options to shell wrappers. |
 | **D — Small samples and tests** | Formalize existing Japan sample role; add tiny synthetic fixtures and tests; decide whether binary sample records belong in GitHub or only package. | Tests run without network/CDS credentials, large data, or model simulation; verify no committed examples are overwritten. |
 | **E — Mean runoff/channel inputs** | Trace climatology production/provenance, time averaging, missing-value handling, units, and input-matrix weighting. Document existing annual-mean workflow and distinguish it from legacy max-30-day code. | Reproduce a tiny known runoff-to-discharge calculation and verify output layout/units; compare legacy and v5 only where an approved numerical-parity claim is intended. |
@@ -152,7 +152,7 @@ These questions are recorded before resolution. They do not prevent completing t
 
 ### Important — scientific/time interpretation
 
-1. **Date labels and valid-time 00:00:** should output record dates refer to the ERA5-Land valid timestamp, the UTC day whose accumulation ends at 00:00, or the CaMa-Flood simulation day? ECMWF says a 00:00 valid-time accumulation represents the preceding day, while both wrappers request times starting at 00:00 and converters retain the timestamp date. This affects which runoff amount is applied on each model day and the inclusive start/end coverage. See KG-0019.
+1. **Date labels and valid-time 00:00 — convention resolved:** CaMa-Flood dates follow the selected runoff dataset's labels. ECMWF says a 00:00 valid-time accumulation represents the preceding day. Converter first-record handling and inclusive period-boundary coverage remain open under KG-0019.
 2. **First interval and resets:** for hourly records, should the first value within each day be retained, zeroed, marked missing, or derived from a prior timestamp? What is the accepted treatment of negative differences at forecast-cycle resets? The NC converter exposes `keep|zero|missing` for first step but defaults to `keep`; the binary path hardcodes `keep`.
 3. **Mean climatology definition:** what exact averaging statistic/temporal coverage does `ELSE_GPCC_clm-1981-2010.one` represent, and what is its missing-data treatment? Its filename and CTL comment do not fully establish the computation; the model program only reads one field.
 
@@ -180,9 +180,9 @@ The registry covers `test_1deg`, `test_15min_nc`, `test_jpn_1hr`, the raw ERA5-L
 
 ### Questions for maintainer review
 
-1. For the package `test_jpn_1hr` sample, should stored values be interpreted as `mm/hr` as configured by `gosh/test3-jpn_fcast.sh` (`DROFUNIT=3600000`), or as `mm/day` as written in `runoff.ctl`? The registry leaves `units` and `DROFUNIT` blank until confirmed.
-2. For the ERA5-Land binary example, what are the intended record interval and output layout? The tracked CTL declares 62 records at `1dy`, the report says 24-hour records, and the 31 ignored local files each contain two float32 grid records. The registry leaves its interval, units, and `DROFUNIT` unresolved.
-3. KG-0019 remains open: should converted ERA5-Land record dates identify valid timestamps or the physical accumulation periods? The registry does not change converter or model time interpretation.
+1. Resolved by the maintainer: `test_jpn_1hr` uses the `mm/1h` convention implied by `gosh/test3-jpn_fcast.sh` (`IFRQ_INP=1`, `DROFUNIT=3600000`); its package CTL's `mm/day` comment conflicts with the run configuration.
+2. Resolved as a CTL/layout correction: the observed 2 grids per daily file are described as 62 records at 12-hour spacing. This is local binary-layout metadata, not proof of scientific values or a reproducible generation from the currently tracked source/settings.
+3. The maintainer confirmed that CaMa-Flood dates follow the selected runoff dataset's time labels. KG-0019 remains open only for first-record accumulation attribution and requested-period boundary validation.
 
 The package-only `test_1deg` CTL also declares 1000 time records while the inspected package contains 731 daily files spanning 2000-01-01 to 2001-12-31. The registry documents actual file coverage and the CTL discrepancy; the model run configuration uses 24-hour records and `DROFUNIT=86400000`.
 
@@ -198,7 +198,7 @@ The maintainer clarified that `inp/runoff_datasets.csv` is an inventory of CaMa-
 - NetCDF output is float32, `units="mm"`, ordered north-to-south by default, with a 1e20 fill value and a time-step-duration attribute. Binary output is float32, X west-to-east and Y north-to-south, with nonfinite values converted to the CTL undefined sentinel. Files are grouped by UTC date; subdaily values are records in one daily file. CTL `tdef` count is derived from the total number of output time samples.
 - `make_CMF_runoff_info.py` reads NetCDF coordinates/attributes or the binary CTL and writes suggested grid settings, `IFRQ_INP`, and `DROFUNIT`. It does not generate the model Input Matrix. Its `DROFUNIT` arithmetic assumes the values are accumulated millimetres per record interval.
 
-The tracked raw and converted Japan NetCDFs each contain 31 daily timestamps. The converted NetCDF metadata says 24 hours. In contrast, the tracked binary CTL/report says 62 daily records, and 31 ignored local binary files are each two float32 grids (567,528 bytes for a 321×221 grid). Current binary source code derives the CTL count from output timestamps, so 31 timestamps with the current 24-hour wrapper would produce 31 records, not the tracked 62. The tracked metadata and ignored binary records therefore do not match the current tracked input plus current wrapper configuration. The historical settings that produced the files cannot be recovered from these artifacts alone; retain the discrepancy as unresolved and do not change or overwrite the samples as part of this review.
+The tracked raw and converted Japan NetCDFs each contain 31 daily timestamps. The converted NetCDF metadata says 24 hours. The 31 ignored local binary files each contain two float32 grids (567,528 bytes for a 321×221 grid). The maintainer identified the tracked `tdef 62 ... 1dy` as a CTL-generation error; the CTL and configuration report now describe 62 records at 12-hour spacing, matching this observed layout. Current binary source code derives the CTL count from output timestamps, so the current 31-time source plus 24-hour wrapper would produce 31 records, not the observed 62. The historical configuration that produced the ignored files is not represented by current tracked settings; the local layout description is not a validation of their values or provenance.
 
 ### Changes and verification boundary
 
@@ -206,8 +206,8 @@ The invalid `s01-download.sh` interpreter line was corrected so the Bash-specifi
 
 ### Questions requiring maintainer judgment
 
-1. Resolve KG-0019: which runoff accumulation period does each output timestamp represent, and what time series should a requested inclusive simulation period contain? ECMWF documentation states that the CDS 00:00 UTC accumulation represents the preceding 24 hours, while the current converter groups on the timestamp's calendar date and keeps that first value.
-2. Confirm how to interpret the existing binary CTL/report and ignored binary files. The present checkout cannot establish whether these artifacts were created by an older timestep/configuration or later modified independently. The synthetic tests establish current output-count behavior, not the provenance of these historical files.
+1. Continue KG-0019 validation: the maintainer has confirmed use of the runoff dataset's time labels. Verify whether the converter's first-value and daily-boundary treatment preserves the ERA5-Land accumulation semantics for an inclusive simulation period.
+2. Binary values and provenance remain unverified. The revised CTL describes the observed 12-hour layout only; current tracked input and wrapper settings still produce a different record count.
 3. Confirm the intended accepted policy for forecast resets/negative increments and missing cells before any scientific behavior changes. The compatibility suite pins the current implementation only.
 
 The current assignment was bounded to review, readability, non-scientific corrections, synthetic tests, documentation, the registry correction, and a local commit. It did not authorize any scientific algorithm change, sample replacement, CDS download, push, or pull request.
