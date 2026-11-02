@@ -24,7 +24,7 @@ The table below summarizes the sample locations and review state. The CSV is the
 | `test_15min_nc/` | NetCDF files for 2000 and 2001; `Runoff(time, lat, lon)` on a 0.25-degree grid (1440 × 600; edges 180°W–180°E, 60°S–90°N), daily time coordinate. | The sample NetCDF metadata declares `units="mm day-1"`. `gosh/test2-conus_06min_netcdf.sh` uses `IFRQ_INP=24` and `DROFUNIT=86400000`. |
 | `test_jpn_1hr/` | Plain binary daily files (`runoff_YYYYMMDD.bin`) plus `runoff.ctl`; Japan grid at 1/60 degree (1500 × 1320), 1-hour records for 2007-09-03 through 2007-09-09. | `gosh/test3-jpn_fcast.sh` sets `IFRQ_INP=1` and `DROFUNIT=3600000`, so each stored value is interpreted as runoff depth in mm per 1-hour record (equivalent to a 1-hour mean rate for conversion to m/s). The package CTL comment says `mm/day`, which conflicts with the run configuration. |
 | `download_ERA5/runoff_japan_nc/` | Converted monthly CaMa-Flood NetCDF sample with variable `runoff`. | Tracked in the repository; time labels follow ERA5-Land valid-time semantics. First-record attribution and period-boundary coverage are not independently validated (KG-0019). |
-| `download_ERA5/runoff_japan_bin/` | CTL and configuration report for converted daily-file binary output. | The binary records are not tracked in Git; current record layout and report/CTL timing need review. |
+| `download_ERA5/runoff_japan_bin/` | CTL and configuration report for converted daily-file binary output. | The maintainer reports recalculating 31 daily files with one grid per file; this matches the 31 daily NetCDF timestamps and the 24-hour CTL. Binary records remain untracked in Git. |
 
 ### Data Sources and Acquisition
 

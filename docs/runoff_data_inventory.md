@@ -41,8 +41,8 @@ Key evidence:
 | `ori_japan/ERA5-Land_runoff_200001.nc` | Raw ERA5-Land Japan sample, runoff variable `ro`, dimensions `valid_time=31`, `latitude=221`, `longitude=321`; 0.1-degree grid, latitude descending. Source units are metres, with accumulated-variable metadata. | Tracked, approximately 1.0 MiB. |
 | `runoff_japan_nc/runoff_200001.nc` | Converted Japan sample, `runoff(time,lat,lon)`, 31 daily-labelled records, 221×321, float32; output units `mm` per configured 24-hour step, missing data encoded as `1e20`. | Tracked, approximately 1.3 MiB. |
 | `runoff_japan_nc/runoff_info_CaMaFlood.txt` | Configuration report for the converted NetCDF sample. | Tracked. |
-| `runoff_japan_bin/runoff.ctl` | CTL describing the binary grid/time layout. | Tracked, but the daily binary records are not tracked. This workstation has 31 ignored files; their two-record-per-file layout conflicts with the CTL/report metadata. |
-| `runoff_japan_bin/runoff_info_CaMaFlood.txt` | Binary configuration report; records the locally observed two-record daily layout. | Tracked. The report now records 12-hour records and corresponding `DROFUNIT`; the binary files remain workstation-local and ignored. |
+| `runoff_japan_bin/runoff.ctl` | CTL describing the binary grid/time layout. | Tracked; declares 31 daily records. The maintainer reports regenerated local files with one grid per date, matching the CTL. |
+| `runoff_japan_bin/runoff_info_CaMaFlood.txt` | Binary configuration report for the current daily output. | Tracked; records 24-hour forcing and corresponding `DROFUNIT`. Binary files remain workstation-local and ignored. |
 
 The small tracked Japan samples total about 2.3 MiB for the raw and converted NetCDF data. The binary directory contains metadata only. The generated report is evidence of a prior conversion state, not proof that binary samples are currently distributable from Git.
 
@@ -108,7 +108,7 @@ The present code establishes the downstream calculation contract, but not the un
 1. **ERA5-Land first-record and period-boundary attribution (KG-0019):** source labels follow ERA5-Land valid times, but the converter's first-value and daily-group rules have not been validated as physically correct.
 2. **Missing data / noleap calendars:** source NaNs become `1e20` in outputs; aggregation uses `skipna=False`. The root PR #120 is open and concerns 365_day/noleap forcing calendars. Integration requirements should be coordinated without changing PR #120 here.
 3. **Runoff metadata are split across file formats:** units may be in a CTL or NetCDF attributes, while temporal accumulation/reset semantics are partly in documentation and converter assumptions. The model itself relies on user-configured `IFRQ_INP`, `DROFUNIT`, and variable name.
-4. **Binary sample reproducibility:** binary records are not Git-tracked although the CTL and report are. This workstation has 31 ignored files with two float32 grids each; the corrected CTL describes these as 62 records at 12-hour spacing. The current tracked 24-hour wrapper and 31-time NetCDF sample do not reproduce that local binary layout; a GitHub clone cannot run this binary example.
+4. **Binary sample availability:** binary records are not Git-tracked although the CTL and report are. The maintainer reports 31 local daily files with one float32 grid each after recalculation, matching the 31-time NetCDF sample and 24-hour wrapper. A GitHub clone still cannot run this binary example without regenerating the outputs.
 5. **Downloader portability:** fix the malformed shebang and choose/document supported shell invocation. This is a shell portability issue, not an algorithm issue.
 
 ### Phase B registry design proposed in Phase A
@@ -181,7 +181,7 @@ The registry covers `test_1deg`, `test_15min_nc`, `test_jpn_1hr`, the raw ERA5-L
 ### Questions for maintainer review
 
 1. Resolved by the maintainer: `test_jpn_1hr` uses the `mm/1h` convention implied by `gosh/test3-jpn_fcast.sh` (`IFRQ_INP=1`, `DROFUNIT=3600000`); its package CTL's `mm/day` comment conflicts with the run configuration.
-2. Resolved as a CTL/layout correction: the observed 2 grids per daily file are described as 62 records at 12-hour spacing. This is local binary-layout metadata, not proof of scientific values or a reproducible generation from the currently tracked source/settings.
+2. Resolved by rerunning the current 24-hour wrapper: 31 daily files each contain one grid, matching `tdef 31 ... 1dy`. Earlier two-grid files were likely left from changing settings during testing; that history is not independently verified.
 3. The maintainer confirmed that CaMa-Flood dates follow the selected runoff dataset's time labels. KG-0019 remains open only for first-record accumulation attribution and requested-period boundary validation.
 
 The package-only `test_1deg` CTL also declares 1000 time records while the inspected package contains 731 daily files spanning 2000-01-01 to 2001-12-31. The registry documents actual file coverage and the CTL discrepancy; the model run configuration uses 24-hour records and `DROFUNIT=86400000`.
@@ -198,7 +198,7 @@ The maintainer clarified that `inp/runoff_datasets.csv` is an inventory of CaMa-
 - NetCDF output is float32, `units="mm"`, ordered north-to-south by default, with a 1e20 fill value and a time-step-duration attribute. Binary output is float32, X west-to-east and Y north-to-south, with nonfinite values converted to the CTL undefined sentinel. Files are grouped by UTC date; subdaily values are records in one daily file. CTL `tdef` count is derived from the total number of output time samples.
 - `make_CMF_runoff_info.py` reads NetCDF coordinates/attributes or the binary CTL and writes suggested grid settings, `IFRQ_INP`, and `DROFUNIT`. It does not generate the model Input Matrix. Its `DROFUNIT` arithmetic assumes the values are accumulated millimetres per record interval.
 
-The tracked raw and converted Japan NetCDFs each contain 31 daily timestamps. The converted NetCDF metadata says 24 hours. The 31 ignored local binary files each contain two float32 grids (567,528 bytes for a 321×221 grid). The maintainer identified the tracked `tdef 62 ... 1dy` as a CTL-generation error; the CTL and configuration report now describe 62 records at 12-hour spacing, matching this observed layout. Current binary source code derives the CTL count from output timestamps, so the current 31-time source plus 24-hour wrapper would produce 31 records, not the observed 62. The historical configuration that produced the ignored files is not represented by current tracked settings; the local layout description is not a validation of their values or provenance.
+The tracked raw and converted Japan NetCDFs each contain 31 daily timestamps. The converted NetCDF metadata says 24 hours. After the maintainer reran the current 24-hour wrapper, the local output had 31 daily binary files, each one 321×221 float32 grid (283,764 bytes); the CTL and report now say 31 records at 1-day intervals. This matches the input timestamps and the current converter behavior, which derives the CTL count from output timestamps. The earlier two-grid-per-file state was likely produced while changing settings during testing, as the maintainer suspects, but its exact generation history is not verified. Local binary values were not scientifically validated.
 
 ### Changes and verification boundary
 
@@ -207,7 +207,7 @@ The invalid `s01-download.sh` interpreter line was corrected so the Bash-specifi
 ### Questions requiring maintainer judgment
 
 1. Continue KG-0019 validation: the maintainer has confirmed use of the runoff dataset's time labels. Verify whether the converter's first-value and daily-boundary treatment preserves the ERA5-Land accumulation semantics for an inclusive simulation period.
-2. Binary values and provenance remain unverified. The revised CTL describes the observed 12-hour layout only; current tracked input and wrapper settings still produce a different record count.
+2. The current binary record layout matches the tracked input and wrapper. Binary values have not been scientifically validated; the earlier interim two-record layout's history remains unverified.
 3. Confirm the intended accepted policy for forecast resets/negative increments and missing cells before any scientific behavior changes. The compatibility suite pins the current implementation only.
 
 The current assignment was bounded to review, readability, non-scientific corrections, synthetic tests, documentation, the registry correction, and a local commit. It did not authorize any scientific algorithm change, sample replacement, CDS download, push, or pull request.
