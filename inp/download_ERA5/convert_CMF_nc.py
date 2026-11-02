@@ -237,9 +237,11 @@ def accumulated_to_increment_daily_groups(
 ) -> xr.DataArray:
     """Convert accumulated runoff [m] to timestep increments [m].
 
-    Differencing is applied within each UTC day.
+    Differencing is applied within each UTC calendar-date group.
     This works for both daily input files and monthly input files, because
     grouping is based on the time coordinate, not on file boundaries.
+    The retained first value and its date attribution are current compatibility
+    behavior; see KG-0019 before interpreting these as UTC-day totals.
     """
 
     if "time" not in da.dims:
@@ -281,8 +283,8 @@ def accumulated_to_increment_daily_groups(
         inc = xr.concat([first_inc, diff], dim=sub["time"])
         inc = inc.assign_coords(time=sub["time"])
 
-        # If accumulation resets or numerical issues produce negative differences,
-        # use the current accumulated value at that timestep.
+        # Current compatibility rule: after a negative difference, use the
+        # current accumulated value, then optionally clip any negative result.
         inc = inc.where(inc >= 0.0, sub)
 
         if clip_negative:

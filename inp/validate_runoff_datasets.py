@@ -73,6 +73,14 @@ def validate():
     grids_by_tag = {}
     for row in rows:
         dataset_id = row["dataset_id"]
+        if row["product_role"] == "source_dataset":
+            raise ValueError(
+                f"{dataset_id}: raw source datasets belong in workflow guides, not the product registry"
+            )
+        if row["configuration_status"] == "source_only_not_model_ready":
+            raise ValueError(
+                f"{dataset_id}: registry entries must describe converted CaMa-Flood-ready products"
+            )
         if None in row:
             raise ValueError(f"{dataset_id}: row has more values than the header")
         if any(value is None for value in row.values()):

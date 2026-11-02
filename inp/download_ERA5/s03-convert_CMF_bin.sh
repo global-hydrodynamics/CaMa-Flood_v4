@@ -17,7 +17,7 @@
 #   monthly -> read ERA5-Land_runoff_YYYYMM.nc
 #==========================================================
 
-set -u
+set -eu
 
 #==========================================================
 # User settings
@@ -42,7 +42,7 @@ if [ "${INPUT_FILE_UNIT}" = "daily" ]; then
 elif [ "${INPUT_FILE_UNIT}" = "monthly" ]; then
     INPUT_PATTERN="ERA5-Land_runoff_%Y%m.nc"
 else
-    echo "ERROR: INPUT_FILE_UNIT must be daily or monthly."
+    echo "[ERROR] INPUT_FILE_UNIT must be daily or monthly."
     exit 1
 fi
 
@@ -68,6 +68,7 @@ GRADS_TITLE="ERA5Land Runoff"
 
 SKIP_EXISTING=0
 
+# This simple string is intentionally split into command-line words below.
 EXTRA_OPTS=""
 
 # Metadata text file for CaMa-Flood settings.
@@ -83,29 +84,29 @@ LOGDIR="./log_convert_bin"
 mkdir -p "${OUTDIR}" "${LOGDIR}"
 
 if ! command -v "${PYTHON_CMD}" >/dev/null 2>&1; then
-    echo "ERROR: Python command not found: ${PYTHON_CMD}"
+    echo "[ERROR] Python command not found: ${PYTHON_CMD}"
     exit 1
 fi
 
 if [ ! -f "${PYTHON_SCRIPT}" ]; then
-    echo "ERROR: Python converter not found: ${PYTHON_SCRIPT}"
+    echo "[ERROR] Python converter not found: ${PYTHON_SCRIPT}"
     exit 1
 fi
 
 if [ ! -d "${INDIR}" ]; then
-    echo "ERROR: input directory not found: ${INDIR}"
+    echo "[ERROR] Input directory not found: ${INDIR}"
     exit 1
 fi
 
 if [ ! -f "${INFO_SCRIPT}" ]; then
-    echo "ERROR: runoff information script not found: ${INFO_SCRIPT}"
+    echo "[ERROR] Runoff information script not found: ${INFO_SCRIPT}"
     exit 1
 fi
 
 case "${INPUT_FILE_UNIT}" in
     daily|monthly) ;;
     *)
-        echo "ERROR: INPUT_FILE_UNIT must be daily or monthly."
+        echo "[ERROR] INPUT_FILE_UNIT must be daily or monthly."
         exit 1
         ;;
 esac
@@ -113,18 +114,18 @@ esac
 case "${ENDIAN}" in
     little|big) ;;
     *)
-        echo "ERROR: ENDIAN must be little or big."
+        echo "[ERROR] ENDIAN must be little or big."
         exit 1
         ;;
 esac
 
 if [ "${TIMESTEP_HOURS}" -lt 1 ] || [ "${TIMESTEP_HOURS}" -gt 24 ]; then
-    echo "ERROR: TIMESTEP_HOURS must be between 1 and 24."
+    echo "[ERROR] TIMESTEP_HOURS must be between 1 and 24."
     exit 1
 fi
 
 if [ $((24 % TIMESTEP_HOURS)) -ne 0 ]; then
-    echo "ERROR: TIMESTEP_HOURS must divide 24 exactly."
+    echo "[ERROR] TIMESTEP_HOURS must divide 24 exactly."
     exit 1
 fi
 
@@ -153,7 +154,8 @@ echo "=========================================================="
 
 LOGFILE="${LOGDIR}/convert_binary.log"
 
-"${PYTHON_CMD}" "${PYTHON_SCRIPT}" \
+echo "[STEP] Convert source NetCDF files to daily binary files and CTL"
+if "${PYTHON_CMD}" "${PYTHON_SCRIPT}" \
     --start "${START_DATE}" \
     --end "${END_DATE}" \
     --indir "${INDIR}" \
@@ -171,17 +173,20 @@ LOGFILE="${LOGDIR}/convert_binary.log"
     --grads-title "${GRADS_TITLE}" \
     --endian "${ENDIAN}" \
     --skip-existing "${SKIP_EXISTING}" \
-    ${EXTRA_OPTS} > "${LOGFILE}" 2>&1
-
-status="$?"
+    ${EXTRA_OPTS} > "${LOGFILE}" 2>&1; then
+    status=0
+else
+    status=$?
+fi
 
 if [ "${status}" = "0" ]; then
     echo "=========================================================="
-    echo "All binary conversion jobs finished successfully."
+    echo "[SUCCESS] Binary conversion finished successfully."
+    echo "[STEP] Write CaMa-Flood runoff information summary"
     echo "Creating CaMa-Flood runoff information file..."
     echo "=========================================================="
 
-    "${PYTHON_CMD}" "${INFO_SCRIPT}" \
+    if "${PYTHON_CMD}" "${INFO_SCRIPT}" \
         --source-format binary \
         --outdir "${OUTDIR}" \
         --outfile "${INFO_FILE}" \
@@ -195,11 +200,10 @@ if [ "${status}" = "0" ]; then
         --start "${START_DATE}" \
         --end "${END_DATE}" \
         --sample-name "${INFO_SAMPLE_NAME}" \
-        --overwrite
-
-    info_status="$?"
-    if [ "${info_status}" != "0" ]; then
-        echo "ERROR: failed to create runoff information file."
+        --overwrite; then
+        echo "[SUCCESS] Runoff information file written: ${INFO_FILE}"
+    else
+        echo "[ERROR] Failed to create runoff information file."
         exit 1
     fi
 
@@ -210,7 +214,7 @@ if [ "${status}" = "0" ]; then
     exit 0
 else
     echo "=========================================================="
-    echo "Binary conversion failed. Check log: ${LOGFILE}"
+    echo "[ERROR] Binary conversion failed. Check log: ${LOGFILE}"
     echo "=========================================================="
     exit 1
 fi

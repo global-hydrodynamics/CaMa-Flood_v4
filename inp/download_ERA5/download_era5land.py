@@ -6,7 +6,7 @@
 #   - one daily file:   --file-unit daily   --day DD
 #   - one monthly file: --file-unit monthly --start-day DD --end-day DD
 #
-# It is intended to be called by s11-download.sh.
+# It is intended to be called by s01-download.sh.
 #
 # Daily example:
 #   python download_era5land.py \
@@ -331,6 +331,9 @@ def make_request(args: argparse.Namespace, file_unit: str) -> dict:
         "year": yyyy,
         "month": mm,
         "day": make_days(args, file_unit),
+        # These are CDS validity times, beginning at 00:00 UTC each day.
+        # The meaning of the 00:00 accumulation for CaMa-Flood date labels
+        # is documented as unresolved in KG-0019; do not shift it here.
         "time": make_times(args.time_step),
         "area": make_cds_area(args),
         "data_format": "netcdf",

@@ -236,9 +236,11 @@ def infer_resolution(values: np.ndarray) -> float:
 def accumulated_to_increment_daily_groups(da: xr.DataArray) -> xr.DataArray:
     """Convert accumulated runoff [m] to timestep increments [m].
 
-    Differencing is applied within each UTC day. This works for both
+    Differencing is applied within each UTC calendar-date group. This works for both
     daily input files and monthly input files because grouping uses the
     time coordinate, not file boundaries.
+    The retained first value and its date attribution are current compatibility
+    behavior; see KG-0019 before interpreting these as UTC-day totals.
     """
 
     if "time" not in da.dims:
@@ -267,8 +269,8 @@ def accumulated_to_increment_daily_groups(da: xr.DataArray) -> xr.DataArray:
         inc = xr.concat([first, diff], dim=sub["time"])
         inc = inc.assign_coords(time=sub["time"])
 
-        # Negative increments are interpreted as reset/numerical issues.
-        # Use the current accumulated value and clip remaining negatives.
+        # Current compatibility rule: use the current value after a negative
+        # difference, then clip any remaining negative results to zero.
         inc = inc.where(inc >= 0.0, sub)
         inc = inc.clip(min=0.0)
 

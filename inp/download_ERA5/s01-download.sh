@@ -1,4 +1,4 @@
-#/bin/bash
+#!/usr/bin/env bash
 #==========================================================
 # Download ERA5-Land runoff using a Python CDS downloader.
 #
@@ -37,7 +37,7 @@
 #   The Python downloader should convert it internally.
 #==========================================================
 
-set -u
+set -eu
 
 #==========================================================
 # PBS settings, optional for HPC users.
@@ -101,10 +101,10 @@ EDAY=31
 #EAST=180.0
 
 # Example: Japan region
- NORTH=46.0
- SOUTH=24.0
- WEST=122.0
- EAST=154.0
+NORTH=46.0
+SOUTH=24.0
+WEST=122.0
+EAST=154.0
 
 
 # (4) Basic Settings 
@@ -116,6 +116,7 @@ VARIABLE="runoff"
 SKIP_EXISTING=1
 
 # Extra options passed to Python downloader, if needed.
+# This simple string is intentionally split into command-line words below.
 EXTRA_OPTS="--area-is edge"
 
 #==========================================================
@@ -126,13 +127,13 @@ LOGDIR="./log_download"
 mkdir -p "${OUTDIR}" "${LOGDIR}"
 
 if ! command -v "${PYTHON_CMD}" >/dev/null 2>&1; then
-    echo "ERROR: Python command not found: ${PYTHON_CMD}"
+    echo "[ERROR] Python command not found: ${PYTHON_CMD}"
     echo "       Edit PYTHON_CMD in this script, or activate a Python environment."
     exit 1
 fi
 
 if [ ! -f "${PYTHON_SCRIPT}" ]; then
-    echo "ERROR: Python downloader not found: ${PYTHON_SCRIPT}"
+    echo "[ERROR] Python downloader not found: ${PYTHON_SCRIPT}"
     exit 1
 fi
 
@@ -140,23 +141,23 @@ case "${DOWNLOAD_UNIT}" in
     daily|monthly)
         ;;
     *)
-        echo "ERROR: DOWNLOAD_UNIT must be daily or monthly."
+        echo "[ERROR] DOWNLOAD_UNIT must be daily or monthly."
         exit 1
         ;;
 esac
 
 if [ "${TSTEP}" -lt 1 ] || [ "${TSTEP}" -gt 24 ]; then
-    echo "ERROR: TSTEP must be between 1 and 24."
+    echo "[ERROR] TSTEP must be between 1 and 24."
     exit 1
 fi
 
 if [ $((24 % TSTEP)) -ne 0 ]; then
-    echo "ERROR: TSTEP must divide 24 exactly: 1, 2, 3, 4, 6, 8, 12, or 24."
+    echo "[ERROR] TSTEP must divide 24 exactly: 1, 2, 3, 4, 6, 8, 12, or 24."
     exit 1
 fi
 
 if [ "${NCPUS}" -lt 1 ]; then
-    echo "ERROR: NCPUS must be at least 1."
+    echo "[ERROR] NCPUS must be at least 1."
     exit 1
 fi
 
@@ -184,13 +185,13 @@ check_failed_jobs() {
         status=$(cat "${status_file}")
 
         if [ "${status}" != "0" ]; then
-            echo "ERROR: failed download detected: ${status_file}, exit code ${status}"
+            echo "[ERROR] Failed download: ${status_file}, exit code ${status}"
             failed=1
         fi
     done
 
     if [ "${nstatus}" -eq 0 ]; then
-        echo "ERROR: no status files were created."
+        echo "[ERROR] No status files were created."
         return 1
     fi
 
@@ -219,19 +220,22 @@ run_download() {
         overwrite_opt="--overwrite"
     fi
 
-    echo "Download: ${outfile}"
+    echo "[STEP] Download: ${outfile}"
 
     (
-        "${PYTHON_CMD}" "${PYTHON_SCRIPT}" \
+        if "${PYTHON_CMD}" "${PYTHON_SCRIPT}" \
             "$@" \
             --variable "${VARIABLE}" \
             --time-step "${TSTEP}" \
             --area-nswe "${NORTH}" "${SOUTH}" "${WEST}" "${EAST}" \
             --out "${outfile}" \
             ${overwrite_opt} \
-            ${EXTRA_OPTS} > "${logfile}" 2>&1
-
-        echo "$?" > "${statusfile}"
+            ${EXTRA_OPTS} > "${logfile}" 2>&1; then
+            status=0
+        else
+            status=$?
+        fi
+        echo "${status}" > "${statusfile}"
     ) &
 }
 
@@ -280,6 +284,7 @@ download_one_month() {
 # Main
 #==========================================================
 
+echo "[STEP] Prepare download status files and date ranges"
 rm -f "${LOGDIR}"/status_*.txt
 
 syear4=$(printf "%04d" "$((10#${SYEAR}))")
@@ -306,6 +311,7 @@ echo "Skip existing : ${SKIP_EXISTING}"
 echo "=========================================================="
 
 if [ "${DOWNLOAD_UNIT}" = "daily" ]; then
+    echo "[STEP] Submit daily ERA5-Land requests"
     # Generate inclusive date list using Python.
     DATES=$("${PYTHON_CMD}" - <<EOF
 from datetime import date, timedelta
@@ -330,7 +336,7 @@ EOF
 )
 
     if [ -z "${DATES}" ]; then
-        echo "ERROR: no dates generated."
+        echo "[ERROR] No dates generated."
         exit 1
     fi
 
@@ -341,6 +347,7 @@ EOF
     done <<< "${DATES}"
 
 elif [ "${DOWNLOAD_UNIT}" = "monthly" ]; then
+    echo "[STEP] Submit monthly-grouped ERA5-Land requests"
     # Generate inclusive month list.
     # Each line:
     #   YEAR MONTH START_DAY END_DAY
@@ -383,7 +390,7 @@ EOF
 )
 
     if [ -z "${MONTHS}" ]; then
-        echo "ERROR: no months generated."
+        echo "[ERROR] No months generated."
         exit 1
     fi
 
@@ -394,17 +401,19 @@ EOF
     done <<< "${MONTHS}"
 fi
 
-# Wait for all background downloads before exiting.
-wait
+# Wait for all background downloads. Per-file status records provide the
+# detailed result, so continue to check them even if a job returned nonzero.
+wait_status=0
+wait || wait_status=$?
 
-if check_failed_jobs; then
+if [ "${wait_status}" -eq 0 ] && check_failed_jobs; then
     echo "=========================================================="
-    echo "All download jobs finished successfully."
+    echo "[SUCCESS] All download jobs finished successfully."
     echo "=========================================================="
     exit 0
 else
     echo "=========================================================="
-    echo "Some download jobs failed. Check logs in: ${LOGDIR}"
+    echo "[ERROR] Some download jobs failed. Check logs in: ${LOGDIR}"
     echo "=========================================================="
     exit 1
 fi

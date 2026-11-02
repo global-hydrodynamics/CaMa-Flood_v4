@@ -15,7 +15,7 @@
 #
 #==========================================================
 
-set -u
+set -eu
 
 #==========================================================
 # User settings
@@ -48,7 +48,7 @@ if [ "${INPUT_FILE_UNIT}" = "daily" ]; then
 elif [ "${INPUT_FILE_UNIT}" = "monthly" ]; then
     INPUT_PATTERN="ERA5-Land_runoff_%Y%m.nc"
 else
-    echo "ERROR: INPUT_FILE_UNIT must be daily or monthly."
+    echo "[ERROR] INPUT_FILE_UNIT must be daily or monthly."
     exit 1
 fi
 
@@ -89,6 +89,7 @@ SKIP_EXISTING=0
 NCPUS=1
 
 # Extra options passed to Python converter, if needed.
+# This simple string is intentionally split into command-line words below.
 EXTRA_OPTS=""
 
 # Metadata text file for CaMa-Flood settings.
@@ -105,23 +106,23 @@ LOGDIR="./log_convert"
 mkdir -p "${OUTDIR}" "${LOGDIR}"
 
 if ! command -v "${PYTHON_CMD}" >/dev/null 2>&1; then
-    echo "ERROR: Python command not found: ${PYTHON_CMD}"
+    echo "[ERROR] Python command not found: ${PYTHON_CMD}"
     echo "       Edit PYTHON_CMD in this script, or activate a Python environment."
     exit 1
 fi
 
 if [ ! -f "${PYTHON_SCRIPT}" ]; then
-    echo "ERROR: Python converter not found: ${PYTHON_SCRIPT}"
+    echo "[ERROR] Python converter not found: ${PYTHON_SCRIPT}"
     exit 1
 fi
 
 if [ ! -f "${INFO_SCRIPT}" ]; then
-    echo "ERROR: runoff information script not found: ${INFO_SCRIPT}"
+    echo "[ERROR] Runoff information script not found: ${INFO_SCRIPT}"
     exit 1
 fi
 
 if [ ! -d "${INDIR}" ]; then
-    echo "ERROR: input directory not found: ${INDIR}"
+    echo "[ERROR] Input directory not found: ${INDIR}"
     exit 1
 fi
 
@@ -129,13 +130,13 @@ case "${INPUT_FILE_UNIT}" in
     daily|monthly)
         ;;
     *)
-        echo "ERROR: INPUT_FILE_UNIT must be daily or monthly."
+        echo "[ERROR] INPUT_FILE_UNIT must be daily or monthly."
         exit 1
         ;;
 esac
 
 if [ "${NCPUS}" -lt 1 ]; then
-    echo "ERROR: NCPUS must be at least 1."
+    echo "[ERROR] NCPUS must be at least 1."
     exit 1
 fi
 
@@ -143,7 +144,7 @@ case "${MERGE_UNIT}" in
     yearly|monthly)
         ;;
     *)
-        echo "ERROR: MERGE_UNIT must be yearly or monthly."
+        echo "[ERROR] MERGE_UNIT must be yearly or monthly."
         exit 1
         ;;
 esac
@@ -172,13 +173,13 @@ check_failed_jobs() {
         status=$(cat "${status_file}")
 
         if [ "${status}" != "0" ]; then
-            echo "ERROR: failed conversion detected: ${status_file}, exit code ${status}"
+            echo "[ERROR] Failed conversion: ${status_file}, exit code ${status}"
             failed=1
         fi
     done
 
     if [ "${nstatus}" -eq 0 ]; then
-        echo "ERROR: no status files were created."
+        echo "[ERROR] No status files were created."
         return 1
     fi
 
@@ -209,10 +210,10 @@ run_one_period() {
         overwrite_opt="--overwrite"
     fi
 
-    echo "Convert: ${pstart} to ${pend} -> ${outfile}"
+    echo "[STEP] Convert: ${pstart} to ${pend} -> ${outfile}"
 
     (
-        "${PYTHON_CMD}" "${PYTHON_SCRIPT}" \
+        if "${PYTHON_CMD}" "${PYTHON_SCRIPT}" \
             --start "${pstart}" \
             --end "${pend}" \
             --indir "${INDIR}" \
@@ -225,9 +226,12 @@ run_one_period() {
             --fill-value "${FILL_VALUE}" \
             --lat-order "${LAT_ORDER}" \
             ${overwrite_opt} \
-            ${EXTRA_OPTS} > "${logfile}" 2>&1
-
-        echo "$?" > "${statusfile}"
+            ${EXTRA_OPTS} > "${logfile}" 2>&1; then
+            status=0
+        else
+            status=$?
+        fi
+        echo "${status}" > "${statusfile}"
     ) &
 }
 
@@ -235,6 +239,7 @@ run_one_period() {
 # Main
 #==========================================================
 
+echo "[STEP] Prepare conversion status files and output periods"
 rm -f "${LOGDIR}"/status_*.txt
 
 echo "=========================================================="
@@ -258,6 +263,7 @@ echo "Parallel jobs   : ${NCPUS}"
 echo "Skip existing   : ${SKIP_EXISTING}"
 echo "=========================================================="
 
+echo "[STEP] Create conversion period list"
 # Generate output periods using Python.
 # Output columns:
 #   period_start period_end output_filename tag
@@ -310,7 +316,7 @@ EOF
 )
 
 if [ -z "${PERIODS}" ]; then
-    echo "ERROR: no periods generated."
+    echo "[ERROR] No periods generated."
     exit 1
 fi
 
@@ -320,11 +326,13 @@ while read -r PSTART PEND FNAME TAG; do
     run_one_period "${PSTART}" "${PEND}" "${OUTDIR}/${FNAME}" "${TAG}"
 done <<< "${PERIODS}"
 
-wait
+# Wait for all background conversions, then inspect each status record.
+wait_status=0
+wait || wait_status=$?
 
-if check_failed_jobs; then
+if [ "${wait_status}" -eq 0 ] && check_failed_jobs; then
     echo "=========================================================="
-    echo "All conversion jobs finished successfully."
+    echo "[SUCCESS] All conversion jobs finished successfully."
     echo "Creating CaMa-Flood runoff information file..."
     echo "=========================================================="
 
@@ -336,7 +344,8 @@ if check_failed_jobs; then
         overwrite_info_opt="--overwrite"
     fi
 
-    "${PYTHON_CMD}" "${INFO_SCRIPT}" \
+    echo "[STEP] Write CaMa-Flood runoff information summary"
+    if "${PYTHON_CMD}" "${INFO_SCRIPT}" \
         --outdir "${OUTDIR}" \
         --outfile "${INFO_FILE}" \
         --pattern "runoff_*.nc" \
@@ -346,11 +355,10 @@ if check_failed_jobs; then
         --start "${START_DATE}" \
         --end "${END_DATE}" \
         --sample-name "${INFO_SAMPLE_NAME}" \
-        --overwrite
-
-    info_status="$?"
-    if [ "${info_status}" != "0" ]; then
-        echo "ERROR: failed to create runoff information file."
+        --overwrite; then
+        echo "[SUCCESS] Runoff information file written: ${INFO_FILE}"
+    else
+        echo "[ERROR] Failed to create runoff information file."
         exit 1
     fi
 
@@ -360,7 +368,7 @@ if check_failed_jobs; then
     exit 0
 else
     echo "=========================================================="
-    echo "Some conversion jobs failed. Check logs in: ${LOGDIR}"
+    echo "[ERROR] Some conversion jobs failed. Check logs in: ${LOGDIR}"
     echo "=========================================================="
     exit 1
 fi

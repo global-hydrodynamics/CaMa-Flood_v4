@@ -34,7 +34,7 @@ Key evidence:
 | --- | --- | --- |
 | `inp/README.md` | Explains runoff units, `DROFUNIT`, runoff-grid versus river-map distinction, package examples, ERA5-Land workflow, and known unit-selection cautions. | Tracked; already substantial. |
 | `inp/download_ERA5/ReadMe.md` | CDS credentials/licence, workflow commands, settings, dependencies, converter outputs, and configuration summary. | Tracked. |
-| `s01-download.sh` + `download_era5land.py` | Request ERA5-Land runoff as NetCDF; daily or monthly file grouping; configurable time step, area, retries, overwrite/skip behavior. | Tracked. Shell line 1 is `#/bin/bash` (not a valid shebang); script contains Bash-specific arithmetic. |
+| `s01-download.sh` + `download_era5land.py` | Request ERA5-Land runoff as NetCDF; daily or monthly file grouping; configurable time step, area, retries, overwrite/skip behavior. | Tracked. At the time of the Phase A inspection the shell line 1 was `#/bin/bash`, not a valid shebang; Phase C corrected it to an explicit Bash interpreter. |
 | `s02-convert_CMF_nc.sh` + `convert_CMF_nc.py` | Convert source accumulated runoff into float32 NetCDF `runoff` with time-step metadata and `_FillValue`. | Tracked. |
 | `s03-convert_CMF_bin.sh` + `convert_CMF_bin.py` | Convert to little-endian float32 binary grids, one file per day with subdaily records inside, plus CTL. | Tracked. The shell currently passes one `TIMESTEP_HOURS` value as both input and output time step; Python supports a distinct output interval. |
 | `make_CMF_runoff_info.py` | Inspect a converted NetCDF or binary/CTL product and emit a text summary including grid, time step, file pattern, and suggested forcing settings. | Tracked. Product-specific inspection, not a proven universal metadata detector. |
@@ -158,7 +158,7 @@ These questions are recorded before resolution. They do not prevent completing t
 
 ### Important — interface and data policy
 
-4. **Metadata registry row granularity — resolved for the initial registry:** the maintainer task specifies one row per product, with source and converted products separate and products on the same grid sharing a `ROFFTAG`.
+4. **Metadata registry scope — resolved for the current product registry:** the maintainer task specifies one row per CaMa-Flood-ready product. Raw source files remain documented as provenance and processing inputs but are excluded from the registry. Products on the same grid share a `ROFFTAG`.
 5. **Binary example:** the binary records are not tracked in Git; 31 ignored files are present in this workstation and conflict with the CTL/report time layout. Whether a real binary sample should be tracked or omitted in favor of synthetic fixtures remains undecided.
 6. **Real-sample redistribution:** the current raw and converted ERA5-Land Japan files are tracked, but this Phase A review did not independently audit every applicable licence term. Should new extracted real samples be added only after a separate permission review?
 7. **ERA5 scope:** is the current scope specifically ERA5-Land runoff only, or should future phases include the distinct atmospheric ERA5 product? Current code implements only ERA5-Land.
@@ -185,3 +185,29 @@ The registry covers `test_1deg`, `test_15min_nc`, `test_jpn_1hr`, the raw ERA5-L
 3. KG-0019 remains open: should converted ERA5-Land record dates identify valid timestamps or the physical accumulation periods? The registry does not change converter or model time interpretation.
 
 The package-only `test_1deg` CTL also declares 1000 time records while the inspected package contains 731 daily files spanning 2000-01-01 to 2001-12-31. The registry documents actual file coverage and the CTL discrepancy; the model run configuration uses 24-hour records and `DROFUNIT=86400000`.
+
+## Phase B registry correction and Phase C ERA5-Land review — 2026-11-02
+
+The maintainer clarified that `inp/runoff_datasets.csv` is an inventory of CaMa-Flood-ready runoff products, not raw downloaded sources. The `era5land_japan_source_200001` entry was removed. The tracked `ori_japan/` NetCDF remains unchanged and its provenance, download procedure, source units, and conversion role are documented in [`inp/download_ERA5/ReadMe.md`](../inp/download_ERA5/ReadMe.md). The registry validator now rejects raw-source-only entries; the converted NetCDF and binary product entries remain.
+
+### Behavior recovered from code and tracked examples
+
+- `download_era5land.py` requests dataset `reanalysis-era5-land`, variable `runoff` by default, selected dates and times, NetCDF format, and the configured area. `s01-download.sh` uses monthly grouping and `--area-is edge`; monthly grouping is file/request grouping, not temporal averaging. Center limits, if chosen instead, are expanded by half the configured grid step and the CDS area order is changed from N/S/W/E to N/W/S/E.
+- Download requests include 00:00 UTC and, for subdaily steps, later validity times through 23:00. The Python writer downloads to a `.part` path, checks that it is nonempty, and atomically replaces the final path; it retries a failed request. A pre-existing file is skipped unless overwrite is requested.
+- Both converters assume accumulated source runoff in metres, difference within UTC calendar-date groups, then multiply by 1000. The default first value in each date group is kept. Negative differences are replaced by the current accumulated value and clipped at zero. The NetCDF converter has configurable `keep|zero|missing` first-step choices and clipping toggle; the binary converter currently hardcodes the default behavior. These are code facts, not a confirmation that the behavior is scientifically correct.
+- NetCDF output is float32, `units="mm"`, ordered north-to-south by default, with a 1e20 fill value and a time-step-duration attribute. Binary output is float32, X west-to-east and Y north-to-south, with nonfinite values converted to the CTL undefined sentinel. Files are grouped by UTC date; subdaily values are records in one daily file. CTL `tdef` count is derived from the total number of output time samples.
+- `make_CMF_runoff_info.py` reads NetCDF coordinates/attributes or the binary CTL and writes suggested grid settings, `IFRQ_INP`, and `DROFUNIT`. It does not generate the model Input Matrix. Its `DROFUNIT` arithmetic assumes the values are accumulated millimetres per record interval.
+
+The tracked raw and converted Japan NetCDFs each contain 31 daily timestamps. The converted NetCDF metadata says 24 hours. In contrast, the tracked binary CTL/report says 62 daily records, and 31 ignored local binary files are each two float32 grids (567,528 bytes for a 321×221 grid). Current binary source code derives the CTL count from output timestamps, so 31 timestamps with the current 24-hour wrapper would produce 31 records, not the tracked 62. The tracked metadata and ignored binary records therefore do not match the current tracked input plus current wrapper configuration. The historical settings that produced the files cannot be recovered from these artifacts alone; retain the discrepancy as unresolved and do not change or overwrite the samples as part of this review.
+
+### Changes and verification boundary
+
+The invalid `s01-download.sh` interpreter line was corrected so the Bash-specific wrapper can be executed directly. Shell wrappers now show processing steps and preserve per-job status checks under explicit error handling. Offline synthetic compatibility tests were added under `inp/download_ERA5/tests/`; they do not contact CDS or use the real Japan data. Scientific time labels, first-record attribution, negative values, missing-value policy, and reset handling were not changed. No model simulation, map/Input Matrix generation, CDS request, or real-data conversion was run.
+
+### Questions requiring maintainer judgment
+
+1. Resolve KG-0019: which runoff accumulation period does each output timestamp represent, and what time series should a requested inclusive simulation period contain? ECMWF documentation states that the CDS 00:00 UTC accumulation represents the preceding 24 hours, while the current converter groups on the timestamp's calendar date and keeps that first value.
+2. Confirm how to interpret the existing binary CTL/report and ignored binary files. The present checkout cannot establish whether these artifacts were created by an older timestep/configuration or later modified independently. The synthetic tests establish current output-count behavior, not the provenance of these historical files.
+3. Confirm the intended accepted policy for forecast resets/negative increments and missing cells before any scientific behavior changes. The compatibility suite pins the current implementation only.
+
+The current assignment was bounded to review, readability, non-scientific corrections, synthetic tests, documentation, the registry correction, and a local commit. It did not authorize any scientific algorithm change, sample replacement, CDS download, push, or pull request.

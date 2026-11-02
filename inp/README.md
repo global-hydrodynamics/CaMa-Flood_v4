@@ -10,7 +10,7 @@ The `inp/` directory contains tools for preparing runoff forcing used by CaMa-Fl
 
 ## Runoff Dataset Registry
 
-Each row in [runoff_datasets.csv](runoff_datasets.csv) represents one specific product, including source and converted examples when their roles differ. It records the runoff-grid parameters needed for matrix generation, the data `record_interval_hours` separately from the model `IFRQ_INP` setting, units needed for `DROFUNIT`, and the format, path pattern, NetCDF variable, provenance, and availability. Empty fields are not established values. Use `configuration_status` and `notes` to distinguish configured metadata from source-only entries and unresolved settings.
+Each row in [runoff_datasets.csv](runoff_datasets.csv) represents a CaMa-Flood-ready runoff product. Raw downloaded source files are documented in the relevant workflow guide, but are not registry entries until converted to a model-facing product. The registry records runoff-grid parameters needed for matrix generation, data `record_interval_hours` separately from model `IFRQ_INP`, units needed for `DROFUNIT`, and the format, path pattern, NetCDF variable, provenance, and availability. Empty fields are not established values. Use `configuration_status` and `notes` to distinguish confirmed metadata from unresolved runtime settings.
 
 `ROFFTAG` identifies a runoff input grid for the paired `inpdim_<ROFFTAG>.txt` and `inpmat_<ROFFTAG>.bin` names. It is independent of the CaMa-Flood map resolution. Products on the same grid can share a `ROFFTAG`; each generated matrix remains specific to its target map.
 
@@ -23,7 +23,6 @@ The table below summarizes the sample locations and review state. The CSV is the
 | `test_1deg/` | Plain binary (`Roff____YYYYMMDD.one`) plus `runoff.ctl`; global 1-degree grid (360 × 180; edges 180°W–180°E, 90°S–90°N); daily files from 2000-01-01 through 2001-12-31. | The `.ctl` declares runoff in `mm/day`. `gosh/test1-glb_15min.sh` uses `IFRQ_INP=24` and `DROFUNIT=86400000`. |
 | `test_15min_nc/` | NetCDF files for 2000 and 2001; `Runoff(time, lat, lon)` on a 0.25-degree grid (1440 × 600; edges 180°W–180°E, 60°S–90°N), daily time coordinate. | The sample NetCDF metadata declares `units="mm day-1"`. `gosh/test2-conus_06min_netcdf.sh` uses `IFRQ_INP=24` and `DROFUNIT=86400000`. |
 | `test_jpn_1hr/` | Plain binary daily files (`runoff_YYYYMMDD.bin`) plus `runoff.ctl`; Japan grid at 1/60 degree (1500 × 1320), 1-hour records for 2007-09-03 through 2007-09-09. | The CTL labels runoff `mm/day`, while `gosh/test3-jpn_fcast.sh` uses `mm/hr` and `DROFUNIT=3600000`. Confirm the stored-value unit before using this sample. |
-| `download_ERA5/ori_japan/` | Original ERA5-Land source NetCDF sample with variable `ro`; not ready for direct model input. | Tracked in the GitHub repository; convert before simulation. |
 | `download_ERA5/runoff_japan_nc/` | Converted monthly CaMa-Flood NetCDF sample with variable `runoff`. | Tracked in the repository; the ERA5-Land accumulation date interpretation remains open in KG-0019. |
 | `download_ERA5/runoff_japan_bin/` | CTL and configuration report for converted daily-file binary output. | The binary records are not tracked in Git; current record layout and report/CTL timing need review. |
 
@@ -118,41 +117,9 @@ The `GRSIZEIN`, `WESTIN`, `EASTIN`, `NORTHIN`, `SOUTHIN`, and `OLAT` settings us
 
 Use the runoff product's coordinate metadata to determine its resolution, limits, longitude convention, and latitude order. Then prepare an input matrix that matches both that runoff grid and the selected map. See the [map overview](../map/README.md) and the `src_param` [input-matrix script](../map/src/src_param/s02-generate_inpmat.sh); the Fortran implementation is [`generate_inpmat.F90`](../map/src/src_param/generate_inpmat.F90). This README does not replace their workflow-specific instructions.
 
-## Available ERA5-Land preparation tools
+## ERA5-Land source and conversion workflow
 
-The current workflow is:
-
-```text
-s01-download.sh
-    ├── s02-convert_CMF_nc.sh  → CaMa-Flood NetCDF forcing
-    └── s03-convert_CMF_bin.sh → plain binary forcing + GrADS .ctl
-```
-
-The download script requests ERA5-Land runoff for a selected period, region, and time step. The conversion scripts process those source files, and `make_CMF_runoff_info.py` inspects the converted product and writes a text summary of useful grid and forcing settings. See [`download_ERA5/ReadMe.md`](download_ERA5/ReadMe.md) for account setup, commands, all options, and product-specific notes.
-
-### Select a region, period, and time step
-
-In `download_ERA5/s01-download.sh`, configure `NORTH`, `SOUTH`, `WEST`, and `EAST`, then set the inclusive start and end dates with `SYEAR`, `SMONTH`, `SDAY`, `EYEAR`, `EMONTH`, and `EDAY`. For example, values around Japan are `NORTH=46.0`, `SOUTH=24.0`, `WEST=122.0`, and `EAST=154.0`. These select an ERA5-Land download area, not the CaMa-Flood map bounds. The shell wrapper currently passes `--area-is edge`, so these values are interpreted as bounding edges; the Python downloader also supports center limits, which it expands by half a grid cell when requested.
-
-`TSTEP` sets the runoff data time step in hours. The downloader accepts integer values that divide 24 exactly: 1, 2, 3, 4, 6, 8, 12, or 24 hours. `DOWNLOAD_UNIT` controls whether requests are grouped into daily source files (`ERA5-Land_runoff_YYYYMMDD.nc`) or monthly source files (`ERA5-Land_runoff_YYYYMM.nc`). Monthly grouping reduces the number of files/requests; it does **not** mean monthly-averaged runoff. The dates and `TSTEP` determine the actual period and temporal spacing.
-
-Downloading requires a CDS account, API credentials configured for `cdsapi`, and acceptance of the ERA5-Land licence. The Python download/conversion tools also use packages including NumPy, pandas, xarray, and NetCDF4; see the [ERA5-Land guide](download_ERA5/ReadMe.md) and each script's imports for environment details. That guide contains the account setup and full download instructions.
-
-### Convert to CaMa-Flood forcing
-
-- `s02-convert_CMF_nc.sh` and `convert_CMF_nc.py` create NetCDF runoff files grouped by year or month. The converter treats the source ERA5-Land runoff as accumulated depth in metres, differences the accumulation within each UTC day, converts the increments to millimetres, and records `units="mm"` plus the time-step duration in the NetCDF metadata. Here `mm` means millimetres accumulated over each record's time step, not a monthly total or automatically a rate of `mm/s`.
-- `s03-convert_CMF_bin.sh` and `convert_CMF_bin.py` create single-precision plain-binary grids and a GrADS `.ctl` file. Values are likewise millimetres accumulated per output record. The Python converter stores sub-daily records together in daily `runoff_YYYYMMDD.bin` files; the `.ctl` describes the record time step and grid. The current shell wrapper sets output time step equal to its input `TIMESTEP_HOURS`.
-- Both paths create `runoff_info_CaMaFlood.txt`. It summarizes grid dimensions/coordinates, time step, file naming and relevant forcing settings, including a suggested `DROFUNIT`. Treat this as a configuration aid and confirm it against the actual forcing files and model run.
-
-The existing ERA5-Land tools convert the source product to millimetres accumulated over each selected time step. For those converted files, examples are:
-
-| Converted record contains | `DROFUNIT` |
-| --- | ---: |
-| 24-hour accumulation in mm | 86,400,000 |
-| 3-hour accumulation in mm | 10,800,000 |
-| 1-hour accumulation in mm | 3,600,000 |
-
-The binary metadata tool can infer the interval from the `.ctl` time definition. NetCDF summaries use the converted time metadata and configured time step. Review the generated summary, especially when adjusting conversion settings or using files from a different product.
+The repository includes a workflow to download ERA5-Land runoff, convert it to CaMa-Flood NetCDF or plain-binary forcing, and write a configuration summary. The [ERA5-Land guide](download_ERA5/ReadMe.md) contains the detailed settings, commands, formats, dependencies, time-semantics caveat, and example validation results. Raw downloads under `download_ERA5/ori_japan/` are processing inputs; only converted CaMa-Flood-ready products are listed in the runoff registry.
 
 ## Connect forcing to a `gosh/` run
 
