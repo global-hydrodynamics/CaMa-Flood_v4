@@ -77,8 +77,8 @@
       character*256            :: hires_tag
       character*256            :: inpdim  !! input-dimension descriptor filename
       parameter                 (mapdir='../')
-      parameter                 (inpmat='inpmat_test-1deg.bin')
-      parameter                 (inpdim='../inpdim_test-1deg.txt')
+      parameter                 (inpmat='inpmat_test-glb_1deg.bin')
+      parameter                 (inpdim='../inpdim_test-glb_1deg.txt')
 
 ! Format strings and input buffers.
       character*256            :: buf

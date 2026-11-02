@@ -76,4 +76,8 @@ if ! "$VENV_PYTHON" -m pip install -r "$REQUIREMENTS"; then
   fail "dependency installation failed. Check network access and platform package prerequisites, then rerun."
 fi
 
+if ! "$VENV_PYTHON" -c 'import pandas, xarray, netCDF4' >/dev/null 2>&1; then
+  fail "the ERA5-Land conversion dependencies (pandas, xarray, and netCDF4) are unavailable after installation. Check the requirements and rerun."
+fi
+
 printf '\nPython environment is ready. Activate it with:\n  source .venv/bin/activate\n'

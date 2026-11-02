@@ -14,6 +14,8 @@ out/
 /.venv/
 # Package reference data copied locally; selectively unignore files as they are approved for tracking.
 /map/data/*
+/inp/ERA5-Land_download/ERA5land-glb-nc/
+/inp/ERA5-Land_download/ERA5land-glb-bin/
 !/map/data/ELSE_GPCC_clm-1981-2010.one
 !/map/data/ELSE_GPCC_clm-1981-2010.ctl
 !/map/data/GRDC_allocated.csv

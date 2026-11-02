@@ -28,7 +28,7 @@ cd ..
 DIMINFO="diminfo_ERA5_sixmin.txt"
 INPMAT="inpmat_ERA5_sixmin.bin"
 ##--------------------
-## parameter for sample "test_15min_nc" runoff data
+## parameter for sample "test-E2O_15min_nc" runoff data
 GRSIZEIN=0.1       # input grid size
 WESTIN=-180.0       # input domain west east north south edge
 EASTIN=180.0

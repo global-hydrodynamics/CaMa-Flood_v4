@@ -143,7 +143,7 @@ class GenerateCtlTests(unittest.TestCase):
             ("inpa", "float32", "3", "Input-grid overlap area", "m2"),
         ):
             item = row(
-                "inpmat_test-1deg.bin", name, dtype, "NX,NY,INPN",
+                "inpmat_test-glb_1deg.bin", name, dtype, "NX,NY,INPN",
                 record_layout=f"block {index}: {name} levels 1..INPN",
                 record_index=index, record_count="3", missing="0",
                 special="0: unused contribution slot",
@@ -153,16 +153,16 @@ class GenerateCtlTests(unittest.TestCase):
             item["units"] = units
             matrix_rows.append(item)
         write_registry(self.registry, matrix_rows)
-        (self.map_dir / "inpdim_test-1deg.txt").write_text(
+        (self.map_dir / "inpdim_test-glb_1deg.txt").write_text(
             "3 !! nXX\n2 !! nYY\n2 !! floodplain layers\n360 !! input nXX\n"
-            "180 !! input nYY\n4 !! input num\ninpmat_test-1deg.bin\n"
+            "180 !! input nYY\n4 !! input num\ninpmat_test-glb_1deg.bin\n"
             "-1.5 !! west\n1.5 !! east\n1.0 !! north\n-1.0 !! south\n",
             encoding="ascii",
         )
-        (self.map_dir / "inpmat_test-1deg.bin").write_bytes(b"\0" * (3 * 2 * 4 * 3 * 4))
+        (self.map_dir / "inpmat_test-glb_1deg.bin").write_bytes(b"\0" * (3 * 2 * 4 * 3 * 4))
         result = self.run_generator()
         self.assertEqual((result.generated, result.skipped, result.failed), (1, 0, 0))
-        ctl = (self.map_dir / "inpmat_test-1deg.ctl").read_text()
+        ctl = (self.map_dir / "inpmat_test-glb_1deg.ctl").read_text()
         self.assertIn("undef 0", ctl)
         self.assertIn("zdef 4 linear 1 1", ctl)
         self.assertIn("vars 3", ctl)
@@ -172,9 +172,9 @@ class GenerateCtlTests(unittest.TestCase):
         for item in matrix_rows:
             item["missing_value"] = "-7"
         write_registry(self.registry, matrix_rows)
-        (self.map_dir / "inpmat_test-1deg.ctl").unlink()
+        (self.map_dir / "inpmat_test-glb_1deg.ctl").unlink()
         self.assertEqual(self.run_generator().generated, 1)
-        self.assertIn("undef -7", (self.map_dir / "inpmat_test-1deg.ctl").read_text())
+        self.assertIn("undef -7", (self.map_dir / "inpmat_test-glb_1deg.ctl").read_text())
 
     def test_input_matrix_still_accepts_legacy_diminfo_descriptor(self):
         matrix_rows = []

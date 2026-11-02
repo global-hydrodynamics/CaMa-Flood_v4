@@ -1,0 +1,11 @@
+[INFO] convert_CMF_nc.py
+[INFO] Period          : 2000-01-01 to 2000-01-31
+[INFO] Input directory : ori_japan
+[INFO] Input file unit : monthly
+[INFO] Input pattern   : ERA5-Land_runoff_%Y%m.nc
+[INFO] Output          : runoff_japan_nc/runoff_200001.nc
+[INFO] Input files     : 1
+[INFO] Timestep hours  : 24
+[INFO] Variable        : runoff -> runoff
+[INFO] Wrote: runoff_japan_nc/runoff_200001.nc
+[INFO] Output dimensions: {'time': 31, 'lat': 221, 'lon': 321}

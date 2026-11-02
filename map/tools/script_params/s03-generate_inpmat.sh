@@ -13,7 +13,7 @@ MAP_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd -P)
 CODE_DIR=$(CDPATH= cd "$SCRIPT_DIR/../../tools/code" && pwd -P)
 
 # Runoff grid and output tag; these describe runoff data, not the CaMa-Flood map grid.
-ROFFTAG="test-15min_nc"  # Runoff-grid identifier for the paired output filenames.
+ROFFTAG="test-E2O_15min_nc"  # Runoff dataset ID for the paired output filenames.
 GRSIZEIN=0.25            # Runoff grid-cell size (degrees).
 WESTIN=-180.0            # Western runoff-grid boundary (degrees longitude).
 EASTIN=180.0             # Eastern runoff-grid boundary (degrees longitude).

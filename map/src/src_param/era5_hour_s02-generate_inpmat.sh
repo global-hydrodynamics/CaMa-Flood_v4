@@ -22,10 +22,10 @@ cd ..
 #######################
 # Specify filename, input gridsize, input domain edge, input north-south order, diminfo & inpmat name
 
-#DIMINFO="diminfo_test-15min_nc.txt"
-#INPMAT="inpmat_test-15min_nc.bin"
+#DIMINFO="diminfo_test-E2O_15min_nc.txt"
+#INPMAT="inpmat_test-E2O_15min_nc.bin"
 ##--------------------
-## parameter for sample "test_15min_nc" runoff data
+## parameter for sample "test-E2O_15min_nc" runoff data
 #GRSIZEIN=0.25       # input grid size
 #WESTIN=-180.0       # input domain west east north south edge
 #EASTIN=180.0
@@ -40,7 +40,7 @@ cd ..
 DIMINFO="diminfo_ERA5_hour.txt"
 INPMAT="inpmat_ERA5_hour.bin"
 ##--------------------
-## parameter for sample "test_15min_nc" runoff data
+## parameter for sample "test-E2O_15min_nc" runoff data
 GRSIZEIN=0.1       # input grid size
 WESTIN=-0.05       # input domain west east north south edge
 EASTIN=359.95

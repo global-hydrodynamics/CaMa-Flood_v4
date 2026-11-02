@@ -67,7 +67,7 @@ The existing manuals remain the detailed scientific and workflow references. The
 | Model formulation, basic setup, standard input/output, and execution | [Main manual, v4.20 (Word)](doc/Manual_CaMa-Flood_v420.docx); [user guideline](doc/CaMa-Flood_Guideline.md) |
 | River parameters and runoff input matrices | [Map-parameter tools](map/src/src_param/README.md) |
 | Native-grid runoff remapping | [Composed remapping tools, assumptions, and validation](map/src/src_param/native_inpmat/README.md) |
-| Runoff forcing preparation | [ERA5-Land download and conversion](inp/download_ERA5/ReadMe.md) |
+| Runoff forcing preparation | [ERA5-Land download and conversion](inp/download_ERA5-Land/ReadMe.md) |
 | Reservoir operation | [Reservoir manual, v4.20 (Word)](doc/Manual_ReservoirOperation_v420.docx); [parameter-preparation workflow](map/src/src_dam/ReadMe.md) |
 | Levee parameters | [Levee guide](doc/levee.md); [Word manual](doc/LeveeParameter.docx) |
 | Upstream inflow | [Upstream inflow manual (Word)](doc/Mannual_UpstreamInflowScheme.docx) |

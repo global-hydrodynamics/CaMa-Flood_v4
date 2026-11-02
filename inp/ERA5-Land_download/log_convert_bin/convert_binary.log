@@ -1,0 +1,38 @@
+[INFO] Input files: 1
+[INFO] Input timestep hours : 24
+[INFO] Output timestep hours: 24
+[INFO] Binary file convention: one file per day; sub-daily steps are records inside each daily file.
+[INFO] Open: ori_japan/ERA5-Land_runoff_200001.nc
+[INFO] Wrote binary: runoff_japan_bin/runoff_20000101.bin (1 record(s))
+[INFO] Wrote binary: runoff_japan_bin/runoff_20000102.bin (1 record(s))
+[INFO] Wrote binary: runoff_japan_bin/runoff_20000103.bin (1 record(s))
+[INFO] Wrote binary: runoff_japan_bin/runoff_20000104.bin (1 record(s))
+[INFO] Wrote binary: runoff_japan_bin/runoff_20000105.bin (1 record(s))
+[INFO] Wrote binary: runoff_japan_bin/runoff_20000106.bin (1 record(s))
+[INFO] Wrote binary: runoff_japan_bin/runoff_20000107.bin (1 record(s))
+[INFO] Wrote binary: runoff_japan_bin/runoff_20000108.bin (1 record(s))
+[INFO] Wrote binary: runoff_japan_bin/runoff_20000109.bin (1 record(s))
+[INFO] Wrote binary: runoff_japan_bin/runoff_20000110.bin (1 record(s))
+[INFO] Wrote binary: runoff_japan_bin/runoff_20000111.bin (1 record(s))
+[INFO] Wrote binary: runoff_japan_bin/runoff_20000112.bin (1 record(s))
+[INFO] Wrote binary: runoff_japan_bin/runoff_20000113.bin (1 record(s))
+[INFO] Wrote binary: runoff_japan_bin/runoff_20000114.bin (1 record(s))
+[INFO] Wrote binary: runoff_japan_bin/runoff_20000115.bin (1 record(s))
+[INFO] Wrote binary: runoff_japan_bin/runoff_20000116.bin (1 record(s))
+[INFO] Wrote binary: runoff_japan_bin/runoff_20000117.bin (1 record(s))
+[INFO] Wrote binary: runoff_japan_bin/runoff_20000118.bin (1 record(s))
+[INFO] Wrote binary: runoff_japan_bin/runoff_20000119.bin (1 record(s))
+[INFO] Wrote binary: runoff_japan_bin/runoff_20000120.bin (1 record(s))
+[INFO] Wrote binary: runoff_japan_bin/runoff_20000121.bin (1 record(s))
+[INFO] Wrote binary: runoff_japan_bin/runoff_20000122.bin (1 record(s))
+[INFO] Wrote binary: runoff_japan_bin/runoff_20000123.bin (1 record(s))
+[INFO] Wrote binary: runoff_japan_bin/runoff_20000124.bin (1 record(s))
+[INFO] Wrote binary: runoff_japan_bin/runoff_20000125.bin (1 record(s))
+[INFO] Wrote binary: runoff_japan_bin/runoff_20000126.bin (1 record(s))
+[INFO] Wrote binary: runoff_japan_bin/runoff_20000127.bin (1 record(s))
+[INFO] Wrote binary: runoff_japan_bin/runoff_20000128.bin (1 record(s))
+[INFO] Wrote binary: runoff_japan_bin/runoff_20000129.bin (1 record(s))
+[INFO] Wrote binary: runoff_japan_bin/runoff_20000130.bin (1 record(s))
+[INFO] Wrote binary: runoff_japan_bin/runoff_20000131.bin (1 record(s))
+[INFO] Wrote CTL: runoff_japan_bin/runoff.ctl
+[INFO] Done.
