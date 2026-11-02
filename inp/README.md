@@ -8,17 +8,69 @@ The `inp/` directory contains tools for preparing runoff forcing used by CaMa-Fl
 | --- | --- |
 | `download_ERA5/` | Shell and Python tools to download ERA5-Land runoff from the Copernicus Climate Data Store (CDS), convert it to CaMa-Flood NetCDF or plain binary, and write a configuration summary. See the [detailed ERA5-Land guide](download_ERA5/ReadMe.md). |
 
-### Sample forcing in the v4.30 distribution package
+## Runoff Dataset Registry
 
-The following examples describe the v4.30 package. Other releases may include different periods or files; check the actual forcing coverage before selecting simulation dates. These sample datasets are distributed with the package and are not included in a GitHub clone.
+Each row in [runoff_datasets.csv](runoff_datasets.csv) represents one specific product, including source and converted examples when their roles differ. It records the runoff-grid parameters needed for matrix generation, the data `record_interval_hours` separately from the model `IFRQ_INP` setting, units needed for `DROFUNIT`, and the format, path pattern, NetCDF variable, provenance, and availability. Empty fields are not established values. Use `configuration_status` and `notes` to distinguish configured metadata from source-only entries and unresolved settings.
+
+`ROFFTAG` identifies a runoff input grid for the paired `inpdim_<ROFFTAG>.txt` and `inpmat_<ROFFTAG>.bin` names. It is independent of the CaMa-Flood map resolution. Products on the same grid can share a `ROFFTAG`; each generated matrix remains specific to its target map.
+
+### Available Runoff Samples
+
+The table below summarizes the sample locations and review state. The CSV is the full reference for product grids, file patterns, units, temporal meaning, model settings, provenance, and availability. Package examples describe v4.30; other releases may include different periods or files, so check actual coverage before selecting simulation dates.
 
 | Package directory | Format and grid/time coverage | Unit evidence and relevant example |
 | --- | --- | --- |
 | `test_1deg/` | Plain binary (`Roff____YYYYMMDD.one`) plus `runoff.ctl`; global 1-degree grid (360 × 180; edges 180°W–180°E, 90°S–90°N); daily files from 2000-01-01 through 2001-12-31. | The `.ctl` declares runoff in `mm/day`. `gosh/test1-glb_15min.sh` uses `IFRQ_INP=24` and `DROFUNIT=86400000`. |
 | `test_15min_nc/` | NetCDF files for 2000 and 2001; `Runoff(time, lat, lon)` on a 0.25-degree grid (1440 × 600; edges 180°W–180°E, 60°S–90°N), daily time coordinate. | The sample NetCDF metadata declares `units="mm day-1"`. `gosh/test2-conus_06min_netcdf.sh` uses `IFRQ_INP=24` and `DROFUNIT=86400000`. |
-| `test_jpn_1hr/` | Plain binary daily files (`runoff_YYYYMMDD.bin`) plus `runoff.ctl`; Japan grid at 1/60 degree (1500 × 1320), 1-hour records for 2007-09-03 through 2007-09-09. | Runoff values are in `mm/hr`, matching `gosh/test3-jpn_fcast.sh` (`IFRQ_INP=1`, `DROFUNIT=3600000`). |
+| `test_jpn_1hr/` | Plain binary daily files (`runoff_YYYYMMDD.bin`) plus `runoff.ctl`; Japan grid at 1/60 degree (1500 × 1320), 1-hour records for 2007-09-03 through 2007-09-09. | The CTL labels runoff `mm/day`, while `gosh/test3-jpn_fcast.sh` uses `mm/hr` and `DROFUNIT=3600000`. Confirm the stored-value unit before using this sample. |
+| `download_ERA5/ori_japan/` | Original ERA5-Land source NetCDF sample with variable `ro`; not ready for direct model input. | Tracked in the GitHub repository; convert before simulation. |
+| `download_ERA5/runoff_japan_nc/` | Converted monthly CaMa-Flood NetCDF sample with variable `runoff`. | Tracked in the repository; the ERA5-Land accumulation date interpretation remains open in KG-0019. |
+| `download_ERA5/runoff_japan_bin/` | CTL and configuration report for converted daily-file binary output. | The binary records are not tracked in Git; current record layout and report/CTL timing need review. |
 
-For a GitHub clone, obtain the distribution package or prepare equivalent inputs at the configured paths. For an extracted package, check the included files against the selected run script. The [sample execution guide](../gosh/README.md) describes the workflows; the `gosh/` scripts show the specific forcing configuration used by each example. File spacing alone does not establish the physical units or whether values are rates or accumulated depths; see [Choosing `DROFUNIT`](#choosing-drofunit).
+### Data Sources and Acquisition
+
+Package-only data are not added by cloning the GitHub repository. Obtain the v4.30 distribution package or prepare equivalent inputs separately, then check the actual files against the selected run script. For source and acquisition details, see the [Copernicus ERA5-Land dataset page](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land) and the [ERA5-Land workflow guide](download_ERA5/ReadMe.md). The [sample execution guide](../gosh/README.md) describes the package runs. File spacing alone does not establish physical units or whether values are rates or accumulated depths; see [Choosing `DROFUNIT`](#choosing-drofunit).
+
+### Configuring Input Matrix Generation
+
+Copy the runoff-grid fields from the selected CSV row into [s03-generate_inpmat.sh](../map/tools/script_params/s03-generate_inpmat.sh):
+
+```sh
+ROFFTAG="test-15min_nc"
+GRSIZEIN=0.25
+WESTIN=-180.0
+EASTIN=180.0
+NORTHIN=90.0
+SOUTHIN=-60.0
+OLAT="NtoS"
+```
+
+These example settings describe the package's 0.25-degree NetCDF grid. The bounds are cell edges; the generator computes dimensions from `(EASTIN-WESTIN)/GRSIZEIN` and `(NORTHIN-SOUTHIN)/GRSIZEIN`. `OLAT` must match the runoff array's stored row order. Edit the map-local wrapper settings for the selected product and run it from the target map's `script_params/` directory. It writes `inpdim_<ROFFTAG>.txt` and `inpmat_<ROFFTAG>.bin` in that map root. Do not use CaMa-Flood map geometry as runoff-grid geometry or generate a simulation matrix from a source-only product before conversion.
+
+Validate the CSV structure and grid arithmetic with the standard-library-only checker:
+
+```sh
+python3 inp/validate_runoff_datasets.py
+```
+
+The NetCDF headers, CTLs, and packaged data in this inventory were also checked manually. The checker does not require package data, CDS access, or NetCDF Python packages.
+
+### Configuring CaMa-Flood Simulation
+
+Transfer the CSV values into a `gosh/` run configuration, checking the actual file and `configuration_status` first:
+
+| Registry field | CaMa-Flood setting | Meaning |
+| --- | --- | --- |
+| `record_interval_hours` | `IFRQ_INP` | Expected forcing record interval in hours; confirm it matches the run setup. |
+| `DROFUNIT` | `DROFUNIT` | Divisor converting the stored value to `m/s`; derive it from units and record meaning, not file grouping alone. |
+| `format` | `LINPCDF` | `binary` uses `.FALSE.`; `NetCDF` uses `.TRUE.`. |
+| `LINPDAY` | `LINPDAY` | Selects daily-file mode. The model sets this for binary input; NetCDF can use daily files or one `CROFCDF` covering the simulation period. |
+| `directory`, `prefix`, `suffix` | `CROFDIR`, `CROFPRE`, `CROFSUF` | Binary (and daily-file NetCDF) location and date-pattern components. |
+| `filename_pattern` | Run-script path construction | Shows where dates occur; yearly/monthly NetCDF files need the script to construct `CROFCDF` for the relevant period. |
+| `directory`, `filename_pattern` | `CROFCDF` | NetCDF file path. In single-file mode, set the actual file path; the model does not infer yearly or monthly names from `CROFPRE`/`CROFSUF`. |
+| `nc_variable` | `CVNROF` | NetCDF runoff variable name. |
+
+`IFRQ_INP` is the time between forcing records, not the number of files or their grouping. A yearly NetCDF can contain daily records and use `IFRQ_INP=24`. A row marked `needs_maintainer_review` does not provide a complete simulation configuration; do not fill unresolved units or divisors by assumption.
 
 ## Runoff forcing and units
 

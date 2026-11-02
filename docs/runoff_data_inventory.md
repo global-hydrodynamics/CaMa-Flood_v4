@@ -1,12 +1,12 @@
 # CaMa-Flood v5 Runoff Input Data Tools: Phase A Inventory
 
-**Status:** Phase A inventory and design proposal, 2026-11-01. No Phase B–E implementation is authorized by this document.  
+**Status:** Phase A inventory, 2026-11-01, supplemented by the maintainer-assigned Phase B registry task on 2026-11-02; this addendum records the current Phase B work.
 **Project:** Issue [#126](https://github.com/global-hydrodynamics/CaMa-Flood_v4/issues/126), branch `feature/runoff-data-tools`, based on `master` at `bf8201771b964e1ae8234823b19164200ea97a63` (PR #125 Map Tools merge).  
 **Evidence labels:** “Repository” means files tracked or present in this Git checkout. “Package observation” means read-only files under the separately distributed local v4.30 package; it is not evidence that those files are in a GitHub clone.
 
 ## 1. Executive summary
 
-The repository has an ERA5-Land-specific download and conversion workflow, not a general ERA5 downloader. It can request runoff from the Copernicus Climate Data Store, convert accumulated source values to millimetres per time step, and write either NetCDF or GrADS-style float32 binary plus a CTL. The tracked Japan example contains a raw January 2000 NetCDF and a converted NetCDF, but **does not contain the converted binary runoff records**: `runoff_japan_bin/` contains only a CTL and a configuration summary. The package-only v4.30 samples are much larger and include daily 1-degree binary, daily 1-hour Japan binary, and 0.25-degree NetCDF forcing.
+The repository has an ERA5-Land-specific download and conversion workflow, not a general ERA5 downloader. It can request runoff from the Copernicus Climate Data Store, convert accumulated source values to millimetres per time step, and write either NetCDF or GrADS-style float32 binary plus a CTL. The tracked Japan example contains a raw January 2000 NetCDF and a converted NetCDF. Git tracks the binary CTL and configuration summary but not binary records; this workstation currently has 31 ignored binary files, whose sizes do not match the tracked 24-hour report/CTL description. The package-only v4.30 samples are much larger and include daily 1-degree binary, daily 1-hour Japan binary, and 0.25-degree NetCDF forcing.
 
 The model converts runoff values to a depth rate using `DROFUNIT`, then applies catchment area or the input matrix to form discharge. The v5 channel-parameter workflow separately consumes a one-record annual-mean runoff climatology in mm/s and an input matrix to derive annual mean discharge. These two uses of runoff have different time semantics and must not be conflated.
 
@@ -41,8 +41,8 @@ Key evidence:
 | `ori_japan/ERA5-Land_runoff_200001.nc` | Raw ERA5-Land Japan sample, runoff variable `ro`, dimensions `valid_time=31`, `latitude=221`, `longitude=321`; 0.1-degree grid, latitude descending. Source units are metres, with accumulated-variable metadata. | Tracked, approximately 1.0 MiB. |
 | `runoff_japan_nc/runoff_200001.nc` | Converted Japan sample, `runoff(time,lat,lon)`, 31 daily-labelled records, 221×321, float32; output units `mm` per configured 24-hour step, missing data encoded as `1e20`. | Tracked, approximately 1.3 MiB. |
 | `runoff_japan_nc/runoff_info_CaMaFlood.txt` | Configuration report for the converted NetCDF sample. | Tracked. |
-| `runoff_japan_bin/runoff.ctl` | CTL describing the expected binary grid/time layout. | Tracked, but the referenced `runoff_YYYYMMDD.bin` data files are absent. |
-| `runoff_japan_bin/runoff_info_CaMaFlood.txt` | Binary configuration report; records that 31 files were found when it was generated. | Tracked, but stale relative to the current directory because no daily binary files are present. |
+| `runoff_japan_bin/runoff.ctl` | CTL describing the binary grid/time layout. | Tracked, but the daily binary records are not tracked. This workstation has 31 ignored files; their two-record-per-file layout conflicts with the CTL/report metadata. |
+| `runoff_japan_bin/runoff_info_CaMaFlood.txt` | Binary configuration report; records that 31 files were found when it was generated. | Tracked. Its 24-hour settings and 62-record summary do not reconcile with two grid records in each of 31 ignored local files. |
 
 The small tracked Japan samples total about 2.3 MiB for the raw and converted NetCDF data. The binary directory contains metadata only. The generated report is evidence of a prior conversion state, not proof that binary samples are currently distributable from Git.
 
@@ -108,10 +108,10 @@ The present code establishes the downstream calculation contract, but not the un
 1. **ERA5-Land time alignment (KG-0019):** official valid-time semantics and the converter's date grouping/first-value rule can shift the meaning of daily labels or misinterpret a boundary value. The source sample and one successful conversion do not prove temporal correctness.
 2. **Missing data / noleap calendars:** source NaNs become `1e20` in outputs; aggregation uses `skipna=False`. The root PR #120 is open and concerns 365_day/noleap forcing calendars. Integration requirements should be coordinated without changing PR #120 here.
 3. **Runoff metadata are split across file formats:** units may be in a CTL or NetCDF attributes, while temporal accumulation/reset semantics are partly in documentation and converter assumptions. The model itself relies on user-configured `IFRQ_INP`, `DROFUNIT`, and variable name.
-4. **Binary sample inconsistency:** generated binary data are missing while the CTL and summary remain. A user following the README cannot run the binary example from the repository as currently tracked.
+4. **Binary sample inconsistency:** binary records are not Git-tracked although the CTL and report are. This workstation has 31 ignored records, but their observed two-record-per-file layout conflicts with the documented 24-hour/62-record metadata; a GitHub clone still cannot run this binary example.
 5. **Downloader portability:** fix the malformed shebang and choose/document supported shell invocation. This is a shell portability issue, not an algorithm issue.
 
-### Proposed Phase B dataset registry (not approved schema)
+### Phase B registry design proposed in Phase A
 
 Create a narrowly scoped registry of datasets/products actually included or used by the repository rather than a catalog of all external runoff products. Proposed field groups:
 
@@ -139,12 +139,12 @@ No Phase A test was run against external data or the model. Existing tracked sam
 
 | Phase | Proposed work | Review/validation checkpoint |
 | --- | --- | --- |
-| **B — Dataset metadata** | Agree row granularity and schema; add `inp/runoff_datasets.csv`; include only verified repository/package products; document provenance, terms, and `ROFFTAG` relation. | Schema review; validate CSV against actual sample dimensions, file names, variable attributes, CTL, and generated summary. |
+| **B — Dataset metadata** | The initial registry and `inp/README.md` have been prepared on the assigned branch. Unresolved configuration values remain blank and are listed below. | Review the registry fields, confirm the two conflicting unit/layout cases, and preserve KG-0019 as open before finalizing those values. |
 | **C — ERA5-Land download/conversion** | After time-alignment decision, improve downloader/converter interfaces, shell portability, and error/overwrite behavior only where approved. Keep ERA5 distinct from ERA5-Land; do not change scientific interpretation silently. | Synthetic tests for daily boundaries, first/last samples, reset handling, negative values, missing values, output periods, NetCDF and binary layouts; compare documented command options to shell wrappers. |
 | **D — Small samples and tests** | Formalize existing Japan sample role; add tiny synthetic fixtures and tests; decide whether binary sample records belong in GitHub or only package. | Tests run without network/CDS credentials, large data, or model simulation; verify no committed examples are overwritten. |
 | **E — Mean runoff/channel inputs** | Trace climatology production/provenance, time averaging, missing-value handling, units, and input-matrix weighting. Document existing annual-mean workflow and distinguish it from legacy max-30-day code. | Reproduce a tiny known runoff-to-discharge calculation and verify output layout/units; compare legacy and v5 only where an approved numerical-parity claim is intended. |
 
-Implementation remains subject to Phase A review and the scope boundaries of Issue #126. No scientific behavior or data files were changed in this phase.
+The Phase A proposal described future work at the time it was written. The maintainer subsequently assigned the bounded initial registry and README work; this does not authorize changes to scientific behavior or runoff data.
 
 ## 9. Questions for maintainer review
 
@@ -158,8 +158,8 @@ These questions are recorded before resolution. They do not prevent completing t
 
 ### Important — interface and data policy
 
-4. **Metadata registry row granularity:** should `runoff_datasets.csv` identify source datasets, converted products, or have separate linked rows for both? This determines key and provenance fields.
-5. **Binary example:** should a small real binary sample be tracked in Git, kept package-only, or omitted in favor of synthetic binary fixtures? The present CTL/report refer to missing binary records.
+4. **Metadata registry row granularity — resolved for the initial registry:** the maintainer task specifies one row per product, with source and converted products separate and products on the same grid sharing a `ROFFTAG`.
+5. **Binary example:** the binary records are not tracked in Git; 31 ignored files are present in this workstation and conflict with the CTL/report time layout. Whether a real binary sample should be tracked or omitted in favor of synthetic fixtures remains undecided.
 6. **Real-sample redistribution:** the current raw and converted ERA5-Land Japan files are tracked, but this Phase A review did not independently audit every applicable licence term. Should new extracted real samples be added only after a separate permission review?
 7. **ERA5 scope:** is the current scope specifically ERA5-Land runoff only, or should future phases include the distinct atmospheric ERA5 product? Current code implements only ERA5-Land.
 
@@ -169,4 +169,19 @@ These questions are recorded before resolution. They do not prevent completing t
 
 ## 10. Phase A outcome
 
-The inventory and design proposal are complete for maintainer review. The v5 map-tools changes are already in `master` through PR #125. Phase B–E remain proposed; no converter, model, scientific algorithm, runoff dataset, or model run was modified or executed for this task. The report distinguishes repository-tracked samples from package-only local data and makes no claim of scientific validation or numerical equivalence.
+The Phase A inventory was completed on 2026-11-01. The maintainer later assigned Phase B initial registry work; see the addendum below. This original Phase A work did not modify a converter, model, scientific algorithm, runoff dataset, or run a model. It distinguishes repository-tracked samples from package-only data and makes no claim of scientific validation or numerical equivalence.
+
+
+## Phase B initial registry review — 2026-11-02
+
+The maintainer assigned a bounded initial registry and `inp/README.md` update on `feature/runoff-data-tools`. `inp/runoff_datasets.csv` uses one row per product, with separate rows for the raw ERA5-Land source and the converted CaMa-Flood products. Products on the same grid share a `ROFFTAG`. Package-only v4.30 examples are distinguished from tracked repository samples and ignored workstation-local binary records. No large data were copied or added.
+
+The registry covers `test_1deg`, `test_15min_nc`, `test_jpn_1hr`, the raw ERA5-Land Japan sample, and its converted NetCDF and binary samples. Grid dimensions and cell-edge bounds were checked against CTLs or NetCDF coordinates and the `param_inpmat_generate` edge/resolution arithmetic. Input units and recommended `DROFUNIT` values were checked against data metadata and the existing `gosh/` settings. `inp/validate_runoff_datasets.py` checks CSV structure, unique identifiers, grid dimensions, tag consistency, and configuration values. These checks establish metadata consistency only, not scientific validation.
+
+### Questions for maintainer review
+
+1. For the package `test_jpn_1hr` sample, should stored values be interpreted as `mm/hr` as configured by `gosh/test3-jpn_fcast.sh` (`DROFUNIT=3600000`), or as `mm/day` as written in `runoff.ctl`? The registry leaves `units` and `DROFUNIT` blank until confirmed.
+2. For the ERA5-Land binary example, what are the intended record interval and output layout? The tracked CTL declares 62 records at `1dy`, the report says 24-hour records, and the 31 ignored local files each contain two float32 grid records. The registry leaves its interval, units, and `DROFUNIT` unresolved.
+3. KG-0019 remains open: should converted ERA5-Land record dates identify valid timestamps or the physical accumulation periods? The registry does not change converter or model time interpretation.
+
+The package-only `test_1deg` CTL also declares 1000 time records while the inspected package contains 731 daily files spanning 2000-01-01 to 2001-12-31. The registry documents actual file coverage and the CTL discrepancy; the model run configuration uses 24-hour records and `DROFUNIT=86400000`.
