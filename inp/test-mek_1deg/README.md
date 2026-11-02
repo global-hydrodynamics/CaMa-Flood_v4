@@ -1,6 +1,6 @@
 # Mekong 1-degree ELSE_GPCC runoff sample
 
-This sample contains daily runoff for the Mekong map domain, extracted without rescaling from the long-term global 1-degree ELSE_GPCC product. The maintainer identifies the source as the ELSE_GPCC runoff product associated with Kim et al. (2009), “Role of rivers in the seasonal variations of terrestrial water storage over global basins,” [doi:10.1029/2009GL039006](https://doi.org/10.1029/2009GL039006). The citation documents provenance; it does not establish redistribution rights.
+This sample contains daily runoff for the Mekong map domain, extracted without rescaling from the long-term global 1-degree ELSE_GPCC product. The maintainer identifies the source as the ELSE_GPCC runoff product associated with Kim et al. (2009), “Role of rivers in the seasonal variations of terrestrial water storage over global basins,” [doi:10.1029/2009GL039006](https://doi.org/10.1029/2009GL039006). The maintainer designates this derived sample for redistribution in the GitHub repository and CaMa-Flood distribution package; this does not include the original global ELSE_GPCC files.
 
 The original `ELSE_GPCC/Roff/` files are an internal laboratory dataset and are not part of this Git repository. In this checkout, `../ELSE_GPCC/Roff/` is a configurable source path (currently a local ignored link), and `../ELSE_GPCC/Roff.ctl` is the tracked grid metadata. The source CTL describes a global 360 × 180 grid at 1 degree, little-endian float32, `NtoS` row order (`yrev`), runoff in `mm/day`, and `-999` as undefined. The CTL declares 7,671 records beginning 1981-01-01, but the available source file names span 1979-01-01 to 2011-01-01; the CTL time count is therefore not used to establish file coverage. The extraction script checks every requested daily file by date and size.
 
@@ -34,7 +34,7 @@ inp/test-mek_1deg/
     └── ...
 ```
 
-Expected output is 11,323 files × 2,400 bytes = 27,175,200 bytes (about 25.9 MiB), plus the CTL. Generated `.one` files are excluded from Git until redistribution review is complete. The script and documentation are intended to be tracked; do not add the original global source or generated data to Git without separate approval.
+Expected output is 11,323 files × 2,400 bytes = 27,175,200 bytes (about 25.9 MiB), plus the CTL. The complete `test-mek_1deg/` directory, including all generated `.one` files, the CTL, extraction script, helper, and README, is tracked in Git and included in the distribution package. The original global ELSE_GPCC data remain external and excluded from Git and package contents.
 
 The output CTL uses `Roff____YYYYMMDD.one`, `float32`, little-endian, `undef -999`, daily `tdef`, and `yrev`, with cell centers at 90.5–109.5°E and 5.5–34.5°N. Its `tdef` count is derived from the requested dates, not copied from the source CTL.
 
@@ -51,7 +51,7 @@ SOUTHIN=5
 OLAT="NtoS"
 ```
 
-This creates `inpdim_test-mek-1deg.txt` and `inpmat_test-mek-1deg.bin` for the selected map. The matrix is map-specific; these settings describe the runoff grid. The matching daily binary forcing configuration is:
+This creates `inpdim_test-mek_1deg.txt` and `inpmat_test-mek_1deg.bin` for the selected map. The matrix is map-specific; these settings describe the runoff grid. The matching daily binary forcing configuration is:
 
 ```text
 LINPCDF = .FALSE.
@@ -62,11 +62,11 @@ DROFUNIT = 86400000
 CROFDIR = inp/test-mek_1deg/runoff
 CROFPRE = Roff____
 CROFSUF = .one
-CINPMAT = map/mekong_15min/inpmat_test-mek-1deg.bin
+CINPMAT = map/mekong_15min/inpmat_test-mek_1deg.bin
 ```
 
 The `mm/day` unit and 24-hour interval yield `DROFUNIT=86400000` for conversion to `m/s`, consistent with the existing CaMa-Flood forcing reader and the `test_1deg` run configuration. No model simulation is run by the extraction script. File-format and source-window checks do not establish independent scientific validity of the runoff product.
 
 ## Redistribution status
 
-The source dataset is not Git-tracked. The generated regional sample remains local and Git-ignored while public redistribution terms are reviewed. The extraction script, CTL metadata, registry entry, and README can be reviewed independently of the runoff binaries.
+The original global ELSE_GPCC source dataset remains external and is not Git-tracked. The derived regional Mekong sample is approved for redistribution and tracked in full in GitHub and the CaMa-Flood distribution package.
