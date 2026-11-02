@@ -59,7 +59,7 @@ Avoid enabling multiple alternative flow formulations together. In particular, `
 
 The examples refer to binary or NetCDF maps, dimension-info text, runoff input matrices, forcing files, optional region maps, and reservoir tables by path. They are not interchangeable across map resolutions or grids. The configured paths show what each example expects; locate or prepare matching data before running it.
 
-Test4 currently reads daily E2O WRR2 runoff NetCDF files with variable `Runoff` from `inp/E2O/`; its name and files are a legacy data workflow, not a statement about the status of the model physics. A newer [`ERA5-Land download/conversion workflow`](../inp/download_ERA5/ReadMe.md) provides `s01-download.sh` and separate NetCDF/binary conversion steps (`s02-convert_CMF_nc.sh`, `s03-convert_CMF_bin.sh`). To use ERA5-Land instead, prepare forcing at the required time step and units, prepare an input matrix and dimension metadata for its grid and the selected river map, match the actual NetCDF variable and time coordinate (or binary file pattern), and update the run script's `NFORCE` and time settings. Verify that all settings refer to the prepared forcing before running.
+Test4 currently reads daily E2O WRR2 runoff NetCDF files with variable `Runoff` from `inp/E2O/`; its name and files are a legacy data workflow, not a statement about the status of the model physics. A newer [`ERA5-Land download/conversion workflow`](../inp/download_ERA5-Land/ReadMe.md) provides `s01-download.sh` and separate NetCDF/binary conversion steps (`s02-convert_CMF_nc.sh`, `s03-convert_CMF_bin.sh`). To use ERA5-Land instead, prepare forcing at the required time step and units, prepare an input matrix and dimension metadata for its grid and the selected river map, match the actual NetCDF variable and time coordinate (or binary file pattern), and update the run script's `NFORCE` and time settings. Verify that all settings refer to the prepared forcing before running.
 
 ## Additional examples under `etc/`
 
@@ -86,5 +86,5 @@ The presence or absence of a `gosh/test*` example does not establish whether a s
 - [Root README](../README.md) and [development rules](../AGENTS.md)
 - [CaMa-Flood user guideline](../doc/CaMa-Flood_Guideline.md) and [main manual](../doc/Manual_CaMa-Flood_v420.docx)
 - [High-performance computing note](../doc/Note_HighPerformanceComputing.docx)
-- [ERA5-Land data preparation](../inp/download_ERA5/ReadMe.md)
+- [ERA5-Land data preparation](../inp/download_ERA5-Land/ReadMe.md)
 - [Heatlink source and configuration notes](../src/heatlink/README.md)
