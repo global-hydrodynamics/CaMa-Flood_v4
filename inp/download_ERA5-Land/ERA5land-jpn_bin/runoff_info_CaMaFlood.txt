@@ -1,9 +1,9 @@
 #==========================================================
 # CaMa-Flood runoff forcing information
 #==========================================================
-# Sample name: ERA5-Land runoff forcing
-# Source format inspected: netcdf
-# Created from: runoff_japan_nc/runoff_200001.nc
+# Sample name: ERA5-Land binary runoff forcing
+# Source format inspected: binary
+# Created from: ERA5land-jpn_bin/runoff_20000101.bin
 # Requested period: 2000-01-01 to 2000-01-31
 
 #----------------------------------------------------------
@@ -51,7 +51,7 @@ CROFSUF=".bin"       # runoff suffix
 #----------------------------------------------------------
 # 5. Source metadata summary
 #----------------------------------------------------------
-source_format=netcdf
+source_format=binary
 nx=321
 ny=221
 dlon=0.1
@@ -60,19 +60,15 @@ forcing_timestep_hours=24
 time_step_hours_config=24
 time_step_hours_inferred=24
 ntime_in_sample=31
-time_start_in_sample=2000-01-01 00:00:00
-time_end_in_sample=2000-01-31 00:00:00
+time_start_in_sample=00Z01jan2000
+time_end_in_sample=N/A
 
-# NetCDF metadata
-netcdf_files_found=1
-netcdf_sample_file=runoff_japan_nc/runoff_200001.nc
-lon_name=lon
-lat_name=lat
-lon_min_center=122
-lon_max_center=154
-lat_min_center=24
-lat_max_center=46
-variable_name=runoff
-variable_units=mm
-variable_long_name=runoff accumulated over each input timestep
-fill_value=1.0000000200408773e+20
+# Binary/CTL metadata
+ctl_file=ERA5land-jpn_bin/runoff.ctl
+binary_files_found=31
+dset=^./runoff_%y4%m2%d2.bin
+undef=1e+20
+options=yrev little_endian template
+binary_variable=var
+title=ERA5Land Runoff
+tdef_step=1dy

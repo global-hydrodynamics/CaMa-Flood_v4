@@ -1,6 +1,6 @@
-dset ^inpmat_test-15min_nc.bin
+dset ^inpmat_test-E2O_15min_nc.bin
 undef 0
-title CaMa-Flood map file inpmat_test-15min_nc.bin
+title CaMa-Flood map file inpmat_test-E2O_15min_nc.bin
 options yrev little_endian
 xdef 80 linear 90.125 0.25
 ydef 120 linear 5.125 0.25

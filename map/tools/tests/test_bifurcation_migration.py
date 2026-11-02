@@ -24,10 +24,10 @@ S02_TEMPLATE = ROOT / "map" / "tools" / "script_params" / "s02-bifurcation.sh"
 S01_TEMPLATE = ROOT / "map" / "tools" / "script_params" / "s01-channel_params.sh"
 MAP_INPUTS = (
     "params.txt", "nextxy.bin", "basin.bin", "bifori.txt",
-    "inpdim_test-1deg.txt",
+    "inpdim_test-glb_1deg.txt",
 )
 CHANNEL_INPUTS = (
-    *MAP_INPUTS, "ctmare.bin", "width.bin", "inpmat_test-1deg.bin",
+    *MAP_INPUTS, "ctmare.bin", "width.bin", "inpmat_test-glb_1deg.bin",
 )
 OUTPUTS = ("bifprm.txt", "bifbsn.bin", "bifcol.bin")
 CHECK_OUTPUTS = ("check_bif_dphwth.bin", "check_bif_bsnmod.bin")
@@ -166,7 +166,7 @@ class BifurcationMigrationTests(unittest.TestCase):
             with self.subTest(biflayer=biflayer):
                 result = run(
                     [str(self.code_dir / "param_bif_set_params"), "rivhgt.bin", "bifprm.txt",
-                     biflayer, "inpdim_test-1deg.txt"],
+                     biflayer, "inpdim_test-glb_1deg.txt"],
                     cwd=self.root,
                 )
                 self.assertNotEqual(result.returncode, 0)
@@ -183,7 +183,7 @@ class BifurcationMigrationTests(unittest.TestCase):
 
         legacy_parameter = run(
             [str(self.legacy_dir / "set_bifparam"), "rivhgt.bin", "bifprm.txt", "5",
-             "inpdim_test-1deg.txt"],
+             "inpdim_test-glb_1deg.txt"],
             cwd=legacy,
         )
         self.assertEqual(legacy_parameter.returncode, 0,

@@ -14,8 +14,8 @@ out/
 /.venv/
 # Package reference data copied locally; selectively unignore files as they are approved for tracking.
 /map/data/*
-/inp/download_ERA5-Land/ori_global/
-/inp/download_ERA5-Land/runoff_global_bin/
+/inp/download_ERA5-Land/ERA5land-glb-nc/
+/inp/download_ERA5-Land/ERA5land-glb-bin/
 !/map/data/ELSE_GPCC_clm-1981-2010.one
 !/map/data/ELSE_GPCC_clm-1981-2010.ctl
 !/map/data/GRDC_allocated.csv
@@ -94,4 +94,3 @@ map/tools/code/*.s
 map/tools/code/__pycache__/
 map/tools/**/__pycache__/
 map/tools/**/*.pyc
-/inp/download_ERA5-Land/runoff_global_sample_bin/

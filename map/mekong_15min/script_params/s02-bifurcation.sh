@@ -16,7 +16,7 @@ CODE_DIR=$(CDPATH= cd "$SCRIPT_DIR/../../tools/code" && pwd -P)
 
 # Bifurcation inputs and runoff-grid matrix selection.
 BIFLAYER=5                      # Number of bifori.txt layers to process (1-10).
-ROFFTAG="test-1deg"             # Runoff-grid identifier used to derive INPDIM.
+ROFFTAG="test-glb_1deg"         # Runoff dataset ID used to derive INPDIM.
 INPDIM="inpdim_${ROFFTAG}.txt"  # Runoff-grid dimensions file derived from ROFFTAG.
 RIVHGT="rivhgt.bin"             # Channel-depth map used to estimate bifurcation depth.
 BIFPRM="bifprm.txt"             # Bifurcation parameter table written by this workflow.

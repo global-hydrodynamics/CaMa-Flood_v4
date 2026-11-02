@@ -9,13 +9,13 @@ cd "${SCRIPT_DIR}"
 # User settings
 PYTHON_CMD="python3"
 INPUT_FILE="ERA5-Land_runoff_20000101-02.nc"
-INPUT_DIR="./ori_global"
+INPUT_DIR="./ERA5land-glb-nc"
 START_DATE="2000-01-01"
 END_DATE="2000-01-02"
 INPUT_TIMESTEP_HOURS=24
 OUTPUT_TIMESTEP_HOURS=24
 INPUT_VARIABLE="ro"
-OUTDIR="./runoff_global_sample_bin"
+OUTDIR="./ERA5land-glb-bin"
 CTL_FILE="${OUTDIR}/runoff.ctl"
 UNDEF="1.0e20"
 ENDIAN="little"

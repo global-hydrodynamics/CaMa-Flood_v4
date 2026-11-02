@@ -1,6 +1,6 @@
-dset ^inpmat_test-1deg.bin
+dset ^inpmat_test-glb_1deg.bin
 undef 0
-title CaMa-Flood map file inpmat_test-1deg.bin
+title CaMa-Flood map file inpmat_test-glb_1deg.bin
 options yrev little_endian
 xdef 80 linear 90.125 0.25
 ydef 120 linear 5.125 0.25

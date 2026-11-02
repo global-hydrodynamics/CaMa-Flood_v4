@@ -4,7 +4,7 @@
       1440     !! input nXX 
        600     !! input nYY 
         10     !! input num
-inpmat_test-15min_nc.bin
+inpmat_test-E2O_15min_nc.bin
       90.000     !! west  edge
      110.000     !! east  edge
       35.000     !! north edge

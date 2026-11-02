@@ -55,25 +55,25 @@ class MekongSampleTests(unittest.TestCase):
 
     def test_standard_runoff_pair_uses_inpdim_name_and_matching_geometry(self) -> None:
         dims = read_map_dimensions()
-        descriptor = MAP / "inpdim_test-1deg.txt"
+        descriptor = MAP / "inpdim_test-glb_1deg.txt"
         lines = descriptor.read_text().splitlines()
         input_dims = read_input_dimensions(descriptor)
 
         self.assertEqual(dims, {"NX": 80, "NY": 120, "NLFP": 10})
         self.assertEqual(input_dims, {"INPNX": 360, "INPNY": 180, "INPN": 4})
         self.assertEqual([float(lines[i].split()[0]) for i in (7, 8, 9, 10)], [90.0, 110.0, 35.0, 5.0])
-        self.assertEqual(lines[6].strip(), "inpmat_test-1deg.bin")
+        self.assertEqual(lines[6].strip(), "inpmat_test-glb_1deg.bin")
 
         expected_bytes = dims["NX"] * dims["NY"] * input_dims["INPN"] * (4 + 4 + 4)
         self.assertEqual((MAP / lines[6].strip()).stat().st_size, expected_bytes)
 
     def test_user_configured_runoff_pair_uses_same_inpdim_convention(self) -> None:
-        descriptor = MAP / "inpdim_test-15min_nc.txt"
+        descriptor = MAP / "inpdim_test-E2O_15min_nc.txt"
         lines = descriptor.read_text().splitlines()
         input_dims = read_input_dimensions(descriptor)
 
         self.assertEqual(input_dims, {"INPNX": 1440, "INPNY": 600, "INPN": 10})
-        self.assertEqual(lines[6].strip(), "inpmat_test-15min_nc.bin")
+        self.assertEqual(lines[6].strip(), "inpmat_test-E2O_15min_nc.bin")
         expected_bytes = 80 * 120 * input_dims["INPN"] * (4 + 4 + 4)
         self.assertEqual((MAP / lines[6].strip()).stat().st_size, expected_bytes)
 
@@ -98,7 +98,7 @@ class MekongSampleTests(unittest.TestCase):
         required_base = {
             "nextxy.bin", "ctmare.bin", "elevtn.bin", "nxtdst.bin", "rivlen.bin", "fldhgt.bin",
             "basin.bin", "width.bin", "rivwth.bin", "rivhgt.bin", "rivman.bin",
-            "inpmat_test-1deg.bin", "inpdim_test-1deg.txt",
+            "inpmat_test-glb_1deg.bin", "inpdim_test-glb_1deg.txt",
         }
         actual_base = {path.name for path in MAP.iterdir() if path.is_file()}
         self.assertTrue(required_base <= actual_base, f"missing base-map products: {sorted(required_base - actual_base)}")
@@ -170,7 +170,7 @@ class MekongSampleTests(unittest.TestCase):
                 self.assertEqual(path.stat().st_size, expected_size, f"{relative}: registry size mismatch")
 
     def test_required_text_metadata_files_exist(self) -> None:
-        for name in ("params.txt", "bifori.txt", "inpdim_test-1deg.txt", "inpdim_test-15min_nc.txt"):
+        for name in ("params.txt", "bifori.txt", "inpdim_test-glb_1deg.txt", "inpdim_test-E2O_15min_nc.txt"):
             with self.subTest(path=name):
                 self.assertTrue((MAP / name).is_file())
 

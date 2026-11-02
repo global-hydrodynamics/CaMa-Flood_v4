@@ -24,10 +24,10 @@ class ChannelParamsWrapperTests(unittest.TestCase):
         (self.root / "outside").mkdir()
         (self.root / "map" / "data" / "ELSE_GPCC_clm-1981-2010.one").write_bytes(b"runoff")
         for name in ("params.txt", "nextxy.bin", "ctmare.bin", "width.bin",
-                     "inpmat_test-1deg.bin"):
+                     "inpmat_test-glb_1deg.bin"):
             (self.map_root / name).write_bytes(b"input")
-        (self.map_root / "inpdim_test-1deg.txt").write_text(
-            "80\n120\n10\n360\n180\n4\ninpmat_test-1deg.bin\n"
+        (self.map_root / "inpdim_test-glb_1deg.txt").write_text(
+            "80\n120\n10\n360\n180\n4\ninpmat_test-glb_1deg.bin\n"
             "90\n110\n35\n5\n", encoding="ascii"
         )
         self.calls = self.root / "calls.txt"
@@ -65,11 +65,11 @@ class ChannelParamsWrapperTests(unittest.TestCase):
         records = [line.split("|") for line in self.calls.read_text().splitlines()]
         self.assertEqual(len(records), 3)
         self.assertTrue(all(Path(row[0]).resolve() == self.map_root.resolve() for row in records))
-        self.assertEqual(records[0][1:], ["bin", "inpmat", "inpdim_test-1deg.txt",
+        self.assertEqual(records[0][1:], ["bin", "inpmat", "inpdim_test-glb_1deg.txt",
                                           "../data/ELSE_GPCC_clm-1981-2010.one", ""])
-        self.assertEqual(records[1][1:], ["bin", "inpdim_test-1deg.txt", "0.1", "0.50",
+        self.assertEqual(records[1][1:], ["bin", "inpdim_test-glb_1deg.txt", "0.1", "0.50",
                                           "0.00", "1.0", "2.50", "0.60", "0.00", "5.0", ""])
-        self.assertEqual(records[2][1:], ["inpdim_test-1deg.txt", ""])
+        self.assertEqual(records[2][1:], ["inpdim_test-glb_1deg.txt", ""])
         for name in ("outclm.bin", "rivwth.bin", "rivhgt.bin", "rivman.bin",
                      "rivhgt_inf.bin", "rivwth_merit.bin"):
             self.assertTrue((self.map_root / name).is_file(), name)

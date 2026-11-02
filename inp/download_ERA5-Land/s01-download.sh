@@ -76,7 +76,7 @@ NCPUS=1
 #   monthly -> ERA5-Land_runoff_YYYYMM.nc   (recommended. faster)
 DOWNLOAD_UNIT="monthly"
 # Output directory for original NetCDF files
-#OUTDIR="./ori_global"
+#OUTDIR="./ERA5land-glb-nc"
 OUTDIR="./ori_japan"
 # Input/output forcing timestep in hours. (Downloaded runoff timestep = Converted runoff timestep)
 #   24 -> daily, 12 -> 12 hourly, 6 -> 6 hourly, 3 -> 3-hourly, 1 -> hourly

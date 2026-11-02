@@ -31,7 +31,7 @@ PYTHON_SCRIPT="./convert_CMF_nc.py"
 
 # (1) Downloaded netCDF File
 # Input directory containing downloaded ERA5-Land NetCDF files
-#INDIR="./ori_global"
+#INDIR="./ERA5land-glb-nc"
 INDIR="./ori_japan"
 # Downloaded input file unit:
 #   daily   -> read ERA5-Land_runoff_YYYYMMDD.nc for each day
@@ -57,7 +57,7 @@ fi
 # Output directory for CaMa-Flood-ready runoff files
 #OUTDIR="./runoff_month_nc"
 #OUTDIR="./runoff_year_nc"
-OUTDIR="./runoff_japan_nc"
+OUTDIR="./ERA5land-jpn_nc"
 # Output grouping:
 #   yearly  -> runoff_YYYY.nc
 #   monthly -> runoff_YYYYMM.nc

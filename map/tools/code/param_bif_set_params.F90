@@ -20,7 +20,7 @@ USE NETCDF
 ! Command-line options and input mode
       character*256            :: buf
       character*256            :: diminfo  !! input-dimension descriptor filename
-      data                    diminfo /'./inpdim_test-1deg.txt'/
+      data                    diminfo /'./inpdim_test-glb_1deg.txt'/
 
 ! River-network map parameters
       integer                  :: ix, iy  !! x/y grid index

@@ -39,7 +39,7 @@ class InputMatrixNamingTests(unittest.TestCase):
             script = script_dir / WRAPPER.name
             script_text = WRAPPER.read_text(encoding="utf-8")
             script_text = script_text.replace(
-                'ROFFTAG="test-15min_nc"', 'ROFFTAG="rainfall-025"'
+                'ROFFTAG="test-E2O_15min_nc"', 'ROFFTAG="rainfall-025"'
             ).replace('HIRES_TAG=""', 'HIRES_TAG="15sec"')
             script.write_text(script_text, encoding="utf-8")
             script.chmod(0o755)

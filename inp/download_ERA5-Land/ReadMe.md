@@ -2,17 +2,18 @@
 
 This directory contains a workflow for downloading **ERA5-Land runoff** from the Copernicus Climate Data Store (CDS), converting the accumulated source values to CaMa-Flood forcing files, and writing a configuration summary. It is not a general ERA5 atmospheric-data downloader.
 
-The raw January 2000 Japan NetCDF under `ori_japan/` is a source example. It is not a CaMa-Flood-ready runoff product. The `runoff_japan_nc/` NetCDF is a converted product. The binary directory contains a tracked CTL and report, but its binary records are ignored by Git; see [the sample consistency note](#tracked-japan-example-and-validation-status).
+The raw January 2000 Japan NetCDF under `ori_japan/` is a source example. It is not a CaMa-Flood-ready runoff product. The converted products are in `ERA5land-jpn_nc/` and `ERA5land-jpn_bin/`; the binary directory contains a tracked CTL and report, while its binary records are ignored by Git. See [the sample consistency note](#tracked-japan-example-and-validation-status).
 
 ## 1. Tools and files
 
-Run the shell wrappers from this directory. The Japan wrappers retain their existing settings. `s01-download-global.sh` is a global profile for the ERA5-Land workflow, and `s02-convert-global-bin.sh` converts its monthly downloads in monthly chunks. ERA5-Land is distinct from the standard ERA5 atmospheric reanalysis.
+Run the shell scripts from this directory. The Japan wrappers retain their existing settings. `t01-download-global.sh` downloads a global monthly sample; `t03-convert-global-2day-bin.sh` demonstrates binary conversion of the local two-day sample. `convert_global_CMF_bin.py` provides month-at-a-time conversion for longer global periods. ERA5-Land is distinct from the standard ERA5 atmospheric reanalysis.
 
 | File | Role | Main inputs | Outputs |
 | --- | --- | --- | --- |
 | `s01-download.sh` | User-edited settings and daily/monthly request launcher | Period, region, timestep, CDS account | Raw NetCDF files in `OUTDIR`; logs/status files in `log_download/` |
-| `s01-download-global.sh` | Global ERA5-Land profile; user-edited date range | Period, timestep, CDS account | Monthly raw NetCDF files in `ori_global/`; request logs in `log_download_global/` |
-| `s02-convert-global-bin.sh` and `convert_global_CMF_bin.py` | Month-at-a-time orchestration of the existing binary converter | Monthly NetCDF files and selected dates | Daily binary grids and a period-wide `runoff.ctl` in `runoff_global_bin/` |
+| `t01-download-global.sh` | Global ERA5-Land sample download | Period, timestep, CDS account | Monthly raw NetCDF files in `ERA5land-glb-nc/`; request logs in `log_download_global/` |
+| `convert_global_CMF_bin.py` | Month-at-a-time orchestration of the existing binary converter | Monthly NetCDF files, selected dates, and output directory | Daily binary grids and a period-wide `runoff.ctl` |
+| `t03-convert-global-2day-bin.sh` | Two-day plain-binary format example | Local two-day NetCDF sample and the existing binary converter | Two daily binary grids and a matching CTL in `ERA5land-glb-bin/` |
 | `download_era5land.py` | Builds and submits a CDS request; can print it with `--dry-run` | Request options; `cdsapi` credentials for a real request | One NetCDF file per requested day or month; writes through a temporary `.part` file before replacement |
 | `s02-convert_CMF_nc.sh` | User-edited settings for NetCDF conversion | Raw NetCDF files and period | `runoff_YYYY.nc` or `runoff_YYYYMM.nc`, plus `runoff_info_CaMaFlood.txt` |
 | `convert_CMF_nc.py` | Converts accumulated values and writes CaMa-Flood-oriented NetCDF | ERA5-Land NetCDF | Float32 runoff variable, time and coordinates, fill value `1.0e20` |
@@ -31,18 +32,18 @@ Configure the current CDS personal access token in `~/.cdsapirc` using the two l
 
 ## 2. Configure and download source data
 
-For global ERA5-Land, configure `s01-download-global.sh`. It requests the full domain (`N=90, S=-90, W=-180, E=180`) in monthly NetCDF chunks. Its defaults select January 2000 as a small example; edit the dates near the top before a real request. A multi-year global hourly archive is very large, so choose only the necessary period and time interval. The script does not start a request until explicitly run.
+For global ERA5-Land, configure `t01-download-global.sh`. It requests the full domain (`N=90, S=-90, W=-180, E=180`) in monthly NetCDF chunks. Its defaults select January 2000 as a small example; edit the dates near the top before a real request. A multi-year global hourly archive is very large, so choose only the necessary period and time interval. The script does not start a request until explicitly run.
 
-The corresponding `s02-convert-global-bin.sh` uses the same inclusive date range and monthly files in `ori_global/`. It invokes `convert_global_CMF_bin.py`, which runs the existing binary converter one month at a time to bound memory, joins the daily files, and writes one CTL spanning the selected period. Existing daily outputs are protected unless `OVERWRITE=1`. The numerical accumulation handling is unchanged from the existing converter. Its daily output convention is float32 runoff in mm per 24-hour record, paired with `DROFUNIT=86400000`; confirm this interpretation against the source and model run setup before a simulation. ERA5-Land's 00:00 UTC accumulated value is documented as the preceding 24 hours, so first-record and date-boundary attribution remain unresolved in KG-0019. Splitting work into months does not resolve that scientific timing question.
+For a full-period binary conversion, call `convert_global_CMF_bin.py` with the requested date range, source directory `ERA5land-glb-nc/`, and destination directory `ERA5land-glb-bin/`. It runs the existing binary converter one month at a time to bound memory, joins the daily files, and writes one CTL spanning the selected period. The two-day format example is executed separately by `t03-convert-global-2day-bin.sh`. The numerical accumulation handling is unchanged from the existing converter. Its daily output convention is float32 runoff in mm per 24-hour record, paired with `DROFUNIT=86400000`; confirm this interpretation against the source and model run setup before a simulation. ERA5-Land's 00:00 UTC accumulated value is documented as the preceding 24 hours, so first-record and date-boundary attribution remain unresolved in KG-0019. Splitting work into months does not resolve that scientific timing question.
 
 After editing the date range as needed, run the two steps separately:
 
 ```bash
-./s01-download-global.sh
-./s02-convert-global-bin.sh
+./t01-download-global.sh
+./t03-convert-global-2day-bin.sh
 ```
 
-The first script only downloads source NetCDF; the second only converts already-downloaded files. Neither is run automatically by the other.
+The first script downloads global source NetCDF. The second converts the two-day example; it does not use the configured full-period range from the downloader.
 
 The new global raw NetCDF and binary-output directories are Git-ignored so large user data are not staged accidentally. The scripts, conversion helper, and documentation remain trackable.
 
@@ -87,7 +88,7 @@ The scripts do not validate the scientific completeness of the downloaded time s
 
 Binary conversion is not required when the CaMa-Flood executable is built with NetCDF support (`UseCDF_CMF`). The model's runoff reader accepts a NetCDF variable and time-coordinate name from `NFORCE`; the downloaded ERA5-Land file can therefore be supplied as a NetCDF forcing file. The repository's `gosh/dev_ERA5_hour.sh` is an existing direct-input example for hourly ERA5-Land files (`CVNROF="ro"`, `CVNTIME="valid_time"`).
 
-A two-day global format-check sample was downloaded on 2026-11-02 to `ori_global/ERA5-Land_runoff_20000101-02.nc` (local, Git-ignored). `ncdump -h` confirmed `ro(valid_time, latitude, longitude)` as float32 with `units="m"`, `GRIB_stepType="accum"`, and `_FillValue=NaN`; the file contains two valid times 24 hours apart. The grid is 3600 longitude by 1801 latitude points, with longitude -180 to 179.9 degrees and latitude descending from 90 to -90 degrees, both at 0.1-degree spacing. This 1801-row latitude geometry matches the maintainer-confirmed canonical `inp/ERA5_land/daily/` geometry. The older `inp/ERA5_land/Roff/` lab series has only 1800 rows and omits the north-south half-grid shift; it is a legacy variant, not the canonical grid. The NetCDF longitude coordinates run -180..179.9, whereas the existing hourly matrix template uses 0..359.9, so the corresponding input matrices also differ in column order.
+A two-day global format-check sample was downloaded on 2026-11-02 to `ERA5land-glb-nc/ERA5-Land_runoff_20000101-02.nc` (local, Git-ignored). `ncdump -h` confirmed `ro(valid_time, latitude, longitude)` as float32 with `units="m"`, `GRIB_stepType="accum"`, and `_FillValue=NaN`; the file contains two valid times 24 hours apart. The grid is 3600 longitude by 1801 latitude points, with longitude -180 to 179.9 degrees and latitude descending from 90 to -90 degrees, both at 0.1-degree spacing. This 1801-row latitude geometry matches the maintainer-confirmed canonical `inp/ERA5_land/daily/` geometry. The older `inp/ERA5_land/Roff/` lab series has only 1800 rows and omits the north-south half-grid shift; it is a legacy variant, not the canonical grid. The NetCDF longitude coordinates run -180..179.9, whereas the existing hourly matrix template uses 0..359.9, so the corresponding input matrices also differ in column order.
 
 For this 24-hour sample, a NetCDF-enabled run can use settings equivalent to:
 
@@ -166,12 +167,12 @@ The registry [`inp/runoff_datasets.csv`](../runoff_datasets.csv) indexes CaMa-Fl
 
 ### Two-day global plain-binary conversion sample
 
-The script `t03-convert-global-2day-bin.sh` demonstrates conversion of the local two-record source file `ori_global/ERA5-Land_runoff_20000101-02.nc` into daily plain-binary files and a matching `runoff.ctl`. Run it from any current directory:
+The script `t03-convert-global-2day-bin.sh` demonstrates conversion of the local two-record source file `ERA5land-glb-nc/ERA5-Land_runoff_20000101-02.nc` into daily plain-binary files and a matching `runoff.ctl`. Run it from any current directory:
 
 ```bash
 /path/to/CaMa-Flood_v4/inp/download_ERA5-Land/t03-convert-global-2day-bin.sh
 ```
 
-It calls the existing `convert_CMF_bin.py`; it does not download data or implement a second conversion algorithm. The single NetCDF contains both timestamps, so the wrapper supplies its literal filename through the converter's monthly file-selection interface. The converter writes `runoff_20000101.bin` and `runoff_20000102.bin` plus `runoff.ctl` in the Git-ignored `runoff_global_sample_bin/` directory. Each binary is expected to contain one 3,600 × 1,801 little-endian float32 grid (25,934,400 bytes), ordered west-to-east and north-to-south. The CTL describes the same grid and two daily records (`tdef 2 ... 1dy`); it uses `yrev`, `template`, and `little_endian`, and declares `undef=1.0e20`. The converter expresses values as millimetres per daily record, retaining its current accumulation-differencing behavior.
+It calls the existing `convert_CMF_bin.py`; it does not download data or implement a second conversion algorithm. The single NetCDF contains both timestamps, so the wrapper supplies its literal filename through the converter's monthly file-selection interface. The converter writes `runoff_20000101.bin` and `runoff_20000102.bin` plus `runoff.ctl` in the Git-ignored `ERA5land-glb-bin/` directory. Each binary is expected to contain one 3,600 × 1,801 little-endian float32 grid (25,934,400 bytes), ordered west-to-east and north-to-south. The CTL describes the same grid and two daily records (`tdef 2 ... 1dy`); it uses `yrev`, `template`, and `little_endian`, and declares `undef=1.0e20`. The converter expresses values as millimetres per daily record, retaining its current accumulation-differencing behavior.
 
 The script stops if binary or CTL outputs already exist. Set `OVERWRITE=1` near the top only when intentionally replacing this sample output. The conversion requires NumPy, pandas, xarray, and NetCDF4. This is an operational format example, not scientific validation: the source accumulation's first-record and date-boundary meaning remains unresolved in [KG-0019](../../research/records/knowledge_gaps/KG-0019.md). Generate the CTL and binary together with this script; do not treat a standalone CTL as sufficient to establish scientific timing or suitability for a simulation.

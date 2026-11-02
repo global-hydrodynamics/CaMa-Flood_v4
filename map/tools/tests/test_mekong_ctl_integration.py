@@ -27,7 +27,7 @@ class MekongCtlWrapperIntegrationTests(unittest.TestCase):
                          map_root / "tools" / "code" / "generate_ctl.py")
             shutil.copy2(SAMPLE / "script_region" / "s02-write_ctl.sh",
                          fixture / "script_region" / "s02-write_ctl.sh")
-            for name in ("params.txt", "inpdim_test-1deg.txt", "inpdim_test-15min_nc.txt"):
+            for name in ("params.txt", "inpdim_test-glb_1deg.txt", "inpdim_test-E2O_15min_nc.txt"):
                 shutil.copy2(SAMPLE / name, fixture / name)
             for path in SAMPLE.glob("*.bin"):
                 shutil.copy2(path, fixture / path.name)
@@ -74,7 +74,7 @@ class MekongCtlWrapperIntegrationTests(unittest.TestCase):
             self.assertIn("downx 1 -1,40,4", (fixture / "downxy.ctl").read_text())
             self.assertIn("downy 1 -1,40,4", (fixture / "downxy.ctl").read_text())
             self.assertIn("zdef 10 linear", (fixture / "fldhgt.ctl").read_text())
-            self.assertIn("zdef 4 linear", (fixture / "inpmat_test-1deg.ctl").read_text())
+            self.assertIn("zdef 4 linear", (fixture / "inpmat_test-glb_1deg.ctl").read_text())
             self.assertIn("xdef 1200 linear", (fixture / "1min" / "1min.catmxy.ctl").read_text())
             catmxy_ctl = (fixture / "1min" / "1min.catmxy.ctl").read_text()
             self.assertIn("catmxx 1 -1,40,2,-1", catmxy_ctl)

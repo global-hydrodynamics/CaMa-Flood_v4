@@ -28,7 +28,7 @@ PYTHON_CMD="python3"
 PYTHON_SCRIPT="./convert_CMF_bin.py"
 
 # (1) Downloaded NetCDF files
-#INDIR="./ori_global"
+#INDIR="./ERA5land-glb-nc"
 INDIR="./ori_japan"
 INPUT_FILE_UNIT="monthly"
 
@@ -48,7 +48,7 @@ fi
 
 # (2) Output file configuration
 #OUTDIR="./runoff_bin"
-OUTDIR="./runoff_japan_bin"
+OUTDIR="./ERA5land-jpn_bin"
 
 BINARY_PREFIX="runoff_"
 BINARY_SUFFIX=".bin"
