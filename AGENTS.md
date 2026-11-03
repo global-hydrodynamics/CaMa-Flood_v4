@@ -130,6 +130,8 @@ When adding or changing map-related readers, writers, preprocessing products, or
 
 The maintainer manually controls the map registry's workflow-status column, currently named `workflow_stage` in `map/map_variables.csv`. Codex may read it but must not edit its values, including when adding or revising registry rows. If the status appears stale or a new row needs a status, leave it unchanged or blank and report the suggested update to the maintainer. Preserve the existing column values during CSV edits and do not infer or set `default` from file presence.
 
+The v5 model output-variable inventory is [`output_variables.csv`](output_variables.csv) at the repository root. Future CTL-generation tools should locate it relative to the repository root (`${CMF_BASE}/output_variables.csv`), not under `src_main/`.
+
 ## Shared Fortran Module Naming (`map/tools/code/`)
 
 Name shared Fortran module source files in `map/tools/code/` with the `mod_` prefix (for example, `mod_map_color.F90`). This convention is limited to shared module source files in this directory; it does not apply to main-model files under `src/`, programs, or files in other directories. A source filename rename does not require renaming its internal Fortran module or procedures unless a task explicitly approves that interface change.

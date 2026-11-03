@@ -2,7 +2,7 @@
 
 ## Status
 
-**Phase 0 and the initial Phase 1 Mekong run are implemented and operationally validated.** The complete tracked `src/` and `gosh/` trees were copied to `src_main/` and `gosh_sample/`; `src_main/` builds independently with the existing default compiler configuration. The 2000 Mekong annual run completed with bifurcation enabled. This is an operational smoke test, not independent scientific validation or a v4 numerical comparison.
+**Phase 0 and Phase 1 (including NetCDF I/O and the two-year Mekong run) are implemented and operationally validated on the maintainer's macOS workstation.** The complete tracked `src/` and `gosh/` trees were copied to `src_main/` and `gosh_sample/`; separate Binary and NetCDF-enabled executables were built. The initial 2000 Mekong annual run, 40-day format comparisons, and 2000–2001 annual-NetCDF/restart workflow completed. These checks establish operational behavior and format consistency for this build and sample, not independent scientific validation or broad platform support.
 
 **Persistent branch:** `feature/gosh-refactor`, created from current `origin/master` at `2841239` on 2026-11-03. No GitHub Issue was requested or created.
 
@@ -84,6 +84,10 @@ The maintainer later changed `mek01-default_run.sh` to use 2000-01-01 00:00 thro
 
 A subsequent run used four OpenMP threads and exercised the script's runtime summary: start/end timestamps, elapsed wall-clock seconds, and exit status were printed and saved in `run_time.log`. It again completed the same 40-day interval and produced 40 records for each configured map output. The prior one-thread outputs were preserved under the ignored `out/mek01-default_run_40day_1thread/`. See VR-0085. The `CVARSOUT` value was already maintainer-edited in the worktree before this follow-up and was preserved; VR-0085 records the exact setting used for that local run.
 
+### Binary output CTLs
+
+The standalone standard-library tool [`tools/generate_output_ctl.py`](../tools/generate_output_ctl.py) now reads the run namelist, the referenced map's `params.txt`, and the root [`output_variables.csv`](../output_variables.csv). `mek01-default_run.sh` invokes it in `planned` mode before model execution when binary output is selected. `existing` mode can describe complete records currently present and reports incomplete files; it does not alter binary data. Synthetic checks cover the 40-day month boundary, leap-year record count, partial records, and malformed file sizes. No live GrADS application or model simulation was used to validate the generated descriptor. Vector, NetCDF, uncertain-registry, and special-dimension outputs remain unsupported; combined multi-year CTLs are deferred. See [`tools/README.md`](../tools/README.md).
+
 ## Incremental feature migration order
 
 The current legacy examples indicate distinct profiles; their numbering is not a mandatory sequence.
@@ -109,8 +113,23 @@ Completed:
 - The initial 2000 Mekong annual run completed, followed by a 40-day January-February run using the current script default; each read its expected daily runoff files and wrote the corresponding daily output records.
 - No legacy `src/` or `gosh/` content, shared build setting, or existing map/runoff product was changed. The two newly generated Mekong `test-mek_1deg` matrix files were added to the sample.
 
-Not performed:
-
-- No optional MPI, NetCDF, sediment, heatlink, or ICI build was attempted.
 - No v4/v5 numerical comparison or independent scientific validation was performed.
+- The NetCDF build was verified only on the current macOS/Homebrew environment; a Linux compiler/library matrix was not tested.
+- MPI, `heatlink/`, `sediment/`, and `ICI/` configurations remain unvalidated.
+
+## Phase 1A–1D: NetCDF forcing, output, and annual restart workflow
+
+The maintainer authorized NetCDF I/O work while keeping map inputs in Binary format and leaving the legacy `src/` and `gosh/` trees untouched. `gosh_sample/compile_netcdf.sh` builds a separate `MAIN_cmf_netcdf` from an isolated temporary copy using NetCDF-Fortran and NetCDF-C configuration flags. It does not replace the regular `src_main/MAIN_cmf` build. The verified toolchain was macOS/Homebrew GNU Fortran with `nf-config` and `nc-config`; Linux behavior is designed for the same tools but has not been exercised.
+
+`inp/test-mek_1deg_nc/s00-convert_binary_to_netcdf.py` generates annual `runoff2000.nc` and `runoff2001.nc` from the unchanged 20 × 30 daily Binary sample in `inp/test-mek_1deg/`. The files contain `runoff(time, latitude, longitude)` in `mm day-1`, with CF daily time bounds and `proleptic_gregorian` calendar. The conversion uses `ncgen`/`ncdump`, has an explicit overwrite option, and is described in the adjacent dataset README. All 731 fields were compared after NetCDF round-trip against the source float32 values with exact equality. The two output files total 1,774,768 bytes (about 1.7 MiB). This proves conversion fidelity for these files, not the scientific validity of the underlying runoff product. The registry row records GitHub sample intent; inclusion in a future v5 downloadable package remains an open policy decision because a v5 package assembly workflow is not yet established.
+
+Three 40-day operational comparisons were completed with the Mekong sample:
+
+1. NetCDF-enabled executable, Binary runoff, Binary output versus the prior Binary build: `outflw`, `storge`, `sfcelv`, `flddph`, and `fldfrc` matched bitwise (maximum absolute difference 0).
+2. NetCDF runoff versus Binary runoff, with Binary outputs: the same five output variables matched bitwise. NetCDF input uses the annual file for that run and reuses `inpmat_test-mek_1deg.bin` through the separate `INPMAT_TAG`; no new input matrix was generated.
+3. Binary runoff with NetCDF outputs: all five output arrays matched their Binary counterparts bitwise. The NetCDF output had 40 records and matching 80 × 120 coordinates. Inspection found two metadata defects in the model writer: singular `cell_method` and non-CF units `0-1` for dimensionless `fldfrc`. These were corrected to `cell_methods` and units `1`; corresponding `output_variables.csv` names/units were aligned to actual writer metadata. The model calculation was not changed.
+
+The `gosh_sample/mek02-longterm_netcdf.sh` workflow then ran 2000 and 2001 separately with annual NetCDF runoff, NetCDF model output, four OpenMP threads, and binary restart transfer. 2000 completed with 366 daily records; 2001 completed with 365. The 2001 log confirms reading the 2000-end restart and bifurcation restart companion. Across all five variables this yielded 731 daily output records. Output arrays had expected shapes and no NaN/Inf; the model's finite fill values remain present. The script stores annual namelists, logs, runtime/status, outputs, restarts, and completion signatures; successful runs are skipped only when the recorded inputs and executable signature are unchanged. A repeated invocation recognized both completed years and left their results intact.
+
+The two-year run and repeated-run check establish operational restart continuity and safe same-configuration rerun behavior for this setup. They do not independently verify scientific correctness of restart state, validate all optional physics, compare against v4, or establish multi-platform reproducibility. See validation records VR-0087–VR-0089 and the dataset/run READMEs for commands and limits.
 

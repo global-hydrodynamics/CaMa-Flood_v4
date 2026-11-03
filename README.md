@@ -26,6 +26,8 @@ Start with the [main manual](doc/Manual_CaMa-Flood_v420.docx) and [user guidelin
 
 This repository provides source code, build configurations, execution scripts, and preprocessing and analysis tools for development, customization, and source-code access. **Cloning it alone does not supply all the river-map and forcing datasets needed for the standard simulations.** Obtain the required data separately through the official distribution.
 
+The root [`output_variables.csv`](output_variables.csv) catalogs v5 model output names, meanings, units, data types, temporal aggregation, and implementation notes. It is intended as a metadata source for future output documentation and CTL/NetCDF tooling; future CTL generators should locate it from the repository root (`${CMF_BASE}/output_variables.csv`).
+
 Build settings are in [adm/Mkinclude](adm/Mkinclude), with compiler-specific examples in [adm/](adm/). The [compilation script](gosh/compile.sh) and [sample experiments](gosh/) provide execution entry points. Configure paths, libraries, and options for your environment before building or running; the presence of a configuration example does not establish that it has been tested on your system.
 
 ### Python utilities

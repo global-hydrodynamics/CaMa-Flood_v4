@@ -23,4 +23,16 @@ cd gosh_sample
 ./mek01-default_run.sh
 ```
 
-The script copies `src_main/MAIN_cmf` into `RUNDIR`, changes to that directory, writes the namelist, and runs the model there. `COUTDIR="./"` therefore places the daily outputs, logs, and final restart under `out/mek01-default_run/`. The default uses four OpenMP threads. The run script stops if its namelist or logs already exist, preserving previous results; set another `RUNDIR` to start a separate run. The latest 40-day run read 40 daily runoff files across January and February (2000-01-01 through 2000-02-09) and wrote 40 records for each gridded daily output, ending at 2000-02-10 00:00. It records model start/end timestamps, elapsed wall-clock seconds, and exit status in `run_time.log`. All checked output values were finite. This is an operational smoke test, not scientific validation or a v4 numerical comparison. Details and limits are in the [workflow plan](../docs/model_source_workflow_plan.md).
+The script copies `src_main/MAIN_cmf` into `RUNDIR`, changes to that directory, and writes the namelist. For binary output it then creates planned GrADS CTLs before starting the model, so written records can be inspected during execution; the CTLs use the full configured time axis even while later records are not yet available. `COUTDIR="./"` therefore places the daily outputs, CTLs, logs, and final restart under `out/mek01-default_run/`. The default uses four OpenMP threads. A rerun automatically replaces this sample's known generated files while leaving unrelated files in `RUNDIR` untouched. The latest 40-day run read 40 daily runoff files across January and February (2000-01-01 through 2000-02-09) and wrote 40 records for each gridded daily output, ending at 2000-02-10 00:00. It records model start/end timestamps, elapsed wall-clock seconds, and exit status in `run_time.log`. All checked output values were finite. This is an operational smoke test, not scientific validation or a v4 numerical comparison. Details and limits are in the [workflow plan](../docs/model_source_workflow_plan.md).
+
+## Mekong two-year NetCDF workflow
+
+[`mek02-longterm_netcdf.sh`](mek02-longterm_netcdf.sh) builds and uses a separate NetCDF-enabled executable, consumes yearly runoff files from [`inp/test-mek_1deg_nc/`](../inp/test-mek_1deg_nc/), writes NetCDF model outputs, and carries the binary restart from 2000 into 2001. Build the NetCDF executable with `./gosh_sample/compile_netcdf.sh` from any directory, then run the two-year example from `gosh_sample/`:
+
+```sh
+./gosh_sample/compile_netcdf.sh
+cd gosh_sample
+./mek02-longterm_netcdf.sh
+```
+
+The script stores each year's namelist, log, timing/status, NetCDF outputs, restart, and completion signature under `out/mek02-longterm_netcdf/`. Completed years are retained and skipped on an identical rerun; an incomplete year can be rerun without deleting a completed prior year. The current local validation completed 2000 (366 records) and 2001 (365 records), read the 2000-end restart at the 2001 start, and produced 731 daily records across the two annual files. The annual output arrays were checked for shape and finite values. See the [model workflow plan](../docs/model_source_workflow_plan.md) and dataset [README](../inp/test-mek_1deg_nc/README.md) for evidence and limitations.

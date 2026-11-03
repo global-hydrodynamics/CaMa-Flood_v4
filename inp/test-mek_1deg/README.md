@@ -70,3 +70,5 @@ The `mm/day` unit and 24-hour interval yield `DROFUNIT=86400000` for conversion 
 ## Redistribution status
 
 The original global ELSE_GPCC source dataset remains external and is not Git-tracked. The derived regional Mekong sample is approved for redistribution and tracked in full in GitHub and the CaMa-Flood distribution package.
+
+The 2000–2001 daily fields also have a yearly NetCDF representation in [`../test-mek_1deg_nc/`](../test-mek_1deg_nc/). It is a value-preserving format conversion of these same source records; see that directory's README for its CF time metadata, regeneration command, and validation limits.
