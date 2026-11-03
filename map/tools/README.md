@@ -108,6 +108,21 @@ The MPI utility test compiles the shared MPI tools into a temporary directory, r
 
 Different workflows have different `location.txt` contracts. Allocation tools intentionally accept one high-resolution river-network area; input-matrix generation, regional matrix generation, and permanent-water aggregation process multiple areas sequentially. See the [verified design rationale and validation boundary](../../docs/map_data_tools_plan.md#high-resolution-area-handling-contract).
 
+## Individual map NetCDF conversion
+
+The model accepts independently stored Binary or NetCDF map rasters when `LMAPCDF=.FALSE.`. Convert an individual registered Binary map without modifying its source:
+
+```sh
+python3 map/tools/convert_map_binary_to_netcdf.py \
+  --map-dir map/mekong_15min \
+  --input map/mekong_15min/fldhgt.bin \
+  --output /tmp/fldhgt_optimized.nc
+```
+
+The converter reads dimensions and geographic bounds from `params.txt`, and types, names, layers, and metadata from [`map_variables.csv`](../map_variables.csv). The implemented/tested products are the core float32 2-D rasters, int32 two-record `nextxy` (`nextx` and `nexty` variables), and layered float32 `fldhgt`. Do not assume every optional or high-resolution registry product is supported by this base-map converter. Standard-library Python is used; the NetCDF C shared library must be installed and discoverable (typically via `nc-config`). The default byte order is little-endian as used by the distributed Mekong sample; use `--byte-order` only when the source dataset's storage order is known. Use `--variables` for a custom source basename that is not directly registered, and `--force` only when intentionally replacing a conversion output.
+
+NetCDF variables retain their logical names regardless of output filename, e.g. `rivhgt_optimized.nc` contains `rivhgt`. `nextxy_noedge.nc` contains `nextx` and `nexty`. The converter writes cell-center `lon`/`lat` coordinates, with CDL variable dimensions `(lat,lon)` or `(layer,lat,lon)` corresponding to Fortran-reader dimensions `(NX,NY)` or `(NX,NY,NLFP)`. It checks the output values by reading them back through the NetCDF library, but compatibility with the model is established by the separate mixed-format Mekong simulation tests documented in the [model workflow plan](../../docs/model_source_workflow_plan.md#individual-binarynetcdf-map-inputs). It does not generate consolidated legacy containers or convert structured text inputs such as `bifprm.txt`.
+
 ## River-network analysis
 
 River-network analysis has two execution paths. Standard map preparation uses `script_params/s06-subbasin.sh` and `s07-upbasin.sh`, which call shared executables in `map/tools/code/`. The reusable `s06` uses a 30,000 km2 example threshold and writes `subbsn.bin` and `subcol.bin`; the Mekong sample wrapper uses the same threshold and labels its outputs `subbsn-30000.bin` and `subcol-30000.bin`. This is a practical example, not a scientifically calibrated universal value. `s07` selects the valid GRDC allocation with the largest `area_CaMa`, reports its primary cell, and writes `upbasin-<GRDC_ID>.bin` (Mekong: `upbasin-2569002.bin`). These optional products are not standard simulation inputs.
