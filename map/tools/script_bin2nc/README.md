@@ -41,6 +41,38 @@ The scripts reuse [`convert_map_binary_to_netcdf.py`](../convert_map_binary_to_n
 
 Run both scripts from the same map-local `script_bin2nc/` current directory so `s02` reads the list created by `s01`. The scripts resolve the map, registry, and converter relative to their own locations. They only inspect `.bin` files directly under `MAP_DIR`; high-resolution subdirectories are never searched.
 
+## Build legacy consolidated NetCDF inputs
+
+The individual files written by `s02` are used with `LMAPCDF=.FALSE.`. A separate helper can assemble the historical consolidated containers used with `LMAPCDF=.TRUE.`; the two formats follow different model-reader paths.
+
+The `t01-legacy_netcdf_map.sh` script creates `netcdf/rivclim.nc` with `nextx`, `nexty`, `lon`, `lat`, `ctmare`, `elevtn`, `nxtdst`, `rivlen`, and all `fldhgt` layers. It creates `netcdf/rivpar.nc` with `rivwth`, `rivhgt`, and `rivman`. The defaults match the Mekong simulation examples: `nextxy_noedge.nc` and `rivwth_merit.nc`. Edit `NEXTXY` and `RIVWTH` near the top to choose `nextxy.nc` or `rivwth.nc` instead.
+
+Run the map-local script independently of `s01` and `s02`:
+
+```sh
+cd map/mekong_15min/script_bin2nc
+./t01-legacy_netcdf_map.sh
+```
+
+Existing consolidated outputs are kept in non-interactive use. In a terminal, answer `y` to replace them; Enter or `N` keeps them. Pass `--force` for explicit overwrite. The Python program stages both outputs, reads them back, checks variable values, then replaces the targets.
+
+The current legacy reader additionally uses `gdwdly` from `rivpar.nc` when `LGDWDLY` is enabled (the reader sets it to zero if absent), `elevslope` for `LSLOPEMOUTH`, and `mask_slope` for `LSLPMIX`; the latter two must exist in `rivpar.nc` when their options are enabled. `LMEANSL` reads `meansl` from the separately configured `CMEANSLNC`, and MPI legacy mode reads `mpireg` from `CMPIREGNC`. This generator does not synthesize these optional variables. The basic Mekong containers omit them; do not enable the corresponding option unless its required input is supplied.
+
+Example model settings for the consolidated path:
+
+```fortran
+&NMAP
+LMAPCDF   = .TRUE.
+CRIVCLINC = ".../netcdf/rivclim.nc"
+CRIVPARNC = ".../netcdf/rivpar.nc"
+CPTHOUT   = ".../bifprm.txt"
+/
+```
+
+This is only the Map namelist fragment. If bifurcation is used, enable `LPTHOUT=.TRUE.` in `&NRUNVER`; the model also requires its normal dimension, time, and other run settings.
+
+The NetCDF C library and Python standard library are sufficient. Validation here checks source/output variable values and layout; it does not replace a model run. Execution through the legacy consolidated reader remains a separate validation step.
+
 ## Supported formats and dependencies
 
 The workflow supports registered `float32` or `int32` rasters with dimensions `NX,NY` or `NX,NY,NLFP`, including multi-variable direct-access files such as `nextxy.bin` and layered files such as `fldhgt.bin`. Data type, record order, dimensions, missing values, and variable metadata come from the registry and `params.txt`; the Binary inputs are not modified.

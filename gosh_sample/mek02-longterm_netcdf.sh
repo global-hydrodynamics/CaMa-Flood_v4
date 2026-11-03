@@ -1,331 +1,204 @@
 #!/bin/sh
-# Run consecutive yearly Mekong simulations with NetCDF runoff/output and binary restart.
+# Run yearly Mekong simulations with individual NetCDF maps.
+# NetCDF runoff/output and annual Binary restarts connect the two runs.
 # Run from gosh_sample/: ./mek02-longterm_netcdf.sh
 set -eu
 
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 CMF_BASE=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd -P)
 
-# Simulation years are inclusive; extend END_YEAR to continue the yearly sequence.
-START_YEAR=2000
-END_YEAR=2001
+# -------------------------- User settings ------------------------------
+# Simulation years are inclusive; the model ends at January 1 of END_YEAR+1.
+START_YEAR=2000                  # First simulation year; starts at January 1 00:00.
+END_YEAR=2001                    # Last simulation year; extend to continue the annual sequence.
 
-# Model, map, runoff, input matrix, and experiment output paths.
-EXEC_CMF="${CMF_BASE}/out/bin/MAIN_cmf_netcdf"
-MAPDIR="${CMF_BASE}/map/mekong_15min"
-ROFFTAG="test-mek_1deg_nc"
-INPMAT_TAG="test-mek_1deg"
-RUNOFF_DIR="${CMF_BASE}/inp/${ROFFTAG}"
-INPDIM="${MAPDIR}/inpdim_${INPMAT_TAG}.txt"
-INPMAT="${MAPDIR}/inpmat_${INPMAT_TAG}.bin"
-RUNDIR="${CMF_BASE}/out/mek02-longterm_netcdf"
+# Runoff dataset and its matching map-specific input matrix.
+ROFFTAG="test-mek_1deg_nc"     # Selects inp/test-mek_1deg_nc/ with one NetCDF file per year.
+INPMAT_TAG="test-mek_1deg"     # Selects the existing input matrix for the same 1-degree grid.
 
-# Keep the mek01 numerical and physical configuration.
-OMP_NUM_THREADS=4
-DT=3600
-LADPSTP=".TRUE."
-LPTHOUT=".TRUE."
-LDAMOUT=".FALSE."
-PMANRIV="0.03D0"
-PMANFLD="0.10D0"
-PDSTMTH="10000.D0"
-PCADP="0.7D0"
-CVARSOUT="outflw,storge,sfcelv,flddph,fldfrc"
-IFRQ_OUT=24
-IFRQ_RST=0
-CVNREST="restart"
+# Map input files; LMAPCDF=.FALSE. makes the reader select Binary or NetCDF from each extension.
+MAPDIR="${CMF_BASE}/map/mekong_15min"  # Mekong river-map root containing params.txt and bifprm.txt.
+MAP_NETCDF_DIR="${MAPDIR}/netcdf"      # Individual NetCDF map products.
+#NEXTXY="${MAP_NETCDF_DIR}/nextxy.nc"       # Includes river networks affected by regional edges.
+NEXTXY="${MAP_NETCDF_DIR}/nextxy_noedge.nc" # Excludes boundary-affected river networks (default).
+#RIVWTH="${MAP_NETCDF_DIR}/rivwth.nc"       # Empirical power-law channel width.
+RIVWTH="${MAP_NETCDF_DIR}/rivwth_merit.nc"  # MERIT Hydro-merged channel width (default).
 
-# Runoff is daily depth in mm/day. The existing input matrix matches this grid.
-IFRQ_INP=24
-DROFUNIT=86400000
-CVNROF="runoff"
-CVNTIME="time"
+# Model execution and physical options; these retain the mek01 sample configuration.
+OMP_NUM_THREADS=4                # OpenMP threads for this non-MPI sample.
+DT=3600                          # Base model timestep [s]; adaptive stepping may reduce it.
+LADPSTP=".TRUE."                 # TRUE: enable adaptive time stepping.
+LPTHOUT=".TRUE."                 # TRUE: enable bifurcation routing.
+LDAMOUT=".FALSE."                # TRUE: enable reservoir operation; FALSE: disable it.
+PMANRIV="0.03D0"                # River Manning roughness coefficient [s m-1/3].
+PMANFLD="0.10D0"                # Floodplain Manning roughness coefficient [s m-1/3].
+PDSTMTH="10000.D0"              # Downstream distance assigned at a river mouth [m].
+PCADP="0.7D0"                    # CFL coefficient used by adaptive timestep control [-].
 
-# ----------------------------------------------------------------------
-# User settings end here. Paths, annual namelists, and processing follow.
-# ----------------------------------------------------------------------
+# Runoff input timing and units.
+IFRQ_INP=24                      # Runoff interval [hours]; 24 means daily input.
+DROFUNIT=86400000                # Divide input units by this factor to obtain m/s; mm/day example.
+CVNROF="runoff"                 # NetCDF runoff variable name.
+CVNTIME="time"                  # NetCDF CF time-coordinate variable name.
 
-SCRIPT_NAME=${0##*/}
-STEP="Prepare the annual NetCDF experiment"
-trap '
-    EXIT_STATUS=$?
-    trap - 0
-    if [ "$EXIT_STATUS" -ne 0 ]; then
-        printf "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n" >&2
-        printf "!!! ERROR: %s FAILED !!!\n" "$SCRIPT_NAME" >&2
-        printf "!!! Step: %s\n" "$STEP" >&2
-        printf "!!! Exit status: %s\n" "$EXIT_STATUS" >&2
-        printf "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n" >&2
-    fi
-    exit "$EXIT_STATUS"
-' 0
-trap 'exit 129' HUP
-trap 'exit 130' INT
-trap 'exit 143' TERM
+# Output and restart products.
+IFRQ_OUT=24                      # Model-output interval [hours]; 24 means daily output.
+CVARSOUT="outflw,storge,sfcelv,flddph,fldfrc" # Comma-separated model output variable names.
+LOUTCDF=".TRUE."                # TRUE: write NetCDF model output; FALSE: write Binary output.
+IFRQ_RST=0                       # 0: write restart at end only; 1-24: hourly; 30: monthly (also at end).
+CVNREST="restart"               # Prefix for binary restart files and their date stamps.
+LRESTCDF=".FALSE."              # TRUE: NetCDF restart; FALSE: Binary restart.
+RUNDIR="${CMF_BASE}/out/mek02-longterm_mapnc" # Dedicated individual-map test output directory.
 
 # ----------------------------------------------------------------------
-# End of error handling.
+# User settings end here. Paths and annual model runs follow.
 # ----------------------------------------------------------------------
 
 NAMELIST="${RUNDIR}/input_cmf.nam"
-SUMMARY="${RUNDIR}/summary.tsv"
+EXEC_CMF="${CMF_BASE}/out/bin/MAIN_cmf_netcdf"
+RUNOFF_DIR="${CMF_BASE}/inp/${ROFFTAG}"
+INPDIM="${MAPDIR}/inpdim_${INPMAT_TAG}.txt"
+INPMAT="${MAPDIR}/inpmat_${INPMAT_TAG}.bin"
 
-file_sha256() {
-    if command -v shasum >/dev/null 2>&1; then
-        LC_ALL=C shasum -a 256 "$1" | awk '{print $1}'
-    elif command -v sha256sum >/dev/null 2>&1; then
-        sha256sum "$1" | awk '{print $1}'
-    else
-        printf 'ERROR: shasum or sha256sum is required to protect completed annual results.\n' >&2
-        return 1
-    fi
-}
-
-year_days() {
-    YEAR_CHECK=$1
-    if [ "$((YEAR_CHECK % 400))" -eq 0 ] || \
-       { [ "$((YEAR_CHECK % 4))" -eq 0 ] && [ "$((YEAR_CHECK % 100))" -ne 0 ]; }; then
-        printf '366\n'
-    else
-        printf '365\n'
-    fi
-}
-
-year_end_stamp() {
-    NEXT_YEAR=$(( $1 + 1 ))
-    printf '%04d010100\n' "$NEXT_YEAR"
-}
-
-annual_outputs_exist() {
-    CHECK_YEAR=$1
-    EXPECTED_DAYS=$(year_days "$CHECK_YEAR")
-    for OUTPUT_VAR in outflw storge sfcelv flddph fldfrc; do
-        OUTPUT_FILE="${RUNDIR}/o_${OUTPUT_VAR}${CHECK_YEAR}.nc"
-        [ -s "$OUTPUT_FILE" ] || return 1
-        ncdump -h "$OUTPUT_FILE" | grep -Fq "(${EXPECTED_DAYS} currently)" || return 1
-    done
-    END_STAMP=$(year_end_stamp "$CHECK_YEAR")
-    [ -s "${RUNDIR}/${CVNREST}${END_STAMP}.bin" ] || return 1
-    [ -s "${RUNDIR}/${CVNREST}${END_STAMP}.bin.pth" ] || return 1
-}
-
-mkdir -p "$RUNDIR"
-if ! command -v ncdump >/dev/null 2>&1; then
-    printf 'ERROR: ncdump is required to validate annual NetCDF output.\n' >&2
-    exit 1
-fi
-if [ ! -x "$EXEC_CMF" ]; then
-    printf 'ERROR: NetCDF-enabled model executable not found: %s\n' "$EXEC_CMF" >&2
-    printf 'Build it with: ./gosh_sample/compile_netcdf.sh\n' >&2
-    exit 1
-fi
-if [ ! -d "$RUNOFF_DIR" ] || [ ! -f "$INPDIM" ] || [ ! -f "$INPMAT" ]; then
-    printf 'ERROR: runoff dataset or matching Mekong input matrix is missing.\n' >&2
-    exit 1
-fi
-
-if [ ! -f "$SUMMARY" ]; then
-    printf 'year\tstatus\tstart\tend\telapsed_seconds\texit_status\n' > "$SUMMARY"
-fi
-
+printf '\n==================================================\n'
+printf '[STEP 1/3] Prepare the individual map test\n'
+printf '==================================================\n'
 printf 'CMF_BASE = %s\n' "$CMF_BASE"
 printf 'RUNDIR = %s\n' "$RUNDIR"
 printf 'MAPDIR = %s\n' "$MAPDIR"
 printf 'RUNOFF_DIR = %s\n' "$RUNOFF_DIR"
+printf '\nOverwriting previous sample results in: %s\n' "$RUNDIR"
 
-# Each annual run has an exclusive end at January 1 of the following year.
+mkdir -p "$RUNDIR"
+rm -f "$RUNDIR"/o_outflw*.nc "$RUNDIR"/o_storge*.nc \
+      "$RUNDIR"/o_sfcelv*.nc "$RUNDIR"/o_flddph*.nc \
+      "$RUNDIR"/o_fldfrc*.nc "$RUNDIR"/restart*.bin* \
+      "$RUNDIR"/input_cmf*.nam "$RUNDIR"/console_*.log \
+      "$RUNDIR"/log_CaMa*.txt "$RUNDIR"/run_time_*.log \
+      "$RUNDIR"/MAIN_cmf "$RUNDIR"/mapdata.txt \
+      "$RUNDIR"/year*.complete "$RUNDIR"/signature_*.tmp \
+      "$RUNDIR"/summary.tsv
+cp "$EXEC_CMF" "$RUNDIR/MAIN_cmf"
+
+# Run each calendar year separately, carrying the end-of-year restart forward.
 YEAR=$START_YEAR
 while [ "$YEAR" -le "$END_YEAR" ]; do
     NEXT_YEAR=$((YEAR + 1))
-    EXPECTED_DAYS=$(year_days "$YEAR")
     RUNOFF_FILE="${RUNOFF_DIR}/runoff${YEAR}.nc"
-    END_STAMP=$(year_end_stamp "$YEAR")
-    MARKER="${RUNDIR}/year${YEAR}.complete"
     YEAR_NAMELIST="${RUNDIR}/input_cmf_${YEAR}.nam"
 
-    STEP="Configure year ${YEAR}"
-    printf '\n==================================================\n[STEP] Configure %s (%s records)\n==================================================\n' \
-        "$YEAR" "$EXPECTED_DAYS"
-    if [ ! -s "$RUNOFF_FILE" ]; then
-        printf 'ERROR: yearly runoff file is missing: %s\n' "$RUNOFF_FILE" >&2
-        exit 1
-    fi
+    printf '\n==================================================\n'
+    printf '[STEP 2/3] Configure year %s\n' "$YEAR"
+    printf '==================================================\n'
 
-    if [ "$YEAR" -eq 2000 ]; then
+    if [ "$YEAR" -eq "$START_YEAR" ]; then
         LRESTART=".FALSE."
         CRESTSTO="NONE"
-        PREVIOUS_RESTART="NONE"
     else
-        PREVIOUS_YEAR_END=$(printf '%04d010100' "$YEAR")
-        PREVIOUS_RESTART="${RUNDIR}/${CVNREST}${PREVIOUS_YEAR_END}.bin"
-        if [ ! -s "$PREVIOUS_RESTART" ] || [ ! -s "${PREVIOUS_RESTART}.pth" ]; then
-            printf 'ERROR: restart from the previous year is required: %s\n' "$PREVIOUS_RESTART" >&2
-            exit 1
-        fi
+        PREVIOUS_RESTART="${RUNDIR}/${CVNREST}$(printf '%04d010100' "$YEAR").bin"
         LRESTART=".TRUE."
         CRESTSTO="$PREVIOUS_RESTART"
     fi
 
+    # Save a year-specific Namelist beside the active one used by the model.
     cat > "$NAMELIST" <<EOF
 &NRUNVER
-LADPSTP = ${LADPSTP}
-LPTHOUT = ${LPTHOUT}
-LDAMOUT = ${LDAMOUT}
-LRESTART = ${LRESTART}
+LADPSTP = ${LADPSTP}       ! TRUE enables adaptive time stepping.
+LPTHOUT = ${LPTHOUT}       ! TRUE enables bifurcation routing.
+LDAMOUT = ${LDAMOUT}       ! TRUE enables reservoir operation; FALSE disables it.
+LRESTART = ${LRESTART}     ! TRUE reads initial state from CRESTSTO; FALSE starts without a restart.
 /
 &NDIMTIME
-CDIMINFO = "${INPDIM}"
-DT = ${DT}
-IFRQ_INP = ${IFRQ_INP}
+CDIMINFO = "${INPDIM}"    ! Map and runoff-grid dimensions for input mapping.
+DT = ${DT}                 ! Base timestep [s]; adaptive stepping may reduce it.
+IFRQ_INP = ${IFRQ_INP}     ! Runoff update interval [hours].
 /
 &NPARAM
-PMANRIV = ${PMANRIV}
-PMANFLD = ${PMANFLD}
-PDSTMTH = ${PDSTMTH}
-PCADP = ${PCADP}
+PMANRIV = ${PMANRIV}       ! River Manning roughness coefficient [s m-1/3].
+PMANFLD = ${PMANFLD}       ! Floodplain Manning roughness coefficient [s m-1/3].
+PDSTMTH = ${PDSTMTH}       ! Downstream distance assigned at a river mouth [m].
+PCADP = ${PCADP}           ! CFL coefficient used by adaptive timestep control [-].
 /
 &NSIMTIME
-SYEAR = ${YEAR}
-SMON = 1
-SDAY = 1
-SHOUR = 0
-EYEAR = ${NEXT_YEAR}
-EMON = 1
-EDAY = 1
-EHOUR = 0
+SYEAR = ${YEAR}            ! First simulation year for this annual run.
+SMON = 1                   ! Simulation start month.
+SDAY = 1                   ! Simulation start day.
+SHOUR = 0                  ! Simulation start hour [0-23].
+EYEAR = ${NEXT_YEAR}       ! Exclusive simulation end year (January 1 of the next year).
+EMON = 1                   ! Exclusive simulation end month.
+EDAY = 1                   ! Exclusive simulation end day.
+EHOUR = 0                  ! Exclusive simulation end hour.
 /
 &NMAP
-LMAPCDF = .FALSE.
-CNEXTXY = "${MAPDIR}/nextxy_noedge.bin"
-CGRAREA = "${MAPDIR}/ctmare.bin"
-CELEVTN = "${MAPDIR}/elevtn.bin"
-CNXTDST = "${MAPDIR}/nxtdst.bin"
-CRIVLEN = "${MAPDIR}/rivlen.bin"
-CFLDHGT = "${MAPDIR}/fldhgt.bin"
-CRIVWTH = "${MAPDIR}/rivwth_merit.bin"
-CRIVHGT = "${MAPDIR}/rivhgt.bin"
-CRIVMAN = "${MAPDIR}/rivman.bin"
-CPTHOUT = "${MAPDIR}/bifprm.txt"
+LMAPCDF = .FALSE.                     ! FALSE uses individual .bin/.nc files; TRUE selects legacy consolidated NetCDF maps.
+CNEXTXY = "${NEXTXY}"                ! Downstream river connectivity (nextx/nexty).
+CGRAREA = "${MAP_NETCDF_DIR}/ctmare.nc" ! Unit-catchment area [m2].
+CELEVTN = "${MAP_NETCDF_DIR}/elevtn.nc" ! Channel-top elevation [m].
+CNXTDST = "${MAP_NETCDF_DIR}/nxtdst.nc" ! Distance to downstream unit catchment [m].
+CRIVLEN = "${MAP_NETCDF_DIR}/rivlen.nc" ! River-channel length within unit catchment [m].
+CFLDHGT = "${MAP_NETCDF_DIR}/fldhgt.nc" ! Floodplain elevation-profile thresholds [m].
+CRIVWTH = "${RIVWTH}"                 ! River-channel width [m], selected above.
+CRIVHGT = "${MAP_NETCDF_DIR}/rivhgt.nc" ! River-channel depth [m].
+CRIVMAN = "${MAP_NETCDF_DIR}/rivman.nc" ! River Manning roughness coefficient.
+CPTHOUT = "${MAPDIR}/bifprm.txt"     ! Bifurcation channel parameters.
 /
 &NRESTART
-CRESTSTO = "${CRESTSTO}"
-CRESTDIR = "./"
-CVNREST = "${CVNREST}"
-LRESTCDF = .FALSE.
-IFRQ_RST = ${IFRQ_RST}
+CRESTSTO = "${CRESTSTO}"  ! Input restart path when LRESTART is true; NONE means no input restart.
+CRESTDIR = "./"           ! Directory for restart outputs, relative to the model run directory.
+CVNREST = "${CVNREST}"    ! Prefix for dated restart output files.
+LRESTCDF = ${LRESTCDF}     ! TRUE writes NetCDF restart; FALSE writes Binary restart.
+IFRQ_RST = ${IFRQ_RST}     ! 0=end only; 1-24=hourly; 30=monthly (also writes at end).
 /
 &NFORCE
-LINPCDF = .TRUE.
-LINPDAY = .FALSE.
-LINTERP = .TRUE.
-CINPMAT = "${INPMAT}"
-DROFUNIT = ${DROFUNIT}
-CROFCDF = "${RUNOFF_FILE}"
-CVNROF = "${CVNROF}"
-CVNTIME = "${CVNTIME}"
-SYEARIN = 0
+LINPCDF = .TRUE.           ! TRUE reads NetCDF runoff; independent of the model-output format.
+LINPDAY = .FALSE.          ! FALSE uses one time-series NetCDF file for this annual run.
+LINTERP = .TRUE.           ! TRUE maps runoff through CINPMAT; FALSE uses nearest-grid mapping.
+CINPMAT = "${INPMAT}"     ! Binary runoff-to-river input-mapping matrix.
+DROFUNIT = ${DROFUNIT}     ! Divide input units by this factor to obtain runoff depth rate [m/s].
+CROFCDF = "${RUNOFF_FILE}" ! NetCDF runoff file for this simulation year.
+CVNROF = "${CVNROF}"      ! Runoff data variable within CROFCDF.
+CVNTIME = "${CVNTIME}"    ! CF time-coordinate variable within CROFCDF.
+SYEARIN = 0                ! 0 uses CF time metadata to locate the first input record.
 /
 &NOUTPUT
-COUTDIR = "./"
-CVARSOUT = "${CVARSOUT}"
-COUTTAG = "${YEAR}"
-LOUTVEC = .FALSE.
-LOUTCDF = .TRUE.
-IFRQ_OUT = ${IFRQ_OUT}
+COUTDIR = "./"            ! Output directory relative to the model run directory.
+CVARSOUT = "${CVARSOUT}"  ! Comma-separated list of output variables to write.
+COUTTAG = "${YEAR}"       ! Year tag appended to each output filename.
+LOUTVEC = .FALSE.          ! TRUE writes vector output; FALSE writes gridded XY output.
+LOUTCDF = ${LOUTCDF}       ! TRUE writes NetCDF model output; FALSE writes Binary model output.
+IFRQ_OUT = ${IFRQ_OUT}     ! Model-output interval [hours], separate from IFRQ_INP.
 /
 EOF
-
-    SIGNATURE_INPUT="${RUNDIR}/signature_${YEAR}.tmp"
-    {
-        printf 'year=%s\nrestart=%s\n' "$YEAR" "$PREVIOUS_RESTART"
-        printf 'model=%s\n' "$(file_sha256 "$EXEC_CMF")"
-        printf 'namelist=%s\n' "$(file_sha256 "$NAMELIST")"
-        printf 'runoff=%s\n' "$(file_sha256 "$RUNOFF_FILE")"
-        for INPUT_FILE in \
-            "${MAPDIR}/params.txt" "${MAPDIR}/nextxy_noedge.bin" "${MAPDIR}/ctmare.bin" \
-            "${MAPDIR}/elevtn.bin" "${MAPDIR}/nxtdst.bin" "${MAPDIR}/rivlen.bin" \
-            "${MAPDIR}/fldhgt.bin" "${MAPDIR}/rivwth_merit.bin" "${MAPDIR}/rivhgt.bin" \
-            "${MAPDIR}/rivman.bin" "${MAPDIR}/bifprm.txt" "$INPDIM" "$INPMAT"; do
-            printf '%s=%s\n' "$INPUT_FILE" "$(file_sha256 "$INPUT_FILE")"
-        done
-        if [ "$PREVIOUS_RESTART" != "NONE" ]; then
-            printf 'restart_data=%s\n' "$(file_sha256 "$PREVIOUS_RESTART")"
-            printf 'restart_bifurcation=%s\n' "$(file_sha256 "${PREVIOUS_RESTART}.pth")"
-        fi
-    } > "$SIGNATURE_INPUT"
-    SIGNATURE=$(file_sha256 "$SIGNATURE_INPUT")
-    rm -f "$SIGNATURE_INPUT"
-
-    if [ -f "$MARKER" ]; then
-        if ! grep -Fqx "signature=${SIGNATURE}" "$MARKER"; then
-            printf 'ERROR: completed year %s has different inputs or executable.\n' "$YEAR" >&2
-            printf 'Preserve this result and use a new RUNDIR for changed experiments: %s\n' "$RUNDIR" >&2
-            exit 1
-        fi
-        if ! annual_outputs_exist "$YEAR"; then
-            printf 'ERROR: year %s is marked complete but an output or restart is missing/incomplete.\n' "$YEAR" >&2
-            exit 1
-        fi
-        printf '[SUCCESS] Year %s already completed with matching inputs; leaving its outputs unchanged.\n' "$YEAR"
-        printf '%s\tSKIPPED\t%s-01-01\t%s-01-01\t0\t0\n' "$YEAR" "$YEAR" "$NEXT_YEAR" >> "$SUMMARY"
-        YEAR=$NEXT_YEAR
-        continue
-    fi
-
-    # Remove only this incomplete year's outputs; completed earlier years stay intact.
-    for OUTPUT_VAR in outflw storge sfcelv flddph fldfrc; do
-        rm -f "${RUNDIR}/o_${OUTPUT_VAR}${YEAR}.nc"
-    done
-    rm -f "${RUNDIR}/${CVNREST}${END_STAMP}.bin" "${RUNDIR}/${CVNREST}${END_STAMP}.bin.pth"
-    cp "$EXEC_CMF" "${RUNDIR}/MAIN_cmf"
     cp "$NAMELIST" "$YEAR_NAMELIST"
 
-    STEP="Run and validate year ${YEAR}"
-    printf '\n==================================================\n[STEP] Run %s-01-01 through %s-01-01\n==================================================\n' \
-        "$YEAR" "$NEXT_YEAR"
-    RUN_START=$(date)
+    printf '\n==================================================\n'
+    printf '[STEP 3/3] Run year %s\n' "$YEAR"
+    printf '==================================================\n'
     RUN_START_SECONDS=$(date +%s)
-    printf 'Start: %s\n' "$RUN_START" | tee "${RUNDIR}/run_time_${YEAR}.log"
-    printf '%s\tRUNNING\t%s-01-01\t%s-01-01\t\t\n' "$YEAR" "$YEAR" "$NEXT_YEAR" >> "$SUMMARY"
+    printf 'Start: %s\n' "$(date)" | tee "${RUNDIR}/run_time_${YEAR}.log"
 
     if (cd "$RUNDIR" && OMP_NUM_THREADS="$OMP_NUM_THREADS" ./MAIN_cmf > "console_${YEAR}.log" 2>&1); then
         RUN_STATUS=0
     else
         RUN_STATUS=$?
     fi
-    RUN_END_SECONDS=$(date +%s)
-    RUN_END=$(date)
-    ELAPSED_SECONDS=$((RUN_END_SECONDS - RUN_START_SECONDS))
+
+    ELAPSED_SECONDS=$(($(date +%s) - RUN_START_SECONDS))
     {
-        printf 'End: %s\n' "$RUN_END"
+        printf 'End: %s\n' "$(date)"
         printf 'Elapsed time: %s seconds\n' "$ELAPSED_SECONDS"
         printf 'Exit status: %s\n' "$RUN_STATUS"
     } | tee -a "${RUNDIR}/run_time_${YEAR}.log"
-    cp "${RUNDIR}/log_CaMa.txt" "${RUNDIR}/log_CaMa_${YEAR}.txt"
 
     if [ "$RUN_STATUS" -ne 0 ]; then
-        printf '%s\tFAILED\t%s-01-01\t%s-01-01\t%s\t%s\n' \
-            "$YEAR" "$YEAR" "$NEXT_YEAR" "$ELAPSED_SECONDS" "$RUN_STATUS" >> "$SUMMARY"
+        printf '[ERROR] Model run failed for year %s (status %s).\n' "$YEAR" "$RUN_STATUS" >&2
         exit "$RUN_STATUS"
     fi
 
-    if ! annual_outputs_exist "$YEAR"; then
-        printf 'ERROR: year %s ended but expected NetCDF records or restart files are missing.\n' "$YEAR" >&2
-        printf '%s\tFAILED_VALIDATION\t%s-01-01\t%s-01-01\t%s\t0\n' \
-            "$YEAR" "$YEAR" "$NEXT_YEAR" "$ELAPSED_SECONDS" >> "$SUMMARY"
-        exit 1
-    fi
-
-    {
-        printf 'signature=%s\n' "$SIGNATURE"
-        printf 'year=%s\nrecords=%s\nrestart=%s\n' "$YEAR" "$EXPECTED_DAYS" "${CVNREST}${END_STAMP}.bin"
-    } > "$MARKER"
-    printf '%s\tCOMPLETED\t%s-01-01\t%s-01-01\t%s\t0\n' \
-        "$YEAR" "$YEAR" "$NEXT_YEAR" "$ELAPSED_SECONDS" >> "$SUMMARY"
-    printf '\n[SUCCESS] Year %s completed: %s output records; restart %s\n' \
-        "$YEAR" "$EXPECTED_DAYS" "${CVNREST}${END_STAMP}.bin"
+    cp "${RUNDIR}/log_CaMa.txt" "${RUNDIR}/log_CaMa_${YEAR}.txt"
+    printf '[SUCCESS] Year %s completed.\n' "$YEAR"
     YEAR=$NEXT_YEAR
 done
 
-printf '\n[SUCCESS] Annual simulations %s-%s completed or were safely skipped.\n' "$START_YEAR" "$END_YEAR"
-printf 'Summary: %s\n' "$SUMMARY"
+printf '\n[SUCCESS] Annual simulations %s-%s completed.\n' "$START_YEAR" "$END_YEAR"
+printf 'Results: %s\n' "$RUNDIR"

@@ -125,6 +125,8 @@ NetCDF variables retain their logical names regardless of output filename, e.g. 
 
 For the shared shell templates and human-edited candidate-list workflow for converting base-map Binary files, see the [two-step Binary-to-NetCDF workflow](script_bin2nc/README.md). Copy the templates into a map-local `script_bin2nc/` directory before configuring and using them. High-resolution subdirectories are outside that workflow.
 
+The same guide documents the separate `t01-legacy_netcdf_map.sh` workflow, which assembles individual NetCDF rasters into the legacy consolidated `rivclim.nc` and `rivpar.nc` containers.
+
 ## River-network analysis
 
 River-network analysis has two execution paths. Standard map preparation uses `script_params/s06-subbasin.sh` and `s07-upbasin.sh`, which call shared executables in `map/tools/code/`. The reusable `s06` uses a 30,000 km2 example threshold and writes `subbsn.bin` and `subcol.bin`; the Mekong sample wrapper uses the same threshold and labels its outputs `subbsn-30000.bin` and `subcol-30000.bin`. This is a practical example, not a scientifically calibrated universal value. `s07` selects the valid GRDC allocation with the largest `area_CaMa`, reports its primary cell, and writes `upbasin-<GRDC_ID>.bin` (Mekong: `upbasin-2569002.bin`). These optional products are not standard simulation inputs.
