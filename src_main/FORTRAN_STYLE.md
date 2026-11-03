@@ -96,6 +96,14 @@ LOGICAL                         :: LVALID
 - Prefer explicitly kind-qualified real literals in newly written precision-sensitive calculations.
 - Check an array's actual rank and extent rather than inferring them from its name.
 
+### Declaration layout
+
+- Separate the `USE` import section from `IMPLICIT NONE` with one blank line. Keep `IMPLICIT NONE` at the start of the declaration section; do not add a blank line before the first declaration unless a meaningful group heading or established local style calls for it.
+- Group declarations by role, such as arguments, local indices and scalars, temporary arrays, or compile-time-specific variables. Keep closely related declarations together and separate meaningful role changes with one blank line. Use a short heading only when the group is not self-evident.
+- Align declaration `::` separators within nearby related declarations where practical. Follow the local column style; do not force unusually long alignment because of a long type or attribute list. Preserve declaration order and the order of type and attribute specifications.
+- Mark the end of a procedure's declaration section immediately before its executable statements with the established `!================================================` separator. Reuse an existing separator and avoid duplicates. Keep conditional-compilation structure and declaration directives in the declaration section.
+- Treat declarations as a human-readable inventory of procedure data. Formatting may clarify relationships, but must not change declared names, types, kinds, attributes, initializers, dimensions, imports, or order.
+
 ## 4. Layout and formatting
 
 **Observed conventions:**

@@ -20,6 +20,7 @@ MODULE CMF_CTRL_MAPS_MOD
 ! shared variables in module
 USE PARKIND1,                ONLY: JPIM, JPRB, JPRD, JPRM
 USE YOS_CMF_INPUT,           ONLY: LOGNAM
+
 IMPLICIT NONE
 
 SAVE
@@ -73,6 +74,7 @@ SUBROUTINE CMF_MAPS_NMLIST
 ! -- Called from CMF_DRV_NMLIST
 USE YOS_CMF_INPUT,      ONLY: CSETFILE,NSETFILE,LMEANSL,LGDWDLY
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
+
 IMPLICIT NONE
 !================================================
 !*** 1. Open the namelist file
@@ -182,6 +184,7 @@ USE YOS_CMF_MAP,        ONLY: I2NEXTX,I2NEXTY, I2REGION, REGIONALL,REGIONTHIS, &
                             & NSEQRIV,NSEQALL, NSEQMAX, NPTHOUT,  NPTHLEV
 USE YOS_CMF_MAP,        ONLY: I1UPST, I1UPN, I1P_OUT, I1P_OUTN, I1P_INF, I1P_INFN
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
+
 IMPLICIT NONE
 !================================================
 WRITE(LOGNAM,*) ""
@@ -257,9 +260,10 @@ CONTAINS
 SUBROUTINE READ_MAP_FILES
 ! Read river connectivity from an individual Binary or NetCDF file.
 USE YOS_CMF_INPUT,      ONLY: WEST,EAST,NORTH,SOUTH
+
 IMPLICIT NONE
 !* local variables
-INTEGER(KIND=JPIM),SAVE    :: IX,IY
+INTEGER(KIND=JPIM),SAVE     :: IX,IY
 !==========================================================
 !*** 1. Read river connectivity
 WRITE(LOGNAM,*) '  READ_MAP_FILES: read nextxy from ',TRIM(CNEXTXY)
@@ -292,6 +296,7 @@ END SUBROUTINE READ_MAP_FILES
 SUBROUTINE READ_MAP_CDF
 ! Read connectivity and coordinates from the legacy consolidated NetCDF file.
 USE NETCDF
+
 IMPLICIT NONE
 !* local variables
 INTEGER(KIND=JPIM)              :: NCID,VARID
@@ -330,13 +335,16 @@ USE YOS_CMF_INPUT,           ONLY: IMIS
 #ifdef UseCDF_CMF
 USE NETCDF
 #endif
+
 IMPLICIT NONE
 !* local variables
 INTEGER(KIND=JPIM),ALLOCATABLE  :: REGIONGRID(:)
 !
+
 INTEGER(KIND=JPIM),SAVE         :: IX,IY
 INTEGER(KIND=JPIM),SAVE         :: IREGION
 INTEGER(KIND=JPIM),SAVE         :: NSEQMAX_MPI
+
 #ifdef UseMPI_CMF
 #ifdef UseCDF_CMF
 INTEGER(KIND=JPIM)              :: NCID
@@ -427,6 +435,7 @@ END SUBROUTINE CALC_REGION
 SUBROUTINE CALC_1D_SEQ
 ! Build the river-cell sequence used to process upstream cells before downstream cells.
 USE YOS_CMF_INPUT,           ONLY: IMIS
+
 IMPLICIT NONE
 !* local variables
 INTEGER(KIND=JPIM)              :: IX,IY,JX,JY,ISEQ,JSEQ,ISEQ1,ISEQ2,AGAIN
@@ -562,13 +571,16 @@ USE YOS_CMF_INPUT,      ONLY: PMANRIV, PMANFLD
 USE YOS_CMF_MAP,        ONLY: NPTHOUT, NPTHLEV, PTH_UPST, PTH_DOWN,&
                             & PTH_DST, PTH_ELV, PTH_WTH,  PTH_MAN, NSEQMAX
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
+
 IMPLICIT NONE
 !* local variables
-INTEGER(KIND=JPIM)         :: IX,IY, JX,JY, ISEQ, JSEQ
-INTEGER(KIND=JPIM)         :: IPTH,  ILEV,  NPTHOUT1
-REAL(KIND=JPRB)            :: PELV,  PWTH,  PDPH
-INTEGER(KIND=JPIM)         :: ONMAX,  INMAX
-INTEGER(KIND=JPIM)         :: OCOUNT(NSEQMAX),  ICOUNT(NSEQMAX)
+INTEGER(KIND=JPIM)          :: IX,IY, JX,JY, ISEQ, JSEQ
+
+INTEGER(KIND=JPIM)          :: IPTH,  ILEV,  NPTHOUT1
+REAL(KIND=JPRB)             :: PELV,  PWTH,  PDPH
+
+INTEGER(KIND=JPIM)          :: ONMAX,  INMAX
+INTEGER(KIND=JPIM)          :: OCOUNT(NSEQMAX),  ICOUNT(NSEQMAX)
 !================================================
 WRITE(LOGNAM,*)"  READ_BIFPARAM: read bifurcation parameters from ", TRIM(CPTHOUT)
 
@@ -698,6 +710,7 @@ USE YOS_CMF_MAP,    ONLY: D2NXTDST, D2GRAREA, D2ELEVTN, D2RIVLEN, &
                         & D2FLDGRD, D2RIVMAN, D2RIVSTOMAX, D2FLDSTOMAX,  &
                         & DFRCINC,  NSEQMAX,  D2MEANSL, D2DWNELV, &
                         & D2GDWDLY, I2MASK
+
 IMPLICIT NONE
 !================================================
 WRITE(LOGNAM,*) ""
@@ -797,9 +810,11 @@ CONTAINS
 SUBROUTINE READ_TOPO_BIN
 ! Read individual map rasters and convert them to the model river-cell order.
 USE CMF_UTILS_MOD,       ONLY: mapR2vecD
+
 IMPLICIT NONE
 !* local variables
 INTEGER(KIND=JPIM)          :: ILFP
+
 REAL(KIND=JPRM),ALLOCATABLE :: R2TEMP(:,:)
 REAL(KIND=JPRB),ALLOCATABLE :: D2TEMP(:,:)
 !================================================
@@ -873,10 +888,12 @@ SUBROUTINE READ_TOPO_CDF
 USE NETCDF 
 USE CMF_UTILS_MOD,            ONLY: mapR2vecD
 USE YOS_CMF_MAP,              ONLY: D2ELEVSLOPE     !! only used in ECMWF
+
 IMPLICIT NONE
 !* local variables
 INTEGER(KIND=JPIM)               :: NCID,VARID,STATUS
 INTEGER(KIND=JPIM)               :: ILEV
+
 REAL(KIND=JPRM),ALLOCATABLE      :: R2TEMP(:,:)
 REAL(KIND=JPRB),ALLOCATABLE      :: D2TEMP(:,:)
 !================================================
@@ -990,6 +1007,7 @@ SUBROUTINE SET_FLDSTG
 IMPLICIT NONE
 !* local variables
 INTEGER(KIND=JPIM),SAVE  ::  ISEQ, I
+
 REAL(KIND=JPRB),SAVE     ::  DSTONOW
 REAL(KIND=JPRB),SAVE     ::  DSTOPRE
 REAL(KIND=JPRB),SAVE     ::  DHGTPRE
@@ -1031,9 +1049,12 @@ USE NETCDF
 USE CMF_UTILS_MOD,           ONLY: mapI2vecI
 
 IMPLICIT NONE
-INTEGER(KIND=JPIM),ALLOCATABLE  :: I2TEMP(:,:)
-INTEGER(KIND=JPIM)              :: ISEQ, I0, I1
-INTEGER(KIND=JPIM)              :: NCID,VARID,STATUS
+INTEGER(KIND=JPIM),ALLOCATABLE :: I2TEMP(:,:)
+
+INTEGER(KIND=JPIM)             :: ISEQ, I0, I1
+
+INTEGER(KIND=JPIM)             :: NCID,VARID,STATUS
+!================================================
 
   !*** 1. Read the legacy slope-mixing mask and map it to river-cell order
   ! mask_slope is available only in the legacy consolidated parameter file.
@@ -1080,10 +1101,12 @@ END SUBROUTINE CMF_TOPO_INIT
 SUBROUTINE MAP_UTIL_INPUT_ERROR(CFILE, MESSAGE, CONTEXT)
 ! Write a Map input diagnostic with its caller context and stop execution.
 IMPLICIT NONE
-CHARACTER(LEN=*),INTENT(IN) :: CFILE
-CHARACTER(LEN=*),INTENT(IN) :: MESSAGE
+CHARACTER(LEN=*),INTENT(IN)          :: CFILE
+CHARACTER(LEN=*),INTENT(IN)          :: MESSAGE
 CHARACTER(LEN=*),INTENT(IN),OPTIONAL :: CONTEXT
-CHARACTER(LEN=256) :: CWHERE
+
+CHARACTER(LEN=256)                   :: CWHERE
+!================================================
 
 CWHERE='CMF_CTRL_MAPS_MOD/MAP_UTIL_INPUT_ERROR'
 IF (PRESENT(CONTEXT)) CWHERE=CONTEXT
@@ -1098,9 +1121,11 @@ END SUBROUTINE MAP_UTIL_INPUT_ERROR
 SUBROUTINE MAP_UTIL_NCERROR(STATUS, MESSAGE, CONTEXT)
 ! Write a contextual NetCDF diagnostic and preserve the NCERROR stop status.
 USE NETCDF, ONLY: NF90_NOERR,NF90_STRERROR
+
 IMPLICIT NONE
-INTEGER(KIND=JPIM),INTENT(IN) :: STATUS
-CHARACTER(LEN=*),INTENT(IN) :: MESSAGE,CONTEXT
+INTEGER(KIND=JPIM),INTENT(IN)   :: STATUS
+CHARACTER(LEN=*),INTENT(IN)     :: MESSAGE,CONTEXT
+!================================================
 
 IF (STATUS /= NF90_NOERR) THEN
   WRITE(LOGNAM,*) 'ERROR ['//TRIM(CONTEXT)//']: '//TRIM(NF90_STRERROR(STATUS))//' '//TRIM(MESSAGE)
@@ -1115,9 +1140,11 @@ END SUBROUTINE MAP_UTIL_NCERROR
 INTEGER(KIND=JPIM) FUNCTION MAP_UTIL_INPUT_KIND(CFILE, CONTEXT)
 ! Return the individual Map format code selected from the filename extension.
 IMPLICIT NONE
-CHARACTER(LEN=*),INTENT(IN) :: CFILE
+CHARACTER(LEN=*),INTENT(IN)          :: CFILE
 CHARACTER(LEN=*),INTENT(IN),OPTIONAL :: CONTEXT
-INTEGER(KIND=JPIM) :: NFILE
+
+INTEGER(KIND=JPIM)                   :: NFILE
+!================================================
 
 NFILE=LEN_TRIM(CFILE)
 
@@ -1157,18 +1184,21 @@ USE CMF_UTILS_MOD, ONLY: INQUIRE_FID,CONV_END
 #ifdef UseCDF_CMF
 USE NETCDF
 #endif
-IMPLICIT NONE
-CHARACTER(LEN=*),INTENT(IN) :: CFILE,VARNAME
-REAL(KIND=JPRM),INTENT(OUT) :: R2DATA(:,:)
-INTEGER(KIND=JPIM),INTENT(IN),OPTIONAL :: IRECORD
-CHARACTER(LEN=*),INTENT(IN),OPTIONAL :: CONTEXT
-INTEGER(KIND=JPIM) :: IUNIT,IREC,IOS,FILEKIND
-CHARACTER(LEN=256) :: CWHERE
-#ifdef UseCDF_CMF
-INTEGER(KIND=JPIM) :: NCID,VARID,STATUS,NDIMS,VARTYPE,DIMIDS(NF90_MAX_VAR_DIMS),DIMLEN
-INTEGER(KIND=JPIM) :: IDIM,START3(3),COUNT3(3)
-#endif
 
+IMPLICIT NONE
+CHARACTER(LEN=*),INTENT(IN)            :: CFILE,VARNAME
+REAL(KIND=JPRM),INTENT(OUT)            :: R2DATA(:,:)
+INTEGER(KIND=JPIM),INTENT(IN),OPTIONAL :: IRECORD
+CHARACTER(LEN=*),INTENT(IN),OPTIONAL   :: CONTEXT
+
+INTEGER(KIND=JPIM)                   :: IUNIT,IREC,IOS,FILEKIND
+CHARACTER(LEN=256)                   :: CWHERE
+
+#ifdef UseCDF_CMF
+INTEGER(KIND=JPIM)                   :: NCID,VARID,STATUS,NDIMS,VARTYPE,DIMIDS(NF90_MAX_VAR_DIMS),DIMLEN
+INTEGER(KIND=JPIM)                   :: IDIM,START3(3),COUNT3(3)
+#endif
+!================================================
 !*** 1. Validate the destination and select the file format
 ! Binary uses one direct-access record per layer; NetCDF uses (NX,NY), or
 ! (NX,NY,NLFP) for layered data. The caller converts the grid to river order.
@@ -1252,18 +1282,21 @@ USE CMF_UTILS_MOD, ONLY: INQUIRE_FID,CONV_ENDI
 #ifdef UseCDF_CMF
 USE NETCDF
 #endif
-IMPLICIT NONE
-CHARACTER(LEN=*),INTENT(IN) :: CFILE,VARNAME
-INTEGER(KIND=JPIM),INTENT(OUT) :: I2DATA(:,:)
-INTEGER(KIND=JPIM),INTENT(IN),OPTIONAL :: IRECORD
-CHARACTER(LEN=*),INTENT(IN),OPTIONAL :: CONTEXT
-INTEGER(KIND=JPIM) :: IUNIT,IREC,IOS,FILEKIND
-CHARACTER(LEN=256) :: CWHERE
-#ifdef UseCDF_CMF
-INTEGER(KIND=JPIM) :: NCID,VARID,STATUS,NDIMS,VARTYPE,DIMIDS(NF90_MAX_VAR_DIMS),DIMLEN
-INTEGER(KIND=JPIM) :: IDIM
-#endif
 
+IMPLICIT NONE
+CHARACTER(LEN=*),INTENT(IN)                :: CFILE,VARNAME
+INTEGER(KIND=JPIM),INTENT(OUT)             :: I2DATA(:,:)
+INTEGER(KIND=JPIM),INTENT(IN),OPTIONAL     :: IRECORD
+CHARACTER(LEN=*),INTENT(IN),OPTIONAL       :: CONTEXT
+
+INTEGER(KIND=JPIM)                   :: IUNIT,IREC,IOS,FILEKIND
+CHARACTER(LEN=256)                   :: CWHERE
+
+#ifdef UseCDF_CMF
+INTEGER(KIND=JPIM)                   :: NCID,VARID,STATUS,NDIMS,VARTYPE,DIMIDS(NF90_MAX_VAR_DIMS),DIMLEN
+INTEGER(KIND=JPIM)                   :: IDIM
+#endif
+!================================================
 !*** 1. Validate the destination and select the file format
 ! IRECORD selects a Binary record; NetCDF network components are separate
 ! variables (nextx and nexty) in two-dimensional arrays.
