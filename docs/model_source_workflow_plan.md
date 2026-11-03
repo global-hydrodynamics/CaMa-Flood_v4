@@ -82,6 +82,8 @@ The initial annual acceptance run completed with 8,784 model steps and 366 daily
 
 The maintainer later changed `mek01-default_run.sh` to use 2000-01-01 00:00 through 2000-02-10 00:00, an end-exclusive 40-day interval. The script now requires execution from `gosh_sample/`, copies `src_main/MAIN_cmf` into the run directory, and executes the model from that directory so `COUTDIR="./"` keeps outputs together. The model read 40 daily files through `Roff____20000209.one`, reached the requested end time after 960 hourly steps, and wrote 40 records to each gridded output. This verifies date rollover across the month boundary and the current sample script's directory behavior. The earlier annual output directory was preserved under the ignored name `out/mek01-default_run_2000-full-year/`; the current default output is `out/mek01-default_run/`. See VR-0084 for the detailed check. No numerical algorithms or model source were changed.
 
+A subsequent run used four OpenMP threads and exercised the script's runtime summary: start/end timestamps, elapsed wall-clock seconds, and exit status were printed and saved in `run_time.log`. It again completed the same 40-day interval and produced 40 records for each configured map output. The prior one-thread outputs were preserved under the ignored `out/mek01-default_run_40day_1thread/`. See VR-0085. The `CVARSOUT` value was already maintainer-edited in the worktree before this follow-up and was preserved; VR-0085 records the exact setting used for that local run.
+
 ## Incremental feature migration order
 
 The current legacy examples indicate distinct profiles; their numbering is not a mandatory sequence.
