@@ -162,7 +162,7 @@ print *, 'calc outlet pixel location of each unit catchment'
                 if( ctx1m(jx,jy)/=ctx1m(ix,iy) .or. cty1m(jx,jy)/=cty1m(ix,iy) )then
                   if( outx(iXX,iYY)/=-9999 )then
                     !!print *, 'Multiple Outlet', iXX,iYY
-                    if( upa1m(jx,jy)>maxupa(iXX,iYY) )then    !! mid resolution river map might have two outlet, due to resampling limitation
+                    if( upa1m(jx,jy)>maxupa(iXX,iYY) )then    !! resampling can give a cell multiple outlets
                       maxupa(iXX,iYY)=upa1m(jx,jy)
                       outx(iXX,iYY)=ix
                       outy(iXX,iYY)=iy
@@ -313,7 +313,7 @@ print *, 'calc outlet pixel location of each unit catchment'
           if( isFound==1 )then
             jXX=ctx1m(ix,iy)
             jYY=cty1m(ix,iy)
-            if( uparea(jXX,jYY)<area0*0.1 ) goto 3200   !! upstream grid uparea is 1-order smaller than gauge uparea --> small tributary: skip
+            if( uparea(jXX,jYY)<area0*0.1 ) goto 3200   !! skip tributaries with <10% of gauge area
 
             area=upa_sum+uparea(jXX,jYY)    !! consider multiple upstream grids
             diff=area-area0

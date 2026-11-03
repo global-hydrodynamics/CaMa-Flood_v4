@@ -207,7 +207,11 @@ def parse_count(value: str, grid: Grid) -> int | None:
     if value.upper() == "NLFP" and not grid.high_resolution:
         # NLFP is record 3 of params.txt; read it directly from that file.
         try:
-            tokens = [line.split("!!", 1)[0].split("#", 1)[0].split()[0] for line in Path(grid.source).read_text().splitlines() if line.split("!!", 1)[0].split("#", 1)[0].strip()]
+            tokens = [
+                line.split("!!", 1)[0].split("#", 1)[0].split()[0]
+                for line in Path(grid.source).read_text().splitlines()
+                if line.split("!!", 1)[0].split("#", 1)[0].strip()
+            ]
             count = int(float(tokens[2]))
         except (OSError, ValueError, IndexError):
             raise CtlError(f"Cannot resolve NLFP from {grid.source}")
@@ -320,7 +324,16 @@ def record_variables(rows: list[dict[str, str]], grid: Grid) -> tuple[list[Varia
                 name = match.group(2)
                 if not NAME_RE.fullmatch(name):
                     raise CtlError(f"invalid GrADS variable name {name!r}")
-                variables.append(Variable(name, 1, dtype, row.get("long_name", "").strip(), row.get("units", "").strip(), index))
+                variables.append(
+                    Variable(
+                        name,
+                        1,
+                        dtype,
+                        row.get("long_name", "").strip(),
+                        row.get("units", "").strip(),
+                        index,
+                    )
+                )
             continue
         if re.fullmatch(r"record\s+1", layout, re.I):
             name = (row.get("name") or "").strip()
@@ -548,7 +561,11 @@ def generate_directory(map_dir: Path, registry_path: Path, *, dry_run: bool = Fa
             )
             actual_size = path.stat().st_size
             if actual_size != expected_size:
-                raise CtlValidationError(f"binary size mismatch: expected {expected_size} bytes ({records} record(s), {grid.nx}x{grid.ny}, {variables[0].dtype}), found {actual_size}")
+                raise CtlValidationError(
+                    f"binary size mismatch: expected {expected_size} bytes "
+                    f"({records} record(s), {grid.nx}x{grid.ny}, "
+                    f"{variables[0].dtype}), found {actual_size}"
+                )
             try:
                 text = ctl_text(path, variables, grid, sentinel)
             except CtlError as exc:
@@ -590,7 +607,10 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     summary = generate_directory(args.map_dir, args.metadata_csv, dry_run=args.dry_run, overwrite=args.overwrite)
     action = "planned" if args.dry_run else "generated"
-    print(f"Summary: {action}={summary.generated}, skipped={summary.skipped}, failed={summary.failed}, fallback={summary.fallback_files}")
+    print(
+        f"Summary: {action}={summary.generated}, skipped={summary.skipped}, "
+        f"failed={summary.failed}, fallback={summary.fallback_files}"
+    )
     return 1 if summary.failed else 0
 
 

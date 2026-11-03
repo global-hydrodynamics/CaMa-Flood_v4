@@ -26,28 +26,28 @@ IMPLICIT NONE
 SAVE
 !*** Map input settings (registered in NAMELIST/NMAP/)
 !*** NAMELIST/NMAP/: Individual map files (Binary or NetCDF)
-CHARACTER(LEN=256)              :: CNEXTXY         !! downstream cell indices (nextx, nexty)
-CHARACTER(LEN=256)              :: CGRAREA         !! upstream catchment area
-CHARACTER(LEN=256)              :: CELEVTN         !! riverbank elevation
-CHARACTER(LEN=256)              :: CNXTDST         !! distance to downstream cell
-CHARACTER(LEN=256)              :: CRIVLEN         !! river channel length
-CHARACTER(LEN=256)              :: CFLDHGT         !! floodplain elevation profile
+CHARACTER(LEN=256)              :: CNEXTXY         !! downstream grid-cell indices (1-based nextx, nexty)
+CHARACTER(LEN=256)              :: CGRAREA         !! unit-catchment area used in floodplain calculations [m2]
+CHARACTER(LEN=256)              :: CELEVTN         !! unit-catchment channel-top elevation [m]
+CHARACTER(LEN=256)              :: CNXTDST         !! distance to downstream unit catchment [m]
+CHARACTER(LEN=256)              :: CRIVLEN         !! channel length within each unit catchment [m]
+CHARACTER(LEN=256)              :: CFLDHGT         !! floodplain elevation thresholds by layer [m]
 !* River channel parameters
-CHARACTER(LEN=256)              :: CRIVWTH         !! river channel width
-CHARACTER(LEN=256)              :: CRIVHGT         !! river channel depth
-CHARACTER(LEN=256)              :: CRIVMAN         !! Manning's roughness coefficient
+CHARACTER(LEN=256)              :: CRIVWTH         !! river-channel width [m]
+CHARACTER(LEN=256)              :: CRIVHGT         !! river-channel depth [m]
+CHARACTER(LEN=256)              :: CRIVMAN         !! Manning roughness coefficient [s m-1/3]
 !* Optional map inputs
-CHARACTER(LEN=256)              :: CPTHOUT         !! bifurcation channel parameters (text)
-CHARACTER(LEN=256)              :: CGDWDLY         !! groundwater delay parameter
-CHARACTER(LEN=256)              :: CMEANSL         !! mean sea level elevation
+CHARACTER(LEN=256)              :: CPTHOUT         !! text file with bifurcation pathway definitions and parameters
+CHARACTER(LEN=256)              :: CGDWDLY         !! groundwater-delay raster; set when LGDWDLY is TRUE (default NONE)
+CHARACTER(LEN=256)              :: CMEANSL         !! mean sea-level elevation raster [m]; set for LMEANSL (default NONE)
 !* MPI domain decomposition
-CHARACTER(LEN=256)              :: CMPIREG         !! MPI region ID for each grid cell
+CHARACTER(LEN=256)              :: CMPIREG         !! MPI region-ID map for domain decomposition (default NONE)
 !* Legacy consolidated NetCDF map inputs
-LOGICAL                         :: LMAPCDF         !! true: legacy NetCDF; false: individual files
-CHARACTER(LEN=256)              :: CRIVCLINC       !! consolidated river network and topography
-CHARACTER(LEN=256)              :: CRIVPARNC       !! consolidated channel and optional parameters
-CHARACTER(LEN=256)              :: CMEANSLNC       !! mean sea level (legacy NetCDF)
-CHARACTER(LEN=256)              :: CMPIREGNC       !! MPI region map (legacy NetCDF)
+LOGICAL                         :: LMAPCDF         !! TRUE: consolidated NetCDF maps; FALSE: individual files (default FALSE)
+CHARACTER(LEN=256)              :: CRIVCLINC       !! legacy NetCDF river-network/topography file (default NONE)
+CHARACTER(LEN=256)              :: CRIVPARNC       !! legacy NetCDF channel/optional-parameter file (default NONE)
+CHARACTER(LEN=256)              :: CMEANSLNC       !! legacy sea-level NetCDF file used with LMEANSL (default NONE)
+CHARACTER(LEN=256)              :: CMPIREGNC       !! legacy MPI region NetCDF file (default NONE)
 
 !*** Register map input variables to NAMELIST/NMAP/
 NAMELIST/NMAP/     CNEXTXY,  CGRAREA,  CELEVTN,  CNXTDST, CRIVLEN, CFLDHGT, &

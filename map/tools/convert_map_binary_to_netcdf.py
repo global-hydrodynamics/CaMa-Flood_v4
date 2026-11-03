@@ -158,8 +158,20 @@ def convert(args: argparse.Namespace) -> None:
         check(lib, lib.nc_def_dim(ncid.value, b"lat", ny, ctypes.byref(lat_dim)), "define lat dimension")
         check(lib, lib.nc_def_dim(ncid.value, b"layer", nlfp, ctypes.byref(layer_dim)), "define layer dimension")
         lon_var, lat_var = ci(), ci()
-        check(lib, lib.nc_def_var(ncid.value, b"lon", NC_DOUBLE, 1, ctypes.byref(lon_dim), ctypes.byref(lon_var)), "define lon coordinate")
-        check(lib, lib.nc_def_var(ncid.value, b"lat", NC_DOUBLE, 1, ctypes.byref(lat_dim), ctypes.byref(lat_var)), "define lat coordinate")
+        check(
+            lib,
+            lib.nc_def_var(
+                ncid.value, b"lon", NC_DOUBLE, 1, ctypes.byref(lon_dim), ctypes.byref(lon_var)
+            ),
+            "define lon coordinate",
+        )
+        check(
+            lib,
+            lib.nc_def_var(
+                ncid.value, b"lat", NC_DOUBLE, 1, ctypes.byref(lat_dim), ctypes.byref(lat_var)
+            ),
+            "define lat coordinate",
+        )
         put_text(lib, ncid.value, NC_GLOBAL, "Conventions", "CF-1.10")
         put_text(lib, ncid.value, NC_GLOBAL, "title", f"CaMa-Flood map variable(s) converted from {args.input.name}")
         for row in rows:
@@ -185,12 +197,56 @@ def convert(args: argparse.Namespace) -> None:
             if sentinel:
                 if dtype == "int32":
                     value = ci(int(sentinel))
-                    check(lib, lib.nc_put_att_int(ncid.value, varid.value, b"missing_value", NC_INT, 1, ctypes.byref(value)), f"write {name} missing_value")
-                    check(lib, lib.nc_put_att_int(ncid.value, varid.value, b"_FillValue", NC_INT, 1, ctypes.byref(value)), f"write {name} _FillValue")
+                    check(
+                        lib,
+                        lib.nc_put_att_int(
+                            ncid.value,
+                            varid.value,
+                            b"missing_value",
+                            NC_INT,
+                            1,
+                            ctypes.byref(value),
+                        ),
+                        f"write {name} missing_value",
+                    )
+                    check(
+                        lib,
+                        lib.nc_put_att_int(
+                            ncid.value,
+                            varid.value,
+                            b"_FillValue",
+                            NC_INT,
+                            1,
+                            ctypes.byref(value),
+                        ),
+                        f"write {name} _FillValue",
+                    )
                 else:
                     value = ctypes.c_float(float(sentinel))
-                    check(lib, lib.nc_put_att_float(ncid.value, varid.value, b"missing_value", NC_FLOAT, 1, ctypes.byref(value)), f"write {name} missing_value")
-                    check(lib, lib.nc_put_att_float(ncid.value, varid.value, b"_FillValue", NC_FLOAT, 1, ctypes.byref(value)), f"write {name} _FillValue")
+                    check(
+                        lib,
+                        lib.nc_put_att_float(
+                            ncid.value,
+                            varid.value,
+                            b"missing_value",
+                            NC_FLOAT,
+                            1,
+                            ctypes.byref(value),
+                        ),
+                        f"write {name} missing_value",
+                    )
+                    check(
+                        lib,
+                        lib.nc_put_att_float(
+                            ncid.value,
+                            varid.value,
+                            b"_FillValue",
+                            NC_FLOAT,
+                            1,
+                            ctypes.byref(value),
+                        ),
+                        f"write {name} _FillValue",
+                    )
         check(lib, lib.nc_enddef(ncid.value), "finish NetCDF definition")
 
         lon_values = array.array("d", (west + (i + 0.5) * resolution for i in range(nx)))
@@ -199,8 +255,20 @@ def convert(args: argparse.Namespace) -> None:
         put_text(lib, ncid.value, lon_var.value, "standard_name", "longitude")
         put_text(lib, ncid.value, lat_var.value, "units", "degrees_north")
         put_text(lib, ncid.value, lat_var.value, "standard_name", "latitude")
-        check(lib, lib.nc_put_var_double(ncid.value, lon_var.value, pointer(lon_values, ctypes.c_double)), "write lon coordinate")
-        check(lib, lib.nc_put_var_double(ncid.value, lat_var.value, pointer(lat_values, ctypes.c_double)), "write lat coordinate")
+        check(
+            lib,
+            lib.nc_put_var_double(
+                ncid.value, lon_var.value, pointer(lon_values, ctypes.c_double)
+            ),
+            "write lon coordinate",
+        )
+        check(
+            lib,
+            lib.nc_put_var_double(
+                ncid.value, lat_var.value, pointer(lat_values, ctypes.c_double)
+            ),
+            "write lat coordinate",
+        )
 
         plane_bytes = nx * ny * 4
         with args.input.open("rb") as source:
@@ -226,9 +294,17 @@ def convert(args: argparse.Namespace) -> None:
                         count = (ctypes.c_size_t * 3)(1, ny, nx)
                     writer = lib.nc_put_vara_int if row["dtype"] == "int32" else lib.nc_put_vara_float
                     reader = lib.nc_get_vara_int if row["dtype"] == "int32" else lib.nc_get_vara_float
-                    check(lib, writer(ncid.value, varid.value, start, count, pointer(data, ctype)), f"write {name} record {layer}")
+                    check(
+                        lib,
+                        writer(ncid.value, varid.value, start, count, pointer(data, ctype)),
+                        f"write {name} record {layer}",
+                    )
                     decoded = array.array(data.typecode, [0]) * len(data)
-                    check(lib, reader(ncid.value, varid.value, start, count, pointer(decoded, ctype)), f"read back {name} record {layer}")
+                    check(
+                        lib,
+                        reader(ncid.value, varid.value, start, count, pointer(decoded, ctype)),
+                        f"read back {name} record {layer}",
+                    )
                     if decoded.tobytes() != data.tobytes():
                         raise RuntimeError(f"round-trip values differ for {name} record {layer}")
     finally:
@@ -244,7 +320,12 @@ def main() -> int:
     parser.add_argument("--output", type=Path, required=True, help="destination NetCDF file")
     parser.add_argument("--registry", type=Path, default=root / "map/map_variables.csv", help="map variable registry")
     parser.add_argument("--variables", help="comma-separated registry variable names; defaults to all variables in the file")
-    parser.add_argument("--byte-order", choices=("little", "big", "native"), default="little", help="Binary byte order (standard distributed maps are little-endian)")
+    parser.add_argument(
+        "--byte-order",
+        choices=("little", "big", "native"),
+        default="little",
+        help="Binary byte order (standard distributed maps are little-endian)",
+    )
     parser.add_argument("--force", action="store_true", help="replace an existing NetCDF output file")
     args = parser.parse_args()
     args.map_dir = args.map_dir.resolve()

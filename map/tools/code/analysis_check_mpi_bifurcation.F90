@@ -63,11 +63,13 @@ program analysis_check_mpi_bifurcation
   ! [1] Read command-line options and map geometry
   ! ================================================
   call get_command_argument(1,region_file)
-  if(len_trim(region_file)==0) call die('usage: analysis_check_mpi_bifurcation <region-map.bin> [--csv <dropped.csv>]')
+  if(len_trim(region_file)==0) call die( &
+    'usage: analysis_check_mpi_bifurcation <region-map.bin> [--csv <dropped.csv>]')
   write_csv=.false.; csv_file=''
   if(command_argument_count()>1) then
     call get_command_argument(2,arg)
-    if(trim(arg)/='--csv' .or. command_argument_count()/=3) call die('usage: analysis_check_mpi_bifurcation <region-map.bin> [--csv <dropped.csv>]')
+    if(trim(arg)/='--csv' .or. command_argument_count()/=3) call die( &
+      'usage: analysis_check_mpi_bifurcation <region-map.bin> [--csv <dropped.csv>]')
     call get_command_argument(3,csv_file); write_csv=.true.
   end if
 
@@ -215,7 +217,9 @@ program analysis_check_mpi_bifurcation
   write(*,'(a,i0)') 'MPI regions: ',regcount
   write(*,'(a,i0)') 'Bifurcation pathways: ',sum(total)
   write(*,'(a,i0)') 'Retained by a model-local vector: ',total(1)
-  write(*,'(a,i0)') '  including endpoints in different assigned regions via downstream vector extension: ',cross_region_retained
+  write(*,'(a,i0)') &
+    '  including endpoints in different assigned regions via downstream vector extension: ', &
+    cross_region_retained
   write(*,'(a,i0)') 'Dropped (both endpoints have a vector, but never on the same rank): ',total(2)
   write(*,'(a,i0)') 'Invalid/unassigned (an endpoint has no model vector): ',total(3)
   if(sum(total)>0) write(*,'(a,f8.4,a)') 'Dropped fraction of all pathways: ',real(total(2))/real(sum(total))*100.0,' %'

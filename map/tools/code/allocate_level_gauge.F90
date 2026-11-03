@@ -44,7 +44,7 @@
       real                 ::  err, err0, err1, err2, dd
       real                 ::  rate, rate0
 
-      integer              ::  type         !! 1: allocated on the catchment mainstem. 2: on catchment tributary, 3: small stream
+      integer              ::  type         !! 1: mainstem; 2: tributary; 3: small stream
 
       real                 ::  dst
       real                 ::  dst_outlt                      !! distance to outlet pixel [km]
@@ -157,7 +157,7 @@ print *, 'calc outlet pixel location of each unit catchment'
                 if( ctx1m(jx,jy)/=ctx1m(ix,iy) .or. cty1m(jx,jy)/=cty1m(ix,iy) )then
                   if( outx(iXX,iYY)/=-9999 )then
                     !!print *, 'Multiple Outlet', iXX,iYY
-                    if( upa1m(jx,jy)>maxupa(iXX,iYY) )then    !! mid resolution river map might have two outlet, due to resampling limitation
+                    if( upa1m(jx,jy)>maxupa(iXX,iYY) )then    !! resampling can give a cell multiple outlets
                       maxupa(iXX,iYY)=upa1m(jx,jy)
                       outx(iXX,iYY)=ix
                       outy(iXX,iYY)=iy

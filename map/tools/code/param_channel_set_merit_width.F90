@@ -86,7 +86,7 @@ print *, trim(cwidth)
           if( nextx(ix,iy)/=imis )then
             if( meritwth(ix,iy)<50 )then
               meritwth(ix,iy)=max(meritwth(ix,iy),rivwth(ix,iy))
-            elseif( meritwth(ix,iy)<rivwth(ix,iy)*0.5 )then   !!! if MERIT width is very small compated to power-law width, modify
+            elseif( meritwth(ix,iy)<rivwth(ix,iy)*0.5 )then   !!! MERIT width is less than half the power-law width
               meritwth(ix,iy)=rivwth(ix,iy)*0.5
             else
               if( meritwth(ix,iy)>rivwth(ix,iy)*5.0 )then    !! if MERIT width is very large, mnodify

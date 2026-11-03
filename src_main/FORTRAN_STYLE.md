@@ -104,6 +104,13 @@ LOGICAL                         :: LVALID
 - Mark the end of a procedure's declaration section immediately before its executable statements with the established `!================================================` separator. Reuse an existing separator and avoid duplicates. Keep conditional-compilation structure and declaration directives in the declaration section.
 - Treat declarations as a human-readable inventory of procedure data. Formatting may clarify relationships, but must not change declared names, types, kinds, attributes, initializers, dimensions, imports, or order.
 
+### Namelist variable declarations
+
+- Declare each variable registered in a Namelist on its own line. Add an English `!!` inline description that explains the setting's role, rather than merely expanding its name.
+- Include verified units where applicable. Describe what `.TRUE.` enables for logical settings, identify the role of each configured file path, and explain meaningful sentinel values such as `NONE` when their behavior is established. Do not guess unclear semantics or units; report them for confirmation.
+- Keep related Namelist declarations together and separate changes in purpose with a blank line. Align `::` and inline descriptions where practical without excessive padding.
+- Label the Namelist registration statement with its group name. When adding a Namelist variable, reconcile its declaration, any applicable default, registration, and any required setting report/logging with the actual design; defaults and logging are not universally required.
+
 ## 4. Layout and formatting
 
 **Observed conventions:**
