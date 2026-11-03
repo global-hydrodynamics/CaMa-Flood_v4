@@ -14,31 +14,32 @@ The scripts reuse [`convert_map_binary_to_netcdf.py`](../convert_map_binary_to_n
    cp map/tools/script_bin2nc/s02-convert_netcdf.sh map/your_map/script_bin2nc/
    ```
 
-2. Generate an editable candidate list by running the map-local script:
+2. Change to the map-local script directory, then generate the candidate list. The list is written to the current directory as `bin2nc_list.txt`:
 
    ```sh
-   ./map/your_map/script_bin2nc/s01-list_binary.sh
+   cd map/your_map/script_bin2nc
+   ./s01-list_binary.sh
    ```
 
-   The Mekong copy targets `map/mekong_15min/`. The list is written to `<map>/netcdf/bin2nc_list.txt`, ordered by numeric `category_id` and then registry row order. A file listed in multiple categories appears once under its first category. Only registered files directly in the map root and supported by the converter are listed. Unregistered binaries and registered but unsupported layouts are reported as warnings. The current `NX,NY,INPN` runoff input matrices are not handled as map rasters and are omitted. If a list already exists, `s01` asks before replacing it; non-interactive use preserves it.
+   The Mekong copy targets `map/mekong_15min/`. Candidates are ordered by numeric `category_id` and then registry row order. A file listed in multiple categories appears once under its first category. Only registered files directly in the map root and supported by the converter are listed. Unregistered binaries and registered but unsupported layouts are reported as warnings. The current `NX,NY,INPN` runoff input matrices are not handled as map rasters and are omitted. If a list already exists in the current directory, `s01` asks before replacing it; non-interactive use preserves it.
 
 3. Review `bin2nc_list.txt` and comment out every file that should not be converted by placing `#` at the beginning of its line. The generated list starts with all supported candidates selected.
 
 4. Convert the remaining entries in list order:
 
    ```sh
-   ./map/your_map/script_bin2nc/s02-convert_netcdf.sh
+   ./s02-convert_netcdf.sh
    ```
 
    Files are written to `<map>/netcdf/<binary-stem>.nc`. For example, `nextxy.bin` becomes `nextxy.nc` with `nextx` and `nexty`; `fldhgt.bin` retains all registered floodplain layers. The converter checks registry metadata, map dimensions, record sizes, and reads each written variable/layer back for exact value comparison.
 
-4. Review the conversion log and the NetCDF files in `<map>/netcdf/`. Existing outputs are skipped by default in non-interactive use. In a terminal, each existing output prompts for `y/N`; Enter skips it. Pass `--force` to overwrite selected outputs without prompts:
+5. Review the conversion log and the NetCDF files in `<map>/netcdf/`. Existing outputs are skipped by default in non-interactive use. In a terminal, each existing output prompts for `y/N`; Enter skips it. Pass `--force` to overwrite selected outputs without prompts:
 
    ```sh
-   ./map/your_map/script_bin2nc/s02-convert_netcdf.sh --force
+   ./s02-convert_netcdf.sh --force
    ```
 
-The scripts resolve paths from their own locations and can be called from any working directory. They only inspect `.bin` files directly under `MAP_DIR`; high-resolution subdirectories are never searched.
+Run both scripts from the same map-local `script_bin2nc/` current directory so `s02` reads the list created by `s01`. The scripts resolve the map, registry, and converter relative to their own locations. They only inspect `.bin` files directly under `MAP_DIR`; high-resolution subdirectories are never searched.
 
 ## Supported formats and dependencies
 

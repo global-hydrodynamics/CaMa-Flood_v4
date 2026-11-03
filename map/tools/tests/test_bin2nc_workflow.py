@@ -176,7 +176,7 @@ class BinaryToNetCDFWorkflowTests(unittest.TestCase):
             ]
             registry = root / "map_variables.csv"
             write_registry(registry, rows)
-            output = map_dir / "netcdf/bin2nc_list.txt"
+            output = root / "bin2nc_list.txt"
 
             with tempfile.TemporaryFile(mode="w+") as log:
                 from contextlib import redirect_stdout
@@ -203,9 +203,7 @@ class BinaryToNetCDFWorkflowTests(unittest.TestCase):
             registry = map_dir.parent / "map_variables.csv"
             write_registry(registry, [registry_row("elevtn.bin", "11", "default_rivmap")])
             (map_dir / "elevtn.bin").write_bytes(b"\0" * 16)
-            netcdf_dir = map_dir / "netcdf"
-            netcdf_dir.mkdir()
-            list_file = netcdf_dir / "bin2nc_list.txt"
+            list_file = root / "bin2nc_list.txt"
             list_file.write_text("# maintainer selection\n", encoding="utf-8")
             script = script_dir / "s01-list_binary.sh"
 
@@ -218,6 +216,7 @@ class BinaryToNetCDFWorkflowTests(unittest.TestCase):
             transcript = run_tty(script, root, b"y\n", b"Regenerate it? [y/N]:")
             self.assertIn("Generated 1 conversion candidates", transcript)
             self.assertIn("elevtn.bin", list_file.read_text())
+            self.assertFalse((map_dir / "netcdf/bin2nc_list.txt").exists())
 
     def test_s02_ignores_comments_skips_noninteractive_overwrite_and_accepts_force(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -227,7 +226,7 @@ class BinaryToNetCDFWorkflowTests(unittest.TestCase):
             (map_dir / "second.bin").write_text("second")
             netcdf_dir = map_dir / "netcdf"
             netcdf_dir.mkdir()
-            (netcdf_dir / "bin2nc_list.txt").write_text(
+            (root / "bin2nc_list.txt").write_text(
                 "# select files\nfirst.bin\n#second.bin\n\n", encoding="ascii"
             )
             script = script_dir / "s02-convert_netcdf.sh"
@@ -257,7 +256,7 @@ class BinaryToNetCDFWorkflowTests(unittest.TestCase):
             (map_dir / "first.bin").write_text("first")
             netcdf_dir = map_dir / "netcdf"
             netcdf_dir.mkdir()
-            (netcdf_dir / "bin2nc_list.txt").write_text("first.bin\n", encoding="ascii")
+            (root / "bin2nc_list.txt").write_text("first.bin\n", encoding="ascii")
             output = netcdf_dir / "first.nc"
             output.write_text("old")
 
@@ -276,7 +275,7 @@ class BinaryToNetCDFWorkflowTests(unittest.TestCase):
             script_dir, map_dir = make_workflow_tree(root, use_converter_stub=True)
             netcdf_dir = map_dir / "netcdf"
             netcdf_dir.mkdir()
-            list_file = netcdf_dir / "bin2nc_list.txt"
+            list_file = root / "bin2nc_list.txt"
             script = script_dir / "s02-convert_netcdf.sh"
             list_file.write_text("missing.bin\n", encoding="ascii")
             result = subprocess.run(["sh", str(script)], cwd=root, text=True, capture_output=True)
@@ -303,13 +302,13 @@ class BinaryToNetCDFWorkflowTests(unittest.TestCase):
             (map_dir / "elevtn.bin").write_bytes(struct.pack("<4f", 10.0, 20.0, 30.0, 40.0))
             netcdf_dir = map_dir / "netcdf"
             netcdf_dir.mkdir()
-            (netcdf_dir / "bin2nc_list.txt").write_text(
+            (script_dir / "bin2nc_list.txt").write_text(
                 "# selected files\nnextxy.bin\nfldhgt.bin\n#elevtn.bin\n", encoding="ascii"
             )
 
             result = subprocess.run(
                 ["sh", str(script_dir / "s02-convert_netcdf.sh")],
-                cwd=root,
+                cwd=script_dir,
                 text=True,
                 capture_output=True,
             )

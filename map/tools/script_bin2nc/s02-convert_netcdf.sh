@@ -1,15 +1,15 @@
 #!/bin/sh
 # Convert selected map-root Binary files to individual NetCDF files.
-# Inputs: params.txt, bin2nc_list.txt, registered .bin files, map_variables.csv.
+# Inputs: bin2nc_list.txt in the current working directory, params.txt, registered .bin files.
 # Outputs: <map>/netcdf/<binary-stem>.nc.
 set -eu
 
-# Resolve this template independently of the caller's working directory.
+# Resolve shared tools from the script location; read the list from the current directory.
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 # Default target when running the shared template; map-local copies use "..".
 MAP_DIR="$SCRIPT_DIR/../../mekong_15min"  # Change this to select another map directory.
 NETCDF_DIR="$MAP_DIR/netcdf"
-LIST_FILE="$NETCDF_DIR/bin2nc_list.txt"
+LIST_FILE="bin2nc_list.txt"
 REGISTRY="$SCRIPT_DIR/../../map_variables.csv"
 if [ -f "$SCRIPT_DIR/../convert_map_binary_to_netcdf.py" ]; then
     TOOL_DIR="$SCRIPT_DIR/.."
