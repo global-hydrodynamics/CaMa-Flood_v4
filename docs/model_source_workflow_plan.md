@@ -59,7 +59,7 @@ The original `gosh/compile.sh` assumes it is run from `gosh/`; it clean/builds `
 
 The other copied `test*.sh`, options, and development examples have not yet been migrated into v5-ready execution examples. Several point to package-only maps/forcing, use current-working-directory-relative paths, clear existing result files, and still contain legacy executable paths. They must not be run as v5 samples until each is explicitly migrated and its paths/output isolation reviewed.
 
-## Phase 1: Mekong default simulation (completed)
+## Phase 1: Mekong simulation (completed)
 
 The first v5 model run uses the committed Mekong map and runoff sample:
 
@@ -76,7 +76,11 @@ The map-local [`mek03-generate_inpmat-mek1deg.sh`](../map/mekong_15min/script_pa
 
 [`gosh_sample/mek01-default_run.sh`](../gosh_sample/mek01-default_run.sh) writes the namelist and runs `src_main/MAIN_cmf` from the experiment directory. The successful model log reports the requested dimensions and interval, reads the binary matrix and all 366 runoff files from `Roff____20000101.one` through `Roff____20001231.one`, and reports `LPTHOUT=T`. `cmf_ctrl_maps_mod.F90` reads the configured bifurcation table when that flag is true. The source namelist initializer remains false; this sample explicitly enables bifurcation as the maintainer directed. No Fortran algorithm or model default was changed.
 
-The process completed with 8,784 model steps and 366 daily records for each gridded output. Each 80 × 120 float32 output is 14,054,400 bytes; `pthflw2000.pth` and the final restart products were also nonempty. All values in the four gridded files and bifurcation output were finite; the gridded outputs contain the model's finite `1e20` fill value on missing cells. `outflw` and `pthflw` contain negative values; the routing source permits backflow, so sign alone was not treated as an error. Existing map and runoff inputs were not modified; the generated input descriptor and matrix are the only new map products. This establishes operational behavior for this build and sample, not scientific validity or numerical equivalence with v4. See VR-0083 for evidence and limitations.
+The initial annual acceptance run completed with 8,784 model steps and 366 daily records for each gridded output. Each 80 × 120 float32 output was 14,054,400 bytes; `pthflw2000.pth` and the final restart products were also nonempty. All values in the four gridded files and bifurcation output were finite; the gridded outputs contain the model's finite `1e20` fill value on missing cells. `outflw` and `pthflw` contain negative values; the routing source permits backflow, so sign alone was not treated as an error. Existing map and runoff inputs were not modified; the generated input descriptor and matrix are the only new map products. This establishes operational behavior for this build and sample, not scientific validity or numerical equivalence with v4. See VR-0083 for evidence and limitations.
+
+### Follow-up: default 40-day month-boundary run
+
+The maintainer later changed `mek01-default_run.sh` to use 2000-01-01 00:00 through 2000-02-10 00:00, an end-exclusive 40-day interval. The script now requires execution from `gosh_sample/`, copies `src_main/MAIN_cmf` into the run directory, and executes the model from that directory so `COUTDIR="./"` keeps outputs together. The model read 40 daily files through `Roff____20000209.one`, reached the requested end time after 960 hourly steps, and wrote 40 records to each gridded output. This verifies date rollover across the month boundary and the current sample script's directory behavior. The earlier annual output directory was preserved under the ignored name `out/mek01-default_run_2000-full-year/`; the current default output is `out/mek01-default_run/`. See VR-0084 for the detailed check. No numerical algorithms or model source were changed.
 
 ## Incremental feature migration order
 
@@ -100,7 +104,7 @@ Completed:
 - Full tracked-tree copies present, retaining all source and workflow subdirectories.
 - All tracked source/workflow files match except the intentionally updated v5 build Makefile/wrapper and added READMEs.
 - `make -C src_main all` completed and produced `src_main/MAIN_cmf`.
-- The 2000 Mekong annual simulation completed; the model read the configured input matrix and all expected daily runoff files, and wrote the requested daily output records.
+- The initial 2000 Mekong annual run completed, followed by a 40-day January-February run using the current script default; each read its expected daily runoff files and wrote the corresponding daily output records.
 - No legacy `src/` or `gosh/` content, shared build setting, or existing map/runoff product was changed. The two newly generated Mekong `test-mek_1deg` matrix files were added to the sample.
 
 Not performed:
