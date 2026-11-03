@@ -8,14 +8,14 @@ contains
 
   subroutine read_allocation_base(map_dir, nx, ny, gsize, west, east, south, north, &
                                   uparea, nextx, nexty, ctmare, elevtn)
-    character(len=*), intent(in) :: map_dir
-    integer, intent(out) :: nx, ny
-    real, intent(out) :: gsize, west, east, south, north
-    real, allocatable, intent(out) :: uparea(:,:)
-    real, allocatable, intent(out), optional :: ctmare(:,:), elevtn(:,:)
-    integer, allocatable, intent(out) :: nextx(:,:), nexty(:,:)
-    integer :: unit, ios
-    character(len=256) :: line
+    character(len=*), intent(in) :: map_dir  !! map root with params.txt and base maps
+    integer, intent(out) :: nx, ny  !! base-map x/y dimensions
+    real, intent(out) :: gsize, west, east, south, north  !! grid spacing and bounds [deg]
+    real, allocatable, intent(out) :: uparea(:,:)  !! upstream area as stored in uparea.bin [m2]
+    real, allocatable, intent(out), optional :: ctmare(:,:), elevtn(:,:)  !! optional area [m2] and elevation [m]
+    integer, allocatable, intent(out) :: nextx(:,:), nexty(:,:)  !! downstream base-map indices
+    integer :: unit, ios  !! params-file unit and I/O status
+    character(len=256) :: line  !! discarded params.txt header line
 
     open(newunit=unit, file=join_path(map_dir, 'params.txt'), status='old', &
          action='read', iostat=ios)
@@ -57,13 +57,13 @@ contains
   ! High-resolution terrain resolution is a separate concern from network correspondence.
   subroutine read_allocation_hires(map_dir, tag, nx, ny, west, east, south, north, &
                                    uparea, catmx, catmy, downx, downy, elevtn)
-    character(len=*), intent(in) :: map_dir, tag
-    integer, intent(out) :: nx, ny
-    real, intent(out) :: west, east, south, north
-    real, allocatable, intent(out) :: uparea(:,:)
-    real, allocatable, intent(out), optional :: elevtn(:,:)
-    integer(int16), allocatable, intent(out) :: catmx(:,:), catmy(:,:), downx(:,:), downy(:,:)
-    integer :: unit, ios, narea
+    character(len=*), intent(in) :: map_dir, tag  !! map root and selected high-resolution directory tag
+    integer, intent(out) :: nx, ny  !! high-resolution x/y dimensions
+    real, intent(out) :: west, east, south, north  !! high-resolution tile bounds [deg]
+    real, allocatable, intent(out) :: uparea(:,:)  !! high-resolution upstream area [km2]
+    real, allocatable, intent(out), optional :: elevtn(:,:)  !! optional high-resolution elevation [m]
+    integer(int16), allocatable, intent(out) :: catmx(:,:), catmy(:,:), downx(:,:), downy(:,:)  !! map indices/offsets
+    integer :: unit, ios, narea  !! location-file unit, I/O status, and listed area count
     character(len=32) :: label1, label2
     character(len=512) :: locfile, hires_dir
 
@@ -97,7 +97,7 @@ contains
   subroutine read_real_grid(path, nx, ny, grid, label)
     character(len=*), intent(in) :: path, label
     integer, intent(in) :: nx, ny
-    real, intent(out) :: grid(nx,ny)
+    real, intent(out) :: grid(nx,ny)  !! one direct-access float32 map record
     integer :: unit, ios
     open(newunit=unit, file=path, form='unformatted', access='direct', recl=4*nx*ny, &
          status='old', action='read', iostat=ios)
@@ -110,7 +110,7 @@ contains
   subroutine read_int32_pair(path, nx, ny, grid1, grid2, label)
     character(len=*), intent(in) :: path, label
     integer, intent(in) :: nx, ny
-    integer, intent(out) :: grid1(nx,ny), grid2(nx,ny)
+    integer, intent(out) :: grid1(nx,ny), grid2(nx,ny)  !! two direct-access int32 records, in file order
     integer :: unit, ios
     open(newunit=unit, file=path, form='unformatted', access='direct', recl=4*nx*ny, &
          status='old', action='read', iostat=ios)
@@ -125,7 +125,7 @@ contains
   subroutine read_int16_pair(path, nx, ny, grid1, grid2, label)
     character(len=*), intent(in) :: path, label
     integer, intent(in) :: nx, ny
-    integer(int16), intent(out) :: grid1(nx,ny), grid2(nx,ny)
+    integer(int16), intent(out) :: grid1(nx,ny), grid2(nx,ny)  !! two direct-access int16 records, in file order
     integer :: unit, ios
     open(newunit=unit, file=path, form='unformatted', access='direct', recl=2*nx*ny, &
          status='old', action='read', iostat=ios)

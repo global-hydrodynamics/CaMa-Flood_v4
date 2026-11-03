@@ -10,15 +10,14 @@
       use allocation_map_io, only: read_allocation_base, read_allocation_hires
       implicit none
 !
-      character*16         ::  mode   !! multi  = up to 2 corresponding grid
-                                      !! single = only  1 corresponding grid (primary for dam allocation)
+      character*16         ::  mode   !! multi = up to 2 corresponding map cells; single = at most 1
 
 ! index TRIP
       integer              ::  iXX, iYY, jXX, jYY
       integer              ::  nXX, nYY                        !! x-y matrix GLOBAL
       real                 ::  gsize, csize                    !! grid size [degree]
-      real                 ::  west,  north,  east,  south
-      real                 ::  west2, north2, east2, south2
+      real                 ::  west,  north,  east,  south       !! base-map bounds [deg]
+      real                 ::  west2, north2, east2, south2      !! selected high-resolution map bounds [deg]
       character*16         ::  hires                           !! selected high-resolution map tag
 ! index 1min
       integer              ::  ix, iy, jx, jy, kx, ky, dx, dy
@@ -26,34 +25,35 @@
 
       integer              ::  ix0, iy0                        !! allocated station xy
 ! input
-      real,allocatable     ::  uparea(:,:)                    !! drainage area (GRID base)
-      integer,allocatable  ::  nextXX(:,:), nextYY(:,:)       !! next grid X
+      real,allocatable     ::  uparea(:,:)                    !! base-map upstream area [km2 after conversion]
+      integer,allocatable  ::  nextXX(:,:), nextYY(:,:)       !! downstream base-map cell indices
 
-      real,allocatable     ::  maxupa(:,:)                    !! maximum drainage area of upstream grids
-      integer,allocatable  ::  upstXX(:,:,:), upstYY(:,:,:)   !! list of upstream grid
+      real,allocatable     ::  maxupa(:,:)                    !! largest upstream area encountered per downstream cell [km2]
+      integer,allocatable  ::  upstXX(:,:,:), upstYY(:,:,:)   !! upstream cells ranked by drainage area
       integer,allocatable  ::  outx(:,:), outy(:,:)           !! high-res (ix,iy) coordinate of outlet pixel
 
-      real,allocatable     ::  glon(:), glat(:)
+      real,allocatable     ::  glon(:), glat(:)              !! base-map cell-center longitude/latitude [deg]
 
       integer*2,allocatable::  dwx1m(:,:), dwy1m(:,:)         !! downstream pixel (jx,jy) of each high-res pixel (ix,iy)
       integer*2,allocatable::  ctx1m(:,:), cty1m(:,:)         !! corresponding unit-catchment (iXX,iYY) of each high-res pixel
-      real,allocatable     ::  upa1m(:,:)                     !! high-res upstream area
+      real,allocatable     ::  upa1m(:,:)                     !! high-resolution upstream area [km2]
       real,allocatable     ::  lon1m(:), lat1m(:)             !! high-res pixel lat lon
 
-      integer*8            ::  id
-      real                 ::  lat0, lon0, lat, lon, area0, area
-      real                 ::  err, err0, err1, err2, dd, diff
-      real                 ::  rate, rate0
-      integer              ::  nn
+      integer*8            ::  id                              !! external gauge identifier
+      real                 ::  lat0, lon0, lat, lon             !! input and selected-point coordinates [deg]
+      real                 ::  area0, area                      !! reported and candidate drainage area [km2]
+      real                 ::  err, err0, err1, err2, dd, diff !! area mismatch and adjusted candidate score
+      real                 ::  rate, rate0                      !! symmetric area-error score and best score
+      integer              ::  nn                               !! half-width of high-resolution candidate search window
 
-      integer              ::  i_ups, j_ups, n_ups            !! upstream grid
-      integer              ::  snum
+      integer              ::  i_ups, j_ups, n_ups            !! ranked upstream-candidate indices and list size
+      integer              ::  snum                            !! number of selected substitute catchments
 
       integer              ::  iXX0, iYY0, jXX0, jYY0
       integer              ::  isFound
 
-      integer              ::  staX(2), staY(2)
-      real                 ::  staA(2), upa_sum
+      integer              ::  staX(2), staY(2)                !! selected CaMa map cells for allocation output
+      real                 ::  staA(2), upa_sum                 !! selected areas and their total [km2]
 
 ! file
       character*128        ::  gaugelist
@@ -198,7 +198,8 @@ print *, 'calc outlet pixel location of each unit catchment'
       err1 =1.e20
       rate0=1.e20
 
-!!    search high-res uparea and find the best fit pixel
+!! Search a 7x7 pixel window. Candidates must exceed 5% of the reported area;
+!! the score combines relative area mismatch with a distance penalty.
       nn=3
       do dy=-nn, nn
         do dx=-nn, nn

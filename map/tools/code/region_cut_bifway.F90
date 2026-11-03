@@ -17,17 +17,17 @@
 
       integer, allocatable      :: nextx(:,:)  !! downstream x grid index
 
-      integer                  :: ipath
+      integer                  :: ipath  !! source pathway row index
       integer                  :: npath  !! bifurcation-path count
-      integer                  :: mpath
+      integer                  :: mpath  !! number of pathways retained inside the crop
       integer                  :: ilev  !! bifurcation-layer index
       integer                  :: nlev  !! layer count
 
-      integer                  :: iXX, iYY
-      integer                  :: jXX, jYY
-      integer                  :: iXX2, iYY2
-      integer                  :: jXX2, jYY2
-      real                     :: dst
+      integer                  :: iXX, iYY    !! source-map upstream endpoint
+      integer                  :: jXX, jYY    !! source-map downstream endpoint
+      integer                  :: iXX2, iYY2  !! regional upstream endpoint after offset
+      integer                  :: jXX2, jYY2  !! regional downstream endpoint after offset
+      real                     :: dst         !! bifurcation pathway length [m]
       real                     :: elv  !! pathway elevation [m]
       real                     :: lon, lat  !! longitude/latitude [deg]
       real, allocatable         :: wth(:)  !! bifurcation width [m]

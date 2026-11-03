@@ -17,7 +17,7 @@
 ! Map geometry from params.txt.
       character*256            :: param  !! river map parameters
       parameter                 (param='./params.txt')
-      integer                  :: iXX, iYY
+      integer                  :: iXX, iYY  !! base-map catchment indices for the current pixel
       integer                  :: nXX, nYY  !! x/y map dimensions
       integer                  :: nflp  !! floodplain-layer count
       real                     :: gsize  !! map grid size [deg]
@@ -25,7 +25,7 @@
 
 ! High-resolution source geometry and area metadata from location.txt.
       integer                  :: i  !! area ID
-      integer                  :: narea  !! area ID
+      integer                  :: narea  !! number of high-resolution areas in location.txt
       character*256            :: area  !! area code
       integer                  :: ix, iy  !! x/y grid index
       integer                  :: nx, ny  !! x/y grid dimensions
@@ -51,20 +51,20 @@
       data                   southin / -90.0/
       data                   olat    /'NtoS'/
 
-      real                     :: lon0, lat0
+      real                     :: lon0, lat0  !! current high-resolution pixel center [deg]
 ! ===============================================
 ! Sparse input-matrix arrays: source-grid indices and overlap areas.
-      integer                  :: inum  !!
-      integer                  :: nmax  !!
-      integer                  :: mmax  !!
+      integer                  :: inum  !! contribution-slot index for one map cell
+      integer                  :: nmax  !! maximum distinct input cells allowed per map cell
+      integer                  :: mmax  !! largest contribution count found on any map cell
       parameter                 (nmax=100)
       integer, allocatable      :: inpn(:,:)  !! number of input grids for river network grid (iXX,iYY)
       integer, allocatable      :: inpx(:,:,:), inpy(:,:,:)  !! input-grid x/y indices
       real, allocatable         :: inpa(:,:,:)  !! overlap area [m2]
 
-      integer, allocatable      :: inpx0(:,:,:)
-      integer, allocatable      :: inpy0(:,:,:)
-      real, allocatable         :: inpa0(:,:,:)
+      integer, allocatable      :: inpx0(:,:,:)  !! packed input-grid x indices for output records
+      integer, allocatable      :: inpy0(:,:,:)  !! packed input-grid y indices for output records
+      real, allocatable         :: inpa0(:,:,:)  !! packed overlap areas for output records [m2]
 
 ! Per-area high-resolution map arrays.
       integer*2, allocatable    :: catmXX(:,:), catmYY(:,:)  !! catchment (iXX,iYY)  of hires pixel (ix,iy)
@@ -72,8 +72,8 @@
       real, allocatable         :: carea(:,:)  !! high-resolution cell area [m2]
 
 ! Working indices and counts.
-      integer                  :: new
-      integer                  :: iXX0, iYY0
+      integer                  :: new          !! whether the current input cell needs a new slot
+      integer                  :: iXX0, iYY0   !! map cell with the largest input-grid contribution count
 
 ! Filenames and I/O status.
       integer                  :: ios  !! I/O status code
@@ -216,8 +216,8 @@ print *, 'CALC_INPMAT:'
               iYY=catmYY(ix,iy)
 
           ! #################################################################################################
-          ! Edit this relation when mapping pixels to another runoff grid.
-          ! The current example maps pixel centers to a regular 0.5-degree grid.
+          ! Map each pixel center to the configured runoff grid. Change this
+          ! mapping only when the input grid uses a different coordinate scheme.
           ! #######
 
               lon0=lon(ix)
@@ -244,6 +244,8 @@ print *, 'CALC_INPMAT:'
 
           ! #######################################################################################
 
+              ! Keep one sparse slot per catchment/runoff-cell pair and add the
+              ! areas of later high-resolution pixels assigned to that pair.
               new=1
               if( inpn(iXX,iYY)>=1 )then
                 do inum=1, inpn(iXX,iYY)

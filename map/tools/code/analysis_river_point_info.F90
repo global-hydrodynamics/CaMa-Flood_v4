@@ -21,24 +21,24 @@
       integer,allocatable ::  nextx(:,:)      !! downstream x
       integer,allocatable ::  nexty(:,:)      !! downstream y
 
-      integer,allocatable ::  basin(:,:)      !!
-      integer,allocatable ::  upgrid(:,:)     !!
+      integer,allocatable ::  basin(:,:)      !! river-basin identifier
+      integer,allocatable ::  upgrid(:,:)     !! upstream river-cell count, including this cell
 
-      real,allocatable    ::  uparea(:,:)     !!
-      real,allocatable    ::  ctmare(:,:)     !!
-      real,allocatable    ::  elevtn(:,:)     !!
-      real,allocatable    ::  outlon(:,:)     !!
-      real,allocatable    ::  outlat(:,:)     !!
+      real,allocatable    ::  uparea(:,:)     !! upstream drainage area [m2]
+      real,allocatable    ::  ctmare(:,:)     !! unit-catchment area [m2]
+      real,allocatable    ::  elevtn(:,:)     !! elevation at the unit-catchment outlet [m]
+      real,allocatable    ::  outlon(:,:)     !! unit-catchment outlet longitude [deg]
+      real,allocatable    ::  outlat(:,:)     !! unit-catchment outlet latitude [deg]
 
-      integer*2,allocatable:: catmx(:,:), catmy(:,:)
+      integer*2,allocatable:: catmx(:,:), catmy(:,:)  !! high-resolution pixel to base-map cell indices
 
-      real                ::  glon, glat
+      real                ::  glon, glat        !! selected base-map cell-center longitude/latitude [deg]
 
 
       real                ::  west, east, north, south
       real                ::  gsize, csize
 
-      integer             ::  isHires
+      integer             ::  isHires           !! selected source: 0=base map, 15=15sec, 60=1min
 
 ! file
       character*256       ::  finp, fparam, floc
@@ -130,6 +130,8 @@
       read(11,rec=2) outlat
       close(11)
 
+      ! In lat/lon mode, prefer the finest available location-to-catchment map;
+      ! otherwise convert the point directly to a base-map grid index.
       if( trim(type)=='latlon' )then
 
         isHires=0

@@ -13,8 +13,8 @@
       integer              ::  iXX, iYY, jXX, jYY
       integer              ::  nXX, nYY                        !! x-y matrix GLOBAL
       real                 ::  gsize, csize                    !! grid size [degree]
-      real                 ::  west,  north,  east,  south
-      real                 ::  west2, north2, east2, south2
+      real                 ::  west,  north,  east,  south       !! base-map bounds [deg]
+      real                 ::  west2, north2, east2, south2      !! selected high-resolution map bounds [deg]
       character*16         ::  hires                           !! selected high-resolution map tag
 ! index 1min
       integer              ::  ix, iy, jx, jy, kx, ky, dx, dy
@@ -23,30 +23,31 @@
       integer              ::  ix0, iy0                        !! allocated station xy
       integer              ::  jx0, jy0                        !! catchment outlet of the allocated gauge
 ! input
-      real,allocatable     ::  uparea(:,:)                    !! drainage area (GRID base)
-      real,allocatable     ::  elevtn(:,:)                    !! elevation
-      integer,allocatable  ::  nextXX(:,:), nextYY(:,:)       !! next grid X
+      real,allocatable     ::  uparea(:,:)                    !! base-map upstream area [km2 after conversion]
+      real,allocatable     ::  elevtn(:,:)                    !! base-map elevation [m]
+      integer,allocatable  ::  nextXX(:,:), nextYY(:,:)       !! downstream base-map cell indices
 
-      real,allocatable     ::  maxupa(:,:)                    !! maximum drainage area of upstream grids
-      integer,allocatable  ::  upstXX(:,:,:), upstYY(:,:,:)   !! list of upstream grid
+      real,allocatable     ::  maxupa(:,:)                    !! largest upstream area encountered per downstream cell [km2]
+      integer,allocatable  ::  upstXX(:,:,:), upstYY(:,:,:)   !! upstream cells ranked by drainage area
       integer,allocatable  ::  outx(:,:), outy(:,:)           !! high-res (ix,iy) coordinate of outlet pixel
 
-      real,allocatable     ::  glon(:), glat(:)
+      real,allocatable     ::  glon(:), glat(:)              !! base-map cell-center longitude/latitude [deg]
 
       integer*2,allocatable::  dwx1m(:,:), dwy1m(:,:)         !! downstream pixel (jx,jy) of each high-res pixel (ix,iy)
       integer*2,allocatable::  ctx1m(:,:), cty1m(:,:)         !! corresponding unit-catchment (iXX,iYY) of each high-res pixel
-      real,allocatable     ::  upa1m(:,:)                     !! high-res upstream area
-      real,allocatable     ::  elv1m(:,:)                     !! high-res elevtn
+      real,allocatable     ::  upa1m(:,:)                     !! high-resolution upstream area [km2]
+      real,allocatable     ::  elv1m(:,:)                     !! high-resolution elevation [m]
       real,allocatable     ::  lon1m(:), lat1m(:)             !! high-res pixel lat lon
 
-      integer*8            ::  id
-      real                 ::  lat0, lon0, lat, lon, area0, area
-      real                 ::  err, err0, err1, err2, dd
-      real                 ::  rate, rate0
+      integer*8            ::  id                              !! external gauge identifier
+      real                 ::  lat0, lon0, lat, lon             !! input and selected-point coordinates [deg]
+      real                 ::  area0, area                      !! reported and candidate drainage area [km2]
+      real                 ::  err, err0, err1, err2, dd       !! area mismatch and adjusted candidate score
+      real                 ::  rate, rate0                      !! symmetric area-error score and best score
 
       integer              ::  type         !! 1: mainstem; 2: tributary; 3: small stream
 
-      real                 ::  dst
+      real                 ::  dst                              !! accumulated river-path distance [km]
       real                 ::  dst_outlt                      !! distance to outlet pixel [km]
       real                 ::  dst_upst                       !! distance from upstream outlet pixel [km]
 
@@ -54,9 +55,9 @@
       real                 ::  elv_gauge                      !! elevation of gauge  pixel [m]
       real                 ::  elv_upst                       !! elevation of upstream outlet pixel [m]
 
-      integer              ::  nn
+      integer              ::  nn                               !! half-width of high-resolution candidate search window
 
-      integer              ::  i_ups, j_ups, n_ups            !! upstream grid
+      integer              ::  i_ups, j_ups, n_ups            !! ranked upstream-candidate indices and list size
 
       integer              ::  iXX0, iYY0, jXX0, jYY0
 ! file
@@ -196,7 +197,8 @@ print *, 'calc outlet pixel location of each unit catchment'
       ix0=-9999
       iy0=-9999
 
-!!    search high-res uparea and find the best fit pixel
+!! Search a 7x7 pixel window. Candidates must exceed 5% of the reported area;
+!! the score combines relative area mismatch with a distance penalty.
       nn=3
       do dy=-nn, nn
         do dx=-nn, nn

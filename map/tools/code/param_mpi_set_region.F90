@@ -11,10 +11,10 @@ program param_mpi_set_region
   ! Grid, basin, and region indices.
   integer                  :: ix, iy  !! x/y grid index
   integer                  :: ibsn  !! basin identifier
-  integer                  :: i
-  integer                  :: imin
-  integer                  :: jmpi
-  integer                  :: u
+  integer                  :: i  !! candidate MPI region index
+  integer                  :: imin  !! smallest current region load [river cells]
+  integer                  :: jmpi  !! selected least-loaded MPI region
+  integer                  :: u  !! active input/output-file unit
   integer                  :: ios  !! I/O status code
 
   ! Basin raster, output region raster, and balancing arrays.
@@ -25,7 +25,7 @@ program param_mpi_set_region
   integer, allocatable      :: mpgrid(:)  !! river-cell count per MPI region
 
   character(len=64)         :: arg  !! command-line argument
-  character(len=64)         :: count_text
+  character(len=64)         :: count_text  !! process count formatted for the output filename
 
   ! Read the requested number of MPI regions.
   if(command_argument_count()/=1) call die('usage: param_mpi_set_region <number-of-regions>')

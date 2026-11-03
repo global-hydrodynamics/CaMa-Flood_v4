@@ -6,22 +6,22 @@ module map_color_mod
   public :: color_map
 contains
   subroutine color_map(class_map,nx,ny,west,east,colors)
-    integer,intent(in)  :: nx, ny
-    real,intent(in)     :: west, east
+    integer,intent(in)  :: nx, ny  !! map grid dimensions
+    real,intent(in)     :: west, east  !! longitude bounds; 360 degrees enables wraparound [deg]
     integer,intent(in)  :: class_map(nx,ny)  !! basin or MPI region IDs
     integer,intent(out) :: colors(nx,ny)  !! display palette indices; -9999 outside classes
 
     ! Class bounds and neighbor-color assignment state.
-    integer                  :: nclass
-    integer                  :: class_id
-    integer                  :: ix, iy
-    integer                  :: jx, jy
-    integer                  :: grid
-    integer                  :: color_this
-    integer                  :: color_max
-    integer                  :: icol
-    integer                  :: col_used(10)
-    integer,allocatable      :: class_bounds(:,:)
+    integer                  :: nclass  !! highest positive class identifier
+    integer                  :: class_id  !! class currently assigned a display color
+    integer                  :: ix, iy  !! current map-cell indices
+    integer                  :: jx, jy  !! neighboring map-cell indices
+    integer                  :: grid  !! number of cells in the current class
+    integer                  :: color_this  !! palette index assigned to the current class
+    integer                  :: color_max  !! largest palette index assigned so far
+    integer                  :: icol  !! candidate palette index
+    integer                  :: col_used(10)  !! palette indices already used by adjacent classes
+    integer,allocatable      :: class_bounds(:,:)  !! min/max x/y extent for each class
 
     nclass=maxval(class_map)
     colors=-9999

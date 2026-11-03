@@ -9,7 +9,7 @@ program analysis_mpi_region_color
   integer                  :: nx=0, ny=0  !! map grid dimensions
   integer                  :: mpi_count=0  !! process count encoded in input filename
   integer                  :: nregion  !! highest positive MPI region ID
-  integer                  :: u
+  integer                  :: u  !! active input-file unit
   integer                  :: ios  !! I/O status code
 
   ! Input region map and generated visualization colors.
@@ -17,12 +17,14 @@ program analysis_mpi_region_color
   integer, allocatable      :: color(:,:)  !! display color per MPI region
 
   ! Map geometry and filenames.
-  real                     :: west, east
+  real                     :: west, east  !! map longitude bounds [deg]
   character(len=512)       :: region_file  !! input mpireg-N.bin path
   character(len=512)       :: output_file  !! output bsncol_mpi-N.bin path
-  character(len=512)       :: base_name
-  character(len=64)        :: count_text
-  integer                  :: slash, file_length, record_unit
+  character(len=512)       :: base_name  !! input filename without its directory
+  character(len=64)        :: count_text  !! formatted MPI process count
+  integer                  :: slash  !! position of the final directory separator
+  integer                  :: file_length  !! input filename length
+  integer                  :: record_unit  !! output binary-file unit
 
   ! Read and validate the process-count-specific input filename.
   if(command_argument_count()/=1) call die('usage: analysis_mpi_region_color mpireg-N.bin')

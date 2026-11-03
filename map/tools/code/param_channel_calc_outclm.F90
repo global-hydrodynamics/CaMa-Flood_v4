@@ -62,16 +62,16 @@ USE NETCDF
       integer, allocatable      :: upnow(:,:)  !! processed upstream links per cell
       integer, allocatable      :: xseq(:)  !! calculation sequence from upstream
       integer, allocatable      :: yseq(:)  !! calculation sequence from upstream
-      integer                  :: iseq
-      integer                  :: jseq
-      integer                  :: nseqpre
-      integer                  :: nseqnow
-      integer                  :: again
+      integer                  :: iseq      !! current cell in the upstream-to-downstream sequence
+      integer                  :: jseq      !! end index while appending the next sequence frontier
+      integer                  :: nseqpre   !! last sequence index processed in the previous pass
+      integer                  :: nseqnow   !! last sequence index currently registered
+      integer                  :: again     !! whether the latest pass appended downstream cells
 
 ! input matrix
       integer                  :: i
       integer                  :: inpn  !! max number of input grid for one river grid
-      integer, allocatable      :: inpx(:,:,:), inpy(:,:,:)  !! input-grid x/y indices
+      integer, allocatable      :: inpx(:,:,:), inpy(:,:,:)  !! source runoff-grid x/y indices for each overlap slot
       real, allocatable         :: inpa(:,:,:)  !! overlap area [m2]
 
 ! Runoff climatology input
@@ -287,8 +287,8 @@ print *, trim(crofcdf)
 #endif
 
 ! ============================================================
-! Interpolate runoff to each map cell, convert mm/s times area to m3/s, then
-! sum local and upstream contributions along NEXTXY.
+! Interpolate runoff to each map cell and convert depth rate to discharge.
+! Then accumulate local and upstream contributions along NEXTXY in sequence order.
 print *, 'calc_outclm: calc annual average'
       if( intp=='near' )then
         call conv_resol(nx,ny,nxin,nyin,imis,rmis,nextx,ctmare,roffin,runoff)

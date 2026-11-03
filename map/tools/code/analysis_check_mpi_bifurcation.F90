@@ -8,18 +8,18 @@ program analysis_check_mpi_bifurcation
   integer                  :: nx, ny  !! x/y grid dimensions
   integer                  :: npth  !! bifurcation-path count
   integer                  :: nlev  !! layer count
-  integer                  :: u
+  integer                  :: u  !! active input-file unit
   integer                  :: ucsv  !! CSV output unit
   integer                  :: ios  !! I/O status code
-  integer                  :: i
-  integer                  :: k
+  integer                  :: i  !! pathway or grid traversal index
+  integer                  :: k  !! bifurcation layer index
   integer                  :: ix, iy  !! x/y grid index
   integer                  :: jx, jy  !! target x/y grid index
-  integer                  :: regcount
+  integer                  :: regcount  !! highest positive MPI region ID
   integer                  :: cat  !! pathway class: 1 retained, 2 dropped, 3 invalid
-  integer                  :: region
-  integer                  :: head
-  integer                  :: tail
+  integer                  :: region  !! MPI region currently reconstructed
+  integer                  :: head  !! next river cell to remove from the queue
+  integer                  :: tail  !! last river cell added to the queue
   integer                  :: total(3)  !! pathway counts by class
   integer                  :: channel(3)  !! channel-path counts by class
   integer                  :: flood(3)  !! floodplain-only counts by class
@@ -30,21 +30,21 @@ program analysis_check_mpi_bifurcation
   integer, allocatable      :: nextx(:,:), nexty(:,:)  !! downstream cell x/y indices
   integer, allocatable      :: upst_count(:,:)  !! upstream-link count per cell
   integer, allocatable      :: upstream_now(:,:)  !! visited upstream-link count
-  integer, allocatable      :: queue_x(:)
-  integer, allocatable      :: queue_y(:)
+  integer, allocatable      :: queue_x(:)  !! queued river-cell x indices
+  integer, allocatable      :: queue_y(:)  !! queued river-cell y indices
 
   ! Bifurcation endpoints and their assigned MPI regions.
-  integer, allocatable      :: path_ix(:), path_iy(:)
-  integer, allocatable      :: path_jx(:), path_jy(:)
+  integer, allocatable      :: path_ix(:), path_iy(:)  !! upstream bifurcation endpoints
+  integer, allocatable      :: path_jx(:), path_jy(:)  !! downstream bifurcation endpoints
   integer, allocatable      :: region_up(:)  !! upstream endpoint region
   integer, allocatable      :: region_down(:)  !! downstream endpoint region
 
   ! Pathway classification flags and parsed physical attributes.
   logical, allocatable      :: vector(:,:)  !! model-local river-vector membership
-  logical, allocatable      :: up_valid(:)
-  logical, allocatable      :: down_valid(:)
-  logical, allocatable      :: retained_path(:)
-  logical, allocatable      :: valid_coords(:)
+  logical, allocatable      :: up_valid(:)  !! upstream endpoint belongs to its region's local vector
+  logical, allocatable      :: down_valid(:)  !! downstream endpoint belongs to its region's local vector
+  logical, allocatable      :: retained_path(:)  !! both endpoints occur in a reconstructed local vector
+  logical, allocatable      :: valid_coords(:)  !! both endpoints lie within the map bounds
   real, allocatable         :: widths(:)  !! bifurcation widths [m]
   real, allocatable         :: path_elv(:)  !! pathway elevation [m]
   real, allocatable         :: path_lat(:)  !! pathway latitude [deg]

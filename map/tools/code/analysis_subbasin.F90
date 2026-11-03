@@ -25,10 +25,10 @@
 ! river netwrok map
       integer,allocatable ::  nextx(:,:)      !! downstream x
       integer,allocatable ::  nexty(:,:)      !! downstream y
-      real,allocatable    ::  uparea(:,:)
+      real,allocatable    ::  uparea(:,:)      !! source area [m2], converted to km2 before thresholding
 
-      integer,allocatable ::  basin(:,:)      !! downstream y
-      integer,allocatable ::  color(:,:)      !! downstream y
+      integer,allocatable ::  basin(:,:)      !! segment ID; 0 for small network cells, -9999 outside network
+      integer,allocatable ::  color(:,:)      !! display color index for positive segment IDs
 
 ! local
       integer             ::  ibsn, nbsn, jbsn
@@ -38,7 +38,7 @@
 
       integer,allocatable::  basin_order(:), basin_new(:)
       real,allocatable   ::  basin_size(:)
-      real               ::  upa_thrs
+      real               ::  upa_thrs          !! minimum downstream area increase used to split a segment [km2]
 ! file
       character*256       ::  finp, fparam, fout_subbsn, fout_subcol
       integer             ::  ios
@@ -105,6 +105,8 @@
       read(11,rec=1) uparea
       close(11)
 
+      ! Convert the source drainage-area map from m2 to km2 before applying
+      ! the user-supplied threshold.
       do iy=1, ny
         do ix=1, nx
           if( uparea(ix,iy)>0 ) uparea(ix,iy)=uparea(ix,iy)*1.e-6
@@ -112,6 +114,8 @@
       end do
 
 ! ===================
+      ! Split a link only when its downstream drainage area jumps by more than
+      ! the threshold; terminal links are left unchanged.
       do iy=1, ny
         do ix=1, nx
           if( uparea(ix,iy)>upa_thrs )then
@@ -129,8 +133,8 @@
         end do
       end do
 
-      ! Keep sea/outside-network cells distinct from small modeled catchments.
-      ! -999 is an internal unassigned marker; output small catchments become 0.
+      ! Keep outside-network cells distinct from in-network cells that remain
+      ! below the split threshold; -999 is only an internal unassigned marker.
       basin(:,:)=-9999
       do iy=1, ny
         do ix=1, nx
@@ -153,6 +157,8 @@
       end do
       nbsn=ibsn
 
+      ! Seed segment IDs at cut links, then propagate each seed upstream along
+      ! the directed network until a previously labeled cell is reached.
       do iy=1, ny
         do ix=1, nx
           if( nextx(ix,iy)>0 .and. basin(ix,iy)==-999 ) then
@@ -179,12 +185,14 @@
         end do
       end do
 
+      ! Legacy ordering arrays are not consumed by current outputs. basin_size
+      ! and basin_order are populated, but basin_new is only allocated.
       allocate(basin_size(nbsn))
       allocate(basin_order(nbsn))
       allocate(basin_new(nbsn))
       do iy=1, ny
         do ix=1, nx
-          ! Keep only positive assigned subbasin IDs for the unused diagnostics.
+          ! Populate the legacy ordering arrays for positive assigned IDs.
           if( nextx(ix,iy)<0 .and. nextx(ix,iy)/=-9999 .and. basin(ix,iy)>0 ) then
             ibsn=basin(ix,iy)
             basin_size(ibsn)=uparea(ix,iy)
@@ -211,6 +219,7 @@
 
 CONTAINS
       subroutine set_color
+! Assign display colors by basin adjacency; large basins are colored first.
 
 print *, 'SET_MAP color basin'
       color(:,:)=-9999

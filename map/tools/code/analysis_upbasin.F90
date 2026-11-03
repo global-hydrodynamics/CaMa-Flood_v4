@@ -18,10 +18,10 @@
 ! river netwrok map
       integer,allocatable ::  nextx(:,:)      !! downstream x
       integer,allocatable ::  nexty(:,:)      !! downstream y
-      integer,allocatable ::  upgrid(:,:)
-      real,allocatable    ::  uparea(:,:)
+      integer,allocatable ::  upgrid(:,:)     !! number of upstream river cells, including this cell
+      real,allocatable    ::  uparea(:,:)     !! upstream drainage area [m2]
 
-      integer,allocatable ::  basin(:,:)      !! downstream y
+      integer,allocatable ::  basin(:,:)      !! selected upstream mask: 1, 0, or -9999 outside network
 
 
       integer             ::  ix0, iy0, ibasin
@@ -104,6 +104,8 @@
         print *, 'Upstream Area [km2] of [ix,iy]:', uparea(ix0,iy0)*1.e-6
       endif
 
+      ! Mark terminal network cells as unselected, then mark the requested cell.
+      ! Each unclassified upstream path inherits its first classified downstream label.
       basin(:,:)=-9999
       do iy=1, ny
         do ix=1, nx
