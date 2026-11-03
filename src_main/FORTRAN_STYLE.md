@@ -114,6 +114,14 @@ LOGICAL                         :: LVALID
 - Limit Fortran source lines to 128 characters, including indentation. Shorten comments and diagnostic messages when their essential meaning is preserved; otherwise wrap statements with free-form `&` continuations.
 - **Do not run an automatic formatter or reformat unrelated source** as part of a feature change.
 
+### Logical grouping with blank lines
+
+Use blank lines to separate logically distinct statement groups when a numbered process heading is unnecessary. Keep statements that serve one immediate purpose together, and insert one blank line when the processing purpose, data being handled, or operation type changes. Typical boundaries include initialization to calculation, validation to data access, data access to conversion, and one variable group to another.
+
+Keep an operation with its associated error check. Do not add blank lines mechanically around every `IF`, `DO`, `CALL`, or `END` statement. Use `!*** N.` headings for major stages and blank lines for smaller transitions within a stage. Prefer one blank line, avoid excessive vertical space, and preserve meaningful existing spacing instead of applying automatic formatting.
+
+**A blank line should indicate a small change in meaning, not merely a change in syntax.**
+
 ## 5. Runtime logging
 
 **Recommended practices for modules that use `LOGNAM`:**
