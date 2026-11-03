@@ -126,11 +126,11 @@ Within `script_analysis/`, use `a00-link_codes.sh` to create a relative `code` s
 
 ## Map metadata maintenance
 
-When adding or changing map-related readers, writers, preprocessing products, or model map interfaces, inspect and update [`map/map_variables.csv`](map/map_variables.csv) and the responsible module README. Keep verified facts distinct from provisional fields, and record distribution role separately from packages where a product was observed; see [`map/map_metadata_spec.md`](map/map_metadata_spec.md).
+When adding or changing map-related readers, writers, preprocessing products, or model map interfaces, inspect and update [`variable_table/map_variables.csv`](variable_table/map_variables.csv) and the responsible module README. Keep verified facts distinct from provisional fields, and record distribution role separately from packages where a product was observed; see [`variable_table/map_metadata_spec.md`](variable_table/map_metadata_spec.md).
 
-The maintainer manually controls the map registry's workflow-status column, currently named `workflow_stage` in `map/map_variables.csv`. Codex may read it but must not edit its values, including when adding or revising registry rows. If the status appears stale or a new row needs a status, leave it unchanged or blank and report the suggested update to the maintainer. Preserve the existing column values during CSV edits and do not infer or set `default` from file presence.
+The maintainer manually controls the map registry's workflow-status column, currently named `workflow_stage` in `variable_table/map_variables.csv`. Codex may read it but must not edit its values, including when adding or revising registry rows. If the status appears stale or a new row needs a status, leave it unchanged or blank and report the suggested update to the maintainer. Preserve the existing column values during CSV edits and do not infer or set `default` from file presence.
 
-The v5 model output-variable inventory is [`output_variables.csv`](output_variables.csv) at the repository root. Future CTL-generation tools should locate it relative to the repository root (`${CMF_BASE}/output_variables.csv`), not under `src_main/`.
+The v5 model output-variable inventory is [`variable_table/output_variables.csv`](variable_table/output_variables.csv). Future CTL-generation tools should locate it relative to the repository root (`${CMF_BASE}/variable_table/output_variables.csv`).
 
 ## Shared Fortran Module Naming (`map/tools/code/`)
 
@@ -144,7 +144,7 @@ For changes to Fortran source files under `src_main/`, follow the conventions in
 
 These recommendations support human-readable Fortran and Python tools under `map/tools/code/`. Organize code by scientific or computational meaning: keep related operations together, use a blank line when the purpose or data changes, and keep an operation with its error check. Use comments for major process transitions; do not add whitespace or comments mechanically around every statement.
 
-Prefer comments that explain **Why**, then **What**, then **How** when that information is not clear from the code. Explain verified scientific rationale, units, sentinels, array dimensions, data order, and input/output contracts where they matter. Do not narrate obvious syntax or infer undocumented science. Group settings, constants, and data structures by role, keep related values near their use, and use [`map/map_variables.csv`](map/map_variables.csv) as the maintained reference for map-product metadata instead of duplicating its full contents in code.
+Prefer comments that explain **Why**, then **What**, then **How** when that information is not clear from the code. Explain verified scientific rationale, units, sentinels, array dimensions, data order, and input/output contracts where they matter. Do not narrate obvious syntax or infer undocumented science. Group settings, constants, and data structures by role, keep related values near their use, and use [`variable_table/map_variables.csv`](variable_table/map_variables.csv) as the maintained reference for map-product metadata instead of duplicating its full contents in code.
 
 Preserve scientific behavior and data contracts during readability work, including equations, constants, evaluation order, precision, array layout, binary/NetCDF formats, missing values, coordinate/index conventions, filenames, and workflow compatibility. Treat behavior changes as separate work. Keep focused changes local and reviewable.
 

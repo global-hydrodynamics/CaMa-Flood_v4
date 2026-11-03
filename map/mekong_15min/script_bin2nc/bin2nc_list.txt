@@ -1,5 +1,5 @@
 # Binary-to-NetCDF conversion list
-# Generated from map_variables.csv
+# Generated from variable_table/map_variables.csv
 # Comment out files that should not be converted.
 
 # [11] default_rivmap

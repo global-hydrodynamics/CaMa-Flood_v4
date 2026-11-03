@@ -61,7 +61,9 @@ def make_workflow_tree(root: Path, *, use_converter_stub: bool) -> tuple[Path, P
     map_dir = map_root / "mekong_15min"
     script_dir.mkdir(parents=True)
     tools_dir.mkdir()
-    (map_root / "map_variables.csv").write_text("unused by the shell fixture\n", encoding="utf-8")
+    registry_dir = root / "variable_table"
+    registry_dir.mkdir()
+    (registry_dir / "map_variables.csv").write_text("unused by the shell fixture\n", encoding="utf-8")
     for name in ("s01-list_binary.sh", "s02-convert_netcdf.sh"):
         shutil.copyfile(SCRIPT_SOURCE / name, script_dir / name)
     if use_converter_stub:
@@ -200,7 +202,7 @@ class BinaryToNetCDFWorkflowTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             script_dir, map_dir = make_workflow_tree(root, use_converter_stub=False)
-            registry = map_dir.parent / "map_variables.csv"
+            registry = root / "variable_table" / "map_variables.csv"
             write_registry(registry, [registry_row("elevtn.bin", "11", "default_rivmap")])
             (map_dir / "elevtn.bin").write_bytes(b"\0" * 16)
             list_file = root / "bin2nc_list.txt"
@@ -291,7 +293,7 @@ class BinaryToNetCDFWorkflowTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             script_dir, map_dir = make_workflow_tree(root, use_converter_stub=False)
-            shutil.copyfile(ROOT / "map/map_variables.csv", map_dir.parent / "map_variables.csv")
+            shutil.copyfile(ROOT / "variable_table/map_variables.csv", root / "variable_table/map_variables.csv")
             (map_dir / "params.txt").write_text("2\n2\n2\n1\n0\n2\n0\n2\n", encoding="ascii")
             (map_dir / "nextxy.bin").write_bytes(
                 struct.pack("<8i", 2, 0, 2, -9999, 1, 2, 0, -9999)

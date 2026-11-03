@@ -9,7 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 MAP = ROOT / "map" / "mekong_15min"
-REGISTRY = ROOT / "map" / "map_variables.csv"
+REGISTRY = ROOT / "variable_table" / "map_variables.csv"
 DTYPE_BYTES = {"int8": 1, "int16": 2, "int32": 4, "float32": 4}
 
 

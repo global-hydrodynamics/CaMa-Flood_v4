@@ -165,7 +165,7 @@ def select_variables(filename: str, rows: list[dict[str, str]], requested: list[
     if not matches and requested:
         matches = [row for row in rows if row.get("name") in requested]
     if not matches:
-        raise ValueError(f"{filename} is not registered in map/map_variables.csv; use --variables with a registered variable")
+        raise ValueError(f"{filename} is not registered in variable_table/map_variables.csv; use --variables with a registered variable")
     if filename.startswith("nextxy"):
         for row in matches:
             row["_individual_name"] = "nextx" if row.get("record_index") == "1" else "nexty"
@@ -394,7 +394,7 @@ def main() -> int:
     parser.add_argument("--map-dir", type=Path, required=True, help="map directory containing params.txt")
     parser.add_argument("--input", type=Path, help="registered Binary map file")
     parser.add_argument("--output", type=Path, help="destination NetCDF file")
-    parser.add_argument("--registry", type=Path, default=root / "map/map_variables.csv", help="map variable registry")
+    parser.add_argument("--registry", type=Path, default=root / "variable_table/map_variables.csv", help="map variable registry")
     parser.add_argument("--generate-list", action="store_true", help="write a human-editable base-map conversion list")
     parser.add_argument("--list-file", type=Path, help="conversion-list path; defaults to <map-dir>/netcdf/bin2nc_list.txt")
     parser.add_argument("--variables", help="comma-separated registry variable names; defaults to all variables in the file")

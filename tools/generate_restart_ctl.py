@@ -311,8 +311,8 @@ def main() -> int:
     parser.add_argument(
         "--registry",
         type=Path,
-        default=Path(__file__).resolve().parents[1] / "src_main" / "restart_variables.csv",
-        help="Restart variable registry (default: src_main/restart_variables.csv)",
+        default=Path(__file__).resolve().parents[1] / "variable_table" / "restart_variables.csv",
+        help="Restart variable registry (default: variable_table/restart_variables.csv)",
     )
     parser.add_argument(
         "--endian", choices=("native", "little", "big"), default="native",

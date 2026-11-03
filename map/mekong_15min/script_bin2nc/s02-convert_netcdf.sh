@@ -10,7 +10,7 @@ SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 MAP_DIR="$SCRIPT_DIR/.."  # Map root containing params.txt and map Binary files.
 NETCDF_DIR="$MAP_DIR/netcdf"
 LIST_FILE="bin2nc_list.txt"
-REGISTRY="$SCRIPT_DIR/../../map_variables.csv"
+REGISTRY="$SCRIPT_DIR/../../../variable_table/map_variables.csv"
 if [ -f "$SCRIPT_DIR/../convert_map_binary_to_netcdf.py" ]; then
     TOOL_DIR="$SCRIPT_DIR/.."
 else

@@ -440,8 +440,8 @@ def main() -> int:
     parser.add_argument("--namelist", type=Path, help="Namelist path (default: RUN_DIR/input_cmf.nam)")
     parser.add_argument(
         "--registry", type=Path,
-        default=Path(__file__).resolve().parents[1] / "output_variables.csv",
-        help="Output variable registry (default: repository-root output_variables.csv)",
+        default=Path(__file__).resolve().parents[1] / "variable_table" / "output_variables.csv",
+        help="Output variable registry (default: variable_table/output_variables.csv)",
     )
     parser.add_argument("--mode", choices=("planned", "existing"), required=True)
     parser.add_argument(

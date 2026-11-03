@@ -202,7 +202,7 @@ class AnalysisMigrationTests(unittest.TestCase):
         shutil.copy2(v5_map / "subcol.bin", v5_map / "subcol-30000.bin")
         for name in ("params.txt", "upbasin-2569002.bin", "subbsn-30000.bin", "subcol-30000.bin"):
             shutil.copy2(v5_map / name, ctl_dir / name)
-        result = generate_directory(ctl_dir, ROOT / "map" / "map_variables.csv")
+        result = generate_directory(ctl_dir, ROOT / "variable_table" / "map_variables.csv")
         self.assertEqual(result.generated, 3, result)
         for stem, variable in (("upbasin-2569002", "upbasin"), ("subbsn-30000", "subbsn"), ("subcol-30000", "subcol")):
             ctl = (ctl_dir / f"{stem}.ctl").read_text(encoding="utf-8")

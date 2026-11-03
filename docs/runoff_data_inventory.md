@@ -127,7 +127,7 @@ Create a narrowly scoped registry of datasets/products actually included or used
 | Spatial/temporal grid | `grid_resolution`, `dimensions`, `domain`, `coordinate_names`, `longitude_convention`, `grid_order`, `calendar`, `time_step`, `period` | Describe coordinates and coverage needed for conversion and model setup. |
 | File and workflow | `format`, `filename_pattern`, `download_script`, `processing_script`, `configuration_report`, `sample_available`, `distribution_scope` | Link the product to reproducible commands and identify whether it lives in Git, the package, or both. |
 
-Avoid storing generated file facts twice if they can be validated from the NetCDF/CTL; the registry should be a concise index, not a replacement for self-describing file metadata. Decide whether each row represents a source dataset, a specific product, or both before fixing the CSV schema. Do not set any `map_variables.csv` `workflow_stage` values as part of this project.
+Avoid storing generated file facts twice if they can be validated from the NetCDF/CTL; the registry should be a concise index, not a replacement for self-describing file metadata. Decide whether each row represents a source dataset, a specific product, or both before fixing the CSV schema. Do not set any `variable_table/map_variables.csv` `workflow_stage` values as part of this project.
 
 ## 7. Small-sample strategy
 

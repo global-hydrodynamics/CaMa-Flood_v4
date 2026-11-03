@@ -41,7 +41,7 @@ Build targets are listed in this directory's `Makefile`; it includes the reposit
 
 ## Product metadata
 
-Regional readers and writers may crop core map files and derive products such as `rivseq.bin`, `uparea_grid.bin`, `upgrid.bin`, `nxtdst_grid.bin`, `rivlen_grid.bin`, `basin.bin`, and `bsncol.bin`. Their verified roles, symbolic layouts, and confidence states are tracked in [`map/map_variables.csv`](../../map_variables.csv), with schema notes in [`map/map_metadata_spec.md`](../../map_metadata_spec.md). Do not treat these regional/diagnostic outputs as original global-map generators or as universally required simulation inputs.
+Regional readers and writers may crop core map files and derive products such as `rivseq.bin`, `uparea_grid.bin`, `upgrid.bin`, `nxtdst_grid.bin`, `rivlen_grid.bin`, `basin.bin`, and `bsncol.bin`. Their verified roles, symbolic layouts, and confidence states are tracked in [`variable_table/map_variables.csv`](../../../variable_table/map_variables.csv), with schema notes in [`variable_table/map_metadata_spec.md`](../../../variable_table/map_metadata_spec.md). Do not treat these regional/diagnostic outputs as original global-map generators or as universally required simulation inputs.
 
 ## Practical checks and limitations
 

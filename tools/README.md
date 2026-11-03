@@ -4,7 +4,7 @@ This directory contains standalone tools for inspecting and describing model out
 
 ## Generate GrADS CTLs for Binary Restart files
 
-`generate_restart_ctl.py` creates one GrADS descriptor for each existing main Binary Restart in a run directory. It reads the active `input_cmf.nam`, the map's `params.txt`, and [`src_main/restart_variables.csv`](../src_main/restart_variables.csv). The registry documents the field names, units, internal kinds, order, and optional conditions.
+`generate_restart_ctl.py` creates one GrADS descriptor for each existing main Binary Restart in a run directory. It reads the active `input_cmf.nam`, the map's `params.txt`, and [`variable_table/restart_variables.csv`](../variable_table/restart_variables.csv). The registry documents the field names, units, internal kinds, order, and optional conditions.
 
 Run it from the repository root:
 
@@ -28,7 +28,7 @@ CTL files and any Float32 visualization copies are overwritten on regeneration. 
 
 - `input_cmf.nam` from the run directory (or `--namelist`), including simulation dates, `DT`, `IFRQ_OUT`, `CVARSOUT`, output paths, and binary/vector settings.
 - The map's `params.txt`, located by following `CNEXTXY`, `CGRAREA`, or `CDIMINFO` in the namelist.
-- The repository-root [`output_variables.csv`](../output_variables.csv) for names, metadata, data type, dimensions, and missing value.
+- [`variable_table/output_variables.csv`](../variable_table/output_variables.csv) for names, metadata, data type, dimensions, and missing value.
 
 Run from any working directory:
 

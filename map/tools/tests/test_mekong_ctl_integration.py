@@ -22,7 +22,10 @@ class MekongCtlWrapperIntegrationTests(unittest.TestCase):
             (fixture / "script_region").mkdir(parents=True)
             (fixture / "1min").mkdir()
 
-            shutil.copy2(ROOT / "map" / "map_variables.csv", map_root / "map_variables.csv")
+            registry_dir = temp_root / "variable_table"
+            registry_dir.mkdir()
+            shutil.copy2(ROOT / "variable_table" / "map_variables.csv",
+                          registry_dir / "map_variables.csv")
             shutil.copy2(ROOT / "map" / "tools" / "code" / "generate_ctl.py",
                          map_root / "tools" / "code" / "generate_ctl.py")
             shutil.copy2(SAMPLE / "script_region" / "s02-write_ctl.sh",
@@ -50,13 +53,16 @@ class MekongCtlWrapperIntegrationTests(unittest.TestCase):
             # missing-value sentinel, so CTL generation reports those fallback
             # defaults. Fallback warnings do not mean a binary was skipped or
             # failed to receive a descriptor.
+            # The Mekong-specific runoff matrix is not registered in the
+            # shared map-variable table, so the CTL generator skips it.
             self.assertEqual([summary[:3] for summary in summaries],
-                             [(expected[0], 0, 0), (expected[1], 0, 0)],
+                             [(expected[0] - 1, 1, 0), (expected[1], 0, 0)],
                              process.stdout + process.stderr)
+            self.assertIn("SKIP inpmat_test-mek_1deg.bin: not registered", process.stdout)
 
             base_ctls = list(fixture.glob("*.ctl"))
             high_ctls = list((fixture / "1min").glob("*.ctl"))
-            self.assertEqual(len(base_ctls), expected[0])
+            self.assertEqual(len(base_ctls), expected[0] - 1)
             self.assertEqual(len(high_ctls), expected[1])
             for ctl in base_ctls + high_ctls:
                 text = ctl.read_text(encoding="utf-8")

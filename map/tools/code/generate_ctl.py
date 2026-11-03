@@ -71,7 +71,7 @@ MATRIX_BLOCK_RE = re.compile(r"^block\s+(\d+)\s*:\s*([A-Za-z][A-Za-z0-9_]*)\s+le
 
 
 def default_registry_path() -> Path:
-    return Path(__file__).resolve().parents[2] / "map_variables.csv"
+    return Path(__file__).resolve().parents[3] / "variable_table" / "map_variables.csv"
 
 
 def read_registry(path: Path) -> list[dict[str, str]]:
@@ -601,7 +601,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--map-dir", type=Path, required=True,
                         help="directory to scan directly for .bin files (map root or high-resolution subdirectory)")
     parser.add_argument("--metadata-csv", type=Path, default=default_registry_path(),
-                        help="variable registry (default: map/map_variables.csv)")
+                        help="variable registry (default: variable_table/map_variables.csv)")
     parser.add_argument("--dry-run", action="store_true", help="validate and list planned CTLs without writing")
     parser.add_argument("--overwrite", action="store_true", help="replace existing .ctl files")
     args = parser.parse_args(argv)

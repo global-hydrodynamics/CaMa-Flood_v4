@@ -53,7 +53,7 @@ Do not run it from the map root: the Fortran programs use paths relative to the 
 | `region_default_inpmat` | Parent map: `inpmat_test-glb_1deg.bin` and `inpdim_test-glb_1deg.txt` | Standard runoff-climatology mapping product for channel cross-section parameter estimation; distributed with prepared v5 maps when generated. |
 | Separate CTL step | `.ctl` files beside eligible binaries | GrADS descriptors based on the base `params.txt` or high-resolution `location.txt`; not written by `s01`. |
 
-Consult [`map_variables.csv`](../../map_variables.csv) for per-product type, dimensions, record layout, numeric missing value, special codes, and model/runtime role. Core model inputs and preprocessing/analysis products are distinguished there; the table above names outputs without duplicating every variable definition.
+Consult [`variable_table/map_variables.csv`](../../../variable_table/map_variables.csv) for per-product type, dimensions, record layout, numeric missing value, special codes, and model/runtime role. Core model inputs and preprocessing/analysis products are distinguished there; the table above names outputs without duplicating every variable definition.
 
 ## High-resolution downstream links
 
