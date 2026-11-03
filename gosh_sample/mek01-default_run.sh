@@ -28,19 +28,33 @@ END_MONTH=2                   # End month.
 END_DAY=10                    # End day, at 00:00 (exclusive).
 END_HOUR=0                    # End hour (00:00).
 
+# River map configuration.
+MAPDIR="${CMF_BASE}/map/mekong_15min"
+
+# River network connectivity.
+# nextxy.bin:        Includes rivers draining outside the regional domain.
+# nextxy_noedge.bin: Excludes river networks affected by regional boundaries (default).
+#NEXTXY="${MAPDIR}/nextxy.bin"
+NEXTXY="${MAPDIR}/nextxy_noedge.bin"
+
+# River channel width.
+# rivwth_merit.bin: Satellite-derived river width (default).
+# rivwth.bin:       Power-law river width estimated from upstream area.
+#RIVWTH="${MAPDIR}/rivwth.bin"
+RIVWTH="${MAPDIR}/rivwth_merit.bin"
 
 # CPU execution settings; this sample runs with OpenMP and without MPI.
 OMP_NUM_THREADS=4             # Number of OpenMP threads (non-MPI execution).
 
 # Model features and initial conditions.
-LADPSTP=".TRUE."             # Let the model adjust the timestep to its stability criteria.
-LPTHOUT=".TRUE."             # Enable bifurcation flow paths using bifprm.txt.
-LDAMOUT=".FALSE."            # Disable reservoir operation.
-LRESTART=".FALSE."           # Initialize storage to zero; do not read a restart.
+LADPSTP=".TRUE."              # Let the model adjust the timestep to its stability criteria.
+LPTHOUT=".TRUE."              # Enable bifurcation flow paths using bifprm.txt.
+LDAMOUT=".FALSE."             # Disable reservoir operation.
+LRESTART=".FALSE."            # Initialize storage to zero; do not read a restart.
 DT=3600                       # Maximum timestep setting, in seconds.
 
 # Daily binary runoff sample and its matching map-specific input matrix.
-ROFFTAG="test-mek_1deg"      # Select inp/test-mek_1deg/runoff and its input matrix.
+ROFFTAG="test-mek_1deg"       # Select inp/test-mek_1deg/runoff and its input matrix.
 IFRQ_INP=24                   # Read runoff once every 24 hours.
 DROFUNIT=86400000             # Convert daily runoff in mm/day to the model input rate.
 LINPCDF=".FALSE."             # Read binary runoff files rather than NetCDF.
@@ -50,9 +64,10 @@ CROFPRE="Roff____"            # Daily filename prefix: Roff____YYYYMMDD.one.
 CROFSUF=".one"                # Daily filename suffix.
 
 # Daily binary output settings.
-CVARSOUT="outflw,storge,sfcelv,flddph,pthflw"  # Variables saved in binary output.
+CVARSOUT="outflw,storge,sfcelv,flddph,fldfrc"  # Variables saved in binary output.
 IFRQ_OUT=24                   # Write output every 24 hours.
-LOUTCDF=".FALSE."            # Write binary files rather than NetCDF.
+LOUTCDF=".FALSE."             # Write binary files rather than NetCDF.
+
 # Model output directory, relative to the model execution directory.
 # "./" means outputs are saved in RUNDIR,
 # because CaMa-Flood is executed after "cd ${RUNDIR}".
@@ -87,8 +102,7 @@ trap 'exit 143' TERM
 # End of error handling.
 # ----------------------------------------------------------------------
 
-# Reference input directories: river map and daily runoff files.
-MAPDIR="${CMF_BASE}/map/mekong_15min"
+# Reference input directory for daily runoff files.
 RUNOFF_DIR="${CMF_BASE}/inp/${ROFFTAG}/runoff"
 
 # The dimension descriptor and matrix were generated for this map/runoff pair.
@@ -126,68 +140,68 @@ STEP="Write the Mekong run namelist"
 printf '\n==================================================\n[STEP 1/2] Configure the Mekong simulation\n==================================================\n\n'
 cat > input_cmf.nam <<EOF
 &NRUNVER
-LADPSTP  = ${LADPSTP}
-LPTHOUT  = ${LPTHOUT}
-LDAMOUT  = ${LDAMOUT}
-LRESTART = ${LRESTART}
+LADPSTP  = ${LADPSTP}        ! Enable adaptive time stepping.
+LPTHOUT  = ${LPTHOUT}        ! Enable bifurcation routing.
+LDAMOUT  = ${LDAMOUT}        ! Enable reservoir operation.
+LRESTART = ${LRESTART}       ! Read initial conditions from a restart file when true.
 /
 &NDIMTIME
-CDIMINFO = "${INPDIM}"
-DT       = ${DT}
-IFRQ_INP = ${IFRQ_INP}
+CDIMINFO = "${INPDIM}"       ! Map and runoff-grid dimensions and input-matrix metadata.
+DT       = ${DT}             ! Timestep setting [s]; adaptive time stepping is enabled.
+IFRQ_INP = ${IFRQ_INP}       ! Runoff input interval [hours].
 /
 &NPARAM
-PMANRIV  = 0.03D0
-PMANFLD  = 0.10D0
-PDSTMTH  = 10000.D0
-PCADP    = 0.7D0
+PMANRIV  = 0.03D0            ! River Manning roughness coefficient [s m-1/3].
+PMANFLD  = 0.10D0            ! Floodplain Manning roughness coefficient [s m-1/3].
+PDSTMTH  = 10000.D0          ! Downstream distance at river mouth [m].
+PCADP    = 0.7D0             ! CFL coefficient for adaptive time-step control [-].
 /
 &NSIMTIME
-SYEAR = ${START_YEAR}
-SMON  = ${START_MONTH}
-SDAY  = ${START_DAY}
-SHOUR = ${START_HOUR}
-EYEAR = ${END_YEAR}
-EMON  = ${END_MONTH}
-EDAY  = ${END_DAY}
-EHOUR = ${END_HOUR}
+SYEAR = ${START_YEAR}        ! Simulation start year.
+SMON  = ${START_MONTH}       ! Simulation start month.
+SDAY  = ${START_DAY}         ! Simulation start day.
+SHOUR = ${START_HOUR}        ! Simulation start hour [0-23].
+EYEAR = ${END_YEAR}          ! Simulation end year (end time is exclusive).
+EMON  = ${END_MONTH}         ! Simulation end month (end time is exclusive).
+EDAY  = ${END_DAY}           ! Simulation end day (end time is exclusive).
+EHOUR = ${END_HOUR}          ! Simulation end hour (end time is exclusive).
 /
 &NMAP
-LMAPCDF = .FALSE.
-CNEXTXY = "${MAPDIR}/nextxy.bin"
-CGRAREA = "${MAPDIR}/ctmare.bin"
-CELEVTN = "${MAPDIR}/elevtn.bin"
-CNXTDST = "${MAPDIR}/nxtdst.bin"
-CRIVLEN = "${MAPDIR}/rivlen.bin"
-CFLDHGT = "${MAPDIR}/fldhgt.bin"
-CRIVWTH = "${MAPDIR}/rivwth_merit.bin"
-CRIVHGT = "${MAPDIR}/rivhgt.bin"
-CRIVMAN = "${MAPDIR}/rivman.bin"
-CPTHOUT = "${MAPDIR}/bifprm.txt"
+LMAPCDF = .FALSE.                   ! Read map inputs in binary format.
+CNEXTXY = "${NEXTXY}"               ! River-network downstream connectivity.
+CGRAREA = "${MAPDIR}/ctmare.bin"    ! Unit catchment area [m2].
+CELEVTN = "${MAPDIR}/elevtn.bin"    ! River-bank elevation [m].
+CNXTDST = "${MAPDIR}/nxtdst.bin"    ! Distance to downstream outlet [m].
+CRIVLEN = "${MAPDIR}/rivlen.bin"    ! River channel length [m].
+CFLDHGT = "${MAPDIR}/fldhgt.bin"    ! Floodplain elevation profile [m].
+CRIVWTH = "${RIVWTH}"               ! River channel width [m].
+CRIVHGT = "${MAPDIR}/rivhgt.bin"    ! River channel depth [m].
+CRIVMAN = "${MAPDIR}/rivman.bin"    ! River Manning roughness [s m-1/3].
+CPTHOUT = "${MAPDIR}/bifprm.txt"    ! Bifurcation channel parameters.
 /
 &NRESTART
-CRESTDIR = "./"
-CVNREST  = "${CVNREST}"
-LRESTCDF = .FALSE.
-IFRQ_RST = ${IFRQ_RST}
+CRESTDIR = "./"              ! Restart-output directory relative to the run directory.
+CVNREST  = "${CVNREST}"      ! Prefix for restart-output filenames.
+LRESTCDF = .FALSE.           ! Write restart data in binary rather than NetCDF.
+IFRQ_RST = ${IFRQ_RST}       ! Restart output interval; 0 writes only at simulation end.
 /
 &NFORCE
-LINPCDF  = ${LINPCDF}
-LINPDAY  = ${LINPDAY}
-LINTERP  = ${LINTERP}
-CINPMAT  = "${INPMAT}"
-DROFUNIT = ${DROFUNIT}
-CROFDIR  = "${RUNOFF_DIR}"
-CROFPRE  = "${CROFPRE}"
-CROFSUF  = "${CROFSUF}"
+LINPCDF  = ${LINPCDF}         ! Read runoff input in NetCDF format when true.
+LINPDAY  = ${LINPDAY}         ! Read separate daily runoff files when true.
+LINTERP  = ${LINTERP}         ! Use the input matrix to map runoff onto river cells.
+CINPMAT  = "${INPMAT}"        ! Runoff-to-river input-mapping matrix.
+DROFUNIT = ${DROFUNIT}        ! Convert input mm/day to runoff rate [m/s].
+CROFDIR  = "${RUNOFF_DIR}"    ! Directory containing runoff input files.
+CROFPRE  = "${CROFPRE}"       ! Runoff filename prefix before the date.
+CROFSUF  = "${CROFSUF}"       ! Runoff filename suffix.
 /
 &NOUTPUT
-COUTDIR  = "${COUTDIR}"
-CVARSOUT = "${CVARSOUT}"
-COUTTAG  = "${START_YEAR}"
-LOUTVEC  = .FALSE.
-LOUTCDF  = ${LOUTCDF}
-IFRQ_OUT = ${IFRQ_OUT}
+COUTDIR  = "${COUTDIR}"       ! Output directory relative to the model run directory.
+CVARSOUT = "${CVARSOUT}"      ! Comma-separated list of output variables.
+COUTTAG  = "${START_YEAR}"    ! Tag appended to output filenames.
+LOUTVEC  = .FALSE.            ! Write gridded output rather than vector output.
+LOUTCDF  = ${LOUTCDF}         ! Write output in NetCDF format when true.
+IFRQ_OUT = ${IFRQ_OUT}        ! Output interval [hours].
 /
 EOF
 
