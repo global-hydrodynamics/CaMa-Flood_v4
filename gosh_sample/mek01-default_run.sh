@@ -261,6 +261,12 @@ if [ "${RUN_STATUS}" -ne 0 ]; then
     exit "${RUN_STATUS}"
 fi
 
+STEP="Generate GrADS CTLs for Binary Restart files"
+printf '\n==================================================\n'
+printf '[STEP 3/3] Generate GrADS CTLs for Binary Restart files\n'
+printf '==================================================\n\n'
+python3 "${CMF_BASE}/tools/generate_restart_ctl.py" --run-dir "${RUNDIR}"
+
 printf '\n==================================================\n[SUCCESS] %s completed\n' "${SCRIPT_NAME}"
 printf 'Results: %s\n' "${RUNDIR}"
 printf 'Model log: %s\n' "${MODEL_LOG}"

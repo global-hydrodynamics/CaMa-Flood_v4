@@ -37,7 +37,6 @@ NAMELIST/NRESTART/ CRESTSTO,CRESTDIR,CVNREST,LRESTCDF,LRESTDBL,IFRQ_RST
 !
 CONTAINS 
 !####################################################################
-!! changed 12/12
 ! -- CMF_RESTART_NMLIST : set restart configulation info from namelist
 ! -- CMF_RESTART_INIT   : Read  restart file
 ! -- CMF_RESTART_WRITE  : Write restart file

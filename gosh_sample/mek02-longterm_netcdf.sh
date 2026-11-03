@@ -46,8 +46,8 @@ IFRQ_OUT=24                      # Model-output interval [hours]; 24 means daily
 CVARSOUT="outflw,storge,sfcelv,flddph,fldfrc" # Comma-separated model output variable names.
 LOUTCDF=".TRUE."                # TRUE: write NetCDF model output; FALSE: write Binary output.
 IFRQ_RST=0                       # 0: write restart at end only; 1-24: hourly; 30: monthly (also at end).
-CVNREST="restart"               # Prefix for binary restart files and their date stamps.
-LRESTCDF=".FALSE."              # TRUE: NetCDF restart; FALSE: Binary restart.
+CVNREST="restart"               # Prefix for dated restart files.
+LRESTCDF=".TRUE."               # TRUE: NetCDF restart; FALSE: Binary restart.
 RUNDIR="${CMF_BASE}/out/mek02-longterm_mapnc" # Dedicated individual-map test output directory.
 
 # ----------------------------------------------------------------------
@@ -73,6 +73,7 @@ mkdir -p "$RUNDIR"
 rm -f "$RUNDIR"/o_outflw*.nc "$RUNDIR"/o_storge*.nc \
       "$RUNDIR"/o_sfcelv*.nc "$RUNDIR"/o_flddph*.nc \
       "$RUNDIR"/o_fldfrc*.nc "$RUNDIR"/restart*.bin* \
+      "$RUNDIR"/restart*.nc \
       "$RUNDIR"/input_cmf*.nam "$RUNDIR"/console_*.log \
       "$RUNDIR"/log_CaMa*.txt "$RUNDIR"/run_time_*.log \
       "$RUNDIR"/MAIN_cmf "$RUNDIR"/mapdata.txt \
@@ -95,7 +96,7 @@ while [ "$YEAR" -le "$END_YEAR" ]; do
         LRESTART=".FALSE."
         CRESTSTO="NONE"
     else
-        PREVIOUS_RESTART="${RUNDIR}/${CVNREST}$(printf '%04d010100' "$YEAR").bin"
+        PREVIOUS_RESTART="${RUNDIR}/${CVNREST}$(printf '%04d010100' "$YEAR").nc"
         LRESTART=".TRUE."
         CRESTSTO="$PREVIOUS_RESTART"
     fi
