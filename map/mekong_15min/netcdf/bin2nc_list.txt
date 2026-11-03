@@ -1,0 +1,59 @@
+# Binary-to-NetCDF conversion list
+# Generated from map_variables.csv
+# Comment out files that should not be converted.
+
+# [11] default_rivmap
+ctmare.bin
+elevtn.bin
+fldhgt.bin
+nextxy.bin
+nxtdst.bin
+rivlen.bin
+
+# [12] default_rivmap_grid
+grdare.bin
+nxtdst_grid.bin
+rivlen_grid.bin
+
+# [13] default_rivmap_region
+nextxy_noedge.bin
+uparea_grid.bin
+
+# [16] default_rivmap_supp
+basin.bin
+bsncol.bin
+catmpx.bin
+class.bin
+downxy.bin
+lonlat.bin
+lsmask.bin
+rivseq.bin
+uparea.bin
+upgrid.bin
+width.bin
+
+# [21] param_cross-section
+rivhgt_inf.bin
+rivhgt.bin
+rivman.bin
+rivwth_merit.bin
+rivwth.bin
+outclm.bin
+
+# [22] bifurcation
+bifbsn.bin
+bifcol.bin
+
+# [24] MPI
+mpireg-16.bin
+mpireg-4.bin
+mpireg-8.bin
+bifcol_mpi.bin
+
+# [25] river_map_supplement
+prmwat.bin
+
+# [26] river_map_analysis
+subbsn-30000.bin
+subcol-30000.bin
+upbasin-2569002.bin

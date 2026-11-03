@@ -84,6 +84,82 @@ def registry_rows(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(stream))
 
 
+def registered_base_filenames(row: dict[str, str]) -> list[str]:
+    """Return literal binary filenames that can occur in a map root."""
+    value = (row.get("binary_filename") or "").strip()
+    filenames = []
+    for item in value.split(";"):
+        item = item.strip()
+        if not item or Path(item).name != item or any(char in item for char in "*?<>[]"):
+            continue
+        if item.endswith(".bin"):
+            filenames.append(item)
+    return filenames
+
+
+def conversion_support(rows: list[dict[str, str]]) -> tuple[bool, str]:
+    """Check whether all registry rows for one file fit this raster converter."""
+    dtypes = {row.get("dtype", "").strip() for row in rows}
+    dimensions = {row.get("dimensions", "").strip() for row in rows}
+    if not dtypes <= {"float32", "int32"}:
+        return False, f"unsupported storage type(s): {', '.join(sorted(dtypes))}"
+    if len(dimensions) != 1:
+        return False, "registry rows declare different dimensions"
+    dimension = next(iter(dimensions))
+    if dimension not in {"NX,NY", "NX,NY,NLFP"}:
+        return False, f"unsupported dimensions: {dimension or 'blank'}"
+    if dimension == "NX,NY,NLFP" and len(rows) != 1:
+        return False, "layered files require one variable row"
+    return True, ""
+
+
+def generate_conversion_list(map_dir: Path, registry_path: Path, list_path: Path) -> int:
+    """Write supported registered base-map binaries in registry workflow order."""
+    rows = registry_rows(registry_path)
+    rows_by_filename: dict[str, list[tuple[int, dict[str, str]]]] = {}
+    for row_index, row in enumerate(rows):
+        for filename in registered_base_filenames(row):
+            rows_by_filename.setdefault(filename, []).append((row_index, row))
+
+    binary_files = {path.name for path in map_dir.glob("*.bin") if path.is_file()}
+    candidates = []
+    for filename in sorted(binary_files):
+        file_rows = rows_by_filename.get(filename, [])
+        if not file_rows:
+            print(f"WARNING: {filename} is not registered; it will not be listed.")
+            continue
+
+        supported, reason = conversion_support([row for _, row in file_rows])
+        if not supported:
+            print(f"WARNING: {filename} is registered but not supported: {reason}.")
+            continue
+
+        chosen_index, chosen_row = min(
+            file_rows,
+            key=lambda item: (int(item[1]["category_id"]), item[0]),
+        )
+        category_id = int(chosen_row["category_id"])
+        category = (chosen_row.get("category") or "Registered map products").strip()
+        candidates.append((category_id, chosen_index, filename, category))
+
+    candidates.sort(key=lambda item: (item[0], item[1]))
+    list_path.parent.mkdir(parents=True, exist_ok=True)
+    lines = [
+        "# Binary-to-NetCDF conversion list",
+        "# Generated from map_variables.csv",
+        "# Comment out files that should not be converted.",
+    ]
+    previous_category = None
+    for category_id, _, filename, category in candidates:
+        if category_id != previous_category:
+            lines.extend(("", f"# [{category_id}] {category}"))
+            previous_category = category_id
+        lines.append(filename)
+    list_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"Generated {len(candidates)} conversion candidates: {list_path}")
+    return len(candidates)
+
+
 def select_variables(filename: str, rows: list[dict[str, str]], requested: list[str] | None) -> list[dict[str, str]]:
     matches = [row for row in rows if Path(row.get("binary_filename", "")).name == filename]
     if not matches and requested:
@@ -316,9 +392,11 @@ def main() -> int:
     root = Path(__file__).resolve().parents[2]
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--map-dir", type=Path, required=True, help="map directory containing params.txt")
-    parser.add_argument("--input", type=Path, required=True, help="registered Binary map file")
-    parser.add_argument("--output", type=Path, required=True, help="destination NetCDF file")
+    parser.add_argument("--input", type=Path, help="registered Binary map file")
+    parser.add_argument("--output", type=Path, help="destination NetCDF file")
     parser.add_argument("--registry", type=Path, default=root / "map/map_variables.csv", help="map variable registry")
+    parser.add_argument("--generate-list", action="store_true", help="write a human-editable base-map conversion list")
+    parser.add_argument("--list-file", type=Path, help="conversion-list path; defaults to <map-dir>/netcdf/bin2nc_list.txt")
     parser.add_argument("--variables", help="comma-separated registry variable names; defaults to all variables in the file")
     parser.add_argument(
         "--byte-order",
@@ -329,6 +407,21 @@ def main() -> int:
     parser.add_argument("--force", action="store_true", help="replace an existing NetCDF output file")
     args = parser.parse_args()
     args.map_dir = args.map_dir.resolve()
+
+    if args.generate_list:
+        if args.input or args.output or args.variables or args.force:
+            parser.error("--generate-list cannot be combined with conversion options")
+        args.registry = args.registry.resolve()
+        args.list_file = (args.list_file or args.map_dir / "netcdf/bin2nc_list.txt").resolve()
+        try:
+            generate_conversion_list(args.map_dir, args.registry, args.list_file)
+        except (OSError, ValueError) as error:
+            print(f"ERROR: {error}", file=sys.stderr)
+            return 1
+        return 0
+
+    if args.input is None or args.output is None or args.list_file is not None:
+        parser.error("conversion requires --input and --output; --list-file is only for --generate-list")
     args.input = args.input.resolve()
     args.output = args.output.resolve()
     args.registry = args.registry.resolve()
