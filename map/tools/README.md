@@ -123,7 +123,7 @@ The converter reads dimensions and geographic bounds from `params.txt`, and type
 
 NetCDF variables retain their logical names regardless of output filename, e.g. `rivhgt_optimized.nc` contains `rivhgt`. `nextxy_noedge.nc` contains `nextx` and `nexty`. The converter writes cell-center `lon`/`lat` coordinates, with CDL variable dimensions `(lat,lon)` or `(layer,lat,lon)` corresponding to Fortran-reader dimensions `(NX,NY)` or `(NX,NY,NLFP)`. It checks the output values by reading them back through the NetCDF library, but compatibility with the model is established by the separate mixed-format Mekong simulation tests documented in the [model workflow plan](../../docs/model_source_workflow_plan.md#individual-binarynetcdf-map-inputs). It does not generate consolidated legacy containers or convert structured text inputs such as `bifprm.txt`.
 
-For a human-edited candidate list and per-file overwrite prompts when converting base-map Binary files, see the [two-step Binary-to-NetCDF workflow](../script_bin2nc/README.md). High-resolution subdirectories are outside that workflow.
+For the shared shell templates and human-edited candidate-list workflow for converting base-map Binary files, see the [two-step Binary-to-NetCDF workflow](script_bin2nc/README.md). Copy the templates into a map-local `script_bin2nc/` directory before configuring and using them. High-resolution subdirectories are outside that workflow.
 
 ## River-network analysis
 

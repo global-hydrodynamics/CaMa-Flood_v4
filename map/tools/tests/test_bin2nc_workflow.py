@@ -15,7 +15,8 @@ from pathlib import Path
 from map.tools.convert_map_binary_to_netcdf import generate_conversion_list
 
 ROOT = Path(__file__).resolve().parents[3]
-SCRIPT_SOURCE = ROOT / "map/script_bin2nc"
+SCRIPT_SOURCE = ROOT / "map/mekong_15min/script_bin2nc"
+SCRIPT_TEMPLATE = ROOT / "map/tools/script_bin2nc"
 CONVERTER_SOURCE = ROOT / "map/tools/convert_map_binary_to_netcdf.py"
 
 FIELDS = [
@@ -55,7 +56,7 @@ def write_registry(path: Path, rows: list[dict[str, str]]) -> None:
 
 def make_workflow_tree(root: Path, *, use_converter_stub: bool) -> tuple[Path, Path]:
     map_root = root / "map"
-    script_dir = map_root / "script_bin2nc"
+    script_dir = map_root / "mekong_15min/script_bin2nc"
     tools_dir = map_root / "tools"
     map_dir = map_root / "mekong_15min"
     script_dir.mkdir(parents=True)
@@ -87,7 +88,7 @@ print('Converted fixture:', Path(args.input).name)
         )
     else:
         shutil.copyfile(CONVERTER_SOURCE, tools_dir / CONVERTER_SOURCE.name)
-    map_dir.mkdir()
+    map_dir.mkdir(exist_ok=True)
     (map_dir / "params.txt").write_text("2\n2\n1\n1\n0\n2\n0\n2\n", encoding="ascii")
     return script_dir, map_dir
 
@@ -145,6 +146,16 @@ def run_tty(script: Path, cwd: Path, response: bytes, prompt: bytes) -> str:
 
 
 class BinaryToNetCDFWorkflowTests(unittest.TestCase):
+    def test_map_local_scripts_match_shared_templates_except_map_directory(self):
+        for name in ("s01-list_binary.sh", "s02-convert_netcdf.sh"):
+            template = (SCRIPT_TEMPLATE / name).read_text(encoding="utf-8")
+            sample = (SCRIPT_SOURCE / name).read_text(encoding="utf-8")
+            template = template.replace(
+                'MAP_DIR="$SCRIPT_DIR/../../mekong_15min"  # Change this to select another map directory.',
+                'MAP_DIR="$SCRIPT_DIR/.."  # Map root containing params.txt and map Binary files.',
+            )
+            self.assertEqual(sample, template)
+
     def test_candidate_list_deduplicates_and_sorts_by_category_then_registry_order(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -281,7 +292,7 @@ class BinaryToNetCDFWorkflowTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             script_dir, map_dir = make_workflow_tree(root, use_converter_stub=False)
-            shutil.copyfile(ROOT / "map/map_variables.csv", script_dir.parent / "map_variables.csv")
+            shutil.copyfile(ROOT / "map/map_variables.csv", map_dir.parent / "map_variables.csv")
             (map_dir / "params.txt").write_text("2\n2\n2\n1\n0\n2\n0\n2\n", encoding="ascii")
             (map_dir / "nextxy.bin").write_bytes(
                 struct.pack("<8i", 2, 0, 2, -9999, 1, 2, 0, -9999)

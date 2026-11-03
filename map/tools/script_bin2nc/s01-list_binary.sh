@@ -4,12 +4,18 @@
 # Output: <map>/netcdf/bin2nc_list.txt.
 set -eu
 
-# Resolve shared tools relative to this script, regardless of the caller's CWD.
+# Resolve this template independently of the caller's working directory.
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
-MAP_DIR="$SCRIPT_DIR/../mekong_15min"  # Change this to select another map directory.
+# Default target when running the shared template; map-local copies use "..".
+MAP_DIR="$SCRIPT_DIR/../../mekong_15min"  # Change this to select another map directory.
 LIST_FILE="$MAP_DIR/netcdf/bin2nc_list.txt"
-REGISTRY="$SCRIPT_DIR/../map_variables.csv"
-CONVERTER="$SCRIPT_DIR/../tools/convert_map_binary_to_netcdf.py"
+REGISTRY="$SCRIPT_DIR/../../map_variables.csv"
+if [ -f "$SCRIPT_DIR/../convert_map_binary_to_netcdf.py" ]; then
+    TOOL_DIR="$SCRIPT_DIR/.."
+else
+    TOOL_DIR="$SCRIPT_DIR/../../tools"
+fi
+CONVERTER="$TOOL_DIR/convert_map_binary_to_netcdf.py"
 
 # ----------------------------------------------------------------------
 # User settings end here. Program paths and processing steps follow.
