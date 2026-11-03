@@ -147,3 +147,33 @@ This is operational I/O compatibility evidence for the Mekong sample, not indepe
 
 **Open validation question:** runtime coverage for the retained legacy consolidated containers and the optional groundwater, mean-sea-level, MPI, and legacy consolidated slope/mask inputs requires suitable files and enabled configurations. The individual-mode slope rejection is tested. The two identified NetCDF handle defects in the legacy slope reads have been fixed, but these special legacy options remain runtime-untested because no suitable consolidated fixture is available. The standard Mekong sample supports independent-file testing but does not answer this question. It is non-blocking for the completed core sample work; do not claim those legacy/optional paths are validated. See KG-0027 and VR-0093.
 
+## Future work: Driver and Coupler architecture
+
+### Current responsibilities
+
+The following role descriptions combine the maintainer-confirmed architecture with behavior verified in the current source:
+
+- `YOS_CMF_*` modules hold shared model state, configuration, and data.
+- `CMF_CTRL_*` modules provide control operations such as initialization, input/output, and Restart handling.
+- `CMF_CALC_*` modules perform physical-process and numerical calculations.
+- `CMF_DRV_*` procedures coordinate CTRL and CALC operations and advance the internal CaMa-Flood state held in YOS modules.
+- `MAIN_cmf.F90` is the Standalone Coupler reference. It owns the top-level lifecycle and coupling sequence; its forcing interface receives data from external models in a coupled use, while standalone operation obtains forcing through the configured file-based implementation.
+
+The main/driver boundary is intentional: MAIN handles data exchange and coupling, while DRV manages the internal CaMa-Flood calculation. In the current standalone call path, MAIN calls `CMF_DRV_INPUT`, `CMF_DRV_INIT`, `CMF_DRV_ADVANCE`, and `CMF_DRV_END`; it also calls the forcing get/put procedures around advancement. `CMF_DRV_ADVANCE` coordinates time advancement, optional boundary/ups-inflow updates, physics, diagnostics, scheduled output, Restart handling, and model-time update. These call relationships are visible in [`MAIN_cmf.F90`](../src_main/MAIN_cmf.F90) and [`cmf_drv_advance_mod.F90`](../src_main/cmf_drv_advance_mod.F90).
+
+### Maintainer-confirmed future direction
+
+The maintainer identified these as future design goals, not implementation specifications:
+
+1. Review the responsibilities and dependencies currently grouped in `CMF_DRV_*`. Consider how output, Restart, and time-control operations could be combined more flexibly while preserving required scientific execution order.
+2. Keep `MAIN_cmf.F90` as the standard Standalone Coupler reference and support developers writing a custom MAIN/Coupler around the existing DRV entry points, without requiring broad edits to the CaMa-Flood internals.
+3. Use HeatLink as a future design case. With HeatLink enabled, its state update occurs after `CMF_DRV_ADVANCE`; the driver suppresses its ordinary Restart write, and MAIN uses `restart_is_write_time()` to write CaMa-Flood, tracer, and HeatLink Restart state after the coupled updates are synchronized. This illustrates a timing constraint in the current driver structure.
+
+No specific interface, implementation method, or start date has been approved. HeatLink remains under development; its code and Restart behavior are unchanged by this plan update. The term “library” is not used to describe this direction because it does not accurately represent the existing MAIN/DRV design.
+
+### Future investigation and limits
+
+Before changing the architecture, trace and document the ordering and dependencies among forcing updates, adaptive timestep advancement, physical calculations, diagnostics/output accumulation and reset, Restart scheduling/writes, and time updates. Identify which layer owns coupled data and state at each boundary, including optional schemes such as HeatLink. Compare a dedicated HeatLink Coupler with a more flexible standard Driver, and define validation cases that establish unchanged standalone behavior and correctly synchronized coupled Restart timing. These are questions for a later approved task; they are not decisions made here.
+
+This section records a future direction only. It does not authorize Fortran changes, MAIN/DRV extraction, a new Coupler interface, or HeatLink modifications.
+
