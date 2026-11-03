@@ -75,7 +75,7 @@ USE YOS_CMF_INPUT,      ONLY: CSETFILE,NSETFILE,LMEANSL,LGDWDLY
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
 IMPLICIT NONE
 !================================================
-!*** 1. open namelist
+!*** 1. Open the namelist file
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "!---------------------!"
 WRITE(LOGNAM,*) 'CMF::MAPS_NMLIST: START read Map input settings'
@@ -84,7 +84,7 @@ NSETFILE=INQUIRE_FID()
 OPEN(NSETFILE,FILE=CSETFILE,STATUS="OLD")
 WRITE(LOGNAM,*) "CMF::MAPS_NMLIST: namelist OPEN in unit: ", TRIM(CSETFILE), NSETFILE
 
-!*** 2. default value
+!*** 2. Set default map files and options
 CNEXTXY="./nextxy.bin"
 CGRAREA="./ctmare.bin"
 CELEVTN="./elevtn.bin"
@@ -108,13 +108,13 @@ CRIVPARNC="NONE"
 CMEANSLNC="NONE"
 CMPIREGNC="NONE"
 
-!*** 3. read namelist
+!*** 3. Read and report user-defined map settings
 REWIND(NSETFILE)
 READ(NSETFILE,NML=NMAP)
 
 #ifndef UseCDF_CMF
 IF ( LMAPCDF ) THEN
-  WRITE(LOGNAM,*) 'ERROR [CMF::MAPS_NMLIST]: LMAPCDF=.TRUE. requests legacy consolidated NetCDF Map input, but this executable was built without UseCDF_CMF.'
+  WRITE(LOGNAM,*) 'ERROR [CMF::MAPS_NMLIST]: LMAPCDF=.TRUE. requires a UseCDF_CMF build.'
   STOP 9
 ENDIF
 #endif
@@ -188,15 +188,14 @@ WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "!---------------------!"
 WRITE(LOGNAM,*) 'CMF::RIVMAP_INIT: START river network initialization'
 
-! *** 1. ALLOCATE ARRAYS
+!*** 1. Allocate the grid and coordinate arrays
 ALLOCATE( I2NEXTX(NX,NY) )
 ALLOCATE( I2NEXTY(NX,NY) )
 ALLOCATE( I2REGION(NX,NY) )
 ALLOCATE( D1LON(NX) )
 ALLOCATE( D1LAT(NY) )
 
-!============================
-!*** 2a. read river network map
+!*** 2. Read connectivity and derive cell-center coordinates
 WRITE(LOGNAM,*) 'CMF::RIVMAP_INIT: read nextXY & set lat lon'
 IF( LMAPCDF )THEN
 #ifdef UseCDF_CMF
@@ -209,12 +208,11 @@ ELSE
   CALL READ_MAP_FILES
 ENDIF
 
-!*** 2b. calculate river sequence & regions
+!*** 3. Assign computational regions
 WRITE(LOGNAM,*) 'CMF::RIVMAP_INIT: calc region'
 CALL CALC_REGION
 
-!============================
-!*** 3. conversion 2D map -> 1D vector
+!*** 4. Build the river-cell computation sequence
 WRITE(LOGNAM,*) 'CMF::RIVMAP_INIT: calculate 1d river sequence'
 
 CALL CALC_1D_SEQ                                  !! 2D map to 1D vector conversion. for faster calculation
@@ -223,7 +221,7 @@ WRITE(LOGNAM,*) 'CMF::RIVMAP_INIT: NSEQRIV=',NSEQRIV
 WRITE(LOGNAM,*) 'CMF::RIVMAP_INIT: NSEQALL=',NSEQALL
 WRITE(LOGNAM,*) 'CMF::RIVMAP_INIT: NSEQMAX=',NSEQMAX
 
-!*** 3c. Write Map Data                                       !! used for combining mpi distributed output into one map
+!*** 5. Write map dimensions for distributed-output assembly
 IF( REGIONTHIS==1 )THEN
   TMPNAM=INQUIRE_FID()
   OPEN(TMPNAM,FILE='./mapdata.txt',FORM='FORMATTED')
@@ -235,8 +233,7 @@ IF( REGIONTHIS==1 )THEN
   CLOSE(TMPNAM)
 ENDIF
 
-!============================
-!*** 4.  bifurcation channel parameters
+!*** 6. Initialize optional bifurcation pathways
 NPTHOUT=1  !! tentative number
 NPTHLEV=1
 IF( LPTHOUT )THEN
@@ -264,11 +261,12 @@ IMPLICIT NONE
 !* local variables
 INTEGER(KIND=JPIM),SAVE    :: IX,IY
 !==========================================================
+!*** 1. Read river connectivity
 WRITE(LOGNAM,*) '  READ_MAP_FILES: read nextxy from ',TRIM(CNEXTXY)
 CALL MAP_UTIL_READ_INT2D(CNEXTXY,'nextx',I2NEXTX,1,'CMF::RIVMAP_INIT')
 CALL MAP_UTIL_READ_INT2D(CNEXTXY,'nexty',I2NEXTY,2,'CMF::RIVMAP_INIT')
 
-! Derive cell-center coordinates for regular geographic grids.
+!*** 2. Derive cell-center coordinates for regular geographic grids
 ! Skip non-geographic maps based on their coordinate bounds.
 IF( WEST>=-180._JPRB .and. EAST<=360._JPRB .and. &
     SOUTH>=-90._JPRB .and. NORTH<=90._JPRB )THEN
@@ -303,14 +301,14 @@ WRITE(LOGNAM,*)'  READ_MAP_CDF: read nextxy from ', TRIM(CRIVCLINC)
 CALL MAP_UTIL_NCERROR (NF90_OPEN(CRIVCLINC,NF90_NOWRITE,NCID),'opening '//TRIM(CRIVCLINC), &
                        'CMF::RIVMAP_INIT/READ_MAP_CDF')
 
-!*** next xy
+!*** 1. Read river connectivity
 CALL MAP_UTIL_NCERROR ( NF90_INQ_VARID(NCID,'nextx',VARID),'getting id', 'CMF::RIVMAP_INIT/READ_MAP_CDF' )
 CALL MAP_UTIL_NCERROR ( NF90_GET_VAR(NCID,VARID,I2NEXTX),'reading nextx', 'CMF::RIVMAP_INIT/READ_MAP_CDF' )
 
 CALL MAP_UTIL_NCERROR ( NF90_INQ_VARID(NCID,'nexty',VARID),'getting id', 'CMF::RIVMAP_INIT/READ_MAP_CDF' )
 CALL MAP_UTIL_NCERROR ( NF90_GET_VAR(NCID,VARID,I2NEXTY),'reading nexty', 'CMF::RIVMAP_INIT/READ_MAP_CDF' )
 
-!*** lat, lon
+!*** 2. Read cell-center coordinates
 CALL MAP_UTIL_NCERROR ( NF90_INQ_VARID(NCID,'lat',VARID),'getting id', 'CMF::RIVMAP_INIT/READ_MAP_CDF' )
 CALL MAP_UTIL_NCERROR ( NF90_GET_VAR(NCID,VARID,D1LAT),'reading lat', 'CMF::RIVMAP_INIT/READ_MAP_CDF' )
 
@@ -349,7 +347,8 @@ INTEGER(KIND=JPIM)              :: VARID
 !================================================
 WRITE(LOGNAM,*) '  CALC_REGION: assign region codes'
 
-!*** when MPI is not used. Treat all grid as region=1
+!*** 1. Initialize valid river cells in the default region
+! Without an MPI region map, all valid cells remain assigned to region 1.
 REGIONALL=1
 I2REGION(:,:)=IMIS
 !$OMP PARALLEL DO
@@ -362,8 +361,8 @@ DO IY=1, NY
 END DO
 !$OMP END PARALLEL DO
 
-!*** read MPI region map
-!! Use MPI: read MPI region map, allocate regions to MPI nodes
+!*** 2. Read the MPI region map when MPI is enabled
+! The largest region ID determines the extent of region-indexed arrays.
 #ifdef UseMPI_CMF
   IF ( LMAPCDF ) THEN
 #ifdef UseCDF_CMF
@@ -393,6 +392,8 @@ END DO
 #endif
 
 
+!*** 3. Count cells by region and determine per-region sizing
+! NSEQMAX is this process's region size; NSEQMAX_MPI records the largest region size.
 WRITE(LOGNAM,*)'  CALC_REGION: count cells in each region'
 ALLOCATE(REGIONGRID(REGIONALL))
 REGIONGRID(:)=0
@@ -447,7 +448,7 @@ I1SEQY(:)=0
 I1NEXT(:)=0
 I2VECTOR(:,:)=0
 
-!*** 1. Count incoming river links at each downstream cell.
+!*** 1. Count incoming river links at each downstream cell
 NUPST(:,:)=0
 UPNOW(:,:)=0
 UPNMAX=0
@@ -462,7 +463,7 @@ DO IY=1, NY
   END DO
 END DO
 
-!*** 2. Start the sequence with cells that have no upstream river links.
+!*** 2. Seed the sequence with cells that have no incoming river links
 ISEQ=0
 DO IY=1, NY
   DO IX=1, NX
@@ -480,7 +481,8 @@ ISEQ1=1
 ISEQ2=ISEQ
 
 AGAIN=1
-!*** 3. Add downstream cells after all their upstream cells are sequenced.
+!*** 3. Extend the sequence downstream
+! A downstream cell is appended only after every incoming river link is processed.
 DO WHILE( AGAIN==1 )
   AGAIN=0
   JSEQ=ISEQ2
@@ -490,7 +492,7 @@ DO WHILE( AGAIN==1 )
     JX=I2NEXTX(IX,IY)
     JY=I2NEXTY(IX,IY)
     UPNOW(JX,JY)=UPNOW(JX,JY)+1
-    IF( UPNOW(JX,JY)==NUPST(JX,JY) .and. I2NEXTX(JX,JY)>0 )THEN !! if all upstream calculated, register to 1D sequence
+    IF( UPNOW(JX,JY)==NUPST(JX,JY) .and. I2NEXTX(JX,JY)>0 )THEN
       JSEQ=JSEQ+1
       I1SEQX(JSEQ)=JX
       I1SEQY(JSEQ)=JY
@@ -504,7 +506,7 @@ END DO
 NSEQRIV=JSEQ    !! END OF RIVER-LINK GRID
 
 ISEQ=NSEQRIV
-!*** 4. Append river-mouth cells after the river-link cells.
+!*** 4. Append river-mouth cells after river-link cells
 DO IY=1, NY
   DO IX=1, NX
     IF( I2NEXTX(IX,IY).LT.0 .AND. I2NEXTX(IX,IY).NE.IMIS .AND. I2REGION(IX,IY)==REGIONTHIS )THEN
@@ -517,7 +519,7 @@ DO IY=1, NY
 END DO
 NSEQALL=ISEQ    !! END OF RIVER-MOUTH GRID
 
-!*** 5. Convert downstream map coordinates to sequence indices.
+!*** 5. Convert downstream map coordinates to sequence indices
 DO ISEQ=1, NSEQALL
   IX=I1SEQX(ISEQ)
   IY=I1SEQY(ISEQ)
@@ -535,7 +537,7 @@ DEALLOCATE(NUPST,UPNOW)
 WRITE(LOGNAM,*) '  CALC_1D_SEQ: NSEQRIV='   , NSEQRIV
 WRITE(LOGNAM,*) '  CALC_1D_SEQ: NSEQALL='   , NSEQALL
 
-!*** 6. Build the inverse upstream-cell list for each river cell.
+!*** 6. Build the inverse upstream-cell list for each river cell
 !!IF( LSPAMAT )THEN
   WRITE(LOGNAM,*) '  CALC_1D_SEQ: upstream matrix size', UPNMAX
   ALLOCATE(I1UPST(NSEQMAX,UPNMAX),I1UPN(NSEQMAX))
@@ -570,7 +572,7 @@ INTEGER(KIND=JPIM)         :: OCOUNT(NSEQMAX),  ICOUNT(NSEQMAX)
 !================================================
 WRITE(LOGNAM,*)"  READ_BIFPARAM: read bifurcation parameters from ", TRIM(CPTHOUT)
 
-!*** 1. Read the number of pathways and their layer count.
+!*** 1. Read pathway dimensions and allocate pathway data
 TMPNAM=INQUIRE_FID()
 OPEN(TMPNAM,FILE=CPTHOUT,FORM='FORMATTED')
 READ(TMPNAM,*) NPTHOUT,NPTHLEV
@@ -587,13 +589,14 @@ ALLOCATE( PTH_MAN(NPTHLEV)  )
 OCOUNT(:)=0
 ICOUNT(:)=0
 
-!*** 2. Read each pathway and derive its level profile.
+!*** 2. Read pathway endpoints and derive each layer elevation
 NPTHOUT1=0
 DO IPTH=1, NPTHOUT
   READ(TMPNAM,*) IX, IY, JX, JY, PTH_DST(IPTH), PELV, PDPH, (PTH_WTH(IPTH,ILEV),ILEV=1,NPTHLEV)
   PTH_UPST(IPTH)=I2VECTOR(IX,IY)
   PTH_DOWN(IPTH)=I2VECTOR(JX,JY)
-  IF (PTH_UPST(IPTH) > 0 .AND. PTH_DOWN(IPTH) > 0) THEN  ! both upst and down grids are within domain
+  ! Only pathways with both endpoints in the active domain contribute to per-cell counts.
+  IF (PTH_UPST(IPTH) > 0 .AND. PTH_DOWN(IPTH) > 0) THEN
     NPTHOUT1=NPTHOUT1+1
     ISEQ=PTH_UPST(IPTH)
     JSEQ=PTH_DOWN(IPTH)
@@ -620,7 +623,7 @@ DO IPTH=1, NPTHOUT
 END DO
 CLOSE(TMPNAM)
 
-!*** 3. Set river/floodplain roughness and count connected pathways per cell.
+!*** 3. Assign roughness by pathway layer
 DO ILEV=1, NPTHLEV
   IF( ILEV==1 )THEN
     PTH_MAN(ILEV)=PMANRIV
@@ -633,7 +636,8 @@ IF (NPTHOUT /= NPTHOUT1) THEN
   WRITE(LOGNAM,*) 'WARNING [CMF::RIVMAP_INIT/READ_BIFPARAM]: bifurcation channels outside the active domain. Valid:', NPTHOUT1
 ENDIF
 
-!=====
+!*** 4. Size and populate per-cell pathway index lists
+! The first pass counts valid endpoints so each list can be allocated to its local maximum.
 !!IF( LSPAMAT )THEN
   ONMAX=0
   INMAX=0
@@ -692,7 +696,7 @@ USE YOS_CMF_MAP,    ONLY: D2NXTDST, D2GRAREA, D2ELEVTN, D2RIVLEN, &
                         & D2RIVWTH, D2RIVHGT, D2FLDHGT, D2RIVELV, &
                         & D2FLDGRD, D2RIVMAN, D2RIVSTOMAX, D2FLDSTOMAX,  &
                         & DFRCINC,  NSEQMAX,  D2MEANSL, D2DWNELV, &
-                            & D2GDWDLY, I2MASK
+                        & D2GDWDLY, I2MASK
 IMPLICIT NONE
 !================================================
 WRITE(LOGNAM,*) ""
@@ -700,7 +704,7 @@ WRITE(LOGNAM,*) "!---------------------!"
 
 WRITE(LOGNAM,*) 'CMF::TOPO_INIT: START topography map initialization'
 
-! *** 1. ALLOCATE ARRAYS
+!*** 1. Allocate and initialize river-vector map arrays
 ALLOCATE( D2GRAREA(NSEQMAX,1) )
 ALLOCATE( D2ELEVTN(NSEQMAX,1) )
 ALLOCATE( D2NXTDST(NSEQMAX,1) )
@@ -727,16 +731,17 @@ D2DWNELV(:,:)  =0._JPRB
 D2GDWDLY(:,:)  =0._JPRB
 I2MASK(:,:)    =0._JPIM     !! mask for calculation (IFS slopemix: Kinemacti Wave for Mask=1; Reservoir: dam=2, dam upstream=1)
 
-!============================
-! *** 2. Read topo map
+!*** 2. Read topography and channel parameter maps
 WRITE(LOGNAM,*) 'CMF::TOPO_INIT: read topography maps'
 ! These ECMWF-specific options require the legacy consolidated NetCDF path.
 IF ( .NOT. LMAPCDF .AND. LSLOPEMOUTH ) THEN
-  CALL MAP_UTIL_INPUT_ERROR('LMAPCDF','LSLOPEMOUTH requires legacy consolidated NetCDF Map input; individual-file input is not supported', &
+  CALL MAP_UTIL_INPUT_ERROR('LMAPCDF', &
+                            'LSLOPEMOUTH requires consolidated NetCDF; individual files are unsupported', &
                             'CMF::TOPO_INIT')
 ENDIF
 IF ( .NOT. LMAPCDF .AND. LSLPMIX ) THEN
-  CALL MAP_UTIL_INPUT_ERROR('LMAPCDF','LSLPMIX requires legacy consolidated NetCDF Map input; individual-file input is not supported', &
+  CALL MAP_UTIL_INPUT_ERROR('LMAPCDF', &
+                            'LSLPMIX requires consolidated NetCDF; individual files are unsupported', &
                             'CMF::TOPO_INIT')
 ENDIF
 IF ( .not. LMAPCDF ) THEN
@@ -750,8 +755,7 @@ IF ( LSLPMIX ) THEN
   CALL SET_SLOPEMIX
 ENDIF
 
-!============================
-! *** 3a. Calc Channel Parameters
+!*** 3. Derive channel storage capacity and bed elevation
 WRITE(LOGNAM,*) 'CMF::TOPO_INIT: calc river channel parameters'
 
 ALLOCATE(D2RIVSTOMAX(NSEQMAX,1))
@@ -765,14 +769,14 @@ ELSE
 ENDIF
 D2RIVELV(:,:) = D2ELEVTN(:,:) - D2RIVHGT(:,:)
 
-!*** 3b. Calc Channel Parameters
+!*** 4. Derive floodplain storage and geometry by layer
 WRITE(LOGNAM,*) 'CMF::TOPO_INIT: calc floodplain parameters'
 
 ALLOCATE(D2FLDSTOMAX(NSEQMAX,1,NLFP))
 ALLOCATE(D2FLDGRD(NSEQMAX,1,NLFP))
 CALL SET_FLDSTG
 
-!*** 3c. Calc downstream boundary
+!*** 5. Set the downstream boundary elevation
 WRITE(LOGNAM,*) 'CMF::TOPO_INIT: calc downstream boundary elevation'
 D2DWNELV(:,:)=D2ELEVTN(:,:)
 IF( LMEANSL ) THEN
@@ -801,7 +805,8 @@ REAL(KIND=JPRB),ALLOCATABLE :: D2TEMP(:,:)
 ALLOCATE(R2TEMP(NX,NY))
 ALLOCATE(D2TEMP(NSEQMAX,1))
 
-! Each raster is read on the geographic grid, then mapped to model river order.
+!*** 1. Read base geometry and floodplain elevation on the map grid
+! Each raster is read on the geographic grid, then mapped to model river-cell order.
 WRITE(LOGNAM,*)'  READ_TOPO_BIN: unit-catchment area: ',TRIM(CGRAREA)
 CALL MAP_UTIL_READ_REAL2D(CGRAREA,'ctmare',R2TEMP,CONTEXT='CMF::TOPO_INIT')
 CALL mapR2vecD(R2TEMP,D2GRAREA)
@@ -825,7 +830,7 @@ DO ILFP=1,NLFP
   D2FLDHGT(:,:,ILFP)= D2TEMP(:,:)
 ENDDO
 
-!*** river channel / groundwater parameters)
+!*** 2. Read channel parameters and optional groundwater delay
 
 WRITE(LOGNAM,*)'  READ_TOPO_BIN: river channel depth: ',TRIM(CRIVHGT)
 CALL MAP_UTIL_READ_REAL2D(CRIVHGT,'rivhgt',R2TEMP,CONTEXT='CMF::TOPO_INIT')
@@ -845,8 +850,7 @@ IF( LGDWDLY )THEN
   CALL mapR2vecD(R2TEMP,D2GDWDLY)
 ENDIF
 
-! ==========
-
+!*** 3. Read optional mean sea level
 IF( LMEANSL ) THEN
   WRITE(LOGNAM, *)'  READ_TOPO_BIN: mean sea level: ', TRIM(CMEANSL)
   CALL MAP_UTIL_READ_REAL2D(CMEANSL,'meansl',R2TEMP,CONTEXT='CMF::TOPO_INIT')
@@ -878,8 +882,8 @@ REAL(KIND=JPRB),ALLOCATABLE      :: D2TEMP(:,:)
 ALLOCATE(R2TEMP(NX,NY))
 ALLOCATE(D2TEMP(NSEQMAX,1))
 
+!*** 1. Read base geometry and floodplain profile from the legacy map file
 ! The legacy consolidated files are opened separately by variable group.
-!! CLIM FILE
 CALL MAP_UTIL_NCERROR (NF90_OPEN(CRIVCLINC,NF90_NOWRITE,NCID),'opening '//TRIM(CRIVCLINC), &
                        'CMF::TOPO_INIT/READ_TOPO_CDF')
 
@@ -914,8 +918,7 @@ ENDDO
 
 CALL MAP_UTIL_NCERROR( NF90_CLOSE(NCID),'closing '//TRIM(CRIVCLINC), 'CMF::TOPO_INIT/READ_TOPO_CDF')
 
-!!========== 
-!! PAR FILE (river channel / groundwater parameters)
+!*** 2. Read channel parameters and legacy-only slope data
 CALL MAP_UTIL_NCERROR (NF90_OPEN(CRIVPARNC,NF90_NOWRITE,NCID),'opening '//TRIM(CRIVPARNC), &
                        'CMF::TOPO_INIT/READ_TOPO_CDF')
 
@@ -961,8 +964,7 @@ ENDIF
 
 CALL MAP_UTIL_NCERROR( NF90_CLOSE(NCID),'closing '//TRIM(CRIVPARNC), 'CMF::TOPO_INIT/READ_TOPO_CDF')
 
-!!========== 
-!! MEAN SEA LEVEL FILE
+!*** 3. Read optional mean sea level
 IF( LMEANSL ) THEN
   CALL MAP_UTIL_NCERROR (NF90_OPEN(CMEANSLNC,NF90_NOWRITE,NCID),'opening '//TRIM(CMEANSLNC), &
                          'CMF::TOPO_INIT/READ_TOPO_CDF')
@@ -983,7 +985,7 @@ END SUBROUTINE READ_TOPO_CDF
 !+
 !==========================================================
 SUBROUTINE SET_FLDSTG
-! Derive floodplain storage capacity and geometry for each floodplain layer.
+! Set layerwise floodplain storage and geometry values.
 IMPLICIT NONE
 !* local variables
 INTEGER(KIND=JPIM),SAVE  ::  ISEQ, I
@@ -996,8 +998,9 @@ REAL(KIND=JPRB),SAVE     ::  DWTHINC
 D2FLDSTOMAX(:,:,:) = 0._JPRD
 D2FLDGRD(:,:,:)    = 0._JPRB
 DFRCINC=REAL(NLFP,KIND=JPRB)**(-1.)
-! Build cumulative floodplain storage and the area-width increment for each layer.
-!
+!*** 1. Build cumulative storage and grid-width values across floodplain layers
+! The catchment-area width increment is divided across NLFP layers; each layer
+! adds storage between its elevation and the preceding layer elevation.
 !$OMP PARALLEL DO
 DO ISEQ=1, NSEQMAX
   DSTOPRE = D2RIVSTOMAX(ISEQ,1)
@@ -1013,7 +1016,6 @@ DO ISEQ=1, NSEQMAX
 END DO
 !$OMP END PARALLEL DO
 
-!
 END SUBROUTINE SET_FLDSTG
 !==========================================================
 !+
@@ -1031,6 +1033,7 @@ INTEGER(KIND=JPIM),ALLOCATABLE  :: I2TEMP(:,:)
 INTEGER(KIND=JPIM)              :: ISEQ, I0, I1
 INTEGER(KIND=JPIM)              :: NCID,VARID,STATUS
 
+  !*** 1. Read the legacy slope-mixing mask and map it to river-cell order
   ! mask_slope is available only in the legacy consolidated parameter file.
   ALLOCATE(I2TEMP(NX,NY))
   CALL MAP_UTIL_NCERROR (NF90_OPEN(CRIVPARNC,NF90_NOWRITE,NCID),'opening '//TRIM(CRIVPARNC), &
@@ -1045,6 +1048,7 @@ INTEGER(KIND=JPIM)              :: NCID,VARID,STATUS
   CALL MAP_UTIL_NCERROR ( NF90_GET_VAR(NCID,VARID,I2TEMP),'reading mask_slope', 'CMF::TOPO_INIT/SET_SLOPEMIX' )
   CALL MAP_UTIL_NCERROR (NF90_CLOSE(NCID),'closing '//TRIM(CRIVPARNC), 'CMF::TOPO_INIT/SET_SLOPEMIX')
   CALL mapI2vecI(I2TEMP,I2MASK)
+  !*** 2. Count supported mask values and verify full cell coverage
   I0=0
   I1=0
   DO ISEQ=1,NSEQMAX
@@ -1158,8 +1162,9 @@ INTEGER(KIND=JPIM) :: NCID,VARID,STATUS,NDIMS,VARTYPE,DIMIDS(NF90_MAX_VAR_DIMS),
 INTEGER(KIND=JPIM) :: IDIM,START3(3),COUNT3(3)
 #endif
 
-! Binary files use one direct-access record per map layer; NetCDF rasters
-! use (NX,NY), or (NX,NY,NLFP) for a layered variable. The caller vectorizes.
+!*** 1. Validate the destination and select the file format
+! Binary uses one direct-access record per layer; NetCDF uses (NX,NY), or
+! (NX,NY,NLFP) for layered data. The caller converts the grid to river order.
 CWHERE='CMF_CTRL_MAPS_MOD/MAP_UTIL_READ_REAL2D'
 IF (PRESENT(CONTEXT)) CWHERE=TRIM(CONTEXT)//'/MAP_UTIL_READ_REAL2D'
 IF (SIZE(R2DATA,1) /= NX .OR. SIZE(R2DATA,2) /= NY) THEN
@@ -1171,6 +1176,7 @@ IF (PRESENT(IRECORD)) IREC=IRECORD
 FILEKIND=MAP_UTIL_INPUT_KIND(CFILE,CWHERE)
 
 IF (FILEKIND == 1) THEN
+  !*** 2. Read the requested Binary record
   IUNIT=INQUIRE_FID()
   OPEN(IUNIT,FILE=TRIM(CFILE),FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NX*NY,IOSTAT=IOS)
   IF (IOS /= 0) CALL MAP_UTIL_INPUT_ERROR(CFILE,'cannot open Binary map',TRIM(CWHERE))
@@ -1182,6 +1188,7 @@ IF (FILEKIND == 1) THEN
 ENDIF
 
 #ifdef UseCDF_CMF
+!*** 3. Validate and read the NetCDF variable
 STATUS=NF90_OPEN(TRIM(CFILE),NF90_NOWRITE,NCID)
 IF (STATUS /= NF90_NOERR) CALL MAP_UTIL_INPUT_ERROR(CFILE,'cannot open NetCDF map: '//TRIM(NF90_STRERROR(STATUS)),TRIM(CWHERE))
 STATUS=NF90_INQ_VARID(NCID,TRIM(VARNAME),VARID)
@@ -1242,6 +1249,7 @@ INTEGER(KIND=JPIM) :: NCID,VARID,STATUS,NDIMS,VARTYPE,DIMIDS(NF90_MAX_VAR_DIMS),
 INTEGER(KIND=JPIM) :: IDIM
 #endif
 
+!*** 1. Validate the destination and select the file format
 ! IRECORD selects a Binary record; NetCDF network components are separate
 ! variables (nextx and nexty) in two-dimensional arrays.
 CWHERE='CMF_CTRL_MAPS_MOD/MAP_UTIL_READ_INT2D'
@@ -1255,6 +1263,7 @@ IF (PRESENT(IRECORD)) IREC=IRECORD
 FILEKIND=MAP_UTIL_INPUT_KIND(CFILE,CWHERE)
 
 IF (FILEKIND == 1) THEN
+  !*** 2. Read the requested Binary record
   IUNIT=INQUIRE_FID()
   OPEN(IUNIT,FILE=TRIM(CFILE),FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NX*NY,IOSTAT=IOS)
   IF (IOS /= 0) CALL MAP_UTIL_INPUT_ERROR(CFILE,'cannot open Binary map',TRIM(CWHERE))
@@ -1266,6 +1275,7 @@ IF (FILEKIND == 1) THEN
 ENDIF
 
 #ifdef UseCDF_CMF
+!*** 3. Validate and read the NetCDF variable
 STATUS=NF90_OPEN(TRIM(CFILE),NF90_NOWRITE,NCID)
 IF (STATUS /= NF90_NOERR) CALL MAP_UTIL_INPUT_ERROR(CFILE,'cannot open NetCDF map: '//TRIM(NF90_STRERROR(STATUS)),TRIM(CWHERE))
 STATUS=NF90_INQ_VARID(NCID,TRIM(VARNAME),VARID)

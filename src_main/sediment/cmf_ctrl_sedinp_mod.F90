@@ -47,8 +47,10 @@ subroutine sediment_input_init
   character(len=256)              :: cslope       ! slope file
   character(len=256)              :: cinpmat_sed  ! input matrix for sediment
 
+  !*** 1. Read sediment forcing and parameter settings
   call read_sedinp_nmlist
 
+  !*** 2. Read the floodplain slope profile
   call read_slope
 contains
 !================================
@@ -60,6 +62,7 @@ contains
                              cslope, dsylunit, pyld, pyldc, pyldpc,    &
                              cinpmat_sed
 
+    !*** 1. Open the sediment namelist and set defaults
     nsetfile = INQUIRE_FID()
     open(nsetfile,file='input_sed.nam',status='OLD')
 
@@ -73,6 +76,7 @@ contains
     pyldpc = 2.d0
     cinpmat_sed = './inpmat.bin'
 
+    !*** 2. Read and report user-defined sediment settings
     rewind(nsetfile)
     read(nsetfile,nml=sediment_input)
     !defaults
@@ -92,11 +96,14 @@ contains
     implicit none
     integer                       :: ierr, tmpnam, i
     real(kind=jprm)               :: r2temp(nx,ny)
+    !*** 1. Read the slope layers on the map grid
     allocate(d2slope(NSEQMAX,NLFP))
     if ( REGIONTHIS == 1 ) then
       tmpnam = INQUIRE_FID()
       open(tmpnam,file=cslope,form='unformatted',access='direct',recl=4*NX*NY)
     endif
+    !*** 2. Distribute each layer and convert it to river-cell order
+    ! Under MPI, the input-grid layer is broadcast before vector conversion.
     do i = 1, NLFP
       if ( REGIONTHIS == 1 ) read(tmpnam,rec=i) r2temp
 #ifdef UseMPI_CMF
@@ -112,7 +119,7 @@ end subroutine sediment_input_init
 !+
 !==========================================================
 subroutine cmf_sed_forcing
-  ! read forcing from file
+  ! Read sediment forcing and convert it to river-cell sediment yield.
   use YOS_CMF_INPUT,           only: TMPNAM,NXIN,NYIN,DTIN
   use YOS_CMF_TIME,            only: IYYYY, IMM, IDD, IHOUR, IMIN
   use CMF_UTILS_MOD,           only: CONV_END,INQUIRE_FID
@@ -127,22 +134,22 @@ subroutine cmf_sed_forcing
   character(len=256)              :: cdate               !!
   real(kind=jprm)                 :: r2tmp(nxin,nyin)
   
-  !*** 1. calculate irec for sub-daily precipitation
+  !*** 1. Select the record within the current day's forcing file
   isec    = ihour*60*60+imin*60   !! current second in a day
   irecinp = int( isec/dtin ) +1   !! precipitation irec (sub-daily precipitation)
 
-  !*** 2. set file name
+  !*** 2. Build the dated forcing filename
   write(cdate,'(i4.4,i2.2,i2.2)') iyyyy,imm,idd
   cifname=trim(sedinput_dir)//'/'//trim(sedinput_pre)//trim(cdate)//trim(sedinput_suf)
   write(LOGNAM,*) "cmf::sed_forcing_get_bin:",trim(cifname)
 
-  !*** 3. open & read forcing data
+  !*** 3. Read the selected Binary record
   tmpnam=inquire_fid()
   open(tmpnam,file=cifname,form='unformatted',access='direct',recl=4*nxin*nyin)
   read(tmpnam,rec=irecinp) r2tmp
   close(tmpnam)
 
-  !*** 5. conduct necessary conversion
+  !*** 4. Interpolate forcing and calculate sediment yield
   call sedinp_interp(r2tmp,d2temp)   ! interpolate forcing grid to model grid
   call calc_sedyld(d2temp)           ! calculate sediment yield into rivers
 end subroutine cmf_sed_forcing
@@ -161,8 +168,10 @@ subroutine calc_sedyld(pbuffin)
   !================================================
 
   
-  call prcp_convert_sed(pbuffin, sbuff) ! convert precipitation to sediment yield based on Sunada&Hasegawa(1993)
+  !*** 1. Convert precipitation forcing to total sediment yield
+  call prcp_convert_sed(pbuffin, sbuff) ! Sunada & Hasegawa (1993) relation
  
+  !*** 2. Distribute yield by grain fraction and accumulate its time integral
   !$omp parallel do 
   do iseq = 1, NSEQALL
     d2sedinp(iseq,:) = sbuff(iseq) * d2sedfrc(iseq,:)  ! distribute sediment yield to proportionate to sediment grain fraction
@@ -184,6 +193,9 @@ contains
     real(kind=JPRB), intent(out)  :: pbuffout(:)  !! m3/s
     integer(kind=JPIM)            :: i, iseq
 
+    !*** 1. Calculate sediment yield for each catchment
+    ! Cells at or below the coded 10 kg m-2 day-1 threshold are skipped; eligible layers
+    ! contribute according to slope, mapped area, and the remaining layer fraction.
     !$omp parallel do
     do iseq = 1, NSEQALL
       pbuffout(iseq) = 0.d0
@@ -203,7 +215,7 @@ end subroutine calc_sedyld
 !+
 !==========================================================
 subroutine sedinp_interp(pbuffin,pbuffout)
-! interporlate sediment forcing data using "input matrix"
+! Interpolate sediment forcing from the input grid to model catchments.
   use YOS_CMF_INPUT,           only: NXIN, NYIN, INPN, RMIS
   
   implicit none
@@ -213,6 +225,8 @@ subroutine sedinp_interp(pbuffin,pbuffout)
   integer(kind=jpim),save  ::  iseq, ixin, iyin, inpi  !! for output
   !$omp threadprivate    (ixin, iyin)
   !============================
+  !*** 1. Accumulate valid input-grid contributions by catchment
+  ! INPA weights each contribution; D2GRAREA normalizes the sum by catchment area.
   !$omp parallel do
   do iseq=1, NSEQALL
     pbuffout(iseq)=0._JPRB

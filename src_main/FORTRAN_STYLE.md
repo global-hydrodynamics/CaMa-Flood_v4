@@ -111,7 +111,7 @@ LOGICAL                         :: LVALID
 - Match the nearest comparable code when editing an existing routine.
 - In wholly new routines, use a consistent, modest indentation (typically two spaces per level), without imposing it on existing routines.
 - Use readable continuation lines and explicit block endings; keep preprocessor directives easy to spot.
-- Keep lines reasonably short, except where preserving a mathematical expression or local established style is clearer.
+- Limit Fortran source lines to 128 characters, including indentation. Shorten comments and diagnostic messages when their essential meaning is preserved; otherwise wrap statements with free-form `&` continuations.
 - **Do not run an automatic formatter or reformat unrelated source** as part of a feature change.
 
 ## 5. Runtime logging
@@ -151,6 +151,30 @@ Logging edits must not change error conditions, STOP behavior, call order, model
 - Explain **scientific meaning, units, indexing, physical assumptions, non-obvious numerical choices, I/O contracts, and compatibility constraints**, rather than narrating obvious syntax.
 - Keep section numbering meaningful after inserting or moving steps.
 - Correct stale comments in the touched code when needed for accuracy, but do not broaden the task to unrelated cleanup.
+
+### Process-level comments
+
+Use comments to make the purpose of a processing stage clear when reading a routine from top to bottom. Prefer information that is not evident from the statements themselves, in this order:
+
+1. **Why:** why the stage is needed and how it supports a later calculation.
+2. **What:** what result or state the stage establishes.
+3. **How:** the key algorithmic rule, invariant, or assumption when it is not readily apparent from the code.
+
+Not every comment needs all three. Add only the most useful missing context. Do not translate simple assignments, branches, or loops into prose, and consolidate comments when a heading and a nearby note repeat the same point.
+
+For a routine with several logical stages, use sequential, routine-local headings in the established form:
+
+```fortran
+!*** 1. Read the river-network map
+!*** 2. Assign cells to computational regions
+!*** 3. Build the upstream-to-downstream sequence
+```
+
+Number stages by changes in purpose, not by individual statements or control-flow constructs. Small routines do not need numbered headings. Preserve suitable existing headings, but remove gaps, duplicate numbers, and labels that no longer describe the following block.
+
+At non-obvious algorithms, add a short note at the start of the relevant block describing its purpose or key rule. For example, state an ordering invariant when it explains why a downstream cell is not added until all upstream cells have been processed. Keep scientific explanations tied to verified code or documentation; do not infer physical rationale from a variable name or formula alone.
+
+Use inline `!!` notes sparingly for local details such as units, index meanings, sentinel values, or boundary conditions. Do not repeat a point already explained by the process heading or algorithm note. Comment count is not a goal; concise and accurate explanation is.
 
 ## 7. Dependencies and build-time options
 
