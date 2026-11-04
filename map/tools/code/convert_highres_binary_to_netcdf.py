@@ -24,7 +24,7 @@ NC_SHORT = 3
 NC_INT = 4
 NC_FLOAT = 5
 NC_DOUBLE = 6
-CHUNK_PIXELS = 262_144
+NETCDF_CHUNK_EDGE = 256
 TYPE_INFO = {
     "int8": (1, "b", ctypes.c_byte, NC_BYTE, "schar"),
     "int16": (2, "h", ctypes.c_short, NC_SHORT, "short"),
@@ -60,6 +60,8 @@ def configure_api(lib: ctypes.CDLL) -> None:
     lib.nc_create.argtypes = [cp, ci, ctypes.POINTER(ci)]
     lib.nc_def_dim.argtypes = [ci, cp, sz, ctypes.POINTER(ci)]
     lib.nc_def_var.argtypes = [ci, cp, ci, ci, ctypes.POINTER(ci), ctypes.POINTER(ci)]
+    lib.nc_def_var_chunking.argtypes = [ci, ci, ci, ctypes.POINTER(sz)]
+    lib.nc_def_var_deflate.argtypes = [ci, ci, ci, ci, ci]
     lib.nc_inq_varid.argtypes = [ci, cp, ctypes.POINTER(ci)]
     lib.nc_put_att_text.argtypes = [ci, ci, cp, sz, cp]
     lib.nc_put_att_schar.argtypes = [ci, ci, cp, ci, sz, ctypes.POINTER(ctypes.c_byte)]
@@ -90,6 +92,20 @@ def put_text(lib: ctypes.CDLL, ncid: int, varid: int, name: str, value: str) -> 
 
 def array_pointer(data: array.array, ctype: type[ctypes._SimpleCData]):
     return (ctype * len(data)).from_buffer(data)
+
+
+def configure_variable_storage(
+    lib: ctypes.CDLL, ncid: int, varid: int, ny: int, nx: int, compression_level: int
+) -> None:
+    """Set bounded 2-D chunks and lossless shuffle/deflate filters."""
+    chunks = (ctypes.c_size_t * 2)(min(NETCDF_CHUNK_EDGE, ny), min(NETCDF_CHUNK_EDGE, nx))
+    check(lib, lib.nc_def_var_chunking(ncid, varid, 0, chunks), "set NetCDF chunking")
+    deflate = int(compression_level > 0)
+    check(
+        lib,
+        lib.nc_def_var_deflate(ncid, varid, 1, deflate, compression_level),
+        "set NetCDF shuffle/deflate filters",
+    )
 
 
 def read_location(path: Path) -> list[dict[str, int | float | str]]:
@@ -228,7 +244,13 @@ def write_coordinates(lib: ctypes.CDLL, ncid: int, area: dict[str, int | float |
     check(lib, lib.nc_put_var_double(ncid, lat_var, array_pointer(lat, ctypes.c_double)), "write latitude")
 
 
-def write_netcdf(source_path: Path, output_path: Path, area: dict[str, int | float | str], rows: list[dict[str, str]]) -> None:
+def write_netcdf(
+    source_path: Path,
+    output_path: Path,
+    area: dict[str, int | float | str],
+    rows: list[dict[str, str]],
+    compression_level: int,
+) -> None:
     nx, ny = int(area["nx"]), int(area["ny"])
     dtype = rows[0]["dtype"].strip().lower()
     itemsize, _, ctype, nc_type, suffix = TYPE_INFO[dtype]
@@ -259,6 +281,7 @@ def write_netcdf(source_path: Path, output_path: Path, area: dict[str, int | flo
             dimids = (ctypes.c_int * 2)(lat_dim.value, lon_dim.value)
             check(lib, lib.nc_def_var(ncid.value, name.encode(), nc_type, 2, dimids, ctypes.byref(varid)), f"define {name}")
             variable_ids[name] = varid.value
+            configure_variable_storage(lib, ncid.value, varid.value, ny, nx, compression_level)
             put_text(lib, ncid.value, varid.value, "long_name", row.get("long_name", name).strip())
             units = (row.get("units") or "").strip()
             if units:
@@ -273,8 +296,9 @@ def write_netcdf(source_path: Path, output_path: Path, area: dict[str, int | flo
         check(lib, lib.nc_enddef(ncid.value), "finish NetCDF definition")
         write_coordinates(lib, ncid.value, area, lon_var.value, lat_var.value)
 
-        max_x = min(nx, CHUNK_PIXELS)
-        max_y = max(1, CHUNK_PIXELS // max_x)
+        # Match the bounded input chunks to the NetCDF storage chunks.
+        max_x = min(nx, NETCDF_CHUNK_EDGE)
+        max_y = min(ny, NETCDF_CHUNK_EDGE)
         with source_path.open("rb") as source:
             for row in rows:
                 name = row["name"].strip()
@@ -315,7 +339,14 @@ def write_netcdf(source_path: Path, output_path: Path, area: dict[str, int | flo
         raise
 
 
-def convert_variable(map_dir: Path, hires: str, variable: str, registry_path: Path, force: bool) -> int:
+def convert_variable(
+    map_dir: Path,
+    hires: str,
+    variable: str,
+    registry_path: Path,
+    force: bool,
+    compression_level: int,
+) -> int:
     hires_dir = map_dir / hires
     areas = read_location(hires_dir / "location.txt")
     rows = registry_rows(registry_path)
@@ -334,22 +365,17 @@ def convert_variable(map_dir: Path, hires: str, variable: str, registry_path: Pa
             continue
         output_dir.mkdir(parents=True, exist_ok=True)
         if force and output.exists():
-            # Convert to a sibling temporary first; preserve the old output on failure.
-            backup_target = output
-        else:
-            backup_target = None
-        if backup_target:
-            old_output = output.with_name(f".{output.name}.old")
-            old_output.unlink(missing_ok=True)
-            os.replace(output, old_output)
+            # Build the replacement completely before atomically replacing the old file.
+            replacement = output.with_name(f".{output.name}.replacement")
+            replacement.unlink(missing_ok=True)
             try:
-                write_netcdf(source, output, area, selected)
+                write_netcdf(source, replacement, area, selected, compression_level)
+                os.replace(replacement, output)
             except Exception:
-                os.replace(old_output, output)
+                replacement.unlink(missing_ok=True)
                 raise
-            old_output.unlink(missing_ok=True)
         else:
-            write_netcdf(source, output, area, selected)
+            write_netcdf(source, output, area, selected, compression_level)
         print(f"SUCCESS {source} -> {output}")
         converted += 1
     if converted == 0 and skipped == 0:
@@ -365,11 +391,17 @@ def main() -> int:
     parser.add_argument("--variable", required=True, help="registered high-resolution Binary file stem, such as catmxy")
     parser.add_argument("--registry", type=Path, default=repo_root / "variable_table/map_variables.csv", help="map variable registry")
     parser.add_argument("--force", action="store_true", help="replace existing NetCDF files")
+    parser.add_argument(
+        "--compression-level", type=int, choices=range(10), default=6,
+        help="lossless NetCDF4 zlib/deflate level (0 disables deflate; default: 6)",
+    )
     args = parser.parse_args()
     args.map_dir = args.map_dir.resolve()
     args.registry = args.registry.resolve()
     try:
-        count = convert_variable(args.map_dir, args.hires, args.variable, args.registry, args.force)
+        count = convert_variable(
+            args.map_dir, args.hires, args.variable, args.registry, args.force, args.compression_level
+        )
     except (OSError, ValueError, RuntimeError) as error:
         print(f"ERROR: {error}", file=sys.stderr)
         return 1

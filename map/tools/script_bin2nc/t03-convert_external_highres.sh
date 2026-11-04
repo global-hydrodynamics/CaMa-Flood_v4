@@ -8,8 +8,9 @@ set -eu
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 MAP_ROOT="/Users/yamadai/work/CaMa_v400/cmf_v400_data/map_full"
 MAPS="glb_15min"
-HIRES="1min 15sec 3sec"
+HIRES="1min 3sec"
 VARS="catmxy downxy elevtn uparea hand flddif rivwth"
+COMPRESSION_LEVEL=6
 FORCE=0
 
 # Resolve the converter and metadata registry from this script's v5 repository.
@@ -58,8 +59,8 @@ STEP="Convert external high-resolution maps"
 printf '\n==================================================\n'
 printf '[STEP 1/1] Convert selected external high-resolution map tiles\n'
 printf '==================================================\n'
-printf 'Map root: %s\nMaps: %s\nHigh-resolution directories: %s\nVariables: %s\n' \
-    "$MAP_ROOT" "$MAPS" "$HIRES" "$VARS"
+printf 'Map root: %s\nMaps: %s\nHigh-resolution directories: %s\nVariables: %s\nCompression level: %s\n' \
+    "$MAP_ROOT" "$MAPS" "$HIRES" "$VARS" "$COMPRESSION_LEVEL"
 
 # Traverse map, resolution, and variable selections independently.
 for map in $MAPS; do
@@ -91,7 +92,8 @@ for map in $MAPS; do
             printf '\n[INFO] Map=%s resolution=%s variable=%s\n' "$map" "$re" "$var"
             if [ "$FORCE" -eq 1 ]; then
                 if python3 "$CONVERTER" --map-dir "$MAP_DIR" --hires "$re" \
-                    --variable "$var" --registry "$REGISTRY" --force; then
+                    --variable "$var" --registry "$REGISTRY" \
+                    --compression-level "$COMPRESSION_LEVEL" --force; then
                     :
                 else
                     EXIT_STATUS=$?
@@ -101,7 +103,8 @@ for map in $MAPS; do
                 fi
             else
                 if python3 "$CONVERTER" --map-dir "$MAP_DIR" --hires "$re" \
-                    --variable "$var" --registry "$REGISTRY"; then
+                    --variable "$var" --registry "$REGISTRY" \
+                    --compression-level "$COMPRESSION_LEVEL"; then
                     :
                 else
                     EXIT_STATUS=$?

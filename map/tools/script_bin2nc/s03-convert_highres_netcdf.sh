@@ -22,6 +22,9 @@ HIRES="1min"
 #VARS="catmxy catmz100 catmzz downxy elevtn flddif flwdir grdare hand rivwth uparea visual"
 VARS="catmxy downxy elevtn uparea hand flddif rivwth"
 
+# Lossless zlib/deflate compression level (0 disables deflate; range 0-9).
+COMPRESSION_LEVEL=6
+
 # Existing NetCDF outputs are skipped by default. Pass --force to replace them.
 FORCE=0
 
@@ -70,7 +73,8 @@ STEP="Convert selected high-resolution tiles"
 printf '\n==================================================\n'
 printf '[STEP 1/1] Convert registered high-resolution variables\n'
 printf '==================================================\n'
-printf 'Map: %s\nHigh-resolution directories: %s\nVariables: %s\n\n' "$MAP_DIR" "$HIRES" "$VARS"
+printf 'Map: %s\nHigh-resolution directories: %s\nVariables: %s\nCompression level: %s\n\n' \
+    "$MAP_DIR" "$HIRES" "$VARS" "$COMPRESSION_LEVEL"
 
 # Preserve the geometry metadata beside the converted tile rasters.
 for re in $HIRES; do
@@ -88,14 +92,16 @@ for re in $HIRES; do
     # registry validation, chunked I/O, NetCDF creation, and read-back checks.
     for var in $VARS; do
         if [ "$FORCE" -eq 1 ]; then
-            if python3 "$CONVERTER" --map-dir "$MAP_DIR" --hires "$re" --variable "$var" --force; then
+            if python3 "$CONVERTER" --map-dir "$MAP_DIR" --hires "$re" --variable "$var" \
+                --compression-level "$COMPRESSION_LEVEL" --force; then
                 :
             else
                 EXIT_STATUS=$?
                 exit "$EXIT_STATUS"
             fi
         else
-            if python3 "$CONVERTER" --map-dir "$MAP_DIR" --hires "$re" --variable "$var"; then
+            if python3 "$CONVERTER" --map-dir "$MAP_DIR" --hires "$re" --variable "$var" \
+                --compression-level "$COMPRESSION_LEVEL"; then
                 :
             else
                 EXIT_STATUS=$?
