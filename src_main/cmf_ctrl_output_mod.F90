@@ -58,6 +58,8 @@ INTEGER(KIND=JPIM)              :: NCID               ! output netCDF output fil
 INTEGER(KIND=JPIM)              :: VARID              ! output netCDF output variable ID
 INTEGER(KIND=JPIM)              :: TIMID              ! output netCDF time   variable ID 
 INTEGER(KIND=JPIM)              :: IRECNC             ! Current time record for writting
+REAL(KIND=JPRM)                 :: MISSING_VALUE      ! registry missing-value metadata when available
+LOGICAL                         :: HAS_REGISTRY_METADATA = .FALSE.
 END TYPE TVAROUT 
 TYPE(TVAROUT),ALLOCATABLE       :: VAROUT(:)          ! output variable TYPE set
 
@@ -141,6 +143,11 @@ IMPLICIT NONE
 CHARACTER(LEN=256)              :: CTIME, CTMP
 INTEGER(KIND=JPIM)              :: JF,J,J0
 CHARACTER(LEN=256)              :: CVNAMES(NVARS)
+CHARACTER(LEN=256)              :: REQUIRED_OPTION
+CHARACTER(LEN=512)              :: ERROR_MESSAGE
+REAL(KIND=JPRM)                 :: REGISTRY_MISSING
+INTEGER(KIND=JPIM)              :: REGISTRY_AGGREGATE
+LOGICAL                         :: REGISTRY_FOUND
 !================================================
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "!---------------------!"
@@ -179,7 +186,7 @@ WRITE(CTIME,'(A14,I4.4,A1,I2.2,A1,I2.2,A1,I2.2,A1,I2.2)') 'seconds since ',ISYYY
 
 !* Loop on variables and create files 
 DO JF=1,NVARSOUT
-  WRITE(LOGNAM,*) "Creating output for variable:", TRIM( CVNAMES(JF) )
+  WRITE(LOGNAM,*) "Preparing output for variable:", TRIM( CVNAMES(JF) )
   SELECT CASE (CVNAMES(JF))
     CASE ('rivout')
       VAROUT(JF)%CVNAME=CVNAMES(JF)
@@ -271,16 +278,23 @@ DO JF=1,NVARSOUT
       VAROUT(JF)%CVUNITS='m' 
       VAROUT(JF)%AGGREGATE=3
 
-    CASE ('runoff')
+    CASE ('runoff','rofsfc','runoffsub','rofsub')
       VAROUT(JF)%CVNAME=CVNAMES(JF)
-      VAROUT(JF)%CVLNAME='Surface runoff'
-      VAROUT(JF)%CVUNITS='m3/s'
-      VAROUT(JF)%AGGREGATE=2
-    CASE ('runoffsub')
-      VAROUT(JF)%CVNAME=CVNAMES(JF)
-      VAROUT(JF)%CVLNAME='sub-surface runoff'
-      VAROUT(JF)%CVUNITS='m3/s' 
-      VAROUT(JF)%AGGREGATE=2
+      CALL LOAD_RUNOFF_METADATA(CVNAMES(JF),VAROUT(JF)%CVLNAME,VAROUT(JF)%CVUNITS, &
+                                REGISTRY_AGGREGATE,REGISTRY_MISSING,REQUIRED_OPTION, &
+                                REGISTRY_FOUND,ERROR_MESSAGE)
+      IF (LEN_TRIM(ERROR_MESSAGE)>0) THEN
+        WRITE(LOGNAM,*) 'CMF::OUTPUT_INIT: ERROR: ',TRIM(ERROR_MESSAGE)
+        STOP 9
+      ENDIF
+      VAROUT(JF)%AGGREGATE=REGISTRY_AGGREGATE
+      VAROUT(JF)%MISSING_VALUE=REGISTRY_MISSING
+      VAROUT(JF)%HAS_REGISTRY_METADATA=REGISTRY_FOUND
+      IF (REQUIRED_OPTION=='LROSPLIT' .AND. .NOT.LROSPLIT) THEN
+        WRITE(LOGNAM,*) 'CMF::OUTPUT_INIT: ERROR: ',TRIM(CVNAMES(JF)), &
+                        ' requires LROSPLIT=.TRUE.'
+        STOP 9
+      ENDIF
 
     CASE ('damsto')   !!! added
       VAROUT(JF)%CVNAME=CVNAMES(JF)
@@ -333,6 +347,11 @@ DO JF=1,NVARSOUT
     CASE DEFAULT
     WRITE(LOGNAM,*) trim(CVNAMES(JF)), ' Not defined in CMF_CREATE_OUTCDF_MOD'
   END SELECT
+END DO
+
+! Create files only after all requested runoff metadata and option requirements validate.
+DO JF=1,NVARSOUT
+  WRITE(LOGNAM,*) "Creating output for variable:",TRIM(VAROUT(JF)%CVNAME)
   VAROUT(JF)%BINID=INQUIRE_FID()
 
   IF( LOUTCDF )THEN
@@ -348,8 +367,12 @@ IRECOUT=0  ! Initialize Output record to 1 (shared in netcdf & binary)
 
 CONTAINS
 !==========================================================
-!+ CREATE_OUTBIN
-!+ CREATE_OUTCDF
+!+ CREATE_OUTBIN            : Open a Binary output file.
+!+ CREATE_OUTCDF            : Define and open a NetCDF output file.
+!+ LOAD_RUNOFF_METADATA     : Resolve runoff metadata and aliases from the CSV registry.
+!+ READ_OUTPUT_REGISTRY_ROW : Read one row by its name column.
+!+ SPLIT_CSV_RECORD         : Split a CSV record while honoring quoted commas.
+!+ CSV_COLUMN               : Find a CSV column by header name.
 !==========================================================
 SUBROUTINE CREATE_OUTBIN
 IMPLICIT NONE
@@ -422,7 +445,12 @@ CALL NCERROR( NF90_DEF_VAR(VAROUT(JF)%NCID, VAROUT(JF)%CVNAME, NF90_FLOAT, &
 
 CALL NCERROR( NF90_PUT_ATT(VAROUT(JF)%NCID, VAROUT(JF)%VARID, 'long_name', TRIM(VAROUT(JF)%CVLNAME)) )
 CALL NCERROR( NF90_PUT_ATT(VAROUT(JF)%NCID, VAROUT(JF)%VARID, 'units',     TRIM(VAROUT(JF)%CVUNITS)) )
-CALL NCERROR( NF90_PUT_ATT(VAROUT(JF)%NCID, VAROUT(JF)%VARID, '_FillValue',RMIS) )
+IF (VAROUT(JF)%HAS_REGISTRY_METADATA) THEN
+  CALL NCERROR( NF90_PUT_ATT(VAROUT(JF)%NCID,VAROUT(JF)%VARID,'_FillValue', &
+                             VAROUT(JF)%MISSING_VALUE) )
+ELSE
+  CALL NCERROR( NF90_PUT_ATT(VAROUT(JF)%NCID, VAROUT(JF)%VARID, '_FillValue',RMIS) )
+ENDIF
 CMETH = 'time: ' // AGGREGATION_METHOD(VAROUT(JF)%AGGREGATE)
 CALL NCERROR( NF90_PUT_ATT(VAROUT(JF)%NCID, VAROUT(JF)%VARID, 'cell_methods', TRIM(CMETH)) )
 
@@ -442,6 +470,232 @@ WRITE(LOGNAM,*) 'OPEN IN UNIT: ',VAROUT(JF)%NCID
 #endif
 END SUBROUTINE CREATE_OUTCDF
 !==========================================================
+
+SUBROUTINE LOAD_RUNOFF_METADATA(NAME,LONG_NAME,UNITS,AGGREGATE,MISSING_VALUE, &
+                                REQUIRED_OPTION,FOUND,ERROR_MESSAGE)
+! Read canonical or alias metadata and map it to the output writer fields.
+IMPLICIT NONE
+CHARACTER(LEN=*),INTENT(IN)    :: NAME
+CHARACTER(LEN=*),INTENT(OUT)   :: LONG_NAME,UNITS,REQUIRED_OPTION,ERROR_MESSAGE
+INTEGER(KIND=JPIM),INTENT(OUT):: AGGREGATE
+REAL(KIND=JPRM),INTENT(OUT)   :: MISSING_VALUE
+LOGICAL,INTENT(OUT)            :: FOUND
+CHARACTER(LEN=512)             :: CSV_PATH,BASE_PATH,ALIAS_NAME
+CHARACTER(LEN=1024)            :: HEADER(32),ROW(32),CANONICAL_ROW(32)
+INTEGER(KIND=JPIM)             :: NHEADER,NROW,NCANON,IDX_NAME,IDX_ALIAS,IDX_LONG,IDX_UNITS
+INTEGER(KIND=JPIM)             :: IDX_TIME,IDX_MISSING,IDX_OPTION,IDX_INTERNAL,ENV_LENGTH,ENV_STATUS,IOS
+LOGICAL                        :: ROW_FOUND
+!================================================
+ERROR_MESSAGE=''
+LONG_NAME=''
+UNITS=''
+REQUIRED_OPTION='none'
+AGGREGATE=1
+MISSING_VALUE=0.0_JPRM
+FOUND=.FALSE.
+
+CALL GET_ENVIRONMENT_VARIABLE('CMF_OUTPUT_VARIABLES',CSV_PATH,LENGTH=ENV_LENGTH,STATUS=ENV_STATUS)
+IF (ENV_STATUS/=0 .OR. ENV_LENGTH==0) THEN
+  CALL GET_ENVIRONMENT_VARIABLE('CMF_BASE',BASE_PATH,LENGTH=ENV_LENGTH,STATUS=ENV_STATUS)
+  IF (ENV_STATUS/=0 .OR. ENV_LENGTH==0) THEN
+    ERROR_MESSAGE='Set CMF_BASE or CMF_OUTPUT_VARIABLES to locate output_variables.csv.'
+    RETURN
+  ENDIF
+  CSV_PATH=TRIM(BASE_PATH(:ENV_LENGTH))//'/variable_table/output_variables.csv'
+ELSE
+  CSV_PATH=TRIM(CSV_PATH(:ENV_LENGTH))
+ENDIF
+
+CALL READ_OUTPUT_REGISTRY_ROW(TRIM(CSV_PATH),TRIM(NAME),HEADER,NHEADER,ROW,NROW,ROW_FOUND,ERROR_MESSAGE)
+IF (LEN_TRIM(ERROR_MESSAGE)>0) RETURN
+IF (.NOT.ROW_FOUND) THEN
+  ERROR_MESSAGE='No row for '//TRIM(NAME)//' in '//TRIM(CSV_PATH)
+  RETURN
+ENDIF
+
+IDX_NAME=CSV_COLUMN(HEADER,NHEADER,'name')
+IDX_ALIAS=CSV_COLUMN(HEADER,NHEADER,'alias_of')
+IDX_LONG=CSV_COLUMN(HEADER,NHEADER,'long_name')
+IDX_UNITS=CSV_COLUMN(HEADER,NHEADER,'units')
+IDX_TIME=CSV_COLUMN(HEADER,NHEADER,'temporal_type')
+IDX_MISSING=CSV_COLUMN(HEADER,NHEADER,'missing_value')
+IDX_OPTION=CSV_COLUMN(HEADER,NHEADER,'required_option')
+IDX_INTERNAL=CSV_COLUMN(HEADER,NHEADER,'internal_variable')
+IF (MIN(IDX_NAME,IDX_ALIAS,IDX_LONG,IDX_UNITS,IDX_TIME,IDX_MISSING,IDX_OPTION,IDX_INTERNAL)==0) THEN
+  ERROR_MESSAGE='Required output_variables.csv column is missing in '//TRIM(CSV_PATH)
+  RETURN
+ENDIF
+
+ALIAS_NAME=TRIM(ROW(IDX_ALIAS))
+CANONICAL_ROW=ROW
+NCANON=NROW
+IF (LEN_TRIM(ALIAS_NAME)>0) THEN
+  CALL READ_OUTPUT_REGISTRY_ROW(TRIM(CSV_PATH),TRIM(ALIAS_NAME),HEADER,NHEADER, &
+                                CANONICAL_ROW,NCANON,ROW_FOUND,ERROR_MESSAGE)
+  IF (LEN_TRIM(ERROR_MESSAGE)>0) RETURN
+  IF (.NOT.ROW_FOUND) THEN
+    ERROR_MESSAGE='Canonical output '//TRIM(ALIAS_NAME)//' for alias '//TRIM(NAME)//' was not found.'
+    RETURN
+  ENDIF
+  IF (TRIM(ROW(IDX_INTERNAL))/=TRIM(CANONICAL_ROW(IDX_INTERNAL))) THEN
+    ERROR_MESSAGE='Alias and canonical output rows select different internal variables: '//TRIM(NAME)
+    RETURN
+  ENDIF
+  IF (TRIM(ROW(IDX_OPTION))/='none' .AND. LEN_TRIM(ROW(IDX_OPTION))>0 .AND. &
+      TRIM(ROW(IDX_OPTION))/=TRIM(CANONICAL_ROW(IDX_OPTION))) THEN
+    ERROR_MESSAGE='Alias and canonical output rows specify different required options: '//TRIM(NAME)
+    RETURN
+  ENDIF
+ENDIF
+
+LONG_NAME=TRIM(CANONICAL_ROW(IDX_LONG))
+UNITS=TRIM(CANONICAL_ROW(IDX_UNITS))
+REQUIRED_OPTION=TRIM(CANONICAL_ROW(IDX_OPTION))
+IF (LEN_TRIM(REQUIRED_OPTION)==0) REQUIRED_OPTION='none'
+IF (LEN_TRIM(LONG_NAME)==0 .OR. LEN_TRIM(UNITS)==0) THEN
+  ERROR_MESSAGE='Canonical output metadata is incomplete for '//TRIM(NAME)
+  RETURN
+ENDIF
+SELECT CASE (TRIM(CANONICAL_ROW(IDX_TIME)))
+  CASE ('snapshot','point')
+    AGGREGATE=1
+  CASE ('mean')
+    AGGREGATE=2
+  CASE ('maximum')
+    AGGREGATE=3
+  CASE DEFAULT
+    ERROR_MESSAGE='Unsupported temporal_type for '//TRIM(NAME)//': '// &
+                  TRIM(CANONICAL_ROW(IDX_TIME))
+    RETURN
+END SELECT
+READ(CANONICAL_ROW(IDX_MISSING),*,IOSTAT=IOS) MISSING_VALUE
+IF (IOS/=0) THEN
+  ERROR_MESSAGE='Invalid or missing missing_value for canonical output '//TRIM(NAME)
+  RETURN
+ENDIF
+FOUND=.TRUE.
+END SUBROUTINE LOAD_RUNOFF_METADATA
+
+SUBROUTINE READ_OUTPUT_REGISTRY_ROW(PATH,TARGET,CSV_HEADER,HEADER_COUNT,CSV_ROW,ROW_COUNT, &
+                                    MATCHED,READ_ERROR)
+! Read the header and requested data row from the configured output registry.
+IMPLICIT NONE
+CHARACTER(LEN=*),INTENT(IN)     :: PATH,TARGET
+CHARACTER(LEN=1024),INTENT(OUT) :: CSV_HEADER(32),CSV_ROW(32)
+INTEGER(KIND=JPIM),INTENT(OUT)  :: HEADER_COUNT,ROW_COUNT
+LOGICAL,INTENT(OUT)             :: MATCHED
+CHARACTER(LEN=*),INTENT(OUT)    :: READ_ERROR
+CHARACTER(LEN=4096)             :: LINE
+CHARACTER(LEN=1024)             :: FIELDS(32)
+INTEGER(KIND=JPIM)              :: UNIT,STATUS,NFIELDS,NAME_COLUMN
+!================================================
+MATCHED=.FALSE.
+READ_ERROR=''
+HEADER_COUNT=0
+ROW_COUNT=0
+OPEN(NEWUNIT=UNIT,FILE=TRIM(PATH),STATUS='OLD',ACTION='READ',IOSTAT=STATUS)
+IF (STATUS/=0) THEN
+  READ_ERROR='Cannot open output registry: '//TRIM(PATH)
+  RETURN
+ENDIF
+READ(UNIT,'(A)',IOSTAT=STATUS) LINE
+IF (STATUS/=0) THEN
+  READ_ERROR='Cannot read output registry header: '//TRIM(PATH)
+  CLOSE(UNIT)
+  RETURN
+ENDIF
+CALL SPLIT_CSV_RECORD(TRIM(LINE),CSV_HEADER,HEADER_COUNT)
+NAME_COLUMN=CSV_COLUMN(CSV_HEADER,HEADER_COUNT,'name')
+IF (NAME_COLUMN==0) THEN
+  READ_ERROR='Output registry has no name column: '//TRIM(PATH)
+  CLOSE(UNIT)
+  RETURN
+ENDIF
+DO
+  READ(UNIT,'(A)',IOSTAT=STATUS) LINE
+  IF (STATUS/=0) EXIT
+  CALL SPLIT_CSV_RECORD(TRIM(LINE),FIELDS,NFIELDS)
+  IF (NFIELDS>=NAME_COLUMN .AND. TRIM(FIELDS(NAME_COLUMN))==TRIM(TARGET)) THEN
+    CSV_ROW=FIELDS
+    ROW_COUNT=NFIELDS
+    MATCHED=.TRUE.
+    EXIT
+  ENDIF
+ENDDO
+CLOSE(UNIT)
+END SUBROUTINE READ_OUTPUT_REGISTRY_ROW
+
+SUBROUTINE SPLIT_CSV_RECORD(LINE,FIELDS,FIELD_COUNT)
+! Split one record, retaining commas inside quoted fields.
+IMPLICIT NONE
+CHARACTER(LEN=*),INTENT(IN)         :: LINE
+CHARACTER(LEN=1024),INTENT(OUT)     :: FIELDS(32)
+INTEGER(KIND=JPIM),INTENT(OUT)      :: FIELD_COUNT
+CHARACTER(LEN=1024)                 :: VALUE
+INTEGER(KIND=JPIM)                  :: POS,VALUE_LENGTH
+LOGICAL                             :: IN_QUOTES
+!================================================
+FIELDS=''
+VALUE=''
+FIELD_COUNT=1
+VALUE_LENGTH=0
+IN_QUOTES=.FALSE.
+POS=1
+DO WHILE (POS<=LEN_TRIM(LINE))
+  SELECT CASE (LINE(POS:POS))
+    CASE ('"')
+      IF (IN_QUOTES .AND. POS<LEN_TRIM(LINE)) THEN
+        IF (LINE(POS+1:POS+1)=='"') THEN
+          IF (VALUE_LENGTH<LEN(VALUE)) THEN
+            VALUE_LENGTH=VALUE_LENGTH+1
+            VALUE(VALUE_LENGTH:VALUE_LENGTH)='"'
+          ENDIF
+          POS=POS+1
+        ELSE
+          IN_QUOTES=.FALSE.
+        ENDIF
+      ELSE
+        IN_QUOTES=.NOT.IN_QUOTES
+      ENDIF
+    CASE (',')
+      IF (.NOT.IN_QUOTES) THEN
+        FIELDS(FIELD_COUNT)=TRIM(VALUE)
+        FIELD_COUNT=FIELD_COUNT+1
+        VALUE=''
+        VALUE_LENGTH=0
+      ELSE
+        IF (VALUE_LENGTH<LEN(VALUE)) THEN
+          VALUE_LENGTH=VALUE_LENGTH+1
+          VALUE(VALUE_LENGTH:VALUE_LENGTH)=LINE(POS:POS)
+        ENDIF
+      ENDIF
+    CASE DEFAULT
+      IF (VALUE_LENGTH<LEN(VALUE)) THEN
+        VALUE_LENGTH=VALUE_LENGTH+1
+        VALUE(VALUE_LENGTH:VALUE_LENGTH)=LINE(POS:POS)
+      ENDIF
+  END SELECT
+  POS=POS+1
+ENDDO
+FIELDS(FIELD_COUNT)=TRIM(VALUE)
+END SUBROUTINE SPLIT_CSV_RECORD
+
+! Return the one-based field index for a named CSV header, or zero if absent.
+INTEGER(KIND=JPIM) FUNCTION CSV_COLUMN(CSV_HEADER,HEADER_COUNT,COLUMN_NAME)
+! Find the one-based field index for a named column, or return zero.
+IMPLICIT NONE
+CHARACTER(LEN=*),INTENT(IN)      :: CSV_HEADER(:),COLUMN_NAME
+INTEGER(KIND=JPIM),INTENT(IN)    :: HEADER_COUNT
+INTEGER(KIND=JPIM)               :: COLUMN
+!================================================
+CSV_COLUMN=0
+DO COLUMN=1,HEADER_COUNT
+  IF (TRIM(CSV_HEADER(COLUMN))==TRIM(COLUMN_NAME)) THEN
+    CSV_COLUMN=COLUMN
+    RETURN
+  ENDIF
+ENDDO
+END FUNCTION CSV_COLUMN
 
 END SUBROUTINE CMF_OUTPUT_INIT
 !####################################################################
@@ -554,15 +808,10 @@ IF ( MOD(JHOUR,IFRQ_OUT)==0 .and. JMIN==0 ) THEN             ! JHOUR: end of tim
         IF( .not. LGDWDLY ) CYCLE
         D2VEC =>  D2GDWRTN_oAVG
 
-      CASE ('runoff')             !!  compatibility for previous file name
+      CASE ('runoff','rofsfc')
         D2VEC =>  D2RUNOFF_oAVG  
-      CASE ('runoffsub')           !!  compatibility for previous file name
-        IF( .not. LROSPLIT ) CYCLE
+      CASE ('runoffsub','rofsub')
         D2VEC =>  D2ROFSUB_oAVG  
-      CASE ('rofsfc')
-        D2VEC =>  D2RUNOFF_oAVG
-      CASE ('rofsub')
-        D2VEC =>  D2ROFSUB_oAVG
       CASE ('wevap')
         IF( .not. LWEVAP ) CYCLE
         D2VEC => D2WEVAPEX_oAVG

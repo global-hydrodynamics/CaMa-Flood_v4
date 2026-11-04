@@ -9,3 +9,5 @@ This directory contains shared, machine-readable specifications for variables an
 Each table has its own schema and purpose; combining them into one CSV is not intended. Dataset registries describe specific products, sources, coverage, licensing, and access. For example, [`inp/runoff_datasets.csv`](../inp/runoff_datasets.csv) remains the registry for runoff datasets and is not part of this directory.
 
 A separate `input_variables.csv` may be considered if future work needs a shared inventory for multiple time-varying model inputs. No such table is defined here yet.
+
+For `output_variables.csv`, `alias_of` is the authoritative relationship between compatibility names and canonical outputs. An alias row may leave descriptive metadata such as `long_name`, `units`, `temporal_type`, and `missing_value` blank; runtime output initialization and the output CTL generator inherit those fields from the canonical row. Keep the alias's required-option condition consistent with the canonical output when one applies. The `runoff`/`rofsfc` pair and `runoffsub`/`rofsub` pair select identical model arrays while preserving the requested output name.

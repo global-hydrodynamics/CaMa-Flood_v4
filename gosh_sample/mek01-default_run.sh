@@ -13,6 +13,7 @@ set -eu
 
 # CaMa-Flood base directory (contains src_main/, map/, and inp/).
 CMF_BASE=$(cd .. && pwd)
+export CMF_BASE
 
 # Simulation working directory; the model executable and outputs are placed here.
 RUNDIR="${CMF_BASE}/out/mek01-default_run"

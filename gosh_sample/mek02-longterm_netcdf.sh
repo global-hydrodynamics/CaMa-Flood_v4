@@ -6,6 +6,7 @@ set -eu
 
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 CMF_BASE=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd -P)
+export CMF_BASE
 
 # -------------------------- User settings ------------------------------
 # Simulation years are inclusive; the model ends at January 1 of END_YEAR+1.
