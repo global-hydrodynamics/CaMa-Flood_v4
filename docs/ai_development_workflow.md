@@ -16,6 +16,10 @@ This document defines a reusable handoff process among the maintainer, ChatGPT, 
 6. **Escalation:** Return major unresolved scientific or architectural issues to the maintainer before dependent work proceeds. Do not silently choose an assumption that could change scientific behavior, interfaces, compatibility, data policy, or cause substantial rework. Record non-blocking questions and continue independent work as described in `AGENTS.md`.
 7. **Review after implementation:** Once Codex has completed the assigned scope, ChatGPT reviews the resulting code and documentation, the actual validation results, and related research records with the maintainer. Use that review to resolve gaps and decide the next task; do not treat successful execution alone as scientific validation.
 
+## Test selection
+
+Test selection follows the repository's [CaMa-Flood v5 test design principles](../AGENTS.md#cama-flood-v5-test-design-principles). In handoffs, name the CaMa-Flood-specific risk each check addresses and choose validation proportional to that risk. Do not spend tests rechecking guarantees inside standard tools or external libraries; verify CaMa-Flood's inputs, outputs, interpretation, and interfaces at those boundaries.
+
 ## Knowledge-gap review at milestones
 
 At completion of a substantial task or development stage, include this short review in the completion handoff:
@@ -82,6 +86,7 @@ Issue/PR: <link, or “none”>
 
 - Inputs/fixtures and reproducible commands:
 - Expected results and acceptance criteria:
+- CaMa-Flood-specific risks covered by these checks, and why the scope is proportionate:
 - Checks not to run:
 - Missing-data/tool fallback and reporting:
 

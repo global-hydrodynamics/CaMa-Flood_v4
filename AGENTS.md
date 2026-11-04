@@ -169,6 +169,20 @@ Do not impose Fortran declaration alignment, Fortran section separators, or mode
 
 Research logging is a long-term activity across the v4-to-v5 transition, not a feature owned by one project or branch. Preserve the common [`research/`](research/README.md) history across projects and branch transitions; no dedicated research Issue is required. Record significant discussions, approvals, instructions, implementations, knowledge discoveries, human interventions, failures, and validations, distinguishing each stage. The study's approved v5 dimensions are knowledge accessibility, reproducibility, extensibility, and governance; see [`research/study_protocol.md`](research/study_protocol.md). Do not log routine commands or every AI turn, invent unavailable history/metrics, commit raw private transcripts, or claim scientific correctness from execution alone. Have the maintainer review AI-generated discussion summaries, and run `python3 research/validate_records.py` after changing the record tables.
 
+## CaMa-Flood v5 test design principles
+
+Test the CaMa-Flood implementation, not the internals of its dependencies. Tests should establish that our scientific calculations, data transformations, formats, and interfaces behave correctly. Rely on guarantees provided by standard tools and external libraries; test that CaMa-Flood passes the right data and correctly interprets returned data at those boundaries.
+
+Prioritize tests in this order:
+
+1. **Scientific correctness:** Check equations, physical meaning, variable correspondence, units, and boundary conditions. For scientific refactors, compare against the previous implementation where appropriate, but also use independent evidence such as analytical solutions, conservation, or known physical properties when needed. Agreement with old code alone does not prove scientific correctness.
+2. **Data and interface contracts:** Check CaMa-Flood's Binary/NetCDF layouts, names, types, array ordering, coordinates, missing values, restart ordering, and Driver/Coupler interfaces.
+3. **Workflow correctness:** Check CaMa-Flood's path resolution, configuration handoff, command ordering, and error handling in Shell and Python workflows.
+
+Choose test depth in proportion to the changed behavior and risk. Test runtime, compute, and maintenance burden are design costs; do not treat test count or coverage percentage as goals. Prefer small, deterministic synthetic inputs and representative samples. Use focused syntax/path checks for documentation or file-organization changes, small executions for workflow changes, contract checks for I/O changes, independent scientific validation plus appropriate regression coverage for algorithm changes, and state/order/consistency checks for Restart or Driver/Coupler changes. Run expensive integration tests explicitly when their broader coverage is needed; a full test suite is not required for every change. Treat execution and file integrity as evidence of those checks only, not as proof of scientific validity.
+
+Avoid redundant tests, tests of dependency algorithms that their providers already guarantee, duplicate coverage of existing tests, and tests brittle to harmless internal refactoring. Before adding a test, an AI coding agent must identify the CaMa-Flood-specific failure it detects, check whether existing tests or dependency guarantees already cover it, consider a smaller maintainable alternative, and judge the cost against the risk. Do not add tests that detect no implementation risk. Do not delete existing tests or weaken CI without explicit maintainer instruction.
+
 ## 6. Validation and completion
 
 Choose checks proportionate to the change. Inspect test recipes: some existing `test` targets compile executables without running them. Do not report compilation as test execution.
