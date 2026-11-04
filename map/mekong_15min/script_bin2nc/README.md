@@ -1,6 +1,6 @@
 # Mekong Binary-to-NetCDF map conversion
 
-This map-local copy uses the shared templates in [`map/tools/script_bin2nc/`](../../tools/script_bin2nc/README.md) and converter at `map/tools/code/convert_map_binary_to_netcdf.py`. It targets the Mekong base-resolution map only; high-resolution subdirectories such as `1min/` and `15sec/` are not scanned.
+This map-local copy uses the shared templates and converters documented in [`map/tools/script_bin2nc/`](../../tools/script_bin2nc/README.md). `s01`/`s02` convert registered binaries in the Mekong map root; `s03` converts registered high-resolution tiles from `1min/`.
 
 Run the scripts from this directory (or invoke them by path from another working directory):
 
@@ -18,6 +18,16 @@ Review `bin2nc_list.txt` in this directory and comment out files that should not
 The candidate list is created in the current directory and follows numeric `category_id` and registry row order. It lists supported, registered `.bin` files directly in the map root once each. Existing lists are not replaced without confirmation; non-interactive use preserves them. The conversion script prompts before replacing each existing NetCDF, skips it in non-interactive mode, and accepts `--force` for an explicit non-interactive overwrite.
 
 The shared template README documents supported raster layouts, warnings, output verification, and configuration for other maps.
+
+## High-resolution tile conversion
+
+Run the map-local `s03` to convert the selected registered `1min/` tile binaries. Its settings at the top of the script select `catmxy`, `downxy`, `elevtn`, `uparea`, `hand`, `flddif`, and `rivwth`:
+
+```sh
+./s03-convert_highres_netcdf.sh
+```
+
+Outputs go to `1min_nc/`, one NetCDF file per area and source binary (for example, `1min.catmxy.nc`). Multi-record files contain all registered records as separate variables. Existing files are skipped; use `./s03-convert_highres_netcdf.sh --force` to replace them. The converter validates tile sizes against `1min/location.txt` and the variable registry, and reads written chunks back for value comparison. See the shared guide for configuration and limitations.
 
 ## Legacy consolidated NetCDF files
 

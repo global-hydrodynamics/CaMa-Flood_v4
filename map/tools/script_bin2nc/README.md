@@ -1,8 +1,8 @@
 # Binary-to-NetCDF map conversion template
 
-This shared template converts selected base-resolution Binary map rasters into individual NetCDF files. Copy the scripts into a map-local `script_bin2nc/` directory and run that copy. The Mekong sample contains a ready-to-use copy at [`map/mekong_15min/script_bin2nc/`](../../mekong_15min/script_bin2nc/).
+This shared template converts registered base-resolution and high-resolution Binary map rasters into individual NetCDF files. Copy the scripts into a map-local `script_bin2nc/` directory and run that copy. The Mekong sample contains a ready-to-use copy at [`map/mekong_15min/script_bin2nc/`](../../mekong_15min/script_bin2nc/).
 
-The scripts reuse [`convert_map_binary_to_netcdf.py`](../code/convert_map_binary_to_netcdf.py) and the authoritative [`variable_table/map_variables.csv`](../../../variable_table/map_variables.csv) registry. They do not convert high-resolution subdirectories such as `1min/` or `15sec/`.
+The scripts reuse [`convert_map_binary_to_netcdf.py`](../code/convert_map_binary_to_netcdf.py), [`convert_highres_binary_to_netcdf.py`](../code/convert_highres_binary_to_netcdf.py), and the authoritative [`variable_table/map_variables.csv`](../../../variable_table/map_variables.csv) registry. `s01`/`s02` handle binaries directly in the map root; `s03` handles registered high-resolution tile binaries.
 
 ## Select files and convert
 
@@ -72,6 +72,21 @@ CPTHOUT   = ".../bifprm.txt"
 This is only the Map namelist fragment. If bifurcation is used, enable `LPTHOUT=.TRUE.` in `&NRUNVER`; the model also requires its normal dimension, time, and other run settings.
 
 The NetCDF C library and Python standard library are sufficient. Validation here checks source/output variable values and layout; it does not replace a model run. Execution through the legacy consolidated reader remains a separate validation step.
+
+## Convert high-resolution tiles (`s03`)
+
+Copy `s03-convert_highres_netcdf.sh` to the map-local `script_bin2nc/` directory, set `MAP_DIR`, `HIRES`, and `VARS` near the top, then run it from any working directory. The Mekong copy is configured for `1min/`:
+
+```sh
+cd map/mekong_15min/script_bin2nc
+./s03-convert_highres_netcdf.sh
+```
+
+For each selected variable, `s03` calls the shared high-resolution converter. It reads each tile's geometry from `<MAP_DIR>/<HIRES>/location.txt`, and registered variable names, signed type, record index/count, missing value, and dimensions from `variable_table/map_variables.csv`. Unregistered files are ignored; a registered tile with a missing file, inconsistent metadata, or a Binary size that does not match `location.txt` fails explicitly. A multi-record file such as `catmxy` or `downxy` is written as one NetCDF containing all registered variables in record order.
+
+Outputs are individual tiles at `<MAP_DIR>/<HIRES>_nc/<AREA>.<VAR>.nc`. NetCDF variables use `(lat,lon)` dimensions, cell-center coordinates, and the binary's row/record order; data are copied in bounded chunks and checked by reading each chunk back. Output is NetCDF4 without compression. Existing outputs are skipped by default; pass `--force` to replace them. The input Binary and `location.txt` are read-only. A successful conversion verifies file layout and stored values, not scientific correctness or model-reader compatibility.
+
+The NetCDF C library must be installed and discoverable (typically through `nc-config`); Python uses only its standard library.
 
 ## Supported formats and dependencies
 
