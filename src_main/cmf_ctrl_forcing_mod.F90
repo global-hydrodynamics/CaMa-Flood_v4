@@ -9,10 +9,10 @@ MODULE CMF_CTRL_FORCING_MOD
 ! -- CMF_FORCING_GET    : Read forcing data from file (save as "data buffer" PBUFF)
 ! -- CMF_FORCING_END    : Finalize forcing data file
 !
-!* SHARED UTILITIES:
-! -- FORCING_UTIL_NML_HAS_SETTING : Detect an explicitly supplied legacy setting
-! -- FORCING_UTIL_RESOLVE_FILE    : Resolve calendar file period and record index
-! -- FORCING_UTIL_READ_BIN        : Reuse a direct-access Binary input file
+!* SHARED UTILITIES (after CMF_FORCING_END):
+! -- FORCING_UTIL_RESOLVE_FILE : Resolve calendar file period and record index
+! -- FORCING_UTIL_READ_BIN     : Reuse a direct-access Binary input file
+! -- FORCING_UTIL_UPPER        : Normalize a configuration value
 !
 ! (C) D.Yamazaki & E. Dutra  (U-Tokyo/FCUL)  Aug 2019
 !
@@ -30,7 +30,7 @@ USE PARKIND1,                ONLY: JPIM, JPIB, JPRB, JPRM
 USE YOS_CMF_INPUT,           ONLY: LOGNAM
 USE YOS_CMF_MAP,             ONLY: INPX, INPY, INPA, INPXI, INPYI, INPAI, INPNI
 #ifdef UseCDF_CMF
-USE cmf_cf_time_mod,         ONLY: cf_time_axis, cf_resolve_time_record
+USE cmf_cf_time_mod,         ONLY: cf_time_axis, cf_resolve_time_record, cf_find_time_record
 #endif
 !============================
 IMPLICIT NONE
@@ -39,8 +39,7 @@ SAVE
 ! Forcing configulation / foprcing mapping table "input matrix"
 LOGICAL                         :: LINPCDF             !! true : netCDF runoff forcing
 LOGICAL                         :: LINPEND             !! true  for input    endian conversion
-LOGICAL                         :: LINPDAY             !! legacy NetCDF daily/sequence selector
-CHARACTER(LEN=16)               :: CROFFREQ            !! Runoff file grouping: DAY, MON, YEAR, or SEQ
+CHARACTER(LEN=16)               :: CROFFREQ            !! Required runoff file grouping: DAY, MON, YEAR, or SEQ
 
 LOGICAL                         :: LINTERP             !! true : runoff interpolation using input matrix
 LOGICAL                         :: LITRPCDF            !! true : netCDF input matrix file 
@@ -60,12 +59,12 @@ CHARACTER(LEN=256)              :: CVNTIME             !! Netcdf VARNAME of time
 CHARACTER(LEN=256)              :: CVNROF              !! NetCDF VARNAME of runoff. Default "runoff"/
 CHARACTER(LEN=256)              :: CVNSUB              !! NetCDF VARNAME of sub-surface runoff.
 
-INTEGER(KIND=JPIM)              :: SYEARIN             !! first-record year; <=0 reads CF time metadata
-INTEGER(KIND=JPIM)              :: SMONIN              !! first-record month for explicit legacy mode
-INTEGER(KIND=JPIM)              :: SDAYIN              !! first-record day for explicit legacy mode
-INTEGER(KIND=JPIM)              :: SHOURIN             !! first-record hour for explicit legacy mode
+INTEGER(KIND=JPIM)              :: SYEARIN             !! First-record year for SEQ; <=0 uses NetCDF CF time
+INTEGER(KIND=JPIM)              :: SMONIN              !! First-record month for SEQ
+INTEGER(KIND=JPIM)              :: SDAYIN              !! First-record day for SEQ
+INTEGER(KIND=JPIM)              :: SHOURIN             !! First-record hour for SEQ
 
-NAMELIST/NFORCE/   LINTERP, LINPEND, LINPDAY, LINPCDF, LITRPCDF, CROFFREQ, CINPMAT, DROFUNIT, &
+NAMELIST/NFORCE/   LINTERP, LINPEND, LINPCDF, LITRPCDF, CROFFREQ, CINPMAT, DROFUNIT, &
                     CROFDIR,CROFPRE, CROFSUF, CSUBDIR,  CSUBPRE, CSUBSUF, &
                     CROFCDF,CVNTIME, CVNROF,  CVNSUB,  SYEARIN,  SMONIN,SDAYIN,SHOURIN
 
@@ -74,7 +73,6 @@ INTEGER(KIND=JPIM)              :: NCID        !! netCDF file     ID
 INTEGER(KIND=JPIM)              :: NVARID(2)   !! netCDF variable ID
 INTEGER(KIND=JPIM)              :: IBINUNIT(2)=0
 LOGICAL                         :: LBINOPEN(2)=.FALSE.
-LOGICAL                         :: LCROFFREQ_EXPLICIT=.FALSE.
 CHARACTER(LEN=512)              :: CBINNAME(2)=' '
 
 #ifdef UseCDF_CMF
@@ -92,257 +90,6 @@ TYPE(cf_time_axis)              :: ROF_TIME_AXIS
 #endif
 CONTAINS
 !####################################################################
-PURE FUNCTION FORCING_UTIL_UPPER(CTEXT) RESULT(CUPPER)
-CHARACTER(LEN=*),INTENT(IN) :: CTEXT
-CHARACTER(LEN=LEN(CTEXT))   :: CUPPER
-INTEGER                     :: I,ICODE
-CUPPER=CTEXT
-DO I=1,LEN(CTEXT)
-  ICODE=IACHAR(CTEXT(I:I))
-  IF( ICODE>=IACHAR('a') .AND. ICODE<=IACHAR('z') ) CUPPER(I:I)=ACHAR(ICODE-32)
-ENDDO
-END FUNCTION FORCING_UTIL_UPPER
-!####################################################################
-
-!####################################################################
-LOGICAL FUNCTION FORCING_UTIL_NML_HAS_SETTING(CFILE,CSETTING)
-! Distinguish an omitted legacy setting from an explicitly supplied value.
-USE CMF_UTILS_MOD, ONLY: INQUIRE_FID
-CHARACTER(LEN=*),INTENT(IN) :: CFILE,CSETTING
-INTEGER(KIND=JPIM)           :: IUNIT,IOS,I,J,K,N
-CHARACTER(LEN=2048)          :: CLINE,CLOWER
-LOGICAL                      :: LNGROUP,LQUOTE
-CHARACTER                    :: CQUOTE
-FORCING_UTIL_NML_HAS_SETTING=.FALSE.
-LNGROUP=.FALSE.
-IUNIT=INQUIRE_FID()
-OPEN(IUNIT,FILE=TRIM(CFILE),STATUS='OLD',ACTION='READ',IOSTAT=IOS)
-IF( IOS/=0 ) RETURN
-DO
-  READ(IUNIT,'(A)',IOSTAT=IOS) CLINE
-  IF( IOS/=0 ) EXIT
-  CLOWER=FORCING_UTIL_UPPER(CLINE)
-  LQUOTE=.FALSE.
-  CQUOTE=' '
-  DO I=1,LEN_TRIM(CLOWER)
-    IF( LQUOTE ) THEN
-      IF( CLOWER(I:I)==CQUOTE ) LQUOTE=.FALSE.
-    ELSEIF( CLOWER(I:I)=="'" .OR. CLOWER(I:I)=='"' ) THEN
-      LQUOTE=.TRUE.
-      CQUOTE=CLOWER(I:I)
-    ELSEIF( CLOWER(I:I)=='!' ) THEN
-      CLOWER(I:)=' '
-      EXIT
-    ENDIF
-  ENDDO
-  IF( .NOT. LNGROUP ) THEN
-    J=0
-    LQUOTE=.FALSE.
-    CQUOTE=' '
-    K=1
-    DO WHILE( K<=LEN_TRIM(CLOWER) )
-      IF( LQUOTE ) THEN
-        IF( CLOWER(K:K)==CQUOTE ) THEN
-          IF( K<LEN_TRIM(CLOWER) ) THEN
-            IF( CLOWER(K+1:K+1)==CQUOTE ) THEN
-              K=K+2
-              CYCLE
-            ENDIF
-          ENDIF
-          LQUOTE=.FALSE.
-        ENDIF
-      ELSEIF( CLOWER(K:K)=="'" .OR. CLOWER(K:K)=='"' ) THEN
-        LQUOTE=.TRUE.
-        CQUOTE=CLOWER(K:K)
-      ELSEIF( K+6<=LEN_TRIM(CLOWER) ) THEN
-        IF( CLOWER(K:K+6)=='&NFORCE' .OR. CLOWER(K:K+6)=='$NFORCE' ) THEN
-          J=K
-          IF( K+7<=LEN_TRIM(CLOWER) ) THEN
-            IF( INDEX('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_',CLOWER(K+7:K+7))/=0 ) J=0
-          ENDIF
-          IF( J>0 ) EXIT
-        ENDIF
-      ENDIF
-      K=K+1
-    ENDDO
-    IF( J==0 ) CYCLE
-    LNGROUP=.TRUE.
-    CLOWER=CLOWER(J+7:)
-  ENDIF
-  N=LEN_TRIM(CLOWER)
-  LQUOTE=.FALSE.
-  CQUOTE=' '
-  I=1
-  DO WHILE( I<=N )
-    IF( LQUOTE ) THEN
-      IF( CLOWER(I:I)==CQUOTE ) THEN
-        IF( I<N ) THEN
-          IF( CLOWER(I+1:I+1)==CQUOTE ) THEN
-            I=I+2
-            CYCLE
-          ENDIF
-        ENDIF
-        LQUOTE=.FALSE.
-      ENDIF
-      I=I+1
-      CYCLE
-    ELSEIF( CLOWER(I:I)=="'" .OR. CLOWER(I:I)=='"' ) THEN
-      LQUOTE=.TRUE.
-      CQUOTE=CLOWER(I:I)
-      I=I+1
-      CYCLE
-    ENDIF
-    IF( I+LEN_TRIM(CSETTING)-1>N ) EXIT
-    IF( CLOWER(I:I+LEN_TRIM(CSETTING)-1)/=TRIM(FORCING_UTIL_UPPER(CSETTING)) ) THEN
-      I=I+1
-      CYCLE
-    ENDIF
-    IF( I>1 ) THEN
-      IF( INDEX('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_',CLOWER(I-1:I-1))/=0 ) THEN
-        I=I+1
-        CYCLE
-      ENDIF
-    ENDIF
-    J=I+LEN_TRIM(CSETTING)
-    IF( J<=N ) THEN
-      IF( INDEX('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_',CLOWER(J:J))/=0 ) THEN
-        I=I+1
-        CYCLE
-      ENDIF
-    ENDIF
-    DO WHILE( J<=N )
-      IF( CLOWER(J:J)/=' ' .AND. CLOWER(J:J)/=CHAR(9) ) EXIT
-      J=J+1
-    ENDDO
-    IF( J<=N ) THEN
-      IF( CLOWER(J:J)=='=' ) THEN
-        FORCING_UTIL_NML_HAS_SETTING=.TRUE.
-        CLOSE(IUNIT)
-        RETURN
-      ENDIF
-    ENDIF
-    I=I+1
-  ENDDO
-  IF( LNGROUP ) THEN
-    ! Namelist terminators are normally on a line by themselves; accept an
-    ! inline terminator only when it is outside a quoted string.
-    LQUOTE=.FALSE.
-    CQUOTE=' '
-    K=1
-    DO WHILE( K<=N )
-      IF( LQUOTE ) THEN
-        IF( CLOWER(K:K)==CQUOTE ) THEN
-          IF( K<N ) THEN
-            IF( CLOWER(K+1:K+1)==CQUOTE ) THEN
-              K=K+2
-              CYCLE
-            ENDIF
-          ENDIF
-          LQUOTE=.FALSE.
-        ENDIF
-      ELSEIF( CLOWER(K:K)=="'" .OR. CLOWER(K:K)=='"' ) THEN
-        LQUOTE=.TRUE.
-        CQUOTE=CLOWER(K:K)
-      ELSEIF( CLOWER(K:K)=='/' ) THEN
-        CLOSE(IUNIT)
-        RETURN
-      ENDIF
-      K=K+1
-    ENDDO
-  ENDIF
-ENDDO
-CLOSE(IUNIT)
-END FUNCTION FORCING_UTIL_NML_HAS_SETTING
-!####################################################################
-
-!####################################################################
-SUBROUTINE FORCING_UTIL_RESOLVE_FILE(KMINNOW,CIFNAME,CFILETAG,KMINFILE,IRECORD)
-! Resolve calendar-grouped file names and exact record offsets for both formats.
-! MIN2DATE/DATE2MIN and IMDAYS use the model's LLEAPYR calendar convention.
-USE CMF_UTILS_MOD, ONLY: MIN2DATE,SPLITDATE,DATE2MIN
-USE YOS_CMF_INPUT, ONLY: DTIN
-IMPLICIT NONE
-INTEGER(KIND=JPIM),INTENT(IN)  :: KMINNOW
-INTEGER(KIND=JPIM),INTENT(OUT) :: KMINFILE,IRECORD
-CHARACTER(LEN=*),INTENT(OUT)   :: CIFNAME
-CHARACTER(LEN=*),INTENT(OUT)   :: CFILETAG
-INTEGER(KIND=JPIM)              :: IDATE,IHHMM,IYEAR,IMON,IDAY,IPERIOD,IDTIN
-INTEGER(KIND=JPIB)              :: IOFFSET
-CHARACTER(LEN=8)                :: CDATE
-CDATE=' '
-IDTIN=INT(DTIN,KIND=JPIM)
-IF( DTIN<=0._JPRB .OR. REAL(IDTIN,KIND=JPRB)/=DTIN ) THEN
-  WRITE(LOGNAM,*) 'ERROR [CMF::FORCING]: DAY/MON/YEAR requires a positive IFRQ_INP.'
-  STOP 9
-ENDIF
-IF( MOD(86400,IDTIN)/=0 ) THEN
-  WRITE(LOGNAM,*) 'ERROR [CMF::FORCING]: DAY/MON/YEAR requires a positive IFRQ_INP that divides 24 hours.'
-  STOP 9
-ENDIF
-CALL MIN2DATE(KMINNOW,IDATE,IHHMM)
-CALL SPLITDATE(IDATE,IYEAR,IMON,IDAY)
-SELECT CASE(TRIM(CROFFREQ))
-CASE('DAY')
-  IPERIOD=IDATE
-  WRITE(CDATE,'(I4.4,I2.2,I2.2)') IYEAR,IMON,IDAY
-CASE('MON')
-  IPERIOD=IYEAR*10000+IMON*100+1
-  WRITE(CDATE,'(I4.4,I2.2)') IYEAR,IMON
-CASE('YEAR')
-  IPERIOD=IYEAR*10000+101
-  WRITE(CDATE,'(I4.4)') IYEAR
-CASE DEFAULT
-  WRITE(LOGNAM,*) 'ERROR [CMF::FORCING]: File-period resolver called for CROFFREQ=',TRIM(CROFFREQ)
-  STOP 9
-END SELECT
-KMINFILE=DATE2MIN(IPERIOD,0)
-IOFFSET=(INT(KMINNOW,KIND=JPIB)-INT(KMINFILE,KIND=JPIB))*60_JPIB
-IF( IOFFSET<0_JPIB .OR. MOD(IOFFSET,INT(IDTIN,KIND=JPIB))/=0_JPIB ) THEN
-  WRITE(LOGNAM,*) 'ERROR [CMF::FORCING]: requested time is not aligned with the forcing record interval:', &
-  & TRIM(CROFFREQ),KMINNOW,KMINFILE,DTIN
-  STOP 9
-ENDIF
-IRECORD=INT(IOFFSET/INT(IDTIN,KIND=JPIB)+1_JPIB,KIND=JPIM)
-CFILETAG=TRIM(CDATE)
-CIFNAME=TRIM(CROFDIR)//'/'//TRIM(CROFPRE)//TRIM(CFILETAG)//TRIM(CROFSUF)
-END SUBROUTINE FORCING_UTIL_RESOLVE_FILE
-!####################################################################
-
-!####################################################################
-SUBROUTINE FORCING_UTIL_READ_BIN(ISTREAM,CNAME,IRECORD,KMINNOW,FIELD)
-! Reuse each direct-access file until a grouped-file boundary is crossed.
-USE YOS_CMF_INPUT, ONLY: NXIN,NYIN
-USE CMF_UTILS_MOD, ONLY: INQUIRE_FID
-IMPLICIT NONE
-INTEGER(KIND=JPIM),INTENT(IN) :: ISTREAM,IRECORD,KMINNOW
-CHARACTER(LEN=*),INTENT(IN)   :: CNAME
-REAL(KIND=JPRM),INTENT(OUT)   :: FIELD(NXIN,NYIN)
-INTEGER(KIND=JPIM)            :: IOPEN,IOS
-CHARACTER(LEN=256)            :: CERR
-IF( .NOT. LBINOPEN(ISTREAM) .OR. TRIM(CBINNAME(ISTREAM))/=TRIM(CNAME) ) THEN
-  IF( LBINOPEN(ISTREAM) ) CLOSE(IBINUNIT(ISTREAM))
-  IOPEN=INQUIRE_FID()
-  OPEN(IOPEN,FILE=TRIM(CNAME),FORM='UNFORMATTED',ACCESS='DIRECT', &
-  & RECL=4*NXIN*NYIN,STATUS='OLD',IOSTAT=IOS,IOMSG=CERR)
-  IF( IOS/=0 ) THEN
-    WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_GET_BIN]: cannot open file at model minute ', &
-    & KMINNOW,': ',TRIM(CNAME),TRIM(CERR)
-    STOP 9
-  ENDIF
-  IBINUNIT(ISTREAM)=IOPEN
-  CBINNAME(ISTREAM)=TRIM(CNAME)
-  LBINOPEN(ISTREAM)=.TRUE.
-  WRITE(LOGNAM,*) 'Forcing file opened: ',TRIM(CNAME)
-ENDIF
-READ(IBINUNIT(ISTREAM),REC=IRECORD,IOSTAT=IOS,IOMSG=CERR) FIELD
-IF( IOS/=0 ) THEN
-  WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_GET_BIN]: read failed; model minute, file, record:', &
-  & KMINNOW,TRIM(CNAME),IRECORD,TRIM(CERR)
-  STOP 9
-ENDIF
-END SUBROUTINE FORCING_UTIL_READ_BIN
-!####################################################################
-
 !####################################################################
 ! -- CMF_FORCING_NMLIST : Read setting from Namelist
 ! -- CMF_FORCING_INIT   : Initialize forcing data file
@@ -359,9 +106,9 @@ USE YOS_CMF_TIME,       ONLY: YYYY0,KMINSTAIN
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID,DATE2MIN,IMDAYS
 IMPLICIT NONE
 INTEGER(KIND=JPIM)              :: IYEARIN,IMONIN,IDAYIN
-INTEGER(KIND=JPIM)              :: IDTIN
-LOGICAL                         :: LLINPDAY_SET
-CHARACTER(LEN=16)               :: CLEGACY_FREQ
+INTEGER(KIND=JPIM)              :: IDTIN,INMLIOS
+LOGICAL                         :: LSTART_DATE_SET
+CHARACTER(LEN=256)              :: CNMLMSG
 !================================================
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "!---------------------!"
@@ -374,7 +121,6 @@ WRITE(LOGNAM,*) "CMF::FORCING_NMLIST: namelist OPEN in unit: ", TRIM(CSETFILE), 
 !*** 2. Set default forcing and input-matrix options
 LINPCDF =.FALSE.
 LINPEND =.FALSE.
-LINPDAY =.FALSE.
 CROFFREQ=' '
 LINTERP =.FALSE.
 LITRPCDF=.FALSE.
@@ -398,44 +144,58 @@ IF( LROSPLIT )THEN
   CVNSUB="Qsb"
 ENDIF
 
-SYEARIN=0                       !! <=0: derive the input record from NetCDF CF time metadata
-SMONIN =0
-SDAYIN =0
-SHOURIN=0
+SYEARIN=-9999
+SMONIN =-9999
+SDAYIN =-9999
+SHOURIN=-9999
 
-!*** 3. Read settings and resolve legacy/new file-grouping configuration
+!*** 3. Read settings and validate the required file-grouping mode.
 REWIND(NSETFILE)
-READ(NSETFILE,NML=NFORCE)
-LLINPDAY_SET=FORCING_UTIL_NML_HAS_SETTING(CSETFILE,'LINPDAY')
-LCROFFREQ_EXPLICIT=(LEN_TRIM(CROFFREQ)>0)
-
-! Resolve the new grouping option independently from the runoff format.
+READ(NSETFILE,NML=NFORCE,IOSTAT=INMLIOS,IOMSG=CNMLMSG)
+IF( INMLIOS/=0 ) THEN
+  WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_NMLIST]: invalid NFORCE namelist: ',TRIM(CNMLMSG)
+  STOP 9
+ENDIF
 IF( LEN_TRIM(CROFFREQ)==0 ) THEN
-  IF( .NOT. LINPCDF ) THEN
-    CROFFREQ='DAY'
-  ELSEIF( LINPDAY ) THEN
-    CROFFREQ='DAY'
-  ELSE
-    CROFFREQ='SEQ'
-  ENDIF
-ELSE
-  CROFFREQ=TRIM(FORCING_UTIL_UPPER(ADJUSTL(CROFFREQ)))
-  IF( TRIM(CROFFREQ)/='DAY' .AND. TRIM(CROFFREQ)/='MON' .AND. &
-  &   TRIM(CROFFREQ)/='YEAR' .AND. TRIM(CROFFREQ)/='SEQ' ) THEN
-    WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_NMLIST]: CROFFREQ must be DAY, MON, YEAR, or SEQ: ',TRIM(CROFFREQ)
-    STOP 9
-  ENDIF
-  IF( LLINPDAY_SET ) THEN
-    IF( LINPDAY ) THEN
-      CLEGACY_FREQ='DAY'
-    ELSE
-      CLEGACY_FREQ='SEQ'
-    ENDIF
-    IF( TRIM(CROFFREQ)/=TRIM(CLEGACY_FREQ) ) THEN
-      WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_NMLIST]: CROFFREQ conflicts with explicitly set LINPDAY.'
-      WRITE(LOGNAM,*) '  CROFFREQ=',TRIM(CROFFREQ),' LINPDAY=',LINPDAY
+  WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_NMLIST]: CROFFREQ is required; choose DAY, MON, YEAR, or SEQ.'
+  STOP 9
+ENDIF
+CROFFREQ=TRIM(FORCING_UTIL_UPPER(ADJUSTL(CROFFREQ)))
+IF( TRIM(CROFFREQ)/='DAY' .AND. TRIM(CROFFREQ)/='MON' .AND. &
+&   TRIM(CROFFREQ)/='YEAR' .AND. TRIM(CROFFREQ)/='SEQ' ) THEN
+  WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_NMLIST]: CROFFREQ must be DAY, MON, YEAR, or SEQ: ',TRIM(CROFFREQ)
+  STOP 9
+ENDIF
+
+! Sentinel defaults distinguish omitted date fields from explicit Namelist assignments.
+LSTART_DATE_SET=SYEARIN/=-9999 .OR. SMONIN/=-9999 .OR. SDAYIN/=-9999 .OR. SHOURIN/=-9999
+IF( TRIM(CROFFREQ)/='SEQ' .AND. LSTART_DATE_SET ) THEN
+  WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_NMLIST]: explicit start-date fields are only valid with CROFFREQ=SEQ.'
+  STOP 9
+ENDIF
+IF( .NOT. LSTART_DATE_SET ) THEN
+  SYEARIN=0
+  SMONIN=0
+  SDAYIN=0
+  SHOURIN=0
+ENDIF
+IF( TRIM(CROFFREQ)=='SEQ' ) THEN
+  IF( LINPCDF .AND. SYEARIN<=0 ) THEN
+    IF( SMONIN/=-9999 .OR. SDAYIN/=-9999 .OR. SHOURIN/=-9999 ) THEN
+      WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_NMLIST]: NetCDF SEQ date fields must be omitted when SYEARIN<=0.'
       STOP 9
     ENDIF
+    SMONIN=0
+    SDAYIN=0
+    SHOURIN=0
+  ELSEIF( SYEARIN>0 ) THEN
+    IF( SMONIN==-9999 .OR. SDAYIN==-9999 .OR. SHOURIN==-9999 ) THEN
+      WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_NMLIST]: explicit SEQ start requires all four date fields.'
+      STOP 9
+    ENDIF
+  ELSEIF( .NOT. LINPCDF ) THEN
+    WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_NMLIST]: Binary SEQ requires explicit SYEARIN, SMONIN, SDAYIN, and SHOURIN.'
+    STOP 9
   ENDIF
 ENDIF
 
@@ -450,9 +210,8 @@ IF( TRIM(CROFFREQ)/='SEQ' ) THEN
     STOP 9
   ENDIF
 ENDIF
-! Binary calendar-grouped files are indexed from model calendar boundaries;
-! explicit first-record time applies only to Binary SEQ and NetCDF input.
-IF( SYEARIN>0 .AND. (LINPCDF .OR. TRIM(CROFFREQ)=='SEQ') ) THEN
+! Explicit first-record dates are supported only for SEQ; grouped files use period boundaries.
+IF( SYEARIN>0 .AND. TRIM(CROFFREQ)=='SEQ' ) THEN
   IYEARIN=SYEARIN
   IMONIN=SMONIN
   IDAYIN=SDAYIN
@@ -465,23 +224,12 @@ IF( SYEARIN>0 .AND. (LINPCDF .OR. TRIM(CROFFREQ)=='SEQ') ) THEN
     WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_NMLIST]: invalid day in explicit first-record datetime.'
     STOP 9
   ENDIF
-  IF( LINPCDF .AND. TRIM(CROFFREQ)/='SEQ' ) THEN
-    IF( SHOURIN/=0 .OR. (TRIM(CROFFREQ)=='MON' .AND. SDAYIN/=1) .OR. &
-    &   (TRIM(CROFFREQ)=='YEAR' .AND. (SMONIN/=1 .OR. SDAYIN/=1)) ) THEN
-      WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_NMLIST]: grouped NetCDF SYEARIN must match its period start.'
-      STOP 9
-    ENDIF
-  ENDIF
   YYYY0=MIN(YYYY0,SYEARIN)
   KMINSTAIN=DATE2MIN(SYEARIN*10000+SMONIN*100+SDAYIN,SHOURIN*100)
-ELSEIF( TRIM(CROFFREQ)=='SEQ' .AND. .NOT. LINPCDF ) THEN
-  WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_NMLIST]: Binary SEQ requires SYEARIN, SMONIN, SDAYIN, and SHOURIN.'
-  STOP 9
 ENDIF
 
 WRITE(LOGNAM,*)     "=== NAMELIST, NFORCE ==="
 WRITE(LOGNAM,*)     "LINPCDF:   ", LINPCDF
-WRITE(LOGNAM,*)     "LINPDAY:   ", LINPDAY
 WRITE(LOGNAM,*)     "CROFFREQ:  ", TRIM(CROFFREQ)
 WRITE(LOGNAM,*)     "LINTERP:   ", LINTERP
 WRITE(LOGNAM,*)     "LITRPCDF:  ", LITRPCDF
@@ -537,21 +285,10 @@ END SUBROUTINE CMF_FORCING_NMLIST
 SUBROUTINE CMF_FORCING_INIT(LECMF2LAKEC)
 ! Initialize runoff and input-matrix sources selected by the namelist.
 ! -- called from "Main Program / Coupler"
-USE YOS_CMF_INPUT,           ONLY: NXIN,NYIN,DTIN
-USE YOS_CMF_TIME,            ONLY: KMINSTART,KMINEND,KMINSTAIN
-USE CMF_UTILS_MOD,           ONLY: INQUIRE_FID
 IMPLICIT NONE
 
 INTEGER(KIND=JPIM),OPTIONAL,INTENT(IN) :: LECMF2LAKEC   !! Lake coupling: this is currently only used in ECMWF
-INTEGER(KIND=JPIB)              :: IFILESIZE,IRECL,INREC,IREQ,INEED,IOFFSET
-INTEGER(KIND=JPIM)              :: IOS
-CHARACTER(LEN=512)              :: CSEQFILE
-
-!================================================
-WRITE(LOGNAM,*) ""
-WRITE(LOGNAM,*) "!---------------------!"
-
-WRITE(LOGNAM,*) "CMF::FORCING_INIT: " 
+WRITE(LOGNAM,*) "CMF::FORCING_INIT: "
 IF(PRESENT(LECMF2LAKEC)) WRITE(LOGNAM,*) "CMF::FORCING_INIT: LECMF2LAKEC"
 
 IBINUNIT=0
@@ -560,47 +297,6 @@ CBINNAME=' '
 #ifdef UseCDF_CMF
 ROFCDF%NCID=-1
 #endif
-IF( .NOT. LINPCDF .AND. TRIM(CROFFREQ)=='SEQ' ) THEN
-  IF( DTIN<=0._JPRB .OR. REAL(INT(DTIN),KIND=JPRB)/=DTIN ) THEN
-    WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_INIT]: Binary SEQ requires a positive integer-second DTIN.'
-    STOP 9
-  ENDIF
-  CSEQFILE=TRIM(CROFDIR)//'/'//TRIM(CROFPRE)//TRIM(CROFSUF)
-  IRECL=4_JPIB*INT(NXIN,KIND=JPIB)*INT(NYIN,KIND=JPIB)
-  INQUIRE(FILE=TRIM(CSEQFILE),SIZE=IFILESIZE,IOSTAT=IOS)
-  IF( IOS/=0 ) THEN
-    WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_INIT]: missing or malformed Binary SEQ file: ',TRIM(CSEQFILE)
-    STOP 9
-  ENDIF
-  IF( IRECL<=0_JPIB ) THEN
-    WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_INIT]: invalid Binary SEQ record size:',IRECL
-    STOP 9
-  ENDIF
-  IF( MOD(IFILESIZE,IRECL)/=0_JPIB ) THEN
-    WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_INIT]: Binary SEQ file size is not a whole number of records: ', &
-    & TRIM(CSEQFILE),IFILESIZE,IRECL
-    STOP 9
-  ENDIF
-  INREC=IFILESIZE/IRECL
-  IOFFSET=INT(KMINSTART-KMINSTAIN,KIND=JPIB)*60_JPIB
-  IF( IOFFSET<0_JPIB .OR. MOD(IOFFSET,INT(DTIN,KIND=JPIB))/=0_JPIB ) THEN
-    WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_INIT]: simulation start is before or unaligned with Binary SEQ data.'
-    STOP 9
-  ENDIF
-  IREQ=IOFFSET/INT(DTIN,KIND=JPIB)+1_JPIB
-  IF( MOD(INT(KMINEND-KMINSTART,KIND=JPIB)*60_JPIB,INT(DTIN,KIND=JPIB))/=0_JPIB ) THEN
-    WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_INIT]: simulation end is not aligned with Binary SEQ records.'
-    STOP 9
-  ENDIF
-  INEED=(INT(KMINEND-KMINSTART,KIND=JPIB)*60_JPIB+INT(DTIN,KIND=JPIB)-1_JPIB) &
-  & /INT(DTIN,KIND=JPIB)
-  IF( IREQ<1_JPIB .OR. IREQ+INEED-1_JPIB>INREC ) THEN
-    WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_INIT]: requested run exceeds Binary SEQ records:', &
-    & TRIM(CSEQFILE),IREQ,INEED,INREC
-    STOP 9
-  ENDIF
-  WRITE(LOGNAM,*) 'Binary SEQ records validated:',TRIM(CSEQFILE),INREC
-ENDIF
 
 !*** 1. Initialize the NetCDF runoff source when selected
 IF( LINPCDF ) THEN
@@ -999,12 +695,12 @@ END SUBROUTINE CMF_FORCING_GET_BIN
 #ifdef UseCDF_CMF
 SUBROUTINE CMF_FORCING_GET_CDF(PBUFF)
 ! Read from a cached sequence file or a cached calendar-grouped NetCDF file.
-USE YOS_CMF_TIME,            ONLY: KMIN,KMINSTART,KMINSTAIN
+USE YOS_CMF_TIME,            ONLY: KMIN,KMINSTART
 USE YOS_CMF_INPUT,           ONLY: DTIN,NXIN,NYIN,LROSPLIT,LLEAPYR
 USE CMF_UTILS_MOD,           ONLY: NCERROR,MIN2DATE,SPLITHOUR
 USE NETCDF
 IMPLICIT NONE
-INTEGER(KIND=JPIM)           :: IRECINP,KMINFILE,IDATE,IHHMM,IHOUR0,IMIN0,NTIMEID,NCDFSTP
+INTEGER(KIND=JPIM)           :: IRECINP,IFIRSTREC,KMINFILE,IDATE,IHHMM,IHOUR0,IMIN0,NTIMEID,NCDFSTP
 INTEGER(KIND=JPIM)           :: IOS,IERR
 INTEGER(KIND=JPIB)            :: IOFFSET
 CHARACTER(LEN=512)           :: CIFNAME,CFILETAG
@@ -1037,10 +733,6 @@ IF( TRIM(CROFFREQ)=='SEQ' ) THEN
     IRECINP=INT(IOFFSET/INT(DTIN,KIND=JPIB)+1_JPIB,KIND=JPIM)
   ENDIF
 ELSE
-  IF( SYEARIN>0 .AND. KMIN<KMINSTAIN ) THEN
-    WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_GET_CDF]: requested time precedes explicit grouped-file start:',KMIN,KMINSTAIN
-    STOP 9
-  ENDIF
   CALL FORCING_UTIL_RESOLVE_FILE(KMIN,CIFNAME,CFILETAG,KMINFILE,IRECINP)
   IF( ROFCDF%NCID<=0 .OR. TRIM(ROFCDF%CNAME)/=TRIM(CIFNAME) ) THEN
     IF( ROFCDF%NCID>0 ) CALL NCERROR(NF90_CLOSE(ROFCDF%NCID),'CLOSING :'//TRIM(ROFCDF%CNAME))
@@ -1058,23 +750,29 @@ ELSE
     CALL NCERROR(NF90_INQ_DIMID(ROFCDF%NCID,TRIM(CVNTIME),NTIMEID),'GETTING TIME ID FORCING RUNOFF')
     CALL NCERROR(NF90_INQUIRE_DIMENSION(NCID=ROFCDF%NCID,DIMID=NTIMEID,LEN=NCDFSTP), &
     & 'GETTING TIME LENGTH FOR '//TRIM(ROFCDF%CNAME))
-    IF( SYEARIN<=0 .AND. LCROFFREQ_EXPLICIT ) THEN
-      CALL MIN2DATE(KMIN,IDATE,IHHMM)
-      CALL SPLITHOUR(IHHMM,IHOUR0,IMIN0)
-      CALL cf_resolve_time_record(ROFCDF%NCID,TRIM(CVNTIME),IDATE,IHOUR0,IMIN0,LLEAPYR, &
-      & INT(DTIN,KIND=JPIM),NCDFSTP,ROF_TIME_AXIS,IRECINP,IERR,CMESSAGE)
-      IF( IERR/=0 ) THEN
-        WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_GET_CDF]: CF time validation failed for ',TRIM(ROFCDF%CNAME)
-        WRITE(LOGNAM,*) '  requested minute, record, reason:',KMIN,IRECINP,TRIM(CMESSAGE)
-        STOP 9
-      ENDIF
-      WRITE(LOGNAM,*) 'NetCDF forcing file opened:',TRIM(ROFCDF%CNAME), &
-      & ' calendar=',TRIM(ROF_TIME_AXIS%CALENDAR),' interval[min]=',ROF_TIME_AXIS%DT_MINUTES
+    CALL MIN2DATE(KMIN,IDATE,IHHMM)
+    CALL SPLITHOUR(IHHMM,IHOUR0,IMIN0)
+    CALL cf_resolve_time_record(ROFCDF%NCID,TRIM(CVNTIME),IDATE,IHOUR0,IMIN0,LLEAPYR, &
+    & INT(DTIN,KIND=JPIM),NCDFSTP,ROF_TIME_AXIS,IRECINP,IERR,CMESSAGE)
+    IF( IERR/=0 ) THEN
+      WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_GET_CDF]: CF time validation failed for ',TRIM(ROFCDF%CNAME)
+      WRITE(LOGNAM,*) '  requested minute, record, reason:',KMIN,IRECINP,TRIM(CMESSAGE)
+      STOP 9
     ENDIF
+    CALL MIN2DATE(KMINFILE,IDATE,IHHMM)
+    CALL SPLITHOUR(IHHMM,IHOUR0,IMIN0)
+    CALL cf_find_time_record(ROF_TIME_AXIS,IDATE,IHOUR0,IMIN0,IFIRSTREC,IERR,CMESSAGE,.TRUE.)
+    IF( IERR/=0 .OR. IFIRSTREC/=1 ) THEN
+      WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_GET_CDF]: first record must begin at the grouped period boundary: ', &
+      & TRIM(ROFCDF%CNAME),TRIM(CMESSAGE)
+      STOP 9
+    ENDIF
+    WRITE(LOGNAM,*) 'NetCDF forcing file opened:',TRIM(ROFCDF%CNAME), &
+    & ' calendar=',TRIM(ROF_TIME_AXIS%CALENDAR),' interval[min]=',ROF_TIME_AXIS%DT_MINUTES
     ROFCDF%NSTART=KMIN
     ROFCDF%NRECSTART=IRECINP
     WRITE(LOGNAM,*) 'NetCDF forcing file opened:',TRIM(ROFCDF%CNAME)
-  ELSEIF( SYEARIN<=0 .AND. LCROFFREQ_EXPLICIT ) THEN
+  ELSE
     IOFFSET=(INT(KMIN,KIND=JPIB)-INT(ROFCDF%NSTART,KIND=JPIB))*60_JPIB
     IF( DTIN<=0 ) THEN
       WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_GET_CDF]: DTIN must be positive for grouped NetCDF input.'
@@ -1328,6 +1026,107 @@ ENDDO
 WRITE(LOGNAM,*) "CMF::FORCING_END: end"
 
 END SUBROUTINE CMF_FORCING_END
+!####################################################################
+
+!####################################################################
+PURE FUNCTION FORCING_UTIL_UPPER(CTEXT) RESULT(CUPPER)
+CHARACTER(LEN=*),INTENT(IN) :: CTEXT
+CHARACTER(LEN=LEN(CTEXT))   :: CUPPER
+INTEGER                     :: I,ICODE
+CUPPER=CTEXT
+DO I=1,LEN(CTEXT)
+  ICODE=IACHAR(CTEXT(I:I))
+  IF( ICODE>=IACHAR('a') .AND. ICODE<=IACHAR('z') ) CUPPER(I:I)=ACHAR(ICODE-32)
+ENDDO
+END FUNCTION FORCING_UTIL_UPPER
+!####################################################################
+
+!####################################################################
+SUBROUTINE FORCING_UTIL_RESOLVE_FILE(KMINNOW,CIFNAME,CFILETAG,KMINFILE,IRECORD)
+! Resolve calendar-grouped file names and exact record offsets for both formats.
+! MIN2DATE/DATE2MIN and IMDAYS use the model's LLEAPYR calendar convention.
+USE CMF_UTILS_MOD, ONLY: MIN2DATE,SPLITDATE,DATE2MIN
+USE YOS_CMF_INPUT, ONLY: DTIN
+IMPLICIT NONE
+INTEGER(KIND=JPIM),INTENT(IN)  :: KMINNOW
+INTEGER(KIND=JPIM),INTENT(OUT) :: KMINFILE,IRECORD
+CHARACTER(LEN=*),INTENT(OUT)   :: CIFNAME
+CHARACTER(LEN=*),INTENT(OUT)   :: CFILETAG
+INTEGER(KIND=JPIM)              :: IDATE,IHHMM,IYEAR,IMON,IDAY,IPERIOD,IDTIN
+INTEGER(KIND=JPIB)              :: IOFFSET
+CHARACTER(LEN=8)                :: CDATE
+CDATE=' '
+IDTIN=INT(DTIN,KIND=JPIM)
+IF( DTIN<=0._JPRB .OR. REAL(IDTIN,KIND=JPRB)/=DTIN ) THEN
+  WRITE(LOGNAM,*) 'ERROR [CMF::FORCING]: DAY/MON/YEAR requires a positive IFRQ_INP.'
+  STOP 9
+ENDIF
+IF( MOD(86400,IDTIN)/=0 ) THEN
+  WRITE(LOGNAM,*) 'ERROR [CMF::FORCING]: DAY/MON/YEAR requires a positive IFRQ_INP that divides 24 hours.'
+  STOP 9
+ENDIF
+CALL MIN2DATE(KMINNOW,IDATE,IHHMM)
+CALL SPLITDATE(IDATE,IYEAR,IMON,IDAY)
+SELECT CASE(TRIM(CROFFREQ))
+CASE('DAY')
+  IPERIOD=IDATE
+  WRITE(CDATE,'(I4.4,I2.2,I2.2)') IYEAR,IMON,IDAY
+CASE('MON')
+  IPERIOD=IYEAR*10000+IMON*100+1
+  WRITE(CDATE,'(I4.4,I2.2)') IYEAR,IMON
+CASE('YEAR')
+  IPERIOD=IYEAR*10000+101
+  WRITE(CDATE,'(I4.4)') IYEAR
+CASE DEFAULT
+  WRITE(LOGNAM,*) 'ERROR [CMF::FORCING]: File-period resolver called for CROFFREQ=',TRIM(CROFFREQ)
+  STOP 9
+END SELECT
+KMINFILE=DATE2MIN(IPERIOD,0)
+IOFFSET=(INT(KMINNOW,KIND=JPIB)-INT(KMINFILE,KIND=JPIB))*60_JPIB
+IF( IOFFSET<0_JPIB .OR. MOD(IOFFSET,INT(IDTIN,KIND=JPIB))/=0_JPIB ) THEN
+  WRITE(LOGNAM,*) 'ERROR [CMF::FORCING]: requested time is not aligned with the forcing record interval:', &
+  & TRIM(CROFFREQ),KMINNOW,KMINFILE,DTIN
+  STOP 9
+ENDIF
+IRECORD=INT(IOFFSET/INT(IDTIN,KIND=JPIB)+1_JPIB,KIND=JPIM)
+CFILETAG=TRIM(CDATE)
+CIFNAME=TRIM(CROFDIR)//'/'//TRIM(CROFPRE)//TRIM(CFILETAG)//TRIM(CROFSUF)
+END SUBROUTINE FORCING_UTIL_RESOLVE_FILE
+!####################################################################
+
+!####################################################################
+SUBROUTINE FORCING_UTIL_READ_BIN(ISTREAM,CNAME,IRECORD,KMINNOW,FIELD)
+! Reuse each direct-access file until a grouped-file boundary is crossed.
+USE YOS_CMF_INPUT, ONLY: NXIN,NYIN
+USE CMF_UTILS_MOD, ONLY: INQUIRE_FID
+IMPLICIT NONE
+INTEGER(KIND=JPIM),INTENT(IN) :: ISTREAM,IRECORD,KMINNOW
+CHARACTER(LEN=*),INTENT(IN)   :: CNAME
+REAL(KIND=JPRM),INTENT(OUT)   :: FIELD(NXIN,NYIN)
+INTEGER(KIND=JPIM)            :: IOPEN,IOS
+CHARACTER(LEN=256)            :: CERR
+IF( .NOT. LBINOPEN(ISTREAM) .OR. TRIM(CBINNAME(ISTREAM))/=TRIM(CNAME) ) THEN
+  IF( LBINOPEN(ISTREAM) ) CLOSE(IBINUNIT(ISTREAM))
+  IOPEN=INQUIRE_FID()
+  OPEN(IOPEN,FILE=TRIM(CNAME),FORM='UNFORMATTED',ACCESS='DIRECT', &
+  & RECL=4*NXIN*NYIN,STATUS='OLD',IOSTAT=IOS,IOMSG=CERR)
+  IF( IOS/=0 ) THEN
+    WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_GET_BIN]: cannot open file at model minute ', &
+    & KMINNOW,': ',TRIM(CNAME),TRIM(CERR)
+    STOP 9
+  ENDIF
+  IBINUNIT(ISTREAM)=IOPEN
+  CBINNAME(ISTREAM)=TRIM(CNAME)
+  LBINOPEN(ISTREAM)=.TRUE.
+  WRITE(LOGNAM,*) 'Forcing file opened: ',TRIM(CNAME)
+ENDIF
+READ(IBINUNIT(ISTREAM),REC=IRECORD,IOSTAT=IOS,IOMSG=CERR) FIELD
+IF( IOS/=0 ) THEN
+  WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_GET_BIN]: read failed; model minute, file, record:', &
+  & KMINNOW,TRIM(CNAME),IRECORD,TRIM(CERR)
+  STOP 9
+ENDIF
+END SUBROUTINE FORCING_UTIL_READ_BIN
 !####################################################################
 
 END MODULE CMF_CTRL_FORCING_MOD

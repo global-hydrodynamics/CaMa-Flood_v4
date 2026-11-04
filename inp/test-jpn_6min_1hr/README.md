@@ -49,7 +49,7 @@ The matching existing hourly binary forcing setup is:
 
 ```text
 LINPCDF = .FALSE.
-LINPDAY = .TRUE.
+CROFFREQ = "DAY"
 LINTERP = .TRUE.
 IFRQ_INP = 1
 DROFUNIT = 3600000  # mm/hour to m/s; source unit per maintainer assessment

@@ -55,7 +55,7 @@ This creates `inpdim_test-mek_1deg.txt` and `inpmat_test-mek_1deg.bin` for the s
 
 ```text
 LINPCDF = .FALSE.
-LINPDAY = .TRUE.
+CROFFREQ = "DAY"
 LINTERP = .TRUE.
 IFRQ_INP = 24
 DROFUNIT = 86400000

@@ -128,7 +128,7 @@ The repository includes ERA5-Land-specific tools to retrieve runoff from CDS and
 CaMa-Flood reads runoff from plain Binary or NetCDF. File format, file grouping, record interval, and runoff units are separate settings:
 
 - `LINPCDF` selects Binary (`.FALSE.`) or NetCDF (`.TRUE.`).
-- `CROFFREQ` selects how time records are grouped into files. `DAY`, `MON`, and `YEAR` are the recommended modes; `SEQ` is retained for legacy or advanced cases.
+- `CROFFREQ` is required and selects how records are grouped into files. `DAY`, `MON`, and `YEAR` are the standard, recommended modes; `SEQ` is an advanced option for a continuous file.
 - `IFRQ_INP` sets the interval between forcing records in hours; the model derives `DTIN = IFRQ_INP × 3600` seconds.
 - `DROFUNIT` converts stored runoff values to a depth rate in `m/s`. It does not select a file or interval.
 
@@ -141,25 +141,25 @@ CaMa-Flood reads runoff from plain Binary or NetCDF. File format, file grouping,
 | `YEAR` | 00:00 on January 1 | `YYYY` | `runoff_2000.nc` |
 | `SEQ` | The explicitly configured or CF-resolved start time | none | `runoff.bin` or `CROFCDF` |
 
-For Binary `SEQ`, the fixed filename is `CROFDIR/CROFPRE+CROFSUF`; configure all of `SYEARIN`, `SMONIN`, `SDAYIN`, and `SHOURIN` to identify its first record. The model validates that the simulation fits within the file's complete Float32 records. It never infers the start date from the simulation start or filename. NetCDF `SEQ` continues to use `CROFCDF`.
+`CROFFREQ` must be present in every v5 `NFORCE` group. `LINPDAY` was removed from v5; an old Namelist containing it is rejected with the Fortran Namelist error. Binary `SEQ` uses the fixed file `CROFDIR/CROFPRE+CROFSUF` and requires all four of `SYEARIN`, `SMONIN`, `SDAYIN`, and `SHOURIN` to identify its first record. NetCDF `SEQ` uses `CROFCDF` and keeps its CF-time or explicit-start behavior.
 
-For calendar-grouped modes, each file's record index is calculated from its calendar-period start. The initial implementation requires `IFRQ_INP` to divide 24 hours exactly; unsupported intervals are rejected. Starting partway through a day, month, or year selects the corresponding within-file record. Record times must align exactly to `DTIN`; the reader does not round an off-grid time. The file choice uses normalized model time (`KMIN` converted by `MIN2DATE`), so permissively accepted inputs such as `24:00` resolve to the next canonical date for filename selection. `DATE2MIN` itself is unchanged.
+For `DAY`, `MON`, and `YEAR`, the filename identifies the calendar period and the first record is at 00:00 on that period's first day. Record indices use the model calendar and `DTIN`; a simulation starting partway through a period selects the matching record. `IFRQ_INP` must divide 24 hours exactly, and requested times must align with `DTIN`. Do not set `SYEARIN`, `SMONIN`, `SDAYIN`, or `SHOURIN` with these modes; arbitrary first-record offsets are not supported. The resolver uses normalized model time (`KMIN` converted by `MIN2DATE`) for filenames.
 
-`CROFFREQ` is the new setting. If omitted, the model preserves legacy behavior: Binary uses daily files regardless of `LINPDAY`; NetCDF uses daily files when `LINPDAY=.TRUE.` and one sequence file when `.FALSE.`. `LINPDAY` remains accepted for old Namelists. When both settings are explicitly supplied, `.TRUE.` agrees only with `CROFFREQ="DAY"`, and `.FALSE.` agrees only with `CROFFREQ="SEQ"`; leave `LINPDAY` out when explicitly selecting `MON` or `YEAR`.
+This v5 interface intentionally has one file-grouping setting: `CROFFREQ`. It is required, and the supported values are `DAY`, `MON`, `YEAR`, and `SEQ`.
 
 ### Plain Binary requirements
 
 Each Binary record is headerless direct-access data containing one `NXIN × NYIN` field of 4-byte floating-point values. Longitude/x varies fastest. Latitude row order must match the `OLAT` used to generate the Input Matrix. `LINPEND=.FALSE.` reads native byte order; set it `.TRUE.` when the file uses the opposite byte order. The reader does not use CTL metadata to infer dimensions, coordinates, units, record count, or missing values.
 
-For `DAY`, `MON`, and `YEAR`, the date-tagged filename follows the table above and records are indexed from the model calendar; `SYEARIN` fields do not override these Binary period boundaries. For `SEQ`, each record represents one `DTIN` interval in the fixed file, and all four `SYEARIN`, `SMONIN`, `SDAYIN`, and `SHOURIN` values define its first record. Binary has no calendar metadata, so the user must make its record dates consistent with `LLEAPYR`: Gregorian leap days when `.TRUE.`, or 365-day years when `.FALSE.`. The reader reuses each active file and closes it when changing periods or when forcing is finalized. With `LROSPLIT`, total and subsurface runoff remain separate Binary files with matching grouping and record indices, using `CROF*` and `CSUB*` settings respectively.
+For Binary `DAY`, `MON`, and `YEAR`, the date-tagged filename follows the table above and records are indexed from the model calendar. These modes always begin at 00:00 on the first day of the named period; explicit start-date fields are rejected. For `SEQ`, each record represents one `DTIN` interval in the fixed file, and all four `SYEARIN`, `SMONIN`, `SDAYIN`, and `SHOURIN` values define its first record. Binary has no calendar metadata, so the user must make its record dates consistent with `LLEAPYR`: Gregorian leap days when `.TRUE.`, or 365-day years when `.FALSE.`. The reader reuses each active file and closes it when changing periods or when forcing is finalized. With `LROSPLIT`, total and subsurface runoff remain separate Binary files with matching grouping and record indices, using `CROF*` and `CSUB*` settings respectively.
 
 ### NetCDF requirements and time validation
 
 Build with NetCDF support (`UseCDF_CMF`) and set `LINPCDF=.TRUE.`. The selected numeric runoff variable must be three-dimensional with Fortran-interface shape `(NXIN, NYIN, time)`. Supplied examples use NetCDF dimension order `(time, latitude, longitude)`, with x/longitude varying fastest in each field; arbitrary dimension orders are not guaranteed. `CVNROF` selects runoff, and `CVNSUB` selects the optional subsurface variable when `LROSPLIT` is enabled. The model does not use runoff `units`, coordinate values, or `_FillValue` to convert/check the field against the Input Matrix.
 
-For `DAY`, `MON`, or `YEAR` with an explicit `CROFFREQ`, the reader selects the date-tagged file and caches it until a period switch. With `SYEARIN<=0`, each opened file must provide `CVNTIME` both as the time dimension and as a same-named one-dimensional CF coordinate variable. The existing resolver checks the requested timestamp, time interval, calendar, increasing/evenly spaced records, coverage, supported units, and optional contiguous time bounds. Supported CF units are seconds, minutes, hours, or days `since` a reference date; supported calendars are `standard`, `gregorian`, `proleptic_gregorian`, `365_day`, and `noleap`, and must agree with `LLEAPYR`. With `SYEARIN>0`, the explicit timestamp identifies the first forcing period and must be at the corresponding period boundary (midnight for `DAY`, day 1 at midnight for `MON`, January 1 at midnight for `YEAR`); record positions are still counted from that file-period boundary. For backward compatibility, NetCDF daily mode selected only through legacy `LINPDAY` retains its old within-day indexing and does not validate each file's CF time coordinate.
+For `DAY`, `MON`, and `YEAR`, the reader selects the date-tagged file and caches it until a period switch. Every opened grouped NetCDF file must provide `CVNTIME` as both the time dimension and a same-named one-dimensional CF coordinate variable; its first record or CF interval lower bound must begin at the file period boundary. The resolver checks the requested timestamp, time interval, calendar, increasing and evenly spaced records, coverage, supported units, and optional contiguous time bounds. Supported CF units are seconds, minutes, hours, or days `since` a reference date; supported calendars are `standard`, `gregorian`, `proleptic_gregorian`, `365_day`, and `noleap`, and must agree with `LLEAPYR`. Explicit start-date fields are not accepted with these standard grouped modes.
 
-For NetCDF `SEQ`, set `CROFCDF` to the file containing the series. With `SYEARIN<=0`, `CVNTIME` names the dimension and coordinate variable used to resolve the simulation start from CF metadata. With `SYEARIN>0`, `SYEARIN`, `SMONIN`, `SDAYIN`, and `SHOURIN` specify the explicit first-record time and the existing elapsed-time record indexing is used. NetCDF `SEQ` keeps one file open for the run. NetCDF grouped files are opened and validated when first needed, cached while active, then closed on a file switch or at finalization.
+For NetCDF `SEQ`, set `CROFCDF` to the file containing the series. When `SYEARIN<=0`, omit `SMONIN`, `SDAYIN`, and `SHOURIN`; `CVNTIME` names the dimension and coordinate variable used to resolve the simulation start from CF metadata. When `SYEARIN>0`, provide all four date fields to specify the first-record time, and the existing elapsed-time record indexing is used. NetCDF `SEQ` keeps one file open for the run. NetCDF grouped files are opened and validated when first needed, cached while active, then closed on a file switch or at finalization.
 
 `LWEVAP` behavior is not extended by this refactor. `CMF_FORCING_PUT` expects a third input-buffer field when it is enabled, while the current runoff reader only loads runoff and optional subsurface runoff; do not assume these runoff formats supply evaporation through this path. Verify the relevant coupled setup before enabling it.
 
@@ -170,14 +170,13 @@ For NetCDF `SEQ`, set `CROFCDF` to the file containing the series. With `SYEARIN
 | `CDIMINFO` | `NDIMTIME` | Path to `inpdim_<ROFFTAG>.txt`, the map and input-grid dimensions/bounds for the matrix. |
 | `IFRQ_INP` | `NDIMTIME` | Runoff record interval in hours; independent of file grouping and units. |
 | `LINPCDF` | `NFORCE` | `.FALSE.` selects Binary; `.TRUE.` selects NetCDF and requires a NetCDF-enabled executable. |
-| `CROFFREQ` | `NFORCE` | `DAY`, `MON`, `YEAR`, or `SEQ`; when omitted, use the legacy `LINPDAY` behavior. |
-| `LINPDAY` | `NFORCE` | Legacy selector: `.TRUE.` means `DAY`; `.FALSE.` means `SEQ` for NetCDF. Binary's legacy default remains `DAY`. |
+| `CROFFREQ` | `NFORCE` | Required: `DAY`, `MON`, `YEAR`, or advanced `SEQ`. |
 | `DROFUNIT` | `NFORCE` | Divisor converting stored runoff to `m/s`; derive it from units and temporal meaning. |
 | `CROFDIR`, `CROFPRE`, `CROFSUF` | `NFORCE` | Directory, prefix, and suffix for date-grouped Binary/NetCDF files; the grouping tag is inserted between prefix and suffix. Binary `SEQ` uses the same components without a tag. |
 | `CROFCDF` | `NFORCE` | Single NetCDF file used by `SEQ`. |
 | `CVNROF`, `CVNSUB` | `NFORCE` | NetCDF variable names for runoff and optional subsurface runoff. |
 | `CVNTIME` | `NFORCE` | NetCDF time dimension name; auto-CF mode also requires a same-named coordinate variable. |
-| `SYEARIN`, `SMONIN`, `SDAYIN`, `SHOURIN` | `NFORCE` | Explicit first-record time. Required for Binary `SEQ`; for NetCDF `SEQ`, use `SYEARIN<=0` to use CF time. Grouped NetCDF explicit dates must match their first period boundary. |
+| `SYEARIN`, `SMONIN`, `SDAYIN`, `SHOURIN` | `NFORCE` | Use only with `SEQ`. All four are required for Binary `SEQ`; NetCDF `SEQ` uses CF time when `SYEARIN<=0`, or all four for an explicit first-record time. |
 | `LINPEND` | `NFORCE` | Binary byte-order conversion; false means native order. |
 | `LINTERP`, `CINPMAT` | `NFORCE` | Enable Input Matrix mapping and select `inpmat_<ROFFTAG>.bin`. |
 
@@ -197,7 +196,6 @@ For NetCDF `SEQ`, set `CROFCDF` to the file containing the series. With `SYEARIN
   CROFSUF  = ".nc"
   CVNROF   = "runoff"
   CVNTIME  = "time"
-  SYEARIN  = 0              ! resolve records using each annual file's CF time axis
   LINTERP  = .TRUE.
   CINPMAT  = "/data/map/inpmat_my-runoff.bin"
 /
@@ -219,7 +217,7 @@ The legacy daily Binary convention remains valid:
 /
 ```
 
-If `CROFFREQ` is omitted, existing legacy Namelists remain supported. An explicitly stated `LINPDAY` must not contradict an explicitly stated `CROFFREQ`. For any format, compare the requested first/last dates and sample records with the source data, and check plausible runoff/discharge ranges.
+Use one explicit `CROFFREQ` in every v5 configuration. For `SEQ`, users are responsible for preparing complete files whose first-record time and record alignment match the simulation. For every mode, compare requested dates and sample records with the source data, and check plausible runoff/discharge ranges.
 
 The model converts NaN values to its internal `RMIS` sentinel (default `1.0e20`) and clamps negative runoff to zero. It does not generally interpret a CTL `undef` or NetCDF `_FillValue` as missing data. Convert missing source values explicitly to configured `RMIS` or to zero when zero runoff is intended; do not leave positive fill values such as `1.0e20` unless that value matches `RMIS`.
 

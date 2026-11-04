@@ -31,7 +31,7 @@ The script copies `src_main/MAIN_cmf` into `RUNDIR`, changes to that directory, 
 
 Build the NetCDF-enabled executable with `./gosh_sample/compile_netcdf.sh` from any directory, then run either sample from `gosh_sample/`:
 
-These annual samples use `IFRQ_INP=24` and `DROFUNIT=86400000` for daily mm/day values; file grouping is selected separately by `CROFFREQ="YEAR"`. The [runoff input guide](../inp/README.md#supported-input-formats-and-simulation-settings) documents the four grouping modes, legacy `LINPDAY` behavior, and CF-time checks.
+These annual samples use `IFRQ_INP=24` and `DROFUNIT=86400000` for daily mm/day values; file grouping is selected separately by `CROFFREQ="YEAR"`. The [runoff input guide](../inp/README.md#supported-input-formats-and-simulation-settings) documents the required `CROFFREQ` setting, four grouping modes, SEQ start-time rules, and CF-time checks.
 
 ```sh
 ./gosh_sample/compile_netcdf.sh

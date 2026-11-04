@@ -156,7 +156,6 @@ CVNROF = "${CVNROF}"      ! Runoff data variable within each annual file.
 CROFDIR = "${RUNOFF_DIR}" ! Directory containing annual runoff NetCDF files.
 CROFPRE = "runoff"         ! Annual filename prefix: runoffYYYY.nc.
 CROFSUF = ".nc"            ! Annual filename suffix.
-SYEARIN = 0                ! Resolve each file's requested record from CF time metadata.
 /
 &NOUTPUT
 COUTDIR = "./"            ! Output directory relative to the model run directory.
