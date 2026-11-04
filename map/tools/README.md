@@ -108,6 +108,10 @@ The MPI utility test compiles the shared MPI tools into a temporary directory, r
 
 Different workflows have different `location.txt` contracts. Allocation tools intentionally accept one high-resolution river-network area; input-matrix generation, regional matrix generation, and permanent-water aggregation process multiple areas sequentially. See the [verified design rationale and validation boundary](../../docs/map_data_tools_plan.md#high-resolution-area-handling-contract).
 
+## NetCDF output compression
+
+The individual-map converter and consolidated-map writer produce NetCDF-4 with lossless deflate level 3 and shuffle. The high-resolution converter has the same default and supports an explicit level override. The channel-parameter writer retains its existing NetCDF classic 64-bit-offset format for compatibility, so that product is not compressed. See the shared [v5 NetCDF output conventions](../../docs/netcdf_output_conventions.md).
+
 ## Individual map NetCDF conversion
 
 The model accepts independently stored Binary or NetCDF map rasters when `LMAPCDF=.FALSE.`. Convert an individual registered Binary map without modifying its source:

@@ -116,6 +116,8 @@ Both converters assume the selected source variable contains ERA5-Land runoff ac
 For each UTC-date group, the NetCDF converter's default `--first-step keep` retains the first accumulated value; `zero` and `missing` are alternatives. When a difference is negative, both converters substitute the current accumulated value; both then clip negative values to zero by default. The binary converter hardcodes the same first-record and negative-value behavior. These statements describe current implementation only; they do not establish the scientifically correct attribution at a daily boundary.
 
 ### NetCDF output
+`convert_CMF_nc.py` writes NetCDF-4 with lossless deflate level 3 and shuffle; the runoff variable remains Float32. Downloaded source NetCDF files are external inputs and need not use this compression. See the shared [v5 NetCDF output conventions](../../docs/netcdf_output_conventions.md).
+
 
 Edit `s02-convert_CMF_nc.sh` to match the downloader's source directory, file grouping, timestep, and dates. Choose `MERGE_UNIT="monthly"` or `"yearly"`. The script creates `runoff_YYYYMM.nc` or `runoff_YYYY.nc` and a `runoff_info_CaMaFlood.txt` summary. The output variable defaults to `runoff`, is stored as float32 with fill value `1.0e20`, is ordered north-to-south by default, and has `units="mm"` plus a `time_step_hours` attribute. It also retains the source timestamps as the output time coordinate.
 

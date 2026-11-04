@@ -612,7 +612,7 @@ IF( REGIONTHIS==1 )THEN   !! write restart only on master node
   
   !! Define coordinate variables.
   CALL NCERROR( NF90_DEF_VAR(NCID, 'rivsto', NF90_DOUBLE, (/LONID,LATID,TIMEID/), &
-                             VARID,DEFLATE_LEVEL=6), 'Creating Variable')
+                             VARID,SHUFFLE=.TRUE.,DEFLATE_LEVEL=3), 'Creating Variable')
   CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"river storage" ) )
   CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m3") )
   CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',REAL(DMIS,KIND=JPRD)), &
@@ -620,32 +620,32 @@ IF( REGIONTHIS==1 )THEN   !! write restart only on master node
   
    
   CALL NCERROR( NF90_DEF_VAR(NCID, 'fldsto', NF90_DOUBLE, (/LONID,LATID,TIMEID/), &
-                             VARID,DEFLATE_LEVEL=6), 'Creating Variable')  
+                             VARID,SHUFFLE=.TRUE.,DEFLATE_LEVEL=3), 'Creating Variable')
   CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"flood plain storage" ) )
   CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m3") )
   CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',REAL(DMIS,KIND=JPRD)) )
   
   IF ( .not. LSTOONLY )THEN           !! default restart with previous t-step outflw
     CALL NCERROR( NF90_DEF_VAR(NCID, 'rivout_pre', NF90_DOUBLE, (/LONID,LATID,TIMEID/),&
-                               VARID,DEFLATE_LEVEL=6), 'Creating Variable')  
+                               VARID,SHUFFLE=.TRUE.,DEFLATE_LEVEL=3), 'Creating Variable')
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"river outflow prev" ) )
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m3/s") )
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',REAL(DMIS,KIND=JPRD)) )
     
     CALL NCERROR( NF90_DEF_VAR(NCID, 'fldout_pre', NF90_DOUBLE, (/LONID,LATID,TIMEID/), &
-                               VARID,DEFLATE_LEVEL=6), 'Creating Variable')  
+                               VARID,SHUFFLE=.TRUE.,DEFLATE_LEVEL=3), 'Creating Variable')
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"floodplain outflow prev" ) )
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m3/s") )
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',REAL(DMIS,KIND=JPRD)) )
     
     CALL NCERROR( NF90_DEF_VAR(NCID, 'rivdph_pre', NF90_DOUBLE, (/LONID,LATID,TIMEID/), &
-                               VARID,DEFLATE_LEVEL=6), 'Creating Variable')  
+                               VARID,SHUFFLE=.TRUE.,DEFLATE_LEVEL=3), 'Creating Variable')
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"river depth prev" ) )
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m") )
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',REAL(DMIS,KIND=JPRD)) )
     
     CALL NCERROR( NF90_DEF_VAR(NCID, 'fldsto_pre', NF90_DOUBLE, (/LONID,LATID,TIMEID/), &
-                               VARID,DEFLATE_LEVEL=6), 'Creating Variable')  
+                               VARID,SHUFFLE=.TRUE.,DEFLATE_LEVEL=3), 'Creating Variable')
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"floodplain storage prev" ) )
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m3") )
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',REAL(DMIS,KIND=JPRD)) )
@@ -653,7 +653,7 @@ IF( REGIONTHIS==1 )THEN   !! write restart only on master node
     !! Previous-step bifurcation flow is part of a normal Restart only.
     IF ( LPTHOUT ) THEN
       CALL NCERROR( NF90_DEF_VAR(NCID, 'pthflw_pre', NF90_DOUBLE, (/NPTHOUTID,NPTHLEVID,TIMEID/),&
-                                 VARID,DEFLATE_LEVEL=6) ) 
+                                 VARID,SHUFFLE=.TRUE.,DEFLATE_LEVEL=3) )
       CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"bifurcation outflow pre" ) )
       CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m3/s") )
     ENDIF
@@ -661,7 +661,7 @@ IF( REGIONTHIS==1 )THEN   !! write restart only on master node
   
   IF ( LGDWDLY ) THEN
     CALL NCERROR( NF90_DEF_VAR(NCID, 'gdwsto', NF90_DOUBLE, (/LONID,LATID,TIMEID/), &
-                             VARID,DEFLATE_LEVEL=6), 'Creating Variable gdwsto')  
+                             VARID,SHUFFLE=.TRUE.,DEFLATE_LEVEL=3), 'Creating Variable gdwsto')
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"ground water storage" ) )
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m3") )
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',REAL(DMIS,KIND=JPRD)) )
@@ -669,7 +669,7 @@ IF( REGIONTHIS==1 )THEN   !! write restart only on master node
   
   IF ( LDAMOUT ) THEN
     CALL NCERROR( NF90_DEF_VAR(NCID, 'damsto', NF90_DOUBLE, (/LONID,LATID,TIMEID/), &
-                             VARID,DEFLATE_LEVEL=6), 'Creating Variable damsto')
+                             VARID,SHUFFLE=.TRUE.,DEFLATE_LEVEL=3), 'Creating Variable damsto')
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"dam reservoir storage" ) )
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m3") )
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',REAL(DMIS,KIND=JPRD)) )
@@ -677,7 +677,7 @@ IF( REGIONTHIS==1 )THEN   !! write restart only on master node
   
   IF ( LLEVEE ) THEN
     CALL NCERROR( NF90_DEF_VAR(NCID, 'levsto', NF90_DOUBLE, (/LONID,LATID,TIMEID/), &
-                             VARID,DEFLATE_LEVEL=6), 'Creating Variable levsto')  
+                             VARID,SHUFFLE=.TRUE.,DEFLATE_LEVEL=3), 'Creating Variable levsto')
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"storage exceeds levee protection" ) )
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m3") )
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',REAL(DMIS,KIND=JPRD)) )

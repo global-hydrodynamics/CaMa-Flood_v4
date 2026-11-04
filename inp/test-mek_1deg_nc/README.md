@@ -21,10 +21,12 @@ From the repository root, regenerate the initial two-year sample with:
 python3 -B inp/test-mek_1deg_nc/s00-convert_binary_to_netcdf.py
 ```
 
-The script reads `inp/test-mek_1deg/runoff/Roff____YYYYMMDD.one` and writes annual files in this directory. It uses the external command-line tools `ncgen` and `ncdump` (from a NetCDF installation), plus Python's standard library. Existing files are protected unless `--overwrite` is specified. The conversion compares the source float32 values against the NetCDF values after writing and reading them. The configured default period can be extended through 2009 in the script.
+The script reads `inp/test-mek_1deg/runoff/Roff____YYYYMMDD.one` and writes annual files in this directory. It uses the external command-line tools `ncgen`, `nccopy`, and `ncdump` (from a NetCDF installation), plus Python's standard library. Existing files are protected unless `--overwrite` is specified. The output is NetCDF-4 with lossless deflate level 3 and shuffle; the conversion compares the source Float32 values against the compressed NetCDF values after writing and reading them. The configured default period can be extended through 2009 in the script.
 
 The initial 2000–2001 generation was checked against all 731 binary daily fields: each NetCDF field round-tripped exactly as float32; the source data had no `-999`, NaN, or Inf values in that period. This is an exact format-conversion check, not scientific validation.
 
 `mek02-longterm_netcdf.sh` selects this dataset using `ROFFTAG="test-mek_1deg_nc"` and reuses the map-specific `inpmat_test-mek_1deg.bin` by setting `INPMAT_TAG="test-mek_1deg"`. The sample was used in the two-year restart-connected v5 run described in [`gosh_sample/README.md`](../../gosh_sample/README.md).
 
 The two compact NetCDF files are intended to be GitHub-tracked sample data. Their inclusion in a future downloadable v5 package remains undecided until the v5 packaging workflow is defined.
+
+See the shared [v5 NetCDF output conventions](../../docs/netcdf_output_conventions.md) for the repository-wide defaults and exceptions.

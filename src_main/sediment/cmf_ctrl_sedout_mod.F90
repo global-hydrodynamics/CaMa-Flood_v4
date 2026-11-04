@@ -172,7 +172,7 @@ contains
     
     !===
     call NCERROR( nf90_def_var(varout(jf)%ncid, varout(jf)%cvname, nf90_float, &
-                  (/lonid,latid,sedid,timeid/), varout(jf)%varid,deflate_level=ndlevel),     &
+                  (/lonid,latid,sedid,timeid/), varout(jf)%varid,shuffle=.true.,deflate_level=ndlevel),     &
                   'creating variable')
     
     call NCERROR( nf90_put_att(varout(jf)%ncid, varout(jf)%varid, 'long_name', trim(varout(jf)%cvlname)) )

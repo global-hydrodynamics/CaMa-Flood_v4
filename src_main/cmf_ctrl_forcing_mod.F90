@@ -3,16 +3,17 @@ MODULE CMF_CTRL_FORCING_MOD
 !* PURPOSE: Manage CaMa-Flood forcing
 !
 !* CONTAINS:
-! -- CMF_FORCING_NMLIST : Read setting from Namelist
-! -- CMF_FORCING_INIT   : Initialize forcing data file
-! -- CMF_FORCING_PUT    : Put forcing data (PBUFF) to CaMa-Flood
-! -- CMF_FORCING_GET    : Read forcing data from file (save as "data buffer" PBUFF)
-! -- CMF_FORCING_END    : Finalize forcing data file
+! -- CMF_FORCING_NMLIST : Read and validate forcing Namelist settings
+! -- CMF_FORCING_INIT   : Initialize forcing and input-matrix sources
+! -- CMF_FORCING_GET    : Read and sanitize forcing fields
+! -- CMF_FORCING_COM    : Interpolate flood fraction to the runoff grid
+! -- CMF_FORCING_PUT    : Map runoff fields to CaMa-Flood catchments
+! -- CMF_FORCING_END    : Close forcing files
 !
-!* SHARED UTILITIES (after CMF_FORCING_END):
-! -- FORCING_UTIL_RESOLVE_FILE : Resolve calendar file period and record index
-! -- FORCING_UTIL_READ_BIN     : Reuse a direct-access Binary input file
+!* SHARED UTILITIES (after CMF_FORCING_END, in source order):
 ! -- FORCING_UTIL_UPPER        : Normalize a configuration value
+! -- FORCING_UTIL_RESOLVE_FILE : Resolve grouped filename and record index
+! -- FORCING_UTIL_READ_BIN     : Reuse a direct-access Binary input file
 !
 ! (C) D.Yamazaki & E. Dutra  (U-Tokyo/FCUL)  Aug 2019
 !
@@ -22,8 +23,8 @@ MODULE CMF_CTRL_FORCING_MOD
 !   You may not use this file except in compliance with the License.
 !   You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-2.0
 !
-! Unless required by applicable law or agreed to in writing, software distributed under the License is 
-!  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+! Unless required by applicable law or agreed to in writing, software distributed under the License is
+!  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
 USE PARKIND1,                ONLY: JPIM, JPIB, JPRB, JPRM
@@ -42,14 +43,14 @@ LOGICAL                         :: LINPEND             !! true  for input    end
 CHARACTER(LEN=16)               :: CROFFREQ            !! Required runoff file grouping: DAY, MON, YEAR, or SEQ
 
 LOGICAL                         :: LINTERP             !! true : runoff interpolation using input matrix
-LOGICAL                         :: LITRPCDF            !! true : netCDF input matrix file 
+LOGICAL                         :: LITRPCDF            !! true : netCDF input matrix file
 CHARACTER(LEN=256)              :: CINPMAT             !! Input matrix filename
 REAL(KIND=JPRB)                 :: DROFUNIT            !! runoff unit conversion ( InpUnit/DROFUNIT = m3/m2/s)
 ! Binary forcing (total runoff / surface runoff when LROSPLIT)
 CHARACTER(LEN=256)              :: CROFDIR             !! Forcing: runoff directory
 CHARACTER(LEN=256)              :: CROFPRE             !! Forcing: runoff prefix
 CHARACTER(LEN=256)              :: CROFSUF             !! Forcing: runoff suffix
-! 
+!
 CHARACTER(LEN=256)              :: CSUBDIR             !! Forcing: sub-surface runoff directory
 CHARACTER(LEN=256)              :: CSUBPRE             !! Forcing: sub-surface runoff prefix
 CHARACTER(LEN=256)              :: CSUBSUF             !! Forcing: sub-surface runoff suffix
@@ -69,8 +70,6 @@ NAMELIST/NFORCE/   LINTERP, LINPEND, LINPCDF, LITRPCDF, CROFFREQ, CINPMAT, DROFU
                     CROFCDF,CVNTIME, CVNROF,  CVNSUB,  SYEARIN,  SMONIN,SDAYIN,SHOURIN
 
 !* local variable
-INTEGER(KIND=JPIM)              :: NCID        !! netCDF file     ID
-INTEGER(KIND=JPIM)              :: NVARID(2)   !! netCDF variable ID
 INTEGER(KIND=JPIM)              :: IBINUNIT(2)=0
 LOGICAL                         :: LBINOPEN(2)=.FALSE.
 CHARACTER(LEN=512)              :: CBINNAME(2)=' '
@@ -85,17 +84,18 @@ INTEGER(KIND=JPIM)              :: NSTART      !! Start date of netNDF (in KMIN)
 INTEGER(KIND=JPIM)              :: NRECSTART   !! record corresponding to simulation start
 LOGICAL                         :: LAUTOTIME    !! true: use the NetCDF CF time axis
 END TYPE TYPEROF
-TYPE(TYPEROF)                   :: ROFCDF      !! Derived type for Runoff input 
+TYPE(TYPEROF)                   :: ROFCDF      !! Derived type for Runoff input
 TYPE(cf_time_axis)              :: ROF_TIME_AXIS
 #endif
 CONTAINS
 !####################################################################
 !####################################################################
-! -- CMF_FORCING_NMLIST : Read setting from Namelist
-! -- CMF_FORCING_INIT   : Initialize forcing data file
-! -- CMF_FORCING_PUT    : Put forcing data (PBUFF) to CaMa-Flood
-! -- CMF_FORCING_GET    : Read forcing data from file (save as "data buffer" PBUFF)
-! -- CMF_FORCING_END    : Finalize forcing data file
+! -- CMF_FORCING_NMLIST : Read and validate forcing Namelist settings
+! -- CMF_FORCING_INIT   : Initialize forcing and input-matrix sources
+! -- CMF_FORCING_GET    : Read and sanitize forcing fields
+! -- CMF_FORCING_COM    : Interpolate flood fraction to the runoff grid
+! -- CMF_FORCING_PUT    : Map runoff fields to CaMa-Flood catchments
+! -- CMF_FORCING_END    : Close forcing files
 !
 !####################################################################
 SUBROUTINE CMF_FORCING_NMLIST
@@ -116,7 +116,8 @@ WRITE(LOGNAM,*) "!---------------------!"
 !*** 1. Open the namelist file
 NSETFILE=INQUIRE_FID()
 OPEN(NSETFILE,FILE=CSETFILE,STATUS="OLD")
-WRITE(LOGNAM,*) "CMF::FORCING_NMLIST: namelist OPEN in unit: ", TRIM(CSETFILE), NSETFILE 
+WRITE(LOGNAM,*) "CMF::FORCING_NMLIST: START"
+WRITE(LOGNAM,*) "CMF::FORCING_NMLIST: namelist OPEN in unit: ", TRIM(CSETFILE), NSETFILE
 
 !*** 2. Set default forcing and input-matrix options
 LINPCDF =.FALSE.
@@ -156,6 +157,12 @@ IF( INMLIOS/=0 ) THEN
   WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_NMLIST]: invalid NFORCE namelist: ',TRIM(CNMLMSG)
   STOP 9
 ENDIF
+#ifndef UseCDF_CMF
+IF( LINPCDF ) THEN
+  WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_NMLIST]: LINPCDF requires a NetCDF-enabled build.'
+  STOP 9
+ENDIF
+#endif
 IF( LEN_TRIM(CROFFREQ)==0 ) THEN
   WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_NMLIST]: CROFFREQ is required; choose DAY, MON, YEAR, or SEQ.'
   STOP 9
@@ -272,7 +279,7 @@ IF( TRIM(CROFFREQ)=='SEQ' .AND. SYEARIN>0 ) THEN
   WRITE(LOGNAM,*) 'Explicit sequence forcing start KMIN:',KMINSTAIN
 ENDIF
 
-WRITE(LOGNAM,*) "CMF::FORCING_NMLIST: end" 
+WRITE(LOGNAM,*) "CMF::FORCING_NMLIST: END"
 
 END SUBROUTINE CMF_FORCING_NMLIST
 !####################################################################
@@ -284,11 +291,12 @@ END SUBROUTINE CMF_FORCING_NMLIST
 !####################################################################
 SUBROUTINE CMF_FORCING_INIT(LECMF2LAKEC)
 ! Initialize runoff and input-matrix sources selected by the namelist.
+! -- Internal: CMF_FORCING_INIT_CDF (NetCDF build), CMF_INPMAT_INIT_CDF, CMF_INPMAT_INIT_BIN
 ! -- called from "Main Program / Coupler"
 IMPLICIT NONE
 
 INTEGER(KIND=JPIM),OPTIONAL,INTENT(IN) :: LECMF2LAKEC   !! Lake coupling: this is currently only used in ECMWF
-WRITE(LOGNAM,*) "CMF::FORCING_INIT: "
+WRITE(LOGNAM,*) "CMF::FORCING_INIT: START"
 IF(PRESENT(LECMF2LAKEC)) WRITE(LOGNAM,*) "CMF::FORCING_INIT: LECMF2LAKEC"
 
 IBINUNIT=0
@@ -301,7 +309,7 @@ ROFCDF%NCID=-1
 !*** 1. Initialize the NetCDF runoff source when selected
 IF( LINPCDF ) THEN
 #ifdef UseCDF_CMF
-  WRITE(LOGNAM,*) "CMF::FORCING_INIT: Initialize runoff forcing file (only for netCDF)" 
+  WRITE(LOGNAM,*) "CMF::FORCING_INIT: Initialize runoff forcing file (only for netCDF)"
   CALL CMF_FORCING_INIT_CDF
 #endif
 ENDIF
@@ -318,18 +326,19 @@ IF( LINTERP ) THEN
   ELSE
     CALL CMF_INPMAT_INIT_BIN
   ENDIF
-ENDIF 
+ENDIF
 
-WRITE(LOGNAM,*) "CMF::FORCING_INIT: end" 
+WRITE(LOGNAM,*) "CMF::FORCING_INIT: END"
 
 CONTAINS
 !==========================================================
-!+ CMF_FORCING_INIT_CDF : open netCDF forcing
-!+ CMF_INPMAT_INIT_CDF      :  open runoff interporlation matrix (inpmat)
-!+ CMF_INPMAT_INIT_BIN      :  open runoff interporlation matrix (inpmat)
+! -- CMF_FORCING_INIT_CDF : Initialize NetCDF runoff input (NetCDF build only)
+! -- CMF_INPMAT_INIT_CDF  : Read NetCDF runoff input matrix
+! -- CMF_INPMAT_INIT_BIN  : Read Binary runoff input matrix
 !==========================================================
 #ifdef UseCDF_CMF
 SUBROUTINE CMF_FORCING_INIT_CDF
+! Open the SEQ NetCDF source and resolve its initial time record.
 USE YOS_CMF_INPUT,           ONLY: LROSPLIT, LWEVAP, DTIN, LLEAPYR
 USE YOS_CMF_TIME,            ONLY: KMINSTAIN, KMINSTART, KMINEND
 USE CMF_UTILS_MOD,           ONLY: NCERROR,MIN2DATE,SPLITHOUR,DATE2MIN
@@ -358,7 +367,7 @@ IF( TRIM(CROFFREQ)=='SEQ' ) THEN
   ENDIF
 
   WRITE(LOGNAM,*) "CMF::FORCING_INIT_CDF:", TRIM(ROFCDF%CNAME), TRIM(ROFCDF%CVAR(1))
-  
+
   !*** 2. Open the source and identify its data and time variables
   ISTATUS=NF90_OPEN(TRIM(ROFCDF%CNAME),NF90_NOWRITE,ROFCDF%NCID)
   IF( ISTATUS/=NF90_NOERR ) THEN
@@ -366,18 +375,18 @@ IF( TRIM(CROFFREQ)=='SEQ' ) THEN
     CALL NCERROR(ISTATUS,'OPENING :'//ROFCDF%CNAME)
   ENDIF
   CALL NCERROR( NF90_INQ_VARID(ROFCDF%NCID,TRIM(ROFCDF%CVAR(1)),ROFCDF%NVARID(1)) )
-  
+
   IF ( LROSPLIT ) THEN
     CALL NCERROR( NF90_INQ_VARID(ROFCDF%NCID,ROFCDF%CVAR(2),ROFCDF%NVARID(2)) )
-  ENDIF 
+  ENDIF
   IF ( LWEVAP ) THEN
     CALL NCERROR( NF90_INQ_VARID(ROFCDF%NCID,ROFCDF%CVAR(3),ROFCDF%NVARID(3)) )
   ENDIF
   CALL NCERROR( NF90_INQ_DIMID(ROFCDF%NCID,CVNTIME,NTIMEID),'GETTING TIME ID FORCING RUNOFF')
   CALL NCERROR( NF90_INQUIRE_DIMENSION(NCID=ROFCDF%NCID,DIMID=NTIMEID,LEN=NCDFSTP),'GETTING TIME LENGTH')
-  
+
   WRITE(LOGNAM,*) "CMF::FORCING_INIT_CDF: CNAME,NCID,VARID", TRIM(ROFCDF%CNAME),ROFCDF%NCID,ROFCDF%NVARID(1)
-  
+
   !*** 3. Resolve the starting record and check time coverage
   ! CF time metadata selects the record at simulation start; explicit dates use legacy indexing.
   IF ( ROFCDF%LAUTOTIME ) THEN
@@ -425,6 +434,7 @@ END SUBROUTINE CMF_FORCING_INIT_CDF
 !==========================================================
 #ifdef UseCDF_CMF
 SUBROUTINE CMF_INPMAT_INIT_CDF(LECMF2LAKEC)
+! Read the forward matrix and optional inverse fields from NetCDF.
 USE YOS_CMF_INPUT,           ONLY: NX, NY, INPN, NXIN,NYIN
 USE YOS_CMF_MAP,             ONLY: NSEQMAX
 USE CMF_UTILS_MOD,           ONLY: INQUIRE_FID, NCERROR, mapD2vecD, mapI2vecI
@@ -439,6 +449,7 @@ REAL(KIND=JPRB),ALLOCATABLE     :: D2TMP(:,:,:)
 INTEGER(KIND=JPIM)              :: INPI
 INTEGER(KIND=JPIM)              :: VARID
 INTEGER(KIND=JPIM)              :: ISTATUS,VDIMIDS(1)
+INTEGER(KIND=JPIM)              :: NCID
 
 ! SAVE for OpenMP
 INTEGER(KIND=JPIM),SAVE         :: IX,IY,ILEV
@@ -458,7 +469,7 @@ CALL NCERROR (NF90_OPEN(CINPMAT,NF90_NOWRITE,NCID),'opening '//TRIM(CINPMAT) )
 ALLOCATE( D2TMP(NX,NY,INPN) )
 WRITE(LOGNAM,*)'INIT_MAP: inpa:',TRIM(CINPMAT)
 CALL NCERROR ( NF90_INQ_VARID(NCID,'inpa',VARID),'getting id' )
-CALL NCERROR ( NF90_GET_VAR(NCID,VARID,D2TMP,(/1,1,1/),(/NX,NY,INPN/)),'reading data' ) 
+CALL NCERROR ( NF90_GET_VAR(NCID,VARID,D2TMP,(/1,1,1/),(/NX,NY,INPN/)),'reading data' )
 DO INPI=1, INPN
   CALL mapD2vecD(D2TMP(:,:,INPI:INPI),INPA(:,INPI:INPI))
 END DO
@@ -469,7 +480,7 @@ ALLOCATE( I2TMP(NX,NY,INPN) )
 
 WRITE(LOGNAM,*)'INIT_MAP: inpx:',TRIM(CINPMAT)
 CALL NCERROR ( NF90_INQ_VARID(NCID,'inpx',VARID),'getting id' )
-CALL NCERROR ( NF90_GET_VAR(NCID,VARID,I2TMP,(/1,1,1/),(/NX,NY,INPN/)),'reading data' ) 
+CALL NCERROR ( NF90_GET_VAR(NCID,VARID,I2TMP,(/1,1,1/),(/NX,NY,INPN/)),'reading data' )
 DO INPI=1, INPN
   CALL mapI2vecI(I2TMP(:,:,INPI:INPI),INPX(:,INPI:INPI))
 END DO
@@ -477,7 +488,7 @@ END DO
 !** input matrix IYIN
 WRITE(LOGNAM,*)'INIT_MAP: inpy:',TRIM(CINPMAT)
 CALL NCERROR ( NF90_INQ_VARID(NCID,'inpy',VARID),'getting id' )
-CALL NCERROR ( NF90_GET_VAR(NCID,VARID,I2TMP,(/1,1,1/),(/NX,NY,INPN/)),'reading data' ) 
+CALL NCERROR ( NF90_GET_VAR(NCID,VARID,I2TMP,(/1,1,1/),(/NX,NY,INPN/)),'reading data' )
 DO INPI=1, INPN
   CALL mapI2vecI(I2TMP(:,:,INPI:INPI),INPY(:,INPI:INPI))
 END DO
@@ -491,26 +502,26 @@ IF(PRESENT(LECMF2LAKEC) .AND. (LECMF2LAKEC .NE. 0)) THEN
   ISTATUS = NF90_INQ_VARID(NCID, 'levI', VARID)
   IF ( ISTATUS /= 0 ) THEN
     WRITE(LOGNAM,*) "Could not find levI variable in inpmat.nc: inverse interpolation not available"
-    INPNI=-1  ! Not available 
+    INPNI=-1  ! Not available
   ELSE
     !* Find levels dimension  -- (assume "time ID" appears first. CF metadata conventions)
     CALL NCERROR( NF90_INQUIRE_VARIABLE(NCID,VARID,dimids=VDIMIDS),'getting levI dimensions ')
-    CALL NCERROR( NF90_INQUIRE_DIMENSION(NCID,VDIMIDS(1),len=INPNI),'getting time len ') 
+    CALL NCERROR( NF90_INQUIRE_DIMENSION(NCID,VDIMIDS(1),len=INPNI),'getting time len ')
     WRITE(LOGNAM,*) 'Allocating INP*I: NXIN, NYIN, INPNI =', NXIN, NYIN, INPNI
     ALLOCATE( INPXI(NXIN,NYIN,INPNI),INPYI(NXIN,NYIN,INPNI),INPAI(NXIN,NYIN,INPNI) )
-  
+
     WRITE(LOGNAM,*)'INIT_MAP: inpaI:',TRIM(CINPMAT)
     CALL NCERROR ( NF90_INQ_VARID(NCID,'inpaI',VARID),'getting id' )
-    CALL NCERROR ( NF90_GET_VAR(NCID,VARID,INPAI,(/1,1,1/),(/NXIN,NYIN,INPNI/)),'reading data' ) 
+    CALL NCERROR ( NF90_GET_VAR(NCID,VARID,INPAI,(/1,1,1/),(/NXIN,NYIN,INPNI/)),'reading data' )
 
     WRITE(LOGNAM,*)'INIT_MAP: inpx:',TRIM(CINPMAT)
     CALL NCERROR ( NF90_INQ_VARID(NCID,'inpxI',VARID),'getting id' )
-    CALL NCERROR ( NF90_GET_VAR(NCID,VARID,INPXI,(/1,1,1/),(/NXIN,NYIN,INPNI/)),'reading data' ) 
+    CALL NCERROR ( NF90_GET_VAR(NCID,VARID,INPXI,(/1,1,1/),(/NXIN,NYIN,INPNI/)),'reading data' )
 
     WRITE(LOGNAM,*)'INIT_MAP: inpy:',TRIM(CINPMAT)
     CALL NCERROR ( NF90_INQ_VARID(NCID,'inpyI',VARID),'getting id' )
     CALL NCERROR ( NF90_GET_VAR(NCID,VARID,INPYI,(/1,1,1/),(/NXIN,NYIN,INPNI/)),'reading data' )
-  
+
     !! We normalize INPAI here as it is used to interpolate flood fraction (Input Area Inversed)
     WRITE(LOGNAM,*) 'INPAI normalization'
 !$OMP PARALLEL DO
@@ -539,6 +550,7 @@ END SUBROUTINE CMF_INPMAT_INIT_CDF
 !+
 !==========================================================
 SUBROUTINE CMF_INPMAT_INIT_BIN
+! Read the forward input matrix from direct-access Binary records.
 USE YOS_CMF_INPUT,           ONLY: TMPNAM, NX, NY, INPN
 USE CMF_UTILS_MOD,           ONLY: INQUIRE_FID, CONV_END,  CONV_ENDI, mapR2vecD, mapI2vecI
 USE YOS_CMF_MAP,             ONLY: NSEQMAX
@@ -590,14 +602,16 @@ END SUBROUTINE CMF_FORCING_INIT
 
 !####################################################################
 SUBROUTINE CMF_FORCING_GET(PBUFF)
+! Read forcing fields, replace NaNs with RMIS, and clamp negative runoff to zero.
+! -- Internal: CMF_FORCING_GET_BIN, CMF_FORCING_GET_CDF (NetCDF build only)
 USE YOS_CMF_INPUT,           ONLY: NXIN,NYIN,LROSPLIT, RMIS
-USE CMF_UTILS_MOD,           ONLY: CMF_CheckNanB  !! check Udefined value
-! Read forcing fields, then replace invalid or negative runoff values.
+USE CMF_UTILS_MOD,           ONLY: CMF_CheckNanB  !! Check for NaN values
 IMPLICIT NONE
 REAL(KIND=JPRB),INTENT(INOUT)   :: PBUFF(:,:,:)
 
-INTEGER(KIND=JPIM),SAVE         ::  IXIN, IYIN  !! FOR OUTPUT
+INTEGER(KIND=JPIM),SAVE         ::  IXIN, IYIN
 !================================================
+WRITE(LOGNAM,*) "CMF::FORCING_GET: START"
 !*** 1. Read the configured Binary or NetCDF forcing source
 IF( LINPCDF ) THEN
 #ifdef UseCDF_CMF
@@ -605,14 +619,14 @@ IF( LINPCDF ) THEN
 #endif
 ELSE
   CALL CMF_FORCING_GET_BIN(PBUFF(:,:,:))
-ENDIF 
+ENDIF
 
 !*** 2. Apply NaN replacement and the nonnegative bound to runoff fields
 !$OMP PARALLEL DO SIMD PRIVATE(IXIN)
 DO IYIN=1,NYIN
   DO IXIN=1,NXIN
     IF( CMF_CheckNanB(PBUFF(IXIN,IYIN,1),0._JPRB) )THEN !! Check if PRUFINN(IX,IY) is NaN (Not-A-Number) ot not
-      PBUFF(IXIN,IYIN,1)=RMIS 
+      PBUFF(IXIN,IYIN,1)=RMIS
     ENDIF
     PBUFF(IXIN,IYIN,1)=max(PBUFF(IXIN,IYIN,1),0._JPRB)    !! negative Runoff not assumed
   ENDDO
@@ -624,20 +638,22 @@ IF ( LROSPLIT ) THEN
   DO IYIN=1,NYIN
     DO IXIN=1,NXIN
       IF( CMF_CheckNanB(PBUFF(IXIN,IYIN,2),0._JPRB) )THEN !! Check if PRUFINN(IX,IY) is NaN (Not-A-Number) ot not
-        PBUFF(IXIN,IYIN,2)=RMIS 
+        PBUFF(IXIN,IYIN,2)=RMIS
       ENDIF
       PBUFF(IXIN,IYIN,2)=max(PBUFF(IXIN,IYIN,2),0._JPRB)    !! negative Runoff not assumed
     ENDDO
   ENDDO
-!$OMP END PARALLEL DO SIMD 
+!$OMP END PARALLEL DO SIMD
 ENDIF
+WRITE(LOGNAM,*) "CMF::FORCING_GET: END"
 
 CONTAINS
 !==========================================================
-!+ CMF_FORCING_GET_BIN
-!+ CMF_FORCING_GET_CDF
+! -- CMF_FORCING_GET_BIN : Read the selected Binary forcing record
+! -- CMF_FORCING_GET_CDF : Read the selected NetCDF forcing record
 !==========================================================
 SUBROUTINE CMF_FORCING_GET_BIN(PBUFF)
+! Resolve and read runoff for the current model time.
 USE YOS_CMF_INPUT,           ONLY: NXIN,NYIN,LROSPLIT,DTIN
 USE YOS_CMF_TIME,            ONLY: KMIN,KMINSTAIN
 USE CMF_UTILS_MOD,           ONLY: CONV_END
@@ -708,30 +724,24 @@ CHARACTER(LEN=256)           :: CMESSAGE
 REAL(KIND=JPRB),INTENT(OUT)  :: PBUFF(:,:,:)
 
 IF( TRIM(CROFFREQ)=='SEQ' ) THEN
+  ! SEQ uses one file; Binary needs a start date, while NetCDF may resolve CF time.
   CIFNAME=TRIM(ROFCDF%CNAME)
   IF( ROFCDF%LAUTOTIME ) THEN
     IOFFSET=(INT(KMIN,KIND=JPIB)-INT(KMINSTART,KIND=JPIB))*60_JPIB
-    IF( DTIN<=0 ) THEN
-      WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_GET_CDF]: DTIN must be positive for NetCDF SEQ.'
-      STOP 9
-    ENDIF
-    IF( IOFFSET<0_JPIB .OR. MOD(IOFFSET,INT(DTIN,KIND=JPIB))/=0_JPIB ) THEN
-      WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_GET_CDF]: unaligned SEQ time:',KMIN,DTIN
-      STOP 9
-    ENDIF
-    IRECINP=ROFCDF%NRECSTART+INT(IOFFSET/INT(DTIN,KIND=JPIB),KIND=JPIM)
+    IFIRSTREC=ROFCDF%NRECSTART
   ELSE
     IOFFSET=(INT(KMIN,KIND=JPIB)-INT(ROFCDF%NSTART,KIND=JPIB))*60_JPIB
-    IF( DTIN<=0 ) THEN
-      WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_GET_CDF]: DTIN must be positive for explicit NetCDF SEQ.'
-      STOP 9
-    ENDIF
-    IF( IOFFSET<0_JPIB .OR. MOD(IOFFSET,INT(DTIN,KIND=JPIB))/=0_JPIB ) THEN
-      WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_GET_CDF]: unaligned explicit SEQ time:',KMIN,DTIN
-      STOP 9
-    ENDIF
-    IRECINP=INT(IOFFSET/INT(DTIN,KIND=JPIB)+1_JPIB,KIND=JPIM)
+    IFIRSTREC=1
   ENDIF
+  IF( DTIN<=0 ) THEN
+    WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_GET_CDF]: DTIN must be positive for NetCDF SEQ.'
+    STOP 9
+  ENDIF
+  IF( IOFFSET<0_JPIB .OR. MOD(IOFFSET,INT(DTIN,KIND=JPIB))/=0_JPIB ) THEN
+    WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_GET_CDF]: unaligned NetCDF SEQ time:',KMIN,DTIN
+    STOP 9
+  ENDIF
+  IRECINP=IFIRSTREC+INT(IOFFSET/INT(DTIN,KIND=JPIB),KIND=JPIM)
 ELSE
   CALL FORCING_UTIL_RESOLVE_FILE(KMIN,CIFNAME,CFILETAG,KMINFILE,IRECINP)
   IF( ROFCDF%NCID<=0 .OR. TRIM(ROFCDF%CNAME)/=TRIM(CIFNAME) ) THEN
@@ -771,17 +781,8 @@ ELSE
     & ' calendar=',TRIM(ROF_TIME_AXIS%CALENDAR),' interval[min]=',ROF_TIME_AXIS%DT_MINUTES
     ROFCDF%NSTART=KMIN
     ROFCDF%NRECSTART=IRECINP
-    WRITE(LOGNAM,*) 'NetCDF forcing file opened:',TRIM(ROFCDF%CNAME)
   ELSE
     IOFFSET=(INT(KMIN,KIND=JPIB)-INT(ROFCDF%NSTART,KIND=JPIB))*60_JPIB
-    IF( DTIN<=0 ) THEN
-      WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_GET_CDF]: DTIN must be positive for grouped NetCDF input.'
-      STOP 9
-    ENDIF
-    IF( IOFFSET<0_JPIB .OR. MOD(IOFFSET,INT(DTIN,KIND=JPIB))/=0_JPIB ) THEN
-      WRITE(LOGNAM,*) 'ERROR [CMF::FORCING_GET_CDF]: unaligned grouped-file time:',KMIN,DTIN
-      STOP 9
-    ENDIF
     IRECINP=ROFCDF%NRECSTART+INT(IOFFSET/INT(DTIN,KIND=JPIB),KIND=JPIM)
   ENDIF
 ENDIF
@@ -808,6 +809,7 @@ END SUBROUTINE CMF_FORCING_GET
 !####################################################################
 SUBROUTINE CMF_FORCING_COM(PBUFF)
 ! Map catchment-grid flood fraction to the runoff grid using inverse input-matrix weights.
+! -- Internal: INTERPI
 ! -- called from "Main Program / Coupler" or CMF_DRV_ADVANCE
 USE CMF_UTILS_MOD,           ONLY: vecD2mapD
 #ifdef UseMPI_CMF
@@ -815,11 +817,12 @@ USE CMF_CTRL_MPI_MOD,        ONLY: CMF_MPI_AllReduce_D2MAP
 #endif
 USE YOS_CMF_DIAG,            ONLY: D2FLDFRC
 USE YOS_CMF_INPUT,           ONLY: NX,NY
-IMPLICIT NONE 
-! Declaration of arguments 
+IMPLICIT NONE
+! Declaration of arguments
 REAL(KIND=JPRB)                  :: D2MAPTMP(NX,NY)
 REAL(KIND=JPRB), INTENT(OUT)     :: PBUFF(:,:,:)
 !============================
+WRITE(LOGNAM,*) "CMF::FORCING_COM: START"
 !*** 1. Gather catchment-grid flood fraction across MPI regions
 CALL vecD2mapD(D2FLDFRC,D2MAPTMP)             !! MPI node data is gathered by vecP2mapR
 #ifdef UseMPI_CMF
@@ -827,11 +830,12 @@ CALL vecD2mapD(D2FLDFRC,D2MAPTMP)             !! MPI node data is gathered by ve
 #endif
 
 !*** 2. Interpolate the gathered field to the runoff grid
-CALL INTERPI(D2MAPTMP,PBUFF(:,:,1))        !!  Inverse interpolation (CaMa grid -> input runoff grid)
+CALL INTERPI(D2MAPTMP,PBUFF(:,:,1))        !! Inverse interpolation (CaMa grid -> input runoff grid)
+WRITE(LOGNAM,*) "CMF::FORCING_COM: END"
 
 CONTAINS
 !==========================================================
-!+ INTERPI
+! -- INTERPI : Apply inverse input-matrix weights
 !==========================================================
 SUBROUTINE INTERPI(PBUFFIN,PBUFFOUT)
 ! Interpolate a catchment-grid field to each runoff-grid cell using inverse weights.
@@ -847,7 +851,7 @@ IF ( INPNI == -1 ) THEN
   WRITE(LOGNAM,*) "INPNI==-1, no inverse interpolation possible"
   STOP 9
 ENDIF
-PBUFFOUT(:,:)=1._JPRB 
+PBUFFOUT(:,:)=1._JPRB
 
 !*** 2. Accumulate weighted catchment values for each runoff-grid cell
 DO IYIN=1,NYIN
@@ -875,13 +879,15 @@ END SUBROUTINE CMF_FORCING_COM
 !####################################################################
 SUBROUTINE CMF_FORCING_PUT(PBUFF)
 ! Convert runoff-grid input fields to river-sequence discharge fields.
+! -- Internal: ROFF_INTERP, CONV_RESOL
 ! -- called from "Main Program / Coupler" or CMF_DRV_ADVANCE
 USE YOS_CMF_INPUT,           ONLY: LROSPLIT,LWEVAP
 USE YOS_CMF_PROG,            ONLY: D2RUNOFF,D2ROFSUB,D2WEVAP
-IMPLICIT NONE 
-! Declaration of arguments 
+IMPLICIT NONE
+! Declaration of arguments
 REAL(KIND=JPRB), INTENT(IN)     :: PBUFF(:,:,:)
 !============================
+WRITE(LOGNAM,*) "CMF::FORCING_PUT: START"
 !*** 1. Map total and optional subsurface runoff to CaMa-Flood catchments
 ! Use input-matrix weights when enabled; otherwise use the direct-resolution mapping.
 IF (LINTERP) THEN ! mass conservation using "input matrix table (inpmat)"
@@ -898,7 +904,7 @@ ELSE !  nearest point
   ELSE
     D2ROFSUB(:,:) = 0._JPRB
   ENDIF
-ENDIF 
+ENDIF
 
 !*** 2. Map optional evaporation input when requested
 IF (LWEVAP) THEN
@@ -910,18 +916,19 @@ IF (LWEVAP) THEN
     STOP 9
   ENDIF
 ENDIF
+WRITE(LOGNAM,*) "CMF::FORCING_PUT: END"
 
 CONTAINS
 !==========================================================
-!+ ROFF_INTERP : runoff interpolation with mass conservation using "input matrix table (inpmat)"
-!+ CONV_RESOL : nearest point runoff interpolation
+! -- ROFF_INTERP : Apply input-matrix weights and convert runoff units
+! -- CONV_RESOL  : Map equal-resolution runoff directly to river cells
 !==========================================================
 SUBROUTINE ROFF_INTERP(PBUFFIN,PBUFFOUT)
 ! interporlate runoff using "input matrix"
 USE YOS_CMF_MAP,             ONLY: NSEQMAX
 USE YOS_CMF_INPUT,           ONLY: NXIN, NYIN, INPN, RMIS
 IMPLICIT NONE
-REAL(KIND=JPRB),INTENT(IN)      :: PBUFFIN(:,:)     !! default [mm/dt] 
+REAL(KIND=JPRB),INTENT(IN)      :: PBUFFIN(:,:)     !! default [mm/dt]
 REAL(KIND=JPRB),INTENT(OUT)     :: PBUFFOUT(:,:)    !! m3/s
 ! SAVE for OMP
 INTEGER(KIND=JPIM),SAVE  ::  ISEQ
@@ -963,7 +970,7 @@ USE YOS_CMF_INPUT,           ONLY: RMIS
 USE CMF_UTILS_MOD,           ONLY: mapD2vecD
 IMPLICIT NONE
 
-REAL(KIND=JPRB),INTENT(IN)      :: PBUFFIN(:,:)     !! default [mm/dt] 
+REAL(KIND=JPRB),INTENT(IN)      :: PBUFFIN(:,:)     !! default [mm/dt]
 REAL(KIND=JPRB),INTENT(OUT)     :: PBUFFOUT(:,:)    !! m3/s
 
 REAL(KIND=JPRB),ALLOCATABLE     :: D2TEMP(:,:)
@@ -1006,7 +1013,7 @@ INTEGER(KIND=JPIM)              :: ISTREAM
 !================================================
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "!---------------------!"
-WRITE(LOGNAM,*) "CMF::FORCING_END: Finalize forcing module"
+WRITE(LOGNAM,*) "CMF::FORCING_END: START"
 
 #ifdef UseCDF_CMF
 IF( ROFCDF%NCID>0 ) THEN
@@ -1023,7 +1030,7 @@ DO ISTREAM=1,2
   ENDIF
 ENDDO
 
-WRITE(LOGNAM,*) "CMF::FORCING_END: end"
+WRITE(LOGNAM,*) "CMF::FORCING_END: END"
 
 END SUBROUTINE CMF_FORCING_END
 !####################################################################
@@ -1043,8 +1050,10 @@ END FUNCTION FORCING_UTIL_UPPER
 
 !####################################################################
 SUBROUTINE FORCING_UTIL_RESOLVE_FILE(KMINNOW,CIFNAME,CFILETAG,KMINFILE,IRECORD)
-! Resolve calendar-grouped file names and exact record offsets for both formats.
-! MIN2DATE/DATE2MIN and IMDAYS use the model's LLEAPYR calendar convention.
+! Resolve grouped filenames from the model calendar and calculate the 1-based record.
+! Record 1 is 00:00 at the DAY/MON/YEAR period start; leap behavior follows LLEAPYR.
+! IRECORD = (KMINNOW - KMINFILE) * 60 / DTIN + 1, requiring exact time alignment.
+! MIN2DATE/DATE2MIN use the model calendar convention.
 USE CMF_UTILS_MOD, ONLY: MIN2DATE,SPLITDATE,DATE2MIN
 USE YOS_CMF_INPUT, ONLY: DTIN
 IMPLICIT NONE
@@ -1057,14 +1066,6 @@ INTEGER(KIND=JPIB)              :: IOFFSET
 CHARACTER(LEN=8)                :: CDATE
 CDATE=' '
 IDTIN=INT(DTIN,KIND=JPIM)
-IF( DTIN<=0._JPRB .OR. REAL(IDTIN,KIND=JPRB)/=DTIN ) THEN
-  WRITE(LOGNAM,*) 'ERROR [CMF::FORCING]: DAY/MON/YEAR requires a positive IFRQ_INP.'
-  STOP 9
-ENDIF
-IF( MOD(86400,IDTIN)/=0 ) THEN
-  WRITE(LOGNAM,*) 'ERROR [CMF::FORCING]: DAY/MON/YEAR requires a positive IFRQ_INP that divides 24 hours.'
-  STOP 9
-ENDIF
 CALL MIN2DATE(KMINNOW,IDATE,IHHMM)
 CALL SPLITDATE(IDATE,IYEAR,IMON,IDAY)
 SELECT CASE(TRIM(CROFFREQ))

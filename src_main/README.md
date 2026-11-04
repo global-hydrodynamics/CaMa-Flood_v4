@@ -42,6 +42,10 @@ Individual-file support is limited to maps read by the legacy Binary path: the s
 
 The reusable Binary-to-NetCDF conversion command is documented in [`map/tools/README.md`](../map/tools/README.md#individual-map-netcdf-conversion). Legacy consolidated mode and optional groundwater, mean-sea-level, and MPI inputs were not runtime-tested in this task. The slope options are explicitly rejected in individual-file mode. Their legacy consolidated readers now open and close `CRIVPARNC` around the `elevslope` and `mask_slope` reads; no suitable consolidated fixture was available to runtime-test these special options.
 
+## NetCDF output compression
+
+New model output files and Restart files use lossless NetCDF-4 deflate level 3 with shuffle. `NDLEVEL` controls main and sediment output compression and defaults to 3; set it to 0 to disable deflate. Restart precision and variables are unchanged. See the shared [NetCDF output conventions](../docs/netcdf_output_conventions.md) for the inventory and format exception.
+
 ## Restart files
 
 `LRESTART` controls whether the model reads an initial state from `CRESTSTO`. `LRESTCDF=.FALSE.` selects the direct-access Binary format; `LRESTCDF=.TRUE.` selects NetCDF. Binary files use the `.bin` suffix and NetCDF files use `.nc`. `LRESTDBL` selects Float64 (`.TRUE.`) or Float32 (`.FALSE.`) only for Binary Restart. NetCDF Restart variables are written as Float64 regardless of `LRESTDBL`. These file precisions are independent of internal kinds: storage arrays use `JPRD`, while previous-step flow/depth arrays use `JPRB`, which is 4-byte with `SinglePrec_CMF` and 8-byte otherwise.

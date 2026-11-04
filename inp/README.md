@@ -2,6 +2,8 @@
 
 The `inp/` directory contains tools for preparing runoff forcing used by CaMa-Flood. Runoff supplies water per unit land area over time; CaMa-Flood converts it to a flow rate for routing through the river network. The GitHub repository includes an ERA5-Land download and conversion workflow with small Japan examples. Distribution packages also include sample forcing for selected `gosh/` runs. Obtain or prepare additional forcing when the chosen experiment requires data beyond those supplied with the package.
 
+For format and compression settings used by NetCDF files generated with v5 tools, see the shared [NetCDF output conventions](../docs/netcdf_output_conventions.md). External NetCDF forcing inputs are not required to use those output settings.
+
 ## Using Your Own Runoff Dataset
 
 1. Prepare runoff files in a supported [Binary or NetCDF layout](#supported-input-formats-and-simulation-settings).
