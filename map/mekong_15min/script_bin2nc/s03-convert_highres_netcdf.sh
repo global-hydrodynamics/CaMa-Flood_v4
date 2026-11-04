@@ -1,15 +1,32 @@
 #!/bin/sh
 # Convert registered high-resolution Binary map tiles to NetCDF4.
+# This map-local copy calls the shared converter under map/tools/code/.
+# Run it from any working directory; paths are resolved from this script.
 set -eu
 
 # ----------------------------------------------------------------------
-# User settings.
+# User settings: edit these values for the target map.
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
-MAP_DIR="$SCRIPT_DIR/.."  # Map root containing the high-resolution directory.
+# Map root containing each selected high-resolution directory.
+MAP_DIR="$SCRIPT_DIR/.."
+
+# Choose one or more available high-resolution map directories.
+# Each selected directory must contain location.txt and registered tile files.
+#HIRES="1min 15sec 3sec"
 HIRES="1min"
+
+# Choose registered Binary file stems present in the selected directories.
+# Options shown here are high-resolution registry products; a map need not
+# contain every one of them. Multi-record files (catmxy, downxy) are converted
+# with all their registered records together.
+#VARS="catmxy catmz100 catmzz downxy elevtn flddif flwdir grdare hand rivwth uparea visual"
 VARS="catmxy downxy elevtn uparea hand flddif rivwth"
+
+# Existing NetCDF outputs are skipped by default. Pass --force to replace them.
 FORCE=0
 
+# Shared converter path: use the local template's code link if present,
+# otherwise resolve map/tools/code/ from this map-local script directory.
 if [ -f "$SCRIPT_DIR/../code/convert_highres_binary_to_netcdf.py" ]; then
     CONVERTER="$SCRIPT_DIR/../code/convert_highres_binary_to_netcdf.py"
 else
@@ -20,6 +37,7 @@ fi
 
 SCRIPT_NAME=${0##*/}
 STEP="Validate high-resolution conversion settings"
+# Print a stage-specific error when any command exits unsuccessfully.
 trap '
     EXIT_STATUS=$?
     trap - 0
@@ -39,6 +57,7 @@ fi
 if [ "$#" -eq 1 ]; then
     FORCE=1
 fi
+# Check the user-configured paths before creating output directories.
 if [ ! -d "$MAP_DIR" ]; then
     printf 'ERROR: map directory does not exist: %s\n' "$MAP_DIR" >&2
     exit 1
@@ -54,7 +73,20 @@ printf '[STEP 1/1] Convert registered high-resolution variables\n'
 printf '==================================================\n'
 printf 'Map: %s\nHigh-resolution directories: %s\nVariables: %s\n\n' "$MAP_DIR" "$HIRES" "$VARS"
 
+# Preserve the geometry metadata beside the converted tile rasters.
 for re in $HIRES; do
+    SOURCE_LOCATION="$MAP_DIR/$re/location.txt"
+    OUTPUT_DIR="$MAP_DIR/${re}_nc"
+    if [ ! -f "$SOURCE_LOCATION" ]; then
+        printf 'ERROR: high-resolution geometry file not found: %s\n' "$SOURCE_LOCATION" >&2
+        exit 1
+    fi
+    mkdir -p "$OUTPUT_DIR"
+    cp "$SOURCE_LOCATION" "$OUTPUT_DIR/location.txt"
+    printf '[INFO] Copied %s to %s/location.txt\n' "$SOURCE_LOCATION" "$OUTPUT_DIR"
+
+    # Convert one registered Binary stem at a time; Python handles tile layout,
+    # registry validation, chunked I/O, NetCDF creation, and read-back checks.
     for var in $VARS; do
         if [ "$FORCE" -eq 1 ]; then
             if python3 "$CONVERTER" --map-dir "$MAP_DIR" --hires "$re" --variable "$var" --force; then

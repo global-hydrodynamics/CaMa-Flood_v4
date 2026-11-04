@@ -75,7 +75,7 @@ The NetCDF C library and Python standard library are sufficient. Validation here
 
 ## Convert high-resolution tiles (`s03`)
 
-Copy `s03-convert_highres_netcdf.sh` to the map-local `script_bin2nc/` directory, set `MAP_DIR`, `HIRES`, and `VARS` near the top, then run it from any working directory. The Mekong copy is configured for `1min/`:
+Copy `s03-convert_highres_netcdf.sh` to the map-local `script_bin2nc/` directory, set `MAP_DIR`, `HIRES`, and `VARS` near the top, then run it from any working directory. The commented `HIRES` and `VARS` examples show the available choices; select only directories and registered file stems present in the target map. The Mekong copy is configured for `1min/`:
 
 ```sh
 cd map/mekong_15min/script_bin2nc
@@ -84,7 +84,7 @@ cd map/mekong_15min/script_bin2nc
 
 For each selected variable, `s03` calls the shared high-resolution converter. It reads each tile's geometry from `<MAP_DIR>/<HIRES>/location.txt`, and registered variable names, signed type, record index/count, missing value, and dimensions from `variable_table/map_variables.csv`. Unregistered files are ignored; a registered tile with a missing file, inconsistent metadata, or a Binary size that does not match `location.txt` fails explicitly. A multi-record file such as `catmxy` or `downxy` is written as one NetCDF containing all registered variables in record order.
 
-Outputs are individual tiles at `<MAP_DIR>/<HIRES>_nc/<AREA>.<VAR>.nc`. NetCDF variables use `(lat,lon)` dimensions, cell-center coordinates, and the binary's row/record order; data are copied in bounded chunks and checked by reading each chunk back. Output is NetCDF4 without compression. Existing outputs are skipped by default; pass `--force` to replace them. The input Binary and `location.txt` are read-only. A successful conversion verifies file layout and stored values, not scientific correctness or model-reader compatibility.
+Outputs are individual tiles at `<MAP_DIR>/<HIRES>_nc/<AREA>.<VAR>.nc`; the wrapper also copies `<MAP_DIR>/<HIRES>/location.txt` to `<MAP_DIR>/<HIRES>_nc/location.txt` as geometry metadata. NetCDF variables use `(lat,lon)` dimensions, cell-center coordinates, and the binary's row/record order; data are copied in bounded chunks and checked by reading each chunk back. Output is NetCDF4 without compression. Existing NetCDF outputs are skipped by default; pass `--force` to replace them. The input Binary and source `location.txt` are read-only. A successful conversion verifies file layout and stored values, not scientific correctness or model-reader compatibility.
 
 The NetCDF C library must be installed and discoverable (typically through `nc-config`); Python uses only its standard library.
 

@@ -27,7 +27,7 @@ Run the map-local `s03` to convert the selected registered `1min/` tile binaries
 ./s03-convert_highres_netcdf.sh
 ```
 
-Outputs go to `1min_nc/`, one NetCDF file per area and source binary (for example, `1min.catmxy.nc`). Multi-record files contain all registered records as separate variables. Existing files are skipped; use `./s03-convert_highres_netcdf.sh --force` to replace them. The converter validates tile sizes against `1min/location.txt` and the variable registry, and reads written chunks back for value comparison. See the shared guide for configuration and limitations.
+Outputs go to `1min_nc/`, one NetCDF file per area and source binary (for example, `1min.catmxy.nc`); `1min/location.txt` is copied there as geometry metadata. Multi-record files contain all registered records as separate variables. Existing NetCDF files are skipped; use `./s03-convert_highres_netcdf.sh --force` to replace them. The converter validates tile sizes against `1min/location.txt` and the variable registry, and reads written chunks back for value comparison. See the shared guide for configuration and limitations.
 
 ## Legacy consolidated NetCDF files
 
