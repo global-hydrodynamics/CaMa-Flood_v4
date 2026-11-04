@@ -89,6 +89,15 @@ Record non-blocking questions in the relevant technical document under **Open Qu
 
 At completion of a substantial task or development stage, run the brief **Knowledge-gap review** in [`docs/ai_development_workflow.md`](docs/ai_development_workflow.md). Record material questions before resolving them, including source references and why the answer matters. At handoff, list unresolved scientific or architectural questions; unrelated work need not wait for non-blocking answers. Link resolved questions to their discovery trigger, evidence, interpretation, and formalization. Record a completed review with no material new gaps; never invent questions or findings.
 
+## Scientific Design Rationale Review
+
+Optional AI workflows for documenting scientific and algorithmic design intent:
+
+- [`docs/ai_workflows/scientific_why_discovery.md`](docs/ai_workflows/scientific_why_discovery.md) identifies undocumented Why questions in source code.
+- [`docs/ai_workflows/scientific_why_documentation.md`](docs/ai_workflows/scientific_why_documentation.md) verifies rationales through maintainer interaction and documents them.
+
+These detailed workflows are optional and must be invoked explicitly; do not run them automatically during ordinary development, refactoring, or formatting. They do not replace the brief milestone Knowledge-gap review required above. When invoked, read and follow the corresponding workflow document.
+
 ## 5. Technical boundaries for CaMa-Flood
 
 Preserve the existing architecture unless the approved task justifies changing it:
