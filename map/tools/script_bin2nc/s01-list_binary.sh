@@ -10,10 +10,10 @@ SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 MAP_DIR="$SCRIPT_DIR/../../mekong_15min"  # Change this to select another map directory.
 LIST_FILE="bin2nc_list.txt"
 REGISTRY="$SCRIPT_DIR/../../../variable_table/map_variables.csv"
-if [ -f "$SCRIPT_DIR/../convert_map_binary_to_netcdf.py" ]; then
-    TOOL_DIR="$SCRIPT_DIR/.."
+if [ -f "$SCRIPT_DIR/../code/convert_map_binary_to_netcdf.py" ]; then
+    TOOL_DIR="$SCRIPT_DIR/../code"
 else
-    TOOL_DIR="$SCRIPT_DIR/../../tools"
+    TOOL_DIR="$SCRIPT_DIR/../../tools/code"
 fi
 CONVERTER="$TOOL_DIR/convert_map_binary_to_netcdf.py"
 

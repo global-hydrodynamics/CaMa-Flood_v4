@@ -1,6 +1,6 @@
 # Mekong Binary-to-NetCDF map conversion
 
-This map-local copy uses the shared templates in [`map/tools/script_bin2nc/`](../../tools/script_bin2nc/README.md) and converter at `map/tools/convert_map_binary_to_netcdf.py`. It targets the Mekong base-resolution map only; high-resolution subdirectories such as `1min/` and `15sec/` are not scanned.
+This map-local copy uses the shared templates in [`map/tools/script_bin2nc/`](../../tools/script_bin2nc/README.md) and converter at `map/tools/code/convert_map_binary_to_netcdf.py`. It targets the Mekong base-resolution map only; high-resolution subdirectories such as `1min/` and `15sec/` are not scanned.
 
 Run the scripts from this directory (or invoke them by path from another working directory):
 

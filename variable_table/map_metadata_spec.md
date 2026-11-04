@@ -159,7 +159,7 @@ The CaMa-Flood v4 reader contract is verified in `src/cmf_ctrl_maps_mod.F90`:
 
 The current CTL generator follows the legacy `little_endian` and `yrev` convention and reads geometry from the target map directory. The inspected `glb_15min` CTLs and Mekong sample are reference evidence; byte order and row orientation remain dataset properties and must not be generalized without evidence.
 
-The v5 model now supports individual-file Binary/NetCDF inputs in addition to the legacy consolidated NetCDF reader. `map/tools/convert_map_binary_to_netcdf.py` converts supported registered raster files, using the existing `dtype`, `dimensions`, `record_index`, `record_count`, and metadata fields. This implementation establishes a practical individual-file convention for the supported v5 map inputs; it does not define a replacement for legacy consolidated containers or a universal conversion contract for every optional map product.
+The v5 model now supports individual-file Binary/NetCDF inputs in addition to the legacy consolidated NetCDF reader. `map/tools/code/convert_map_binary_to_netcdf.py` converts supported registered raster files, using the existing `dtype`, `dimensions`, `record_index`, `record_count`, and metadata fields. This implementation establishes a practical individual-file convention for the supported v5 map inputs; it does not define a replacement for legacy consolidated containers or a universal conversion contract for every optional map product.
 
 ## Confirmed facts and proposed attributes
 

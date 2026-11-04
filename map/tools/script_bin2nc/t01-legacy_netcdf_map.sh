@@ -7,10 +7,10 @@ set -eu
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 MAP_DIR="$SCRIPT_DIR/../../mekong_15min"  # Change this path when using another map.
 NETCDF_DIR="$MAP_DIR/netcdf"
-if [ -f "$SCRIPT_DIR/../create_legacy_netcdf_map.py" ]; then
-    TOOL_DIR="$SCRIPT_DIR/.."
+if [ -f "$SCRIPT_DIR/../code/create_legacy_netcdf_map.py" ]; then
+    TOOL_DIR="$SCRIPT_DIR/../code"
 else
-    TOOL_DIR="$SCRIPT_DIR/../../tools"
+    TOOL_DIR="$SCRIPT_DIR/../../tools/code"
 fi
 PROGRAM="$TOOL_DIR/create_legacy_netcdf_map.py"
 

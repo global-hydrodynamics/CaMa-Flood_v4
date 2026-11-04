@@ -2,7 +2,7 @@
 
 This shared template converts selected base-resolution Binary map rasters into individual NetCDF files. Copy the scripts into a map-local `script_bin2nc/` directory and run that copy. The Mekong sample contains a ready-to-use copy at [`map/mekong_15min/script_bin2nc/`](../../mekong_15min/script_bin2nc/).
 
-The scripts reuse [`convert_map_binary_to_netcdf.py`](../convert_map_binary_to_netcdf.py) and the authoritative [`variable_table/map_variables.csv`](../../../variable_table/map_variables.csv) registry. They do not convert high-resolution subdirectories such as `1min/` or `15sec/`.
+The scripts reuse [`convert_map_binary_to_netcdf.py`](../code/convert_map_binary_to_netcdf.py) and the authoritative [`variable_table/map_variables.csv`](../../../variable_table/map_variables.csv) registry. They do not convert high-resolution subdirectories such as `1min/` or `15sec/`.
 
 ## Select files and convert
 

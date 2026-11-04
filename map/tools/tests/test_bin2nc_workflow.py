@@ -12,12 +12,12 @@ import time
 import unittest
 from pathlib import Path
 
-from map.tools.convert_map_binary_to_netcdf import generate_conversion_list
+from map.tools.code.convert_map_binary_to_netcdf import generate_conversion_list
 
 ROOT = Path(__file__).resolve().parents[3]
 SCRIPT_SOURCE = ROOT / "map/mekong_15min/script_bin2nc"
 SCRIPT_TEMPLATE = ROOT / "map/tools/script_bin2nc"
-CONVERTER_SOURCE = ROOT / "map/tools/convert_map_binary_to_netcdf.py"
+CONVERTER_SOURCE = ROOT / "map/tools/code/convert_map_binary_to_netcdf.py"
 
 FIELDS = [
     "category_id",
@@ -58,16 +58,17 @@ def make_workflow_tree(root: Path, *, use_converter_stub: bool) -> tuple[Path, P
     map_root = root / "map"
     script_dir = map_root / "mekong_15min/script_bin2nc"
     tools_dir = map_root / "tools"
+    code_dir = tools_dir / "code"
     map_dir = map_root / "mekong_15min"
     script_dir.mkdir(parents=True)
-    tools_dir.mkdir()
+    code_dir.mkdir(parents=True)
     registry_dir = root / "variable_table"
     registry_dir.mkdir()
     (registry_dir / "map_variables.csv").write_text("unused by the shell fixture\n", encoding="utf-8")
     for name in ("s01-list_binary.sh", "s02-convert_netcdf.sh"):
         shutil.copyfile(SCRIPT_SOURCE / name, script_dir / name)
     if use_converter_stub:
-        converter = tools_dir / "convert_map_binary_to_netcdf.py"
+        converter = code_dir / "convert_map_binary_to_netcdf.py"
         converter.write_text(
             """#!/usr/bin/env python3
 import argparse
@@ -89,7 +90,7 @@ print('Converted fixture:', Path(args.input).name)
             encoding="utf-8",
         )
     else:
-        shutil.copyfile(CONVERTER_SOURCE, tools_dir / CONVERTER_SOURCE.name)
+        shutil.copyfile(CONVERTER_SOURCE, code_dir / CONVERTER_SOURCE.name)
     map_dir.mkdir(exist_ok=True)
     (map_dir / "params.txt").write_text("2\n2\n1\n1\n0\n2\n0\n2\n", encoding="ascii")
     return script_dir, map_dir

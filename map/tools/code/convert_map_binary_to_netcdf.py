@@ -389,7 +389,7 @@ def convert(args: argparse.Namespace) -> None:
 
 
 def main() -> int:
-    root = Path(__file__).resolve().parents[2]
+    root = Path(__file__).resolve().parents[3]
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--map-dir", type=Path, required=True, help="map directory containing params.txt")
     parser.add_argument("--input", type=Path, help="registered Binary map file")

@@ -113,7 +113,7 @@ Different workflows have different `location.txt` contracts. Allocation tools in
 The model accepts independently stored Binary or NetCDF map rasters when `LMAPCDF=.FALSE.`. Convert an individual registered Binary map without modifying its source:
 
 ```sh
-python3 map/tools/convert_map_binary_to_netcdf.py \
+python3 map/tools/code/convert_map_binary_to_netcdf.py \
   --map-dir map/mekong_15min \
   --input map/mekong_15min/fldhgt.bin \
   --output /tmp/fldhgt_optimized.nc
