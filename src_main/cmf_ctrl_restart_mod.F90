@@ -6,10 +6,10 @@ MODULE CMF_CTRL_RESTART_MOD
 ! Principal Restart procedures:
 ! -- CMF_RESTART_NMLIST : Read Restart settings from the namelist
 ! -- CMF_RESTART_INIT   : Initialize model state from a Restart file
-! -- CMF_RESTART_WRITE  : Write model state when the Restart interval is due
+! -- CMF_RESTART_WRITE  : Write model state at the configured Restart time
 !
 ! Restart timing query:
-! -- restart_is_write_time : Check the Restart schedule for coupled helpers
+! -- restart_is_write_time : Report whether the configured Restart time is due
 !
 ! (C) D.Yamazaki & E. Dutra  (U-Tokyo/FCUL)  Aug 2019
 !
@@ -39,19 +39,19 @@ INTEGER(KIND=JPIM)              :: IFRQ_RST               !! Hours: 0=end; 1-24=
 !
 NAMELIST/NRESTART/ CRESTSTO,CRESTDIR,CVNREST,LRESTCDF,LRESTDBL,IFRQ_RST
 !
-CONTAINS 
+CONTAINS
 !####################################################################
 ! Principal Restart procedures
 ! -- CMF_RESTART_NMLIST : Read Restart settings from the namelist
 ! -- CMF_RESTART_INIT   : Initialize model state from a Restart file
-! -- CMF_RESTART_WRITE  : Write model state when the Restart interval is due
+! -- CMF_RESTART_WRITE  : Write model state at the configured Restart time
 !
 ! Restart timing query
-! -- restart_is_write_time : Check the Restart schedule for coupled helpers
+! -- restart_is_write_time : Report whether the configured Restart time is due
 !####################################################################
 SUBROUTINE CMF_RESTART_NMLIST
 ! Read Restart settings from the NRESTART namelist.
-! -- Called from CMF_DRV_NMLIST
+! Called from CMF_DRV_NMLIST.
 USE YOS_CMF_INPUT,      ONLY: CSETFILE,NSETFILE
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
 IMPLICIT NONE
@@ -101,15 +101,16 @@ SUBROUTINE CMF_RESTART_INIT
 !+ READ_REST_BIN : Read Binary Restart records and optional companion data
 !+ READ_BIN_MAP  : Read one Binary map record and vectorize it
 !+ READ_REST_CDF : Read NetCDF Restart variables into model state
-! -- call from CMF_DRV_INIT
+! Called from CMF_DRV_INIT.
 USE YOS_CMF_PROG,   ONLY: P2RIVSTO,    P2FLDSTO,    D2RIVOUT,    D2FLDOUT,    P2GDWSTO, &
                         & D2RIVOUT_PRE,D2FLDOUT_PRE,D2RIVDPH_PRE,D2FLDSTO_PRE,&
                         & D1PTHFLW,    D1PTHFLW_PRE, &
-                        & P2DAMSTO,    P2LEVSTO      !!! added
+                        & P2DAMSTO,    P2LEVSTO
 IMPLICIT NONE
 !================================================
-! Initialize arrays first so storage-only and optional-scheme fields have
-! defined values when they are absent from the selected Restart format.
+!*** 1. Initialize Restart state before reading
+! Zero defaults keep fields defined when Storage-only omits previous-step
+! state or when an enabled optional scheme has no separately stored flow.
 P2RIVSTO(:,:)=0._JPRD
 P2FLDSTO(:,:)=0._JPRD
 D2RIVOUT(:,:)=0._JPRB
@@ -125,35 +126,33 @@ IF( LPTHOUT )THEN
   D1PTHFLW_PRE(:,:)=0._JPRB
 ENDIF
 IF( LDAMOUT ) then
-  P2DAMSTO(:,:)=0._JPRD   !!! added LDAMOUT
+  P2DAMSTO(:,:)=0._JPRD
 ENDIF
 IF( LLEVEE ) then
-  P2LEVSTO(:,:)=0._JPRD   !!! added LLEVEE
+  P2LEVSTO(:,:)=0._JPRD
 ENDIF
 IF( LGDWDLY ) then
   P2GDWSTO(:,:)=0._JPRD
 ENDIF
 
+!*** 2. Read the selected Restart representation
 IF ( LRESTCDF ) THEN
   CALL READ_REST_CDF
 ELSE
   CALL READ_REST_BIN
 ENDIF
 
-! Storage-only Restarts omit previous-step fields. Seed previous floodplain
-! storage from the loaded state so current and previous storage start equal.
-IF( LSTOONLY )THEN          !!  storage only restart
+!*** 3. Seed previous floodplain storage for Storage-only initialization
+! Storage-only Restart starts from the supplied storage state, not a complete
+! saved time-step state; use the loaded storage as its previous-step value.
+IF( LSTOONLY )THEN
   D2FLDSTO_PRE(:,:)=REAL(P2FLDSTO(:,:),KIND=JPRB)
 ENDIF
 
 CONTAINS
-!==========================================================
-!+ READ_REST_BIN : Read Binary Restart records and optional companion data
-!+ READ_BIN_MAP  : Read one Binary map record and vectorize it
-!+ READ_REST_CDF : Read NetCDF Restart variables into model state
-!==========================================================
 SUBROUTINE READ_REST_BIN
 ! Read direct-access Binary Restart records in their configured order.
+! There is no file header; record position and LRESTDBL must match the writer.
 USE YOS_CMF_INPUT,           ONLY: TMPNAM,  NX,NY
 USE YOS_CMF_MAP,             ONLY: NSEQMAX,NPTHOUT, NPTHLEV
 USE CMF_UTILS_MOD,           ONLY: INQUIRE_FID, mapR2vecD
@@ -178,14 +177,15 @@ ELSE
 ENDIF
 
 RIREC=0
+! River and floodplain storage occupy records 1 and 2 in every mode.
 CALL READ_BIN_MAP(P2VEC,TMPNAM,RIREC)
  P2RIVSTO=P2VEC
 CALL READ_BIN_MAP(P2VEC,TMPNAM,RIREC)
  P2FLDSTO=P2VEC
 
-! Storage is always first. Normal Restarts then include four previous-step
-! fields, followed by state for each enabled optional scheme.
-IF ( .not. LSTOONLY )THEN           !! default restart with previous t-step outflw
+!*** 1. Read previous-step map fields for Normal Restart
+! They are required to continue the saved time-step state.
+IF ( .not. LSTOONLY )THEN
   CALL READ_BIN_MAP(P2VEC,TMPNAM,RIREC)
    D2RIVOUT_PRE=REAL(P2VEC,KIND=JPRB)
   CALL READ_BIN_MAP(P2VEC,TMPNAM,RIREC)
@@ -195,24 +195,25 @@ IF ( .not. LSTOONLY )THEN           !! default restart with previous t-step outf
   CALL READ_BIN_MAP(P2VEC,TMPNAM,RIREC)
    D2FLDSTO_PRE=REAL(P2VEC,KIND=JPRB)
 ENDIF
-! Optional map records follow the previous-step fields when enabled:
-! gdwsto (LGDWDLY), damsto (LDAMOUT), and levsto (LLEVEE).
+!*** 2. Read map state for enabled optional schemes
+! These records follow the previous-step fields when those are present.
 IF ( LGDWDLY ) THEN
   CALL READ_BIN_MAP(P2VEC,TMPNAM,RIREC)
    P2GDWSTO=P2VEC
 ENDIF
-IF ( LDAMOUT ) THEN      !!! added LDAMOUT
+IF ( LDAMOUT ) THEN
   CALL READ_BIN_MAP(P2VEC,TMPNAM,RIREC)
    P2DAMSTO=P2VEC
 ENDIF
-IF ( LLEVEE ) THEN      !!! added LLEVEE
+IF ( LLEVEE ) THEN
   CALL READ_BIN_MAP(P2VEC,TMPNAM,RIREC)
    P2LEVSTO=P2VEC
 ENDIF
 CLOSE(TMPNAM)
 
-! Bifurcation flow uses a separate NPTHOUT x NPTHLEV companion file. The
-! storage-only reader skips it and leaves previous bifurcation flow at zero.
+!*** 3. Read bifurcation flow from its separate companion file
+! Binary writes this file when LPTHOUT is enabled, but Storage-only
+! initialization does not restore previous-step bifurcation flow.
 IF( LPTHOUT )THEN
   IF( .not. LSTOONLY )THEN
     CFILE=TRIM(CRESTSTO)//'.pth'
@@ -264,7 +265,7 @@ END SUBROUTINE READ_BIN_MAP
 !======
 !==========================================================
 SUBROUTINE READ_REST_CDF
-! Read NetCDF Restart state variables, which are stored as Float64.
+! Read Float64 Restart variables by name; optional variables follow enabled schemes.
 #ifdef UseCDF_CMF
 USE NETCDF
 USE YOS_CMF_INPUT,    ONLY: NX, NY
@@ -320,13 +321,13 @@ IF ( LGDWDLY ) THEN
   CALL mapP2vecP(P2TEMP,P2GDWSTO)
 ENDIF
 
-IF ( LDAMOUT ) THEN    !!! added
+IF ( LDAMOUT ) THEN
   CALL NCERROR( NF90_INQ_VARID(NCID,'damsto',VARID))
   CALL NCERROR( NF90_GET_VAR(NCID,VARID,P2TEMP,(/1,1,1/),(/NX,NY,1/) ) )
   CALL mapP2vecP(P2TEMP,P2DAMSTO)
 ENDIF
 
-IF ( LLEVEE ) THEN    !!! added
+IF ( LLEVEE ) THEN
   CALL NCERROR( NF90_INQ_VARID(NCID,'levsto',VARID))
   CALL NCERROR( NF90_GET_VAR(NCID,VARID,P2TEMP,(/1,1,1/),(/NX,NY,1/) ) )
   CALL mapP2vecP(P2TEMP,P2LEVSTO)
@@ -361,7 +362,7 @@ END SUBROUTINE CMF_RESTART_INIT
 
 !####################################################################
 SUBROUTINE CMF_RESTART_WRITE
-! Write Restart data when the configured interval or run end is reached.
+! Write Restart data after the current step when its configured time is due.
 ! Internal subroutines:
 !+ WRTE_REST_BIN : Write ordered Binary Restart records and companion data
 !+ WRTE_BIN_MAP  : Convert one river-vector field and write a Binary record
@@ -380,6 +381,7 @@ INTEGER(KIND=JPIM)         :: IREST
 !================================================
 IREST=0
 
+!*** 1. Check whether this step is a configured Restart time
 IF ( IFRQ_RST>=0 .and. KSTEP==NSTEPS )THEN         !! end of run
   IREST=1
 ENDIF
@@ -411,13 +413,9 @@ IF( IREST==1 )THEN
 END IF 
 
 CONTAINS
-!==========================================================
-!+ WRTE_REST_BIN : Write ordered Binary Restart records and companion data
-!+ WRTE_BIN_MAP  : Convert one river-vector field and write a Binary record
-!+ WRTE_REST_CDF : Define and write NetCDF Restart variables
-!==========================================================
 SUBROUTINE WRTE_REST_BIN
-! Write storage first, then previous-step and enabled optional state.
+! Write headerless direct-access records in the order expected by the reader.
+! LRESTDBL controls each map record's file precision, not internal array kinds.
 USE YOS_CMF_TIME,       ONLY: JYYYYMMDD, JHOUR
 USE YOS_CMF_MAP,        ONLY: REGIONTHIS, NSEQMAX
 #ifdef UseMPI_CMF
@@ -446,37 +444,37 @@ ELSE
 ENDIF
 
 RIREC=0
-  P2TMP=P2RIVSTO
-   CALL WRTE_BIN_MAP(P2TMP,TMPNAM,RIREC)
-  P2TMP=P2FLDSTO
-   CALL WRTE_BIN_MAP(P2TMP,TMPNAM,RIREC)
-! Normal Restarts preserve four previous-step fields. Storage-only Restarts
-! omit those fields but retain any enabled groundwater, dam, or levee state.
-  IF ( .not. LSTOONLY )THEN           !! default restart with previous t-step outflw
-    P2TMP=D2RIVOUT_PRE
-     CALL WRTE_BIN_MAP(P2TMP,TMPNAM,RIREC)
-    P2TMP=D2FLDOUT_PRE
-     CALL WRTE_BIN_MAP(P2TMP,TMPNAM,RIREC)
-    P2TMP=D2RIVDPH_PRE
-     CALL WRTE_BIN_MAP(P2TMP,TMPNAM,RIREC)
-    P2TMP=D2FLDSTO_PRE
-     CALL WRTE_BIN_MAP(P2TMP,TMPNAM,RIREC)
-  ENDIF
+! River and floodplain storage occupy records 1 and 2 in every mode.
+P2TMP=P2RIVSTO
+CALL WRTE_BIN_MAP(P2TMP,TMPNAM,RIREC)
+P2TMP=P2FLDSTO
+CALL WRTE_BIN_MAP(P2TMP,TMPNAM,RIREC)
+! Normal Restart preserves previous-step state; Storage-only keeps the
+! available storage fields and any enabled optional-scheme storage.
+IF ( .not. LSTOONLY )THEN
+  P2TMP=D2RIVOUT_PRE
+  CALL WRTE_BIN_MAP(P2TMP,TMPNAM,RIREC)
+  P2TMP=D2FLDOUT_PRE
+  CALL WRTE_BIN_MAP(P2TMP,TMPNAM,RIREC)
+  P2TMP=D2RIVDPH_PRE
+  CALL WRTE_BIN_MAP(P2TMP,TMPNAM,RIREC)
+  P2TMP=D2FLDSTO_PRE
+  CALL WRTE_BIN_MAP(P2TMP,TMPNAM,RIREC)
+ENDIF
 
-  ! Optional map records follow the previous-step fields when enabled:
-  ! gdwsto (LGDWDLY), damsto (LDAMOUT), and levsto (LLEVEE).
-  IF ( LGDWDLY ) THEN
-    P2TMP=P2GDWSTO
-     CALL WRTE_BIN_MAP(P2TMP,TMPNAM,RIREC)
-  ENDIF
-  IF ( LDAMOUT ) THEN   !!! ADDED
-    P2TMP=P2DAMSTO
-     CALL WRTE_BIN_MAP(P2TMP,TMPNAM,RIREC)
-  ENDIF
-  IF ( LLEVEE ) THEN   !!! ADDED
-    P2TMP=P2LEVSTO
-     CALL WRTE_BIN_MAP(P2TMP,TMPNAM,RIREC)
-  ENDIF
+! Optional-scheme records follow the previous-step fields when enabled.
+IF ( LGDWDLY ) THEN
+  P2TMP=P2GDWSTO
+  CALL WRTE_BIN_MAP(P2TMP,TMPNAM,RIREC)
+ENDIF
+IF ( LDAMOUT ) THEN
+  P2TMP=P2DAMSTO
+  CALL WRTE_BIN_MAP(P2TMP,TMPNAM,RIREC)
+ENDIF
+IF ( LLEVEE ) THEN
+  P2TMP=P2LEVSTO
+  CALL WRTE_BIN_MAP(P2TMP,TMPNAM,RIREC)
+ENDIF
 
 CLOSE(TMPNAM)
 
@@ -486,8 +484,9 @@ IF( LPTHOUT )THEN
   CFILE=TRIM(CRESTDIR)//TRIM(CVNREST)//TRIM(CDATE)//TRIM(CSUFBIN)//'.pth'
   WRITE(LOGNAM,*) 'WRTE_REST: WRITE RESTART BIN:',CFILE
 
-  !! This companion is written whenever LPTHOUT is enabled, including LSTOONLY.
-  !! The storage-only reader skips it and initializes bifurcation flow to zero.
+  !! The companion is written whenever LPTHOUT is enabled, including Storage-only.
+  !! The Storage-only reader skips it because previous-step bifurcation flow is
+  !! not part of that initialization mode.
   !! Double Precision Restart
   IF( LRESTDBL )THEN
     P1PTH(:,:)=D1PTHFLW_PRE(:,:)
@@ -500,7 +499,7 @@ IF( LPTHOUT )THEN
       CLOSE(TMPNAM)
     ENDIF
 
-  !! Single Precision Restart
+  !! Float32 Binary companion
   ELSE
     R1PTH(:,:)=REAL(D1PTHFLW_PRE(:,:),KIND=JPRM)
 #ifdef UseMPI_CMF
@@ -526,7 +525,7 @@ USE CMF_CTRL_MPI_MOD,   ONLY: CMF_MPI_AllReduce_R2MAP, CMF_MPI_AllReduce_P2MAP
 IMPLICIT NONE
 REAL(KIND=JPRD)            :: P2VAR(NSEQMAX,1)  !! use Real*8 for code simplicity
 INTEGER(KIND=JPIM)         :: TNAM,IREC
-!* local
+!* local variables
 REAL(KIND=JPRM)            :: R2TEMP(NX,NY)
 REAL(KIND=JPRD)            :: P2TEMP(NX,NY)
 !=================
@@ -541,7 +540,7 @@ IF( LRESTDBL )THEN
 
   IF ( REGIONTHIS==1 ) WRITE(TNAM,REC=IREC) P2TEMP
 
-!! Single Precision Restart
+!! Float32 Binary map record
 ELSE
   CALL vecP2mapR(P2VAR,R2TEMP)  
 #ifdef UseMPI_CMF
@@ -551,11 +550,6 @@ ELSE
 ENDIF
 !=================
 END SUBROUTINE WRTE_BIN_MAP
-!==========================================================
-!+
-!+
-!+
-!==========================================================
 SUBROUTINE WRTE_REST_CDF
 ! Define and write NetCDF Restart state variables using Float64 storage.
 #ifdef UseCDF_CMF
@@ -569,7 +563,7 @@ USE CMF_UTILS_MOD,      ONLY: NCERROR,  vecP2mapP
 USE CMF_CTRL_MPI_MOD,   ONLY: CMF_MPI_AllReduce_P2MAP, CMF_MPI_AllReduce_P1PTH
 #endif
 IMPLICIT NONE
-!* local variable
+!* local variables
 CHARACTER(LEN=256)         :: CFILE, CDATE, CTIME, CVAR
 INTEGER(KIND=JPIM)         :: NCID,  VARID, LATID, LONID, TIMEID, JF, &
                               NPTHOUTID,    NPTHLEVID,    STATUS, IOUT
@@ -585,7 +579,7 @@ CFILE=TRIM(CRESTDIR)//TRIM(CVNREST)//TRIM(CDATE)//TRIM(CSUFCDF)
 WRITE(LOGNAM,*) 'WRTE_REST:create RESTART NETCDF:',CFILE
 
 !============================
-!*** 2. create netCDF file
+!*** 2. Define the NetCDF Restart file
 !! NetCDF Restart variables use Float64 regardless of LRESTDBL.
 IF( REGIONTHIS==1 )THEN   !! write restart only on master node
 
@@ -619,7 +613,8 @@ IF( REGIONTHIS==1 )THEN   !! write restart only on master node
                              VARID,DEFLATE_LEVEL=6), 'Creating Variable')
   CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"river storage" ) )
   CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m3") )
-  CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',REAL(DMIS,KIND=JPRD)),'in here?' )
+  CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',REAL(DMIS,KIND=JPRD)), &
+                'Setting rivsto _FillValue')
   
    
   CALL NCERROR( NF90_DEF_VAR(NCID, 'fldsto', NF90_DOUBLE, (/LONID,LATID,TIMEID/), &
@@ -670,15 +665,15 @@ IF( REGIONTHIS==1 )THEN   !! write restart only on master node
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',REAL(DMIS,KIND=JPRD)) )
   ENDIF
   
-  IF ( LDAMOUT ) THEN    !!! added
+  IF ( LDAMOUT ) THEN
     CALL NCERROR( NF90_DEF_VAR(NCID, 'damsto', NF90_DOUBLE, (/LONID,LATID,TIMEID/), &
-                             VARID,DEFLATE_LEVEL=6), 'Creating Variable dasmto')  
+                             VARID,DEFLATE_LEVEL=6), 'Creating Variable damsto')
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"dam reservoir storage" ) )
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m3") )
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',REAL(DMIS,KIND=JPRD)) )
   ENDIF
   
-  IF ( LLEVEE ) THEN    !!! added
+  IF ( LLEVEE ) THEN
     CALL NCERROR( NF90_DEF_VAR(NCID, 'levsto', NF90_DOUBLE, (/LONID,LATID,TIMEID/), &
                              VARID,DEFLATE_LEVEL=6), 'Creating Variable levsto')  
     CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"storage exceeds levee protection" ) )
@@ -749,16 +744,16 @@ DO JF=1,9
         CALL vecP2mapP(P2GDWSTO,P2TEMP)
         IOUT=1
       ENDIF
-    CASE (8)  !!! LDAMOUT
+    CASE (8)  ! Reservoir storage, when enabled.
       CVAR='damsto'
       IF( LDAMOUT ) THEN
         CALL vecP2mapP(P2DAMSTO,P2TEMP)  !! P2DAMSTO only allocated for LDAMOUT
         IOUT=1
       ENDIF
-    CASE (9)  !!! LLEVEE
+    CASE (9)  ! Levee storage, when enabled.
       CVAR='levsto'
       IF( LLEVEE ) THEN
-        CALL vecP2mapP(P2LEVSTO,P2TEMP)  !! P2DAMSTO only allocated for LDAMOUT
+        CALL vecP2mapP(P2LEVSTO,P2TEMP)  !! P2LEVSTO is allocated only for LLEVEE.
         IOUT=1
       ENDIF
   END SELECT
@@ -806,8 +801,8 @@ END SUBROUTINE CMF_RESTART_WRITE
 
 !####################################################################
 LOGICAL FUNCTION restart_is_write_time()
-! Return the Restart schedule decision for coupled helpers such as HeatLink.
-! MAIN uses this query to synchronize coupled Restart writes after state updates.
+! Report whether the configured Restart time is due for coupled helpers.
+! MAIN uses this query to synchronize HeatLink Restart writes after its update.
 USE YOS_CMF_TIME,       ONLY: KSTEP, NSTEPS, JDD, JHOUR, JMIN
 IMPLICIT NONE
 !================================================
