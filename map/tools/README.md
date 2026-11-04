@@ -80,7 +80,7 @@ GrADS documents byte input as unsigned (`-1,40,1`), two-byte signed input as `-1
 
 ## GitHub-only automated tests
 
-Routine tests use code and data included in the repository. They do not execute `s01-regional_map.sh` and do not require or download `glb_15min`.
+Routine tests use code and data included in the repository. They do not execute `s01-regional_map.sh` and do not require or download `glb_15min`. The Mekong sample validator checks required sample files and validates type/dimensions/size for binaries listed in `variable_table/map_variables.csv`; unregistered user-created matrices and analysis binaries are allowed and skipped by that registry-based size check. At least one registered binary must still be checked, and a size mismatch in any registered binary fails validation.
 
 ```sh
 python3 -B -m unittest map.tools.tests.test_generate_ctl -v
