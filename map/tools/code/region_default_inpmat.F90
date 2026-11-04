@@ -5,7 +5,7 @@
 ! Regional map geometry from params.txt.
       character*256            :: param  !! river map parameters
       parameter                 (param='../params.txt')
-      integer                  :: iXX, iYY
+      integer                  :: iXX, iYY  !! regional map-cell index
       integer                  :: nXX, nYY  !! x/y map dimensions
       integer                  :: nflp  !! floodplain-layer count
       real                     :: gsize  !! map grid size [deg]
@@ -13,7 +13,7 @@
 
 ! High-resolution source geometry and area metadata.
       integer                  :: i  !! area ID
-      integer                  :: narea  !! area ID
+      integer                  :: narea  !! number of high-resolution areas in location.txt
       character*256            :: area  !! area code
       integer                  :: ix, iy  !! x/y grid index
       integer                  :: nx, ny  !! x/y grid dimensions
@@ -42,21 +42,21 @@
       data                   southin / -90.0/
       data                   olat    /'NtoS'/
 
-      real                     :: lon0, lat0
+      real                     :: lon0, lat0  !! current high-resolution pixel center [deg]
 ! =============================
 
 ! Sparse input-matrix arrays: source-grid indices and overlap areas.
-      integer                  :: inum  !!
-      integer                  :: nmax  !!
-      integer                  :: mmax  !!
+      integer                  :: inum  !! contribution-slot index for one regional cell
+      integer                  :: nmax  !! maximum distinct input cells allowed per regional cell
+      integer                  :: mmax  !! largest contribution count found on any regional cell
       parameter                 (nmax=100)
       integer, allocatable      :: inpn(:,:)  !! number of input grids for river network grid (iXX,iYY)
       integer, allocatable      :: inpx(:,:,:), inpy(:,:,:)  !! input-grid x/y indices
       real, allocatable         :: inpa(:,:,:)  !! overlap area [m2]
 
-      integer, allocatable      :: inpx0(:,:,:)
-      integer, allocatable      :: inpy0(:,:,:)
-      real, allocatable         :: inpa0(:,:,:)
+      integer, allocatable      :: inpx0(:,:,:)  !! packed input-grid x indices for output records
+      integer, allocatable      :: inpy0(:,:,:)  !! packed input-grid y indices for output records
+      real, allocatable         :: inpa0(:,:,:)  !! packed overlap areas for output records [m2]
 
 ! Per-area high-resolution map arrays.
       integer*2, allocatable    :: catmxx(:,:), catmyy(:,:)  !! catchment (iXX,iYY)  of hires pixel (ix,iy)
@@ -64,8 +64,8 @@
       real, allocatable         :: carea(:,:)  !! high-resolution cell area [m2]
 
 ! Working indices and counts.
-      integer                  :: new
-      integer                  :: iXX0, iYY0
+      integer                  :: new          !! whether the current input cell needs a new slot
+      integer                  :: iXX0, iYY0   !! regional cell with the largest contribution count
 
 ! Input and output filenames and I/O status.
       integer                  :: ios  !! I/O status code
@@ -184,7 +184,7 @@ print *, 'REGION_DEFAULT_INPMAT:'
         endif
 
 ! Map each valid high-resolution pixel center to the configured input grid,
-! then accumulate its area by regional map cell and input-grid cell pair.
+! then sum pixel area for each regional-cell/input-cell pair to form sparse weights.
         do iy=1, ny
           do ix=1, nx
             if( catmxx(ix,iy)>0 )then

@@ -17,7 +17,7 @@ The standard Mekong sample includes the base maps and one-area 1min layers requi
 
 ## 2. Scope and inspection state
 
-Inspected the three programs and wrappers in map/src/src_param/, its README and Makefile, the current shared map/tools/code/Makefile, map/tools/script_params/ documentation and workflows, map/map_variables.csv, the current map/mekong_15min/ tree, local map/data/, and the separately supplied read-only v4.30 package reference.
+Inspected the three programs and wrappers in map/src/src_param/, its README and Makefile, the current shared map/tools/code/Makefile, map/tools/script_params/ documentation and workflows, variable_table/map_variables.csv, the current map/mekong_15min/ tree, local map/data/, and the separately supplied read-only v4.30 package reference.
 
 At Phase A, the three legacy sources were 460, 485, and 527 lines, and `map/tools/tests/` had no allocation-specific tests. At Phase B start, `git fetch origin feature/map-data-tools` succeeded; local HEAD and the remote branch were both `05258b2`. Issue #122 is open, and the allocation-related open PR search returned no matches. The documentation and research changes from the immediately preceding maintainer clarification are preserved in the worktree.
 

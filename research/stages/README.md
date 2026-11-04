@@ -7,3 +7,5 @@ These records summarize Git-observable development stages, using commit timestam
 - [Pre-documentation baseline](../baseline/pre_documentation.md) and [comparison procedure](../baseline/comparison_workflow.md).
 
 The `document` branch name provided as historical context is not present in fetched refs; the verified documentation PR used `docs/reorganization`. Review `KG-0001` before treating the labels as identical. No historical human-intervention record is created without a verifiable source and timestamp. ChatGPT discussion topics supplied by the maintainer are queued in [`chatgpt_archive_queue.md`](../records/discussions/chatgpt_archive_queue.md) as contextual leads only.
+
+- [Model source and simulation workflow](model-source-workflow.md): Phase 0 copy/build baseline on feature/gosh-refactor; Mekong runtime work is deferred.

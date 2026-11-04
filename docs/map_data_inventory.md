@@ -1,12 +1,12 @@
 # CaMa-Flood Map Data Inventory (Review Draft)
 
-**Status:** Phase 1 reference inventory. The packaged v4.30 `glb_15min` map and standard sample run are the verified example, not a universal map specification. Common variable definitions now live in [the shared CSV](../map/map_variables.csv), with schema and design rationale in [map metadata specification](../map/map_metadata_spec.md). This document retains reference-dataset evidence and reader/workflow findings; it does not decide a NetCDF layout or conversion behavior.
+**Status:** Phase 1 reference inventory. The packaged v4.30 `glb_15min` map and standard sample run are the verified example, not a universal map specification. Common variable definitions now live in [the shared CSV](../variable_table/map_variables.csv), with schema and design rationale in [map metadata specification](../variable_table/map_metadata_spec.md). This document retains reference-dataset evidence and reader/workflow findings; it does not decide a NetCDF layout or conversion behavior.
 
 ## 1. Scope and reference configuration
 
 The verified sample is [`gosh/test1-glb_15min.sh`](../gosh/test1-glb_15min.sh#L80). It selects binary maps (`LMAPCDF=.FALSE.`), provides file names through the map namelist, selects `rivwth_gwdlr.bin` as `CRIVWTH`, and enables bifurcation input with `LPTHOUT=.TRUE.`. Those choices describe the sample configuration, not mandatory settings for every run.
 
-This document preserves the source and dataset evidence for the core reference configuration. The broader product register, including package-observed auxiliary/MPI products and traceable source-only outputs, is maintained in [`map/map_variables.csv`](../map/map_variables.csv). Specialized products remain marked provisional where the source evidence does not establish their semantics.
+This document preserves the source and dataset evidence for the core reference configuration. The broader product register, including package-observed auxiliary/MPI products and traceable source-only outputs, is maintained in [`variable_table/map_variables.csv`](../variable_table/map_variables.csv). Specialized products remain marked provisional where the source evidence does not establish their semantics.
 
 The packaged map data were inspected read-only. The binary data are distributed separately from this source repository.
 
@@ -49,13 +49,13 @@ These values are specific to the inspected v4.30 package and must not be general
 
 ## 5. Metadata and configuration reference
 
-The field-by-field formats and producer/reader roles for `params.txt`, `mapdim.txt`, `diminfo*.txt`, and GrADS CTLs are documented in [`map_metadata_spec.md`](../map/map_metadata_spec.md#metadata-and-configuration-files).
+The field-by-field formats and producer/reader roles for `params.txt`, `mapdim.txt`, `diminfo*.txt`, and GrADS CTLs are documented in [`map_metadata_spec.md`](../variable_table/map_metadata_spec.md#metadata-and-configuration-files).
 
 Reference-dataset observations: `params.txt` describes the 1440 × 720 × 10 global 0.25° map; the sample `diminfo_test-1deg.txt` pairs those map dimensions with a separate 360 × 180 input grid and `INPN=7`. The package's `mapdim.txt` repeats only the map dimensions and is an auxiliary input to external map-generation algorithms, not the simulation. The top-level CTLs use generic `Flow Direction` titles for scalar maps, and `rivman.bin` has no corresponding CTL in the inspected directory.
 
 ## 6. Existing NetCDF reader correspondence
 
-The reader mapping is listed in [`map_variables.csv`](../map/map_variables.csv). In source, `READ_MAP_CDF` and `READ_TOPO_CDF` request the module-level variables through `CRIVCLINC` and `CRIVPARNC`. No NetCDF map dataset was present in the inspected v4.30 package. The maintainer confirmed that these module-level files were generated at ECMWF and that code to reproduce this workflow is planned; their complete output contract remains open.
+The reader mapping is listed in [`map_variables.csv`](../variable_table/map_variables.csv). In source, `READ_MAP_CDF` and `READ_TOPO_CDF` request the module-level variables through `CRIVCLINC` and `CRIVPARNC`. No NetCDF map dataset was present in the inspected v4.30 package. The maintainer confirmed that these module-level files were generated at ECMWF and that code to reproduce this workflow is planned; their complete output contract remains open.
 
 Some partial NetCDF output code already exists in `calc_rivwth.F90`. It writes `rivpar.nc` with `lon`, `lat`, `rivwth`, and `rivhgt`, but omits `rivman`. It sets `missing_value=1.e20` while writing `-9999` outside the network. This partial parameter output is not the complete module-level container expected by the model reader. Do not infer the future conversion or fill-value policy from it.
 
@@ -63,11 +63,11 @@ Some partial NetCDF output code already exists in `calc_rivwth.F90`. It writes `
 
 The reference script supplies map paths to the model. `CMF_RIVMAP_INIT` reads network topology and configured bifurcation input; `CMF_TOPO_INIT` reads topography and channel parameters. Binary and NetCDF paths are implemented separately in `src/cmf_ctrl_maps_mod.F90`.
 
-For the verified channel-parameter sequence and program inputs/outputs, see [the channel workflow section in `map_metadata_spec.md`](../map/map_metadata_spec.md#channel-parameter-generation-workflow). Regional tools such as [`cut_domain.F90`](../map/src/src_region/cut_domain.F90) crop existing maps; [`set_map.F90`](../map/src/src_region/set_map.F90) can derive separate grid-oriented products. Neither is the original global-map generator.
+For the verified channel-parameter sequence and program inputs/outputs, see [the channel workflow section in `map_metadata_spec.md`](../variable_table/map_metadata_spec.md#channel-parameter-generation-workflow). Regional tools such as [`cut_domain.F90`](../map/src/src_region/cut_domain.F90) crop existing maps; [`set_map.F90`](../map/src/src_region/set_map.F90) can derive separate grid-oriented products. Neither is the original global-map generator.
 
 ## 7. Open Questions
 
-Remaining metadata and conversion questions are grouped in [the `Open Questions` section of `map_metadata_spec.md`](../map/map_metadata_spec.md#open-questions). This inventory does not repeat them; the current reference binary audit and package evidence can stand independently.
+Remaining metadata and conversion questions are grouped in [the `Open Questions` section of `map_metadata_spec.md`](../variable_table/map_metadata_spec.md#open-questions). This inventory does not repeat them; the current reference binary audit and package evidence can stand independently.
 
 ## 8. Evidence checked
 

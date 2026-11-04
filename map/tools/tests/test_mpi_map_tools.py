@@ -169,13 +169,16 @@ class MpiMapToolsTests(unittest.TestCase):
             self.assertEqual(max_data[max_record_size:], (max_legacy_map / "bpoint_mpi.bin").read_bytes())
 
             ctl_map_dir = root / "ctl_repository" / "map"
+            ctl_registry_dir = root / "ctl_repository" / "variable_table"
             ctl_code = ctl_map_dir / "tools" / "code"
             ctl_target = ctl_map_dir / "mekong_15min"
             ctl_script_dir = ctl_target / "script_params"
             ctl_code.mkdir(parents=True)
             ctl_script_dir.mkdir(parents=True)
+            ctl_registry_dir.mkdir(parents=True)
             shutil.copy2(CODE / "generate_ctl.py", ctl_code / "generate_ctl.py")
-            shutil.copy2(ROOT / "map" / "map_variables.csv", ctl_map_dir / "map_variables.csv")
+            shutil.copy2(ROOT / "variable_table" / "map_variables.csv",
+                         ctl_registry_dir / "map_variables.csv")
             shutil.copy2(MAP / "params.txt", ctl_target / "params.txt")
             shutil.copy2(diagnostic, ctl_target / diagnostic.name)
             shutil.copy2(v5_map / "bifcol_mpi.bin", ctl_target / "bifcol_mpi.bin")
@@ -297,7 +300,7 @@ class MpiMapToolsTests(unittest.TestCase):
             self.assertFalse((root / "mpireg.bin").exists())
 
             # The existing registry pattern should generate one CTL per concrete N.
-            with (ROOT / "map" / "map_variables.csv").open(newline="", encoding="utf-8") as stream:
+            with (ROOT / "variable_table" / "map_variables.csv").open(newline="", encoding="utf-8") as stream:
                 reader = csv.DictReader(stream)
                 fields = reader.fieldnames
                 color_rows = [row for row in reader if row["binary_filename"] in {"bsncol_mpi-*.bin", "bifcol_mpi.bin"}]

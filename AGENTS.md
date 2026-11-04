@@ -102,6 +102,8 @@ Prefer small, independently reviewable changes. Existing Fortran, namelists, Mak
 
 Treat the following as established contracts: public driver/coupler routines, namelist names and defaults, script entry points, paths expected by workflows, variable names/units/meaning, binary layouts, NetCDF conventions, restart precision and contents, and distribution formats. Preserve legacy aliases unless a compatibility change has been approved.
 
+For the approved v5 model-source and simulation-workflow project, preserve `src/` and `gosh/` as legacy reference implementations. New model-source and example-workflow development belongs in `src_main/` and `gosh_sample/`; do not copy over or edit the legacy paths. The project-specific boundaries, Phase 0 plan, and persistent branch are recorded in [`docs/model_source_workflow_plan.md`](docs/model_source_workflow_plan.md) and [`docs/dev_status.md`](docs/dev_status.md).
+
 For numerical refactoring, preserve precision kinds, arithmetic and reduction order, limiters, adaptive time stepping, state-update order, and coupling/restart timing. Storage is intentionally double precision in important paths even when other calculations use single precision. Moving a call can change the numerical method. Do not mix numerical changes with cosmetic cleanup.
 
 For optional schemes, identify initialization, state ownership, outer/adaptive time-step hooks, forcing, output, restart, and unsupported combinations. Test disabled-scheme behavior as well as enabled behavior where data permit. Do not assume compile-time flags and runtime switches are interchangeable.
@@ -124,21 +126,64 @@ Within `script_analysis/`, use `a00-link_codes.sh` to create a relative `code` s
 
 ## Map metadata maintenance
 
-When adding or changing map-related readers, writers, preprocessing products, or model map interfaces, inspect and update [`map/map_variables.csv`](map/map_variables.csv) and the responsible module README. Keep verified facts distinct from provisional fields, and record distribution role separately from packages where a product was observed; see [`map/map_metadata_spec.md`](map/map_metadata_spec.md).
+When adding or changing map-related readers, writers, preprocessing products, or model map interfaces, inspect and update [`variable_table/map_variables.csv`](variable_table/map_variables.csv) and the responsible module README. Keep verified facts distinct from provisional fields, and record distribution role separately from packages where a product was observed; see [`variable_table/map_metadata_spec.md`](variable_table/map_metadata_spec.md).
 
-The maintainer manually controls the map registry's workflow-status column, currently named `workflow_stage` in `map/map_variables.csv`. Codex may read it but must not edit its values, including when adding or revising registry rows. If the status appears stale or a new row needs a status, leave it unchanged or blank and report the suggested update to the maintainer. Preserve the existing column values during CSV edits and do not infer or set `default` from file presence.
+The maintainer manually controls the map registry's workflow-status column, currently named `workflow_stage` in `variable_table/map_variables.csv`. Codex may read it but must not edit its values, including when adding or revising registry rows. If the status appears stale or a new row needs a status, leave it unchanged or blank and report the suggested update to the maintainer. Preserve the existing column values during CSV edits and do not infer or set `default` from file presence.
+
+The v5 model output-variable inventory is [`variable_table/output_variables.csv`](variable_table/output_variables.csv). Future CTL-generation tools should locate it relative to the repository root (`${CMF_BASE}/variable_table/output_variables.csv`).
 
 ## Shared Fortran Module Naming (`map/tools/code/`)
 
 Name shared Fortran module source files in `map/tools/code/` with the `mod_` prefix (for example, `mod_map_color.F90`). This convention is limited to shared module source files in this directory; it does not apply to main-model files under `src/`, programs, or files in other directories. A source filename rename does not require renaming its internal Fortran module or procedures unless a task explicitly approves that interface change.
 
+## Fortran coding conventions
+
+For changes to Fortran source files under `src_main/`, follow the conventions in [`src_main/FORTRAN_STYLE.md`](src_main/FORTRAN_STYLE.md). The directory-specific instructions in [`src_main/AGENTS.md`](src_main/AGENTS.md) also apply. Preserve established numerical behavior, module organization, variable naming, and local formatting conventions. Do not reformat unrelated code.
+
+## Source Code Readability for `map/tools/`
+
+These recommendations support human-readable Fortran and Python tools under `map/tools/code/`. Organize code by scientific or computational meaning: keep related operations together, use a blank line when the purpose or data changes, and keep an operation with its error check. Use comments for major process transitions; do not add whitespace or comments mechanically around every statement.
+
+Prefer comments that explain **Why**, then **What**, then **How** when that information is not clear from the code. Explain verified scientific rationale, units, sentinels, array dimensions, data order, and input/output contracts where they matter. Do not narrate obvious syntax or infer undocumented science. Group settings, constants, and data structures by role, keep related values near their use, and use [`variable_table/map_variables.csv`](variable_table/map_variables.csv) as the maintained reference for map-product metadata instead of duplicating its full contents in code.
+
+Preserve scientific behavior and data contracts during readability work, including equations, constants, evaluation order, precision, array layout, binary/NetCDF formats, missing values, coordinate/index conventions, filenames, and workflow compatibility. Treat behavior changes as separate work. Keep focused changes local and reviewable.
+
 ## Fortran Source Readability
 
-Fortran declarations are a human-readable inventory of a program's data structures. Prioritize human understanding over compactness: group declarations by scientific or computational purpose, keep closely related values together (for example, `nx, ny` or `ix, iy`), and use separate declarations for variables with different meanings even when this adds lines. Use short comments and blank lines between groups. Add concise inline notes for variable roles, physical units, and important classifications when established by code or maintainer decisions; do not guess at unknown meaning. Align declarations reasonably. Use concise comments for major calculations and assumptions, not trivial operations. Long programs should use numbered headings such as `[1]`, `[2]`, and `[3]` with visible separators (`! ================================================`) to mark major stages. Keep scientific expressions and decision rules visible, and avoid helper abstractions that hide them. These are community recommendations, not strict formatting requirements for every contributor. In the current maintainer-led v5 modernization, apply them by default while preserving numerical behavior and keeping formatting changes focused.
+Fortran declarations are a human-readable inventory of a program's data structures. Prioritize human understanding over compactness: group declarations by scientific or computational purpose, keep closely related values together (for example, `nx, ny` or `ix, iy`), and use separate declarations for variables with different meanings even when this adds lines. Use short comments and blank lines between groups. Add concise inline notes for variable roles, physical units, and important classifications when established by code or maintainer decisions; do not guess at unknown meaning. Align declarations reasonably. Use concise comments for major calculations and assumptions, not trivial operations. Long programs should use numbered headings such as `[1]`, `[2]`, and `[3]` with visible separators (`! ================================================`) to mark major stages. Keep scientific expressions and decision rules visible, and avoid helper abstractions that hide them.
+
+For `map/tools/code/`, preserve the local style of the file being edited, including capitalization, indentation, declaration placement, and established type spellings such as `REAL*8`. These are readability recommendations, not a mandate to reformat existing programs. In long programs, retain the map-tools `! ================================================` separators and `[1]`, `[2]` process headings; do not mechanically convert them to the `src_main` `!*** N.` form. Do not apply `src_main/`-specific `CMF_*` procedure names, `CMF::` logs, `LOGNAM` conventions, or model-state organization to map tools. Maintain the map-tool executable families (`region_*`, `param_*`, `analysis_*`, `allocate_*`) and the `mod_*` prefix for shared module source files in this directory, as described in the shared module naming section above. The detailed `src_main/` conventions remain in [`src_main/FORTRAN_STYLE.md`](src_main/FORTRAN_STYLE.md) and do not govern `map/tools/`.
+
+### Python Source Readability
+
+- Follow familiar PEP 8 formatting for new or substantially changed Python code, while preserving the established local style in older utilities.
+- Do not impose a mechanical 128-character limit on Python. A line up to about 160 characters may remain unwrapped when it is easier to read as one expression or call. For longer expressions, Python supports implicit continuation inside parentheses, brackets, and braces; no Fortran-style continuation marker is needed.
+- Start standalone scripts with a short module docstring describing their purpose. Use clear function and class boundaries for cohesive responsibilities; do not split trivial operations into abstractions that obscure the workflow.
+- Group related configuration, constants, and data structures. Use names and types that make units, dimensions, and data roles apparent when they are known. Dataclasses or other structured types are useful when they make related data easier to understand, not as a required pattern.
+- Add docstrings for public or nontrivial functions when they clarify inputs, outputs, assumptions, or errors. Use comments for scientific rationale and non-obvious algorithms, not to repeat Python syntax.
+- Prefer explicit errors that identify the relevant input or metadata. Keep validation close to the code that consumes the input and preserve existing CLI and file contracts.
+
+Do not impose Fortran declaration alignment, Fortran section separators, or model-specific Fortran naming conventions on Python code.
 
 ## Cross-project research logging for the v5 case study
 
 Research logging is a long-term activity across the v4-to-v5 transition, not a feature owned by one project or branch. Preserve the common [`research/`](research/README.md) history across projects and branch transitions; no dedicated research Issue is required. Record significant discussions, approvals, instructions, implementations, knowledge discoveries, human interventions, failures, and validations, distinguishing each stage. The study's approved v5 dimensions are knowledge accessibility, reproducibility, extensibility, and governance; see [`research/study_protocol.md`](research/study_protocol.md). Do not log routine commands or every AI turn, invent unavailable history/metrics, commit raw private transcripts, or claim scientific correctness from execution alone. Have the maintainer review AI-generated discussion summaries, and run `python3 research/validate_records.py` after changing the record tables.
+
+## CaMa-Flood v5 test design principles
+
+Test the CaMa-Flood implementation, not the internals of its dependencies. Tests should establish that our scientific calculations, data transformations, formats, and interfaces behave correctly. Rely on guarantees provided by standard tools and external libraries; test that CaMa-Flood passes the right data and correctly interprets returned data at those boundaries.
+
+Prioritize tests in this order:
+
+1. **Scientific correctness:** Check equations, physical meaning, variable correspondence, units, and boundary conditions. For scientific refactors, compare against the previous implementation where appropriate, but also use independent evidence such as analytical solutions, conservation, or known physical properties when needed. Agreement with old code alone does not prove scientific correctness.
+2. **Data and interface contracts:** Check CaMa-Flood's Binary/NetCDF layouts, names, types, array ordering, coordinates, missing values, restart ordering, and Driver/Coupler interfaces.
+3. **Workflow correctness:** Check CaMa-Flood's path resolution, configuration handoff, command ordering, and error handling in Shell and Python workflows.
+
+Choose test depth in proportion to the changed behavior and risk. Test runtime, compute, and maintenance burden are design costs; do not treat test count or coverage percentage as goals. Prefer small, deterministic synthetic inputs and representative samples. Use focused syntax/path checks for documentation or file-organization changes, small executions for workflow changes, contract checks for I/O changes, independent scientific validation plus appropriate regression coverage for algorithm changes, and state/order/consistency checks for Restart or Driver/Coupler changes. Run expensive integration tests explicitly when their broader coverage is needed; a full test suite is not required for every change. Treat execution and file integrity as evidence of those checks only, not as proof of scientific validity.
+
+Use a staged validation workflow: during an individual development task, run the smallest focused checks that address its CaMa-Flood-specific risks. Before a pull request or merge, run the broader relevant regression, build, and integration checks for the affected workflows and supported configurations. Reserve full-package or global-scale runs for changes whose scale or interaction risks justify them; record clearly which level was actually run.
+
+Avoid redundant tests, tests of dependency algorithms that their providers already guarantee, duplicate coverage of existing tests, and tests brittle to harmless internal refactoring. Before adding a test, an AI coding agent must identify the CaMa-Flood-specific failure it detects, check whether existing tests or dependency guarantees already cover it, consider a smaller maintainable alternative, and judge the cost against the risk. Do not add tests that detect no implementation risk. Do not delete existing tests or weaken CI without explicit maintainer instruction.
 
 ## 6. Validation and completion
 

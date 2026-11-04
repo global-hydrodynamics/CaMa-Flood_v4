@@ -7,7 +7,7 @@ import math
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-REGISTRY = ROOT / "map" / "map_variables.csv"
+REGISTRY = ROOT / "variable_table" / "map_variables.csv"
 INTEGER_RANGES = {"int8": (-128, 127), "int16": (-32768, 32767),
                   "int32": (-2147483648, 2147483647)}
 FLOAT_TYPES = {"float32"}

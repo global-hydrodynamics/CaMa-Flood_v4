@@ -11,12 +11,12 @@
 
       character*256            :: global_param
       character*256            :: cut_param
-      real*8                   :: lon_ori, lat_ori
-      real*8                   :: lon_end, lat_end
-      real*8                   :: glon
-      real*8                   :: glat
-      real*8                   :: d1
-      real*8                   :: d2
+      real*8                   :: lon_ori, lat_ori  !! source-map west and north edges [deg]
+      real*8                   :: lon_end, lat_end  !! source-map east and south edges [deg]
+      real*8                   :: glon              !! source-grid longitude at the crop boundary [deg]
+      real*8                   :: glat              !! source-grid latitude at the crop boundary [deg]
+      real*8                   :: d1                !! nearest crop-edge alignment distance [deg]
+      real*8                   :: d2                !! nearest crop-edge alignment distance [deg]
 
       character*256            :: region_dir
       character*256            :: region_param
@@ -25,13 +25,13 @@
 !
       integer                  :: ix, iy  !! x/y grid index
       integer                  :: jx, jy  !! target x/y grid index
-      integer                  :: kx
-      integer                  :: ky
+      integer                  :: kx                !! source-map downstream x index
+      integer                  :: ky                !! source-map downstream y index
       integer                  :: nx, ny  !! x/y grid dimensions
-      integer                  :: mx
-      integer                  :: my
-      integer                  :: dx
-      integer                  :: dy
+      integer                  :: mx                !! regional map x dimension
+      integer                  :: my                !! regional map y dimension
+      integer                  :: dx                !! source-to-region x-index offset
+      integer                  :: dy                !! source-to-region y-index offset
       real*8                   :: gsize  !! map grid size [deg]
       integer                  :: iflp  !! number of floodplain layer
       integer                  :: nflp  !! floodplain-layer count
@@ -70,40 +70,40 @@
       integer, allocatable      :: nexty0(:,:)  !! source-map downstream y index
       integer, allocatable      :: downx0(:,:)  !! source-map high-resolution downstream x index
       integer, allocatable      :: downy0(:,:)  !! source-map high-resolution downstream y index
-      integer, allocatable      :: catmpx0(:,:)
-      integer, allocatable      :: classmap0(:,:)
-      real, allocatable         :: elevtn0(:,:)
-      real, allocatable         :: fldhgt0(:,:,:)
-      real, allocatable         :: ctmare0(:,:)
-      real, allocatable         :: uparea0(:,:)
-      real, allocatable         :: grdare0(:,:)
+      integer, allocatable      :: catmpx0(:,:)  !! high-resolution pixel count per source catchment
+      integer, allocatable      :: classmap0(:,:) !! source-map class code
+      real, allocatable         :: elevtn0(:,:)  !! river-cell elevation [m]
+      real, allocatable         :: fldhgt0(:,:,:) !! floodplain height by layer [m]
+      real, allocatable         :: ctmare0(:,:)  !! unit-catchment area [m2]
+      real, allocatable         :: uparea0(:,:)  !! upstream drainage area [m2]
+      real, allocatable         :: grdare0(:,:)  !! grid-cell area [m2]
       real, allocatable         :: lon0(:,:), lat0(:,:)
-      real, allocatable         :: nxtdst0(:,:)
-      real, allocatable         :: rivlen0(:,:)
-      real, allocatable         :: width0(:,:)
+      real, allocatable         :: nxtdst0(:,:)  !! distance to downstream grid [m]
+      real, allocatable         :: rivlen0(:,:)  !! river length within unit catchment [m]
+      real, allocatable         :: width0(:,:)   !! channel width [m]
 
 ! Cropped regional arrays and optional supplementary map layers.
       integer, allocatable      :: nextx(:,:), nexty(:,:)  !! downstream cell x/y indices
-      integer, allocatable      :: downx(:,:), downy(:,:)  !!  regional maps
-      integer, allocatable      :: catmpx(:,:)
+      integer, allocatable      :: downx(:,:), downy(:,:)  !! regional high-resolution downstream offsets
+      integer, allocatable      :: catmpx(:,:)  !! cropped high-resolution pixel count per catchment
       integer, allocatable      :: classmap(:,:)  !! map classification code
       real, allocatable         :: elevtn(:,:)  !! elevation [m]
       real, allocatable         :: fldhgt(:,:,:)  !! floodplain height by layer [m]
       real, allocatable         :: ctmare(:,:)  !! unit-catchment area [m2]
-      real, allocatable         :: uparea(:,:)
-      real, allocatable         :: grdare(:,:)
+      real, allocatable         :: uparea(:,:)  !! upstream drainage area [m2]
+      real, allocatable         :: grdare(:,:)  !! grid-cell area [m2]
       real, allocatable         :: lon(:,:), lat(:,:)  !! longitude/latitude [deg]
       real, allocatable         :: nxtdst(:,:)  !! distance to downstream grid [m]
       real, allocatable         :: rivlen(:,:)  !! river length [m]
       real, allocatable         :: width(:,:)  !! channel width [m]
-      integer, allocatable      :: lsmask(:,:)
+      integer, allocatable      :: lsmask(:,:)  !! 1 for retained river-network cells, 0 otherwise
 
       real, allocatable         :: tmp0(:,:)  !! for fldhgt I/O
       real, allocatable         :: tmp(:,:)  !! for fldhgt I/O
 
 ! Boundary-path mask and optional-layer availability flags.
-      integer, allocatable      :: check(:,:)  !! edge-path classification map
-      integer                  :: icheck
+      integer, allocatable      :: check(:,:)  !! -9 outside, 0 unmarked network, 10 terminal, 20 border path
+      integer                  :: icheck       !! path class propagated upstream from its downstream end
       logical                  :: has_catmpx
       logical                  :: has_class
 

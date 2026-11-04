@@ -11,8 +11,8 @@
       integer              ::  iXX, iYY, jXX, jYY
       integer              ::  nXX, nYY                        !! x-y matrix GLOBAL
       real                 ::  gsize, csize                    !! grid size [degree]
-      real                 ::  west,  north,  east,  south
-      real                 ::  west2, north2, east2, south2
+      real                 ::  west,  north,  east,  south       !! base-map bounds [deg]
+      real                 ::  west2, north2, east2, south2      !! selected high-resolution map bounds [deg]
       character*16         ::  hires                           !! selected high-resolution map tag
       integer              ::  ifile
 ! index 1min
@@ -21,28 +21,30 @@
 
       integer              ::  ix0, iy0                    !! allocated station xy
 ! input
-      real,allocatable     ::  uparea(:,:)                 !! drainage  area
-      real,allocatable     ::  ctmare(:,:)                 !! catchment area
-      integer,allocatable  ::  nextXX(:,:), nextYY(:,:)   !! next grid X
+      real,allocatable     ::  uparea(:,:)                 !! base-map upstream area [km2 after conversion]
+      real,allocatable     ::  ctmare(:,:)                 !! unit-catchment area [km2 after conversion]
+      integer,allocatable  ::  nextXX(:,:), nextYY(:,:)   !! downstream base-map cell indices
 
-      real,allocatable     ::  maxupa(:,:)                    !! maximum drainage area of upstream grids
-      integer,allocatable  ::  upstXX(:,:,:), upstYY(:,:,:)   !! list of upstream grid
+      real,allocatable     ::  maxupa(:,:)                    !! largest upstream area encountered per downstream cell [km2]
+      integer,allocatable  ::  upstXX(:,:,:), upstYY(:,:,:)   !! upstream cells ranked by drainage area
       integer,allocatable  ::  outx(:,:), outy(:,:)           !! high-res (ix,iy) coordinate of outlet pixel
 
-      real,allocatable     ::  glon(:), glat(:)
+      real,allocatable     ::  glon(:), glat(:)              !! base-map cell-center longitude/latitude [deg]
 
       integer*2,allocatable::  dwx1m(:,:), dwy1m(:,:)         !! downstream pixel (jx,jy) of each high-res pixel (ix,iy)
       integer*2,allocatable::  ctx1m(:,:), cty1m(:,:)         !! corresponding unit-catchment (iXX,iYY) of each high-res pixel
-      real,allocatable     ::  upa1m(:,:)                     !! high-res upstream area
+      real,allocatable     ::  upa1m(:,:)                     !! high-resolution upstream area [km2]
       real,allocatable     ::  lon1m(:), lat1m(:)             !! high-res pixel lat lon
 
-      integer              ::  id
+      integer              ::  id                             !! external dam identifier
       character*32         ::  damname, rivname
-      integer              ::  year
-      real                 ::  lat0, lon0, lat, lon, area0, area, cap_mcm
-      real                 ::  err, err0, err1, err2, dd, diff
-      real                 ::  rate, rate0
-      integer              ::  nn
+      integer              ::  year                           !! dam construction year from input table
+      real                 ::  lat0, lon0, lat, lon            !! input and selected-point coordinates [deg]
+      real                 ::  area0, area                     !! reported and candidate drainage area [km2]
+      real                 ::  cap_mcm                         !! reservoir capacity [million m3]
+      real                 ::  err, err0, err1, err2, dd, diff !! area mismatch and adjusted candidate score
+      real                 ::  rate, rate0                     !! symmetric area-error score and best score
+      integer              ::  nn                              !! half-width of high-resolution candidate search window
 
       integer              ::  ista, jsta, nsta
       integer              ::  snum
@@ -50,8 +52,8 @@
       integer              ::  iXX0, iYY0, jXX0, jYY0
       integer              ::  isFound
 
-      integer              ::  staX(3), staY(3)
-      real                 ::  staA(3), area_cmf
+      integer              ::  staX(3), staY(3)                !! selected CaMa map cells for allocation output
+      real                 ::  staA(3), area_cmf                !! selected areas and reported CaMa drainage area [km2]
 
 ! file
       character*128        ::  damlist
@@ -152,7 +154,7 @@ print *, 'calc outlet pixel location of each unit catchment'
                 if( ctx1m(jx,jy)/=ctx1m(ix,iy) .or. cty1m(jx,jy)/=cty1m(ix,iy) )then
                   if( outx(iXX,iYY)/=-9999 )then
                     !!print *, 'Multiple Outlet', iXX,iYY
-                    if( upa1m(jx,jy)>maxupa(iXX,iYY) )then    !! mid resolution river map might have two outlet, due to resampling limitation
+                    if( upa1m(jx,jy)>maxupa(iXX,iYY) )then    !! resampling can give a cell multiple outlets
                       maxupa(iXX,iYY)=upa1m(jx,jy)
                       outx(iXX,iYY)=ix
                       outy(iXX,iYY)=iy
@@ -203,7 +205,8 @@ print *, 'calc outlet pixel location of each unit catchment'
       rate0=1.e20
       nn=3
 
-!!    search high-res uparea and find the best fit
+!! Search a 7x7 pixel window. Candidates must exceed 5% of the reported area;
+!! the score combines relative area mismatch with a distance penalty.
       do dy=-nn, nn
         do dx=-nn, nn
           jx=ix+dx
@@ -258,7 +261,7 @@ print *, 'calc outlet pixel location of each unit catchment'
       endif
 
 !===================
-      !! find best grid for the gauge
+      !! find best river-network grid for the dam
       ix0=kx  !! GRDC allocated on 1min
       iy0=ky
       iXX0=ctx1m(ix0,iy0)
@@ -298,7 +301,7 @@ print *, 'calc outlet pixel location of each unit catchment'
       isFound=0
 
 ! ======
-      snum=0    !! when upstream is used to represent gauge, count number of upstream
+      snum=0    !! count upstream cells used to represent the dam drainage area
       area_cmf=0
       if( abs(err1)>0.2 )then    !! uparea error is large. consider using upstream grid
 
@@ -312,7 +315,7 @@ print *, 'calc outlet pixel location of each unit catchment'
           call nextxy(ix,iy,jx,jy)
           isFound=0
 
-          !!follow river from upstream outlet, check the gauge exist in downstream or not
+          !! follow the river downstream to check whether the dam lies on this path
           do while( ctx1m(jx,jy)==iXX0 .and. cty1m(jx,jy)==iYY0 .and. dwx1m(jx,jy)>-900 )
             if( jx==ix0 .and. jy==iy0 )then
               isFound=1
@@ -324,7 +327,7 @@ print *, 'calc outlet pixel location of each unit catchment'
             endif
           end do
 
-          !! if gauge exist in downsream of the upstream outlet
+          !! if the dam lies downstream of the upstream outlet
           if( isFound==1 )then
             jXX=ctx1m(ix,iy)
             jYY=cty1m(ix,iy)

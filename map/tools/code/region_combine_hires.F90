@@ -10,7 +10,7 @@
       real*8                   :: lon_ori, lat_ori  !! west and north edge of global map
       real*8                   :: lon_end, lat_end  !! east and south edge of global map
       real*8                   :: csize  !! high-resolution pixel size [deg]
-      integer                  :: cnum
+      integer                  :: cnum                   !! high-resolution pixels per degree
 
       character*256            :: region_param
       parameter                 (region_param='../params.txt')
@@ -27,36 +27,37 @@
       integer                  :: i  !! area ID
       integer                  :: narea  !! area ID
 
-      integer                  :: ix0, iy0  !! input hires map dimention
-      integer                  :: nx0  !! input hires map dimention
-      integer                  :: ny0  !! input hires map dimention
+      integer                  :: ix0, iy0  !! source high-resolution pixel indices
+      integer                  :: nx0  !! source-area x dimension
+      integer                  :: ny0  !! source-area y dimension
       real*8                   :: west0, north0, east0, south0  !! map bounds [deg]
 
-      integer                  :: isTile
-      integer                  :: ilon
-      integer                  :: ilat
-      integer                  :: nlon
-      integer                  :: nlat
-      character*7              :: CCname
-      integer                  :: iloc
-      integer                  :: nloc
-      real                     :: mwin
+      integer                  :: isTile                 !! whether the regional extent is processed in tiles
+      integer                  :: ilon                   !! tile longitude index
+      integer                  :: ilat                   !! tile latitude index
+      integer                  :: nlon                   !! number of global tiles along longitude
+      integer                  :: nlat                   !! number of global tiles along latitude
+      character*7              :: CCname                 !! current source-area or output-tile name
+      integer                  :: iloc                   !! output location-table row index
+      integer                  :: nloc                   !! count of source tiles with required catmxy input
+      real                     :: mwin                   !! geographic tile width [deg]
 
 ! regional hires map
-      integer*2, allocatable    :: catmXX(:,:), catmYY(:,:)
-      integer*2, allocatable    :: downx(:,:), downy(:,:)
-      integer*1, allocatable    :: catmZZ(:,:)
-      integer*1, allocatable    :: catmZ100(:,:)
+      integer*2, allocatable    :: catmXX(:,:), catmYY(:,:)  !! high-resolution pixel to regional catchment x/y indices
+      integer*2, allocatable    :: downx(:,:), downy(:,:)  !! relative x/y offsets to downstream high-resolution pixel
+      integer*1, allocatable    :: catmZZ(:,:)  !! floodplain profile band per pixel
+      integer*1, allocatable    :: catmZ100(:,:)  !! floodplain rank (1-100) per pixel
       integer*1, allocatable    :: flwdir(:,:)  !! high-resolution flow-direction code
-      real, allocatable         :: flddif(:,:)
-      real, allocatable         :: grdare(:,:)
+      real, allocatable         :: flddif(:,:)  !! elevation difference from reference channel pixel [m]
+      real, allocatable         :: grdare(:,:)  !! represented land area per pixel [km2]
       real, allocatable         :: elevtn(:,:)  !! elevation [m]
-      real, allocatable         :: uparea(:,:)
+      real, allocatable         :: uparea(:,:)  !! upstream contributing area per pixel [km2]
       real, allocatable         :: rivwth(:,:)  !! channel width [m]
       real, allocatable         :: hand(:,:)  !! height above nearest drainage [m]
-      integer*1, allocatable    :: visual(:,:)  !! high-resolution visualization class
+      integer*1, allocatable    :: visual(:,:)  !! categorical visualization code
 
-! input hires map
+! Source-area arrays are read with the same layer layout before being placed
+! into the regional grid above.
       integer*2, allocatable    :: catmXX0(:,:)
       integer*2, allocatable    :: catmYY0(:,:)
       integer*2, allocatable    :: downx0(:,:)
@@ -72,10 +73,10 @@
       real, allocatable         :: hand0(:,:)
       integer*1, allocatable    :: visual0(:,:)
 
-      integer                  :: isDownXY
-      integer                  :: isFdir
+      integer                  :: isDownXY               !! whether to write the downxy output layer
+      integer                  :: isFdir                 !! whether to write the flow-direction output layer
 
-      real, allocatable         :: lon0(:), lat0(:)
+      real, allocatable         :: lon0(:), lat0(:)      !! source high-resolution pixel-center coordinates [deg]
 
 ! files
       character*256            :: rfile1
@@ -351,6 +352,8 @@
                 ix=int( (lon0(ix0) -west)/csize )+1
                 iy=int( (north-lat0(iy0))/csize )+1
 
+                ! Source catmxy indices are global-map coordinates. Shift them
+                ! into the cropped regional grid and mark catchments outside it.
                 if( catmXX(ix,iy)==-9999 )then
                   if( catmXX0(ix0,iy0)>0 )then
                     catmXX(ix,iy)=catmXX0(ix0,iy0)-dXX

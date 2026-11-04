@@ -1,0 +1,10 @@
+! Replace the existing TROF input_item/input_nc pair with this example.
+! ATM_DIR: MIROC6/r1i1p1f1/gn directory containing the file below.
+! INPMAT_DIR_ATM: mapping files for this variable's 256 x 128 grid.
+! Select a start date within 1850-1859 and use LLEAPYR=.true.
+! slice_index=-1 means the last element, without a physical depth inference.
+&input_item item='TROF', fmt='nc', slice_index=-1,
+  path='@ATM_DIR@/tsl_Eday_MIROC6_land-hist_r1i1p1f1_gn_18500101-18591231.nc',
+  diminfo_file='@INPMAT_DIR_ATM@/diminfo.txt',
+  inpmat_file='@INPMAT_DIR_ATM@/inpmat.bin' /
+&input_nc item='TROF', var_name='tsl', slice_dimname='depth' /

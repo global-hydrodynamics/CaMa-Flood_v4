@@ -13,7 +13,7 @@
       integer                  :: jXX, jYY
       integer                  :: nXX, nYY  !! x/y map dimensions
       real                     :: gsize  !! map grid size [deg]
-      real                     :: dstmth
+      real                     :: dstmth          !! fixed terminal-link distance [km]
       parameter             (dstmth=25)
       real                     :: west, north, east, south  !! map bounds [deg]
 
@@ -23,44 +23,44 @@
 
 ! Derived map arrays and output filenames.
       integer, allocatable      :: rivseq(:,:)  !! upstream-to-downstream river sequence
-      real, allocatable         :: grdare(:,:)  !! drainage area (GRID base)
-      real, allocatable         :: uparea(:,:)  !! upa drainage area (GRID base)
+      real, allocatable         :: grdare(:,:)  !! source grid-cell area [m2]
+      real, allocatable         :: uparea(:,:)  !! accumulated upstream grid-cell area [m2]
       real, allocatable         :: nxtdst(:,:)  !! distance to downstream grid [m]
       integer, allocatable      :: color(:,:)  !! basin display-color map
       integer, allocatable      :: basin(:,:)  !! basin identifier
       integer, allocatable      :: upgrid(:,:)  !! upstream map-grid count
 ! 
-      real, allocatable         :: lon(:)  !! longitude/latitude [deg]
-      real, allocatable         :: lat(:)  !! longitude/latitude [deg]
+      real, allocatable         :: lon(:)  !! map-cell center longitude [deg]
+      real, allocatable         :: lat(:)  !! map-cell center latitude [deg]
       real                     :: n_lat
       real                     :: s_lat
 
 ! Working arrays and basin/color counters.
-      integer, allocatable      :: seqxy(:,:)
+      integer, allocatable      :: seqxy(:,:)  !! coordinates of the current downstream sequence frontier
       integer                  :: nseq  !! river-sequence index
-      integer                  :: nseq_max  !! maximum river-sequence index
-      integer                  :: n
-      integer                  :: m
-      integer                  :: nmax
-      real                     :: upa
-      integer                  :: upg
+      integer                  :: nseq_max      !! maximum river-sequence index assigned
+      integer                  :: n              !! number of cells in the current sequence frontier
+      integer                  :: m              !! number of cells in the next sequence frontier
+      integer                  :: nmax           !! current sequence-frontier length
+      real                     :: upa            !! accumulated upstream area carried downstream [m2]
+      integer                  :: upg            !! accumulated upstream cell count carried downstream
       real                     :: lon1
       real                     :: lon2
       real                     :: lat1
       real                     :: lat2
       integer                  :: nbsn  !! basin count or basin ID bound
-      integer                  :: basin_this
-      integer                  :: nbsn_max
-      integer, allocatable      :: bsn_mask(:,:)
+      integer                  :: basin_this     !! existing basin ID reused when paths meet
+      integer                  :: nbsn_max       !! basin count before basin IDs are reordered
+      integer, allocatable      :: bsn_mask(:,:)  !! basin bounding boxes used for neighboring-color checks
       integer                  :: color_this  !! selected basin display color
       integer                  :: color_max  !! maximum display-color ID
       integer                  :: grid  !! grid-cell count in basin
       integer                  :: col_used(10)  !! neighboring-color occupancy flags
       integer                  :: icol
 
-      integer, allocatable      :: basin_grid(:)
-      integer, allocatable      :: basin_order(:)
-      integer, allocatable      :: basin_new(:)
+      integer, allocatable      :: basin_grid(:)  !! upstream-cell count used to sort basin IDs
+      integer, allocatable      :: basin_order(:) !! basin IDs in sorted order
+      integer, allocatable      :: basin_new(:)   !! old-to-reordered basin ID lookup
 
 ! Input and output map paths.
       character*256            :: rfile1
@@ -241,6 +241,7 @@ print *, 'SET_MAP calc upa drainage area'
 ! [3] Calculate distance-to-downstream maps
 ! ================================================
 ! Calculate center-to-center distance to the next cell for each river cell.
+! Terminal links use the configured fixed endpoint distance; non-network cells remain missing.
 ! ===============================================
 print *, 'SET_MAP calc distance to next grid'
       do iYY=1, nYY

@@ -53,10 +53,10 @@ USE NETCDF
 ! Bifurcation-table dimensions and path counters.
       integer                  :: ipth  !! bifurcation-path index
       integer                  :: npth  !! bifurcation-path count
-      integer                  :: npth_new
+      integer                  :: npth_new  !! number of paths retained after the layer/width filter
       integer                  :: ilev  !! bifurcation-layer index
       integer                  :: nlev  !! layer count
-      integer                  :: nlev_new
+      integer                  :: nlev_new  !! requested/retained bifurcation width-layer count
 
 ! Physical attributes read from each bifurcation-table row.
       real                     :: len  !! pathway length [m]
@@ -66,8 +66,8 @@ USE NETCDF
       real, allocatable         :: wth(:)  !! bifurcation width [m]
 
 ! Pathway filter and basin identifiers.
-      real                     :: dph0
-      integer                  :: isData
+      real                     :: dph0  !! maximum adjacent channel depth used to cap bifurcation depth [m]
+      integer                  :: isData  !! 1 when a retained path has any positive width
       integer                  :: ibsn  !! basin identifier
       integer                  :: jbsn  !! basin identifier
 !
@@ -77,8 +77,8 @@ USE NETCDF
       parameter              (imis = -9999)
       parameter              (rmis = 1.e+20)
 
-      character*256            :: cfmt
-      character*256            :: clen
+      character*256            :: cfmt  !! formatted output record format
+      character*256            :: clen  !! formatted width-field length
 ! ================================================
 print *, 'set_bifparam: read parameters from arguments'
 

@@ -215,7 +215,7 @@ class BifurcationMigrationTests(unittest.TestCase):
         ctl_dir.mkdir()
         shutil.copy2(SAMPLE / "params.txt", ctl_dir / "params.txt")
         shutil.copy2(v5 / "check_bif_bsnmod.bin", ctl_dir / "check_bif_bsnmod.bin")
-        ctl_result = generate_directory(ctl_dir, ROOT / "map" / "map_variables.csv")
+        ctl_result = generate_directory(ctl_dir, ROOT / "variable_table" / "map_variables.csv")
         self.assertEqual(ctl_result.generated, 1, ctl_result)
         ctl = (ctl_dir / "check_bif_bsnmod.ctl").read_text(encoding="utf-8")
         self.assertIn("vars 2", ctl)

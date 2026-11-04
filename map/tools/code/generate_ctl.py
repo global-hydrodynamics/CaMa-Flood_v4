@@ -71,7 +71,7 @@ MATRIX_BLOCK_RE = re.compile(r"^block\s+(\d+)\s*:\s*([A-Za-z][A-Za-z0-9_]*)\s+le
 
 
 def default_registry_path() -> Path:
-    return Path(__file__).resolve().parents[2] / "map_variables.csv"
+    return Path(__file__).resolve().parents[3] / "variable_table" / "map_variables.csv"
 
 
 def read_registry(path: Path) -> list[dict[str, str]]:
@@ -207,7 +207,11 @@ def parse_count(value: str, grid: Grid) -> int | None:
     if value.upper() == "NLFP" and not grid.high_resolution:
         # NLFP is record 3 of params.txt; read it directly from that file.
         try:
-            tokens = [line.split("!!", 1)[0].split("#", 1)[0].split()[0] for line in Path(grid.source).read_text().splitlines() if line.split("!!", 1)[0].split("#", 1)[0].strip()]
+            tokens = [
+                line.split("!!", 1)[0].split("#", 1)[0].split()[0]
+                for line in Path(grid.source).read_text().splitlines()
+                if line.split("!!", 1)[0].split("#", 1)[0].strip()
+            ]
             count = int(float(tokens[2]))
         except (OSError, ValueError, IndexError):
             raise CtlError(f"Cannot resolve NLFP from {grid.source}")
@@ -320,7 +324,16 @@ def record_variables(rows: list[dict[str, str]], grid: Grid) -> tuple[list[Varia
                 name = match.group(2)
                 if not NAME_RE.fullmatch(name):
                     raise CtlError(f"invalid GrADS variable name {name!r}")
-                variables.append(Variable(name, 1, dtype, row.get("long_name", "").strip(), row.get("units", "").strip(), index))
+                variables.append(
+                    Variable(
+                        name,
+                        1,
+                        dtype,
+                        row.get("long_name", "").strip(),
+                        row.get("units", "").strip(),
+                        index,
+                    )
+                )
             continue
         if re.fullmatch(r"record\s+1", layout, re.I):
             name = (row.get("name") or "").strip()
@@ -548,7 +561,11 @@ def generate_directory(map_dir: Path, registry_path: Path, *, dry_run: bool = Fa
             )
             actual_size = path.stat().st_size
             if actual_size != expected_size:
-                raise CtlValidationError(f"binary size mismatch: expected {expected_size} bytes ({records} record(s), {grid.nx}x{grid.ny}, {variables[0].dtype}), found {actual_size}")
+                raise CtlValidationError(
+                    f"binary size mismatch: expected {expected_size} bytes "
+                    f"({records} record(s), {grid.nx}x{grid.ny}, "
+                    f"{variables[0].dtype}), found {actual_size}"
+                )
             try:
                 text = ctl_text(path, variables, grid, sentinel)
             except CtlError as exc:
@@ -584,13 +601,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--map-dir", type=Path, required=True,
                         help="directory to scan directly for .bin files (map root or high-resolution subdirectory)")
     parser.add_argument("--metadata-csv", type=Path, default=default_registry_path(),
-                        help="variable registry (default: map/map_variables.csv)")
+                        help="variable registry (default: variable_table/map_variables.csv)")
     parser.add_argument("--dry-run", action="store_true", help="validate and list planned CTLs without writing")
     parser.add_argument("--overwrite", action="store_true", help="replace existing .ctl files")
     args = parser.parse_args(argv)
     summary = generate_directory(args.map_dir, args.metadata_csv, dry_run=args.dry_run, overwrite=args.overwrite)
     action = "planned" if args.dry_run else "generated"
-    print(f"Summary: {action}={summary.generated}, skipped={summary.skipped}, failed={summary.failed}, fallback={summary.fallback_files}")
+    print(
+        f"Summary: {action}={summary.generated}, skipped={summary.skipped}, "
+        f"failed={summary.failed}, fallback={summary.fallback_files}"
+    )
     return 1 if summary.failed else 0
 
 

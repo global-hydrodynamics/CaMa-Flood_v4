@@ -22,7 +22,7 @@ The script names describe sample workflows, not a requirement to run every workf
 
 ## Map-product inventory and channel outputs
 
-The complete, source-linked variable/product registry is [`map/map_variables.csv`](../../map_variables.csv); its field and status definitions are in [`map/map_metadata_spec.md`](../../map_metadata_spec.md). The registry distinguishes products observed in packaged examples from products generated for a specific map. It is not a checklist that every workflow must run.
+The complete, source-linked variable/product registry is [`variable_table/map_variables.csv`](../../../variable_table/map_variables.csv); its field and status definitions are in [`variable_table/map_metadata_spec.md`](../../../variable_table/map_metadata_spec.md). The registry distinguishes products observed in packaged examples from products generated for a specific map. It is not a checklist that every workflow must run.
 
 For the channel workflow, `s01-channel_params.sh` first produces `outclm.bin` from runoff and the selected `inpmat`; `calc_rivwth.F90` then writes empirical `rivwth.bin`, `rivhgt.bin`, `rivman.bin`, and `rivhgt_inf.bin`. `set_gwdlr.F90` can combine `rivwth.bin` with satellite-derived `width.bin` to create the alternative width product `rivwth_gwdlr.bin`; it does not replace depth or roughness. These map-specific outputs should be generated or checked for the target map even when a package includes example copies. Consult the scripts and source for the selected coefficients and data prerequisites.
 

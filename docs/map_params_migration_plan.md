@@ -4,7 +4,7 @@
 
 ## Scope and evidence
 
-This plan covers the legacy parameter tools in `map/src/src_param/`, the dam workflow in `map/src/src_dam/`, the existing shared code and regional workflow under `map/tools/`, and the registry in `map/map_variables.csv`. Source behavior below is marked **verified** when read directly from source or scripts. The family organization described below includes the maintainer-approved decision to place gauge and dam allocation wrappers in `script_params/`; other migration details remain proposals unless identified as approved. Filenames and defaults quoted below are source defaults, not recommendations for scientific use.
+This plan covers the legacy parameter tools in `map/src/src_param/`, the dam workflow in `map/src/src_dam/`, the existing shared code and regional workflow under `map/tools/`, and the registry in `variable_table/map_variables.csv`. Source behavior below is marked **verified** when read directly from source or scripts. The family organization described below includes the maintainer-approved decision to place gauge and dam allocation wrappers in `script_params/`; other migration details remain proposals unless identified as approved. Filenames and defaults quoted below are source defaults, not recommendations for scientific use.
 
 The repository is on `feature/map-data-tools` (Issue [#122](https://github.com/global-hydrodynamics/CaMa-Flood_v4/issues/122)). `map/src/` remains the legacy tree, and its Fortran calculations are not changed by the filename migration. The established v5 regional layout places shared executables in `map/tools/code/` and map-local wrappers in `map/tools/script_region/`; regional scripts rely on a map-local working directory and do not build tools themselves.
 
@@ -211,7 +211,7 @@ Map-local copies of these scripts are usage/configuration templates, not executa
 
 ## Current registry product groups
 
-The maintained `map/map_variables.csv` uses `category_id` as its workflow-oriented sorting key. IDs 10–19 cover products distributed by default or created during regionalization; 900–999 cover high-resolution data. Parameter and auxiliary groups remain incrementally organized. Keep one row per logical variable for multi-record files and apply the same ID to all variables in a file.
+The maintained `variable_table/map_variables.csv` uses `category_id` as its workflow-oriented sorting key. IDs 10–19 cover products distributed by default or created during regionalization; 900–999 cover high-resolution data. Parameter and auxiliary groups remain incrementally organized. Keep one row per logical variable for multi-record files and apply the same ID to all variables in a file.
 
 | Current ID | Group | Relevant products and boundary |
 | ---: | --- | --- |
@@ -287,7 +287,7 @@ Routine CI can later cover compiler builds, shell syntax, synthetic CWD and inpu
 - `map/tools/code/Makefile`, `map/tools/code/generate_ctl.py`, `map/tools/code/region_*.F90`
 - `map/tools/code/param_bif_set_params.F90`, `map/tools/code/param_bif_set_basin.F90`, and `map/tools/script_params/s02-bifurcation.sh`
 - `map/tools/script_region/README.md`, `map/tools/script_region/s01-regional_map.sh`, `map/tools/script_region/s02-write_ctl.sh`
-- `map/tools/script_params/README.md`, `map/tools/README.md`, `map/map_variables.csv`, `map/map_metadata_spec.md`
+- `map/tools/script_params/README.md`, `map/tools/README.md`, `variable_table/map_variables.csv`, `variable_table/map_metadata_spec.md`
 - Relevant shared source: `map/src/src_region/generate_inpmat.F90`
 
 ## High-resolution area handling
@@ -303,7 +303,7 @@ The interfaces separate standard map-preparation products from interactive analy
 
 `script_analysis/` is a toolkit of examples backed by the shared `map/tools/code/` executables. `a00-link_codes.sh` locates that directory relative to itself and creates a relative `code` symlink in either the canonical template or a map-local example directory; it does not compile, copy, or delete files. The link requires the repository's shared code directory and is not suitable for a standalone map-only package. `a01`–`a05` are editable command-line examples that print the working directory and exact command before directly invoking `./code/analysis_*`. Their generated files use the configurable `OUT_DIR`, defaulting to the ignored `script_analysis/out_analysis/`. Most run in map-local `script_analysis/` so the programs' `../` input paths resolve; the MPI connectivity diagnostic `a05` runs from the map root and calls `./script_analysis/code/analysis_check_mpi_bifurcation` because that program reads `params.txt` and map files there. Relative CSV output from a05 is placed under its `OUT_DIR`.
 
-The reusable `script_params/s06-subbasin.sh` writes standard `subbsn.bin` and `subcol.bin` using its configured 30,000 km2 example threshold; the Mekong wrapper uses the same threshold and renames those products to `subbsn-30000.bin` and `subcol-30000.bin`. The direct v5 analysis executable defaults to threshold-labeled analysis names to avoid overwriting the standard products; s06 supplies explicit standard output paths. Similarly, direct `analysis_upbasin IX IY` uses a coordinate-labeled analysis filename; `s07-upbasin.sh` supplies the selected GRDC-ID output path. Optional products are not simulation inputs. Standard and sample filenames have separate rows in category 26 of `map/map_variables.csv`; arbitrary filenames still require a registry entry for automatic CTL generation.
+The reusable `script_params/s06-subbasin.sh` writes standard `subbsn.bin` and `subcol.bin` using its configured 30,000 km2 example threshold; the Mekong wrapper uses the same threshold and renames those products to `subbsn-30000.bin` and `subcol-30000.bin`. The direct v5 analysis executable defaults to threshold-labeled analysis names to avoid overwriting the standard products; s06 supplies explicit standard output paths. Similarly, direct `analysis_upbasin IX IY` uses a coordinate-labeled analysis filename; `s07-upbasin.sh` supplies the selected GRDC-ID output path. Optional products are not simulation inputs. Standard and sample filenames have separate rows in category 26 of `variable_table/map_variables.csv`; arbitrary filenames still require a registry entry for automatic CTL generation.
 
 Mekong's committed `GRDC_alloc.txt` enabled testing of the real selection and primary-cell workflow. On that sample, the selected record is GRDC ID `2569002`, with allocated primary cell `(62,93)`, `area_Input=663168.75 km2`, `area_CaMa=663000.25 km2`, and `Type=1`. The allocated coordinate and primary assigned cell must not be conflated: re-querying the reported geographic coordinates through the high-resolution lookup can select a different cell. The generated single-primary-cell upstream mask is therefore not asserted to reproduce the full reported drainage area.
 

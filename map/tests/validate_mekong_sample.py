@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import csv
 import struct
+import tempfile
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 MAP = ROOT / "map" / "mekong_15min"
-REGISTRY = ROOT / "map" / "map_variables.csv"
+REGISTRY = ROOT / "variable_table" / "map_variables.csv"
 DTYPE_BYTES = {"int8": 1, "int16": 2, "int32": 4, "float32": 4}
 
 
@@ -48,6 +49,43 @@ def rows_for_sample_file(path: Path, rows: list[dict[str, str]]) -> list[dict[st
             if path.name == f"{path.parent.name}.{suffix}":
                 matches.append(row)
     return matches
+
+
+def validate_registered_binary_size(
+    path: Path,
+    rows: list[dict[str, str]],
+    dims: dict[str, int],
+    map_root: Path,
+) -> bool:
+    """Validate a registry-listed binary; return False for user-added files."""
+    matches = rows_for_sample_file(path, rows)
+    if not matches:
+        return False
+
+    expected_size = 0
+    for row in matches:
+        dtype = row["dtype"].strip().lower()
+        if dtype not in DTYPE_BYTES:
+            raise AssertionError(f"unsupported dtype {dtype!r} for {path.name}")
+        variables = [name.strip() for name in row["dimensions"].split(",") if name.strip()]
+        product = 1
+        for variable in variables:
+            if variable == "INPN":
+                descriptor = map_root / path.name.replace("inpmat_", "inpdim_").replace(".bin", ".txt")
+                if not descriptor.is_file():
+                    raise AssertionError(f"paired input descriptor missing: {descriptor.name}")
+                variable_size = read_input_dimensions(descriptor)["INPN"]
+            else:
+                if variable not in dims:
+                    raise AssertionError(f"unresolved dimension {variable!r} for {path.name}")
+                variable_size = dims[variable]
+            product *= variable_size
+        expected_size += product * DTYPE_BYTES[dtype]
+
+    actual_size = path.stat().st_size
+    if actual_size != expected_size:
+        raise AssertionError(f"{path.name}: registry size mismatch (expected {expected_size}, got {actual_size})")
+    return True
 
 
 class MekongSampleTests(unittest.TestCase):
@@ -136,38 +174,48 @@ class MekongSampleTests(unittest.TestCase):
         dims["NY_HIRES"] = int(area[7])
 
         rows = registry_rows()
-        # Analysis examples write user outputs under this ignored directory;
-        # validate only the distributed sample products, not those run results.
+        # Analysis examples write user outputs under this ignored directory.
+        # Other user-created binaries may be present; only registered products
+        # are subject to registry-based type, dimension, and size checks.
         binary_paths = sorted(
             path for path in MAP.rglob("*.bin")
             if "out_analysis" not in path.relative_to(MAP).parts
         )
         self.assertTrue(binary_paths, "no binary map products found")
+        validated_count = 0
         for path in binary_paths:
             relative = path.relative_to(MAP)
             with self.subTest(path=str(relative)):
+                try:
+                    validated = validate_registered_binary_size(path, rows, dims, MAP)
+                except AssertionError as error:
+                    self.fail(str(error))
+                if not validated:
+                    continue
+
                 self.assertGreater(path.stat().st_size, 0)
                 self.assertLess(path.stat().st_size, 100 * 1024 * 1024)
+                validated_count += int(validated)
 
-                matches = rows_for_sample_file(path, rows)
-                self.assertTrue(matches, f"no map_variables.csv entry for {relative}")
-                expected_size = 0
-                for row in matches:
-                    dtype = row["dtype"].strip().lower()
-                    self.assertIn(dtype, DTYPE_BYTES, f"unsupported dtype {dtype!r} for {relative}")
-                    variables = [name.strip() for name in row["dimensions"].split(",") if name.strip()]
-                    product = 1
-                    for variable in variables:
-                        if variable == "INPN":
-                            descriptor = MAP / path.name.replace("inpmat_", "inpdim_").replace(".bin", ".txt")
-                            self.assertTrue(descriptor.is_file(), f"paired input descriptor missing: {descriptor.name}")
-                            variable_size = read_input_dimensions(descriptor)["INPN"]
-                        else:
-                            self.assertIn(variable, dims, f"unresolved dimension {variable!r} for {relative}")
-                            variable_size = dims[variable]
-                        product *= variable_size
-                    expected_size += product * DTYPE_BYTES[dtype]
-                self.assertEqual(path.stat().st_size, expected_size, f"{relative}: registry size mismatch")
+        self.assertGreater(validated_count, 0, "no registry-listed binaries were validated")
+
+    def test_registered_binary_size_check_allows_user_files_and_rejects_bad_size(self) -> None:
+        dims = {"NX": 2, "NY": 1}
+        rows = [{"binary_filename": "registered.bin", "dtype": "int32", "dimensions": "NX,NY"}]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            sample_dir = Path(temp_dir)
+            registered = sample_dir / "registered.bin"
+            unregistered = sample_dir / "user-added.bin"
+            registered.write_bytes(bytes(8))
+            unregistered.write_bytes(bytes(3))
+
+            self.assertTrue(validate_registered_binary_size(registered, rows, dims, sample_dir))
+            self.assertFalse(validate_registered_binary_size(unregistered, rows, dims, sample_dir))
+
+            # A registered product must still fail when its stored size is incorrect.
+            registered.write_bytes(bytes(7))
+            with self.assertRaisesRegex(AssertionError, "registry size mismatch"):
+                validate_registered_binary_size(registered, rows, dims, sample_dir)
 
     def test_required_text_metadata_files_exist(self) -> None:
         for name in ("params.txt", "bifori.txt", "inpdim_test-glb_1deg.txt", "inpdim_test-E2O_15min_nc.txt"):

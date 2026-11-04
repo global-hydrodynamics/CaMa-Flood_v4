@@ -1,0 +1,160 @@
+PROGRAM MAIN_cmf
+!==========================================================
+!* PURPOSE: CaMa-Flood default stand-alone driver
+!
+! (C) D.Yamazaki & E. Dutra  (U-Tokyo/FCUL)  Aug 2019
+!
+! Licensed under the Apache License, Version 2.0 (the "License");
+!   You may not use this file except in compliance with the License.
+!   You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-2.0
+!
+! Unless required by applicable law or agreed to in writing, software distributed under the License is 
+!  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+! See the License for the specific language governing permissions and limitations under the License.
+!==========================================================
+USE PARKIND1,                ONLY: JPRB, JPIM
+USE YOS_CMF_INPUT,           ONLY: NXIN, NYIN, DT,DTIN, LTRACE, &
+&   LHEATLINK
+USE YOS_CMF_TIME,            ONLY: NSTEPS, IYYYYMMDD, IHOUR
+USE CMF_DRV_CONTROL_MOD,     ONLY: CMF_DRV_INPUT,   CMF_DRV_INIT,    CMF_DRV_END
+USE CMF_DRV_ADVANCE_MOD,     ONLY: CMF_DRV_ADVANCE
+USE CMF_CTRL_FORCING_MOD,    ONLY: CMF_FORCING_GET, CMF_FORCING_PUT
+USE CMF_CTRL_TRACER_MOD,     ONLY: CMF_TRACER_FORC_GET, CMF_TRACER_FORC_INTERP
+#ifdef heatlink
+use cmf_ctrl_tracer_mod,     only: CMF_TRACER_RESTART_WRITE
+use cmf_ctrl_restart_mod,    only: CMF_RESTART_WRITE, restart_is_write_time
+use heatlink_config_mod,     only: init_heatlink_config
+use yos_cmf_input,           only: CSETFILE, LWEVAP, LLEVEE
+#endif
+!** parallelization options**
+!$ USE OMP_LIB
+#ifdef UseMPI_CMF
+USE CMF_CTRL_MPI_MOD,        ONLY: CMF_MPI_INIT, CMF_MPI_END
+#endif
+!** sediment options**
+#ifdef sediment
+USE YOS_CMF_INPUT,           ONLY: LSEDOUT
+USE cmf_ctrl_sedinp_mod,     ONLY: cmf_sed_forcing
+#endif
+!** tracer options**
+#ifdef heatlink
+use datetime_mod, only: &
+&   date_hour2datetime
+use dim_converter, only: &
+&   init_dim_converter
+use input_mod, only: &
+&   init_input_mod, update_input
+use output_mod, only: &
+&   init_output_mod, write_output, fin_output_mod
+use restart_mod, only: &
+&   init_restart_mod
+use heatlink_river_mod,      only: &
+&   init_heatlink_river_mod, calc_heatlink, &
+&   write_heatlink_restart, fin_heatlink_river_mod
+#endif
+use yos_cmf_input, only: &
+&   LOGNAM
+!==========================================================
+!****************************
+IMPLICIT NONE
+
+!** local variables
+INTEGER(KIND=JPIM)              :: ISTEP              ! total time step
+INTEGER(KIND=JPIM)              :: ISTEPADV           ! time step to be advanced within DRV_ADVANCE
+REAL(KIND=JPRB),ALLOCATABLE     :: ZBUFF(:,:,:)       ! Buffer to store forcing runoff
+!================================================
+!*** 0. MPI Initialization
+#ifdef UseMPI_CMF
+CALL CMF_MPI_INIT
+#endif
+
+!*** 1a. Namelist handling
+CALL CMF_DRV_INPUT
+
+#ifdef heatlink
+if (LHEATLINK) then
+  call init_heatlink_config(CSETFILE, LOGNAM, LWEVAP, LLEVEE)
+endif
+#endif
+
+!*** 1b. INITIALIZATION
+CALL CMF_DRV_INIT
+
+!*** 1c. allocate data buffer for input forcing
+ALLOCATE(ZBUFF(NXIN,NYIN,2))
+
+#ifdef heatlink
+if (LHEATLINK) then
+  call init_dim_converter()
+  call init_input_mod()
+  call init_output_mod()
+  call init_restart_mod()
+  call init_heatlink_river_mod(date_hour2datetime(IYYYYMMDD, IHOUR))
+endif
+#endif
+!============================
+!*** 2. MAIN TEMPORAL LOOP / TIME-STEP (NSTEPS calculated by DRV_INIT)
+
+ISTEPADV=INT(DTIN/DT,JPIM)
+DO ISTEP=1,NSTEPS
+  write(LOGNAM, '(a,i6)') '[MAIN_cmf] Time step: ', ISTEP
+  if (mod(ISTEP-1, ISTEPADV) == 0) then
+    !*  2a Read forcing from file, This is only relevant in Stand-alone mode 
+    CALL CMF_FORCING_GET(ZBUFF(:,:,:))
+    !*  2b Interporlate runoff & send to CaMa-Flood 
+    CALL CMF_FORCING_PUT(ZBUFF(:,:,:))
+    IF( LTRACE )THEN
+      CALL CMF_TRACER_FORC_GET
+      CALL CMF_TRACER_FORC_INTERP
+    ENDIF
+  endif
+#ifdef heatlink
+  if (LHEATLINK) then
+    call update_input(int(DT) * (ISTEP - 1))
+  endif
+#endif
+
+  !*  2c  Advance CaMa-Flood model for ISTEPADV
+  CALL CMF_DRV_ADVANCE(1)
+
+
+#ifdef sediment
+  !*  2d Prepare forcing for optional sediment transport in stand-alone mode
+  IF ( LSEDOUT ) THEN
+    CALL cmf_sed_forcing
+  ENDIF
+#endif
+#ifdef heatlink
+if (LHEATLINK) then
+  call calc_heatlink(DT)
+  if (restart_is_write_time()) then
+    ! Write one checkpoint after all coupled end-of-step states are updated.
+    call CMF_RESTART_WRITE
+    if (LTRACE) call CMF_TRACER_RESTART_WRITE
+    call write_heatlink_restart(date_hour2datetime(IYYYYMMDD, IHOUR))
+  endif
+  call write_output(int(DT) * ISTEP) ! tail time of the current step
+endif
+#endif
+
+ENDDO
+!============================
+
+!*** 3a. finalize CaMa-Flood 
+DEALLOCATE(ZBUFF)
+#ifdef heatlink
+if (LHEATLINK) then
+  call fin_output_mod()
+  call fin_heatlink_river_mod()
+endif
+#endif
+CALL CMF_DRV_END
+!*** 3b. MPI specific finalization
+#ifdef UseMPI_CMF
+CALL CMF_MPI_END
+#endif
+
+!================================================
+
+END PROGRAM MAIN_cmf
+!####################################################################

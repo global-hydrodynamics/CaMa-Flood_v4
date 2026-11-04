@@ -66,12 +66,12 @@
       integer                  :: ibsn  !! basin identifier
       integer                  :: jbsn  !! basin identifier
       integer                  :: kbsn  !! basin identifier
-      integer                  :: nshown
-      integer                  :: allgrid
-      integer                  :: maxgrid
+      integer                  :: nshown  !! number of basin sizes printed in diagnostics
+      integer                  :: allgrid  !! total river-grid cells in the reported fraction
+      integer                  :: maxgrid  !! largest merged-basin grid-cell count
 
-      integer                  :: mark
-      integer                  :: again
+      integer                  :: mark  !! pathway endpoint class written to bpoint
+      integer                  :: again  !! number of eligible basin merges in the current pass
 
 ! Input and output filenames.
       character*256            :: finp

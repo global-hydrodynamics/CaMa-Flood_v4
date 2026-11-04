@@ -233,7 +233,7 @@ class GenerateCtlTests(unittest.TestCase):
             missing_sentinel({"missing_value": "-9.5"}, "int16")
 
     def test_sample_registry_missing_sentinels_are_parseable_without_prose_artifacts(self):
-        registry = Path(__file__).resolve().parents[2] / "map_variables.csv"
+        registry = Path(__file__).resolve().parents[3] / "variable_table" / "map_variables.csv"
         with registry.open(newline="", encoding="utf-8") as stream:
             rows = list(csv.DictReader(stream))
         expected = {
@@ -260,7 +260,7 @@ class GenerateCtlTests(unittest.TestCase):
         self.assertNotIn("[-1", ctl)
 
     def test_meaningful_endpoint_codes_remain_special_not_missing(self):
-        registry = Path(__file__).resolve().parents[2] / "map_variables.csv"
+        registry = Path(__file__).resolve().parents[3] / "variable_table" / "map_variables.csv"
         with registry.open(newline="", encoding="utf-8") as stream:
             nextx = next(row for row in csv.DictReader(stream)
                          if row["binary_filename"] == "nextxy.bin" and row["name"] == "nextx")

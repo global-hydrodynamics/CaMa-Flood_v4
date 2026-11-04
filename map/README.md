@@ -72,15 +72,15 @@ Examples of maps used by sample runs are listed in [`gosh/README.md`](../gosh/RE
 
 ## Shared map-product registry
 
-[`map_variables.csv`](map_variables.csv) is the source-linked variable and data-product registry for CaMa-Flood maps. It uses symbolic dimensions such as `NX`, `NY`, and `NLFP`, so the definitions apply across map resolutions and regional domains. It is the primary source for variable names, proposed long names and units, data types, record layouts, numeric stored missing values, meaningful special codes, product variants, distribution roles, and current model-reader mappings.
+[`variable_table/map_variables.csv`](../variable_table/map_variables.csv) is the source-linked variable and data-product registry for CaMa-Flood maps. It uses symbolic dimensions such as `NX`, `NY`, and `NLFP`, so the definitions apply across map resolutions and regional domains. It is the primary source for variable names, proposed long names and units, data types, record layouts, numeric stored missing values, meaningful special codes, product variants, distribution roles, and current model-reader mappings.
 
-[`map_metadata_spec.md`](map_metadata_spec.md) explains the CSV schema and how it relates to per-map `params.txt`, `mapdim.txt`, runoff/input-grid descriptors, and GrADS CTL files. v5 workflows pair `inpdim_<ROFFTAG>.txt` with `inpmat_<ROFFTAG>.bin`; legacy `diminfo_*.txt` names remain supported for existing v4 data and callers. `ROFFTAG` identifies the runoff/input-grid configuration, while `HIRES_TAG` selects high-resolution map data.
+[`variable_table/map_metadata_spec.md`](../variable_table/map_metadata_spec.md) explains the CSV schema and how it relates to per-map `params.txt`, `mapdim.txt`, runoff/input-grid descriptors, and GrADS CTL files. v5 workflows pair `inpdim_<ROFFTAG>.txt` with `inpmat_<ROFFTAG>.bin`; legacy `diminfo_*.txt` names remain supported for existing v4 data and callers. `ROFFTAG` identifies the runoff/input-grid configuration, while `HIRES_TAG` selects high-resolution map data.
 
 The channel-parameter entries describe products users generate or verify for a target map. Data-rich packages may include prepared examples; check the actual package contents before generating replacements. The v5 workflow writes the alternative MERIT Hydro merged width as `rivwth_merit.bin`; the preserved v4 workflow retains its historical `rivwth_gwdlr.bin` output.
 
 ### GrADS CTL generation
 
-The v5 CTL generator is [`map/tools/code/generate_ctl.py`](tools/code/generate_ctl.py), invoked by the map-local [`s02-write_ctl.sh`](tools/script_region/s02-write_ctl.sh) wrapper. It reads `map_variables.csv` and map geometry metadata, then validates registered binary layouts and file sizes before writing GrADS descriptors. The current map-tools directory provides CTL generation; a binary-to-NetCDF conversion command is not currently documented as an available map tool.
+The v5 CTL generator is [`map/tools/code/generate_ctl.py`](tools/code/generate_ctl.py), invoked by the map-local [`s02-write_ctl.sh`](tools/script_region/s02-write_ctl.sh) wrapper. It reads `variable_table/map_variables.csv` and map geometry metadata, then validates registered binary layouts and file sizes before writing GrADS descriptors. The current map-tools directory provides CTL generation; a binary-to-NetCDF conversion command is not currently documented as an available map tool.
 
 ```sh
 cd map/<map-tag>/script_region

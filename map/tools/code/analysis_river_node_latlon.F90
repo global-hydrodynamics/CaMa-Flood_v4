@@ -22,10 +22,10 @@
       integer,allocatable ::  nextx(:,:)      !! downstream x
       integer,allocatable ::  nexty(:,:)      !! downstream y
 
-      real,allocatable    ::  uparea(:,:)     !!
-      real,allocatable    ::  elevtn(:,:)     !!
-      real,allocatable    ::  outlon(:,:)     !!
-      real,allocatable    ::  outlat(:,:)     !!
+      real,allocatable    ::  uparea(:,:)     !! upstream drainage area [m2]
+      real,allocatable    ::  elevtn(:,:)     !! elevation at the unit-catchment outlet [m]
+      real,allocatable    ::  outlon(:,:)     !! unit-catchment outlet longitude [deg]
+      real,allocatable    ::  outlat(:,:)     !! unit-catchment outlet latitude [deg]
       real,allocatable    ::  glon(:), glat(:)
 
       real                ::  west, east, north, south

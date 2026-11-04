@@ -13,7 +13,7 @@ program param_mpi_set_basin
     integer                  :: ibsn  !! basin identifier
     integer                  :: jbsn  !! basin identifier
     real                     :: elv  !! pathway elevation [m]
-    real                     :: w1
+    real                     :: w1  !! first-layer channel width [m]; positive denotes a channel path
     character(len=2048)      :: line  !! formatted input row
   end type pathway
 
@@ -22,20 +22,20 @@ program param_mpi_set_basin
   integer                  :: npth  !! bifurcation-path count
   integer                  :: nlev  !! layer count
   integer                  :: nbsn  !! basin count or basin ID bound
-  integer                  :: allgrid
+  integer                  :: allgrid  !! total river cells used for basin-size diagnostics
   integer                  :: grid_thrs  !! combined basin threshold [cells]
   integer                  :: thrs2  !! small-basin threshold [cells]
   integer                  :: ios  !! I/O status code
-  integer                  :: argc
+  integer                  :: argc  !! number of command-line arguments
   integer                  :: ix, iy  !! x/y grid index
-  integer                  :: i
-  integer                  :: k
+  integer                  :: i  !! basin, pathway, or grid traversal index
+  integer                  :: k  !! bifurcation layer index
   integer                  :: ibsn  !! basin identifier
   integer                  :: jbsn  !! basin identifier
-  integer                  :: mark
-  integer                  :: again
-  integer                  :: pass
-  integer                  :: u
+  integer                  :: mark  !! pathway endpoint classification code
+  integer                  :: again  !! number of basin merges in the current pass
+  integer                  :: pass  !! bifurcation merge stage
+  integer                  :: u  !! active input/output-file unit
   real                     :: gsize  !! map grid size [deg]
   real                     :: west, east, south, north  !! map bounds [deg]
   real                     :: rate  !! basin-merge threshold fraction
@@ -46,19 +46,19 @@ program param_mpi_set_basin
   ! Basin rasters and merge bookkeeping.
   integer, allocatable     :: basin(:,:)  !! basin identifier
   integer, allocatable     :: basin_color(:,:)  !! display color per aggregated basin
-  integer, allocatable     :: basin_original(:,:)
+  integer, allocatable     :: basin_original(:,:)  !! pre-merge basin map for check-map diagnostics
   integer, allocatable     :: bnew(:)  !! basin merge destination ID
   integer, allocatable     :: bnum(:)  !! grid-cell count per basin
-  integer, allocatable     :: bnum_original(:)
-  integer, allocatable     :: bifmod_mpi(:,:)
-  integer, allocatable     :: bpoint_mpi(:,:)
+  integer, allocatable     :: bnum_original(:)  !! pre-merge cell count by basin ID
+  integer, allocatable     :: bifmod_mpi(:,:)  !! MPI diagnostic map of basin merge classes
+  integer, allocatable     :: bpoint_mpi(:,:)  !! MPI diagnostic map of pathway endpoint classes
 
   ! Bifurcation widths and parsed pathway rows.
   real, allocatable        :: widths(:)  !! bifurcation widths [m]
   type(pathway), allocatable :: paths(:)  !! parsed bifurcation pathway records
   character(len=256)       :: arg  !! command-line argument
-  character(len=256)       :: diagnostic_arg
-  logical                  :: check_map
+  character(len=256)       :: diagnostic_arg  !! optional check_map argument
+  logical                  :: check_map  !! whether to write the optional diagnostic raster
 
   ! ================================================
   ! [1] Select the merge mode and optional diagnostic output

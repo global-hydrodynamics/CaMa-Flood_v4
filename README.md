@@ -26,6 +26,8 @@ Start with the [main manual](doc/Manual_CaMa-Flood_v420.docx) and [user guidelin
 
 This repository provides source code, build configurations, execution scripts, and preprocessing and analysis tools for development, customization, and source-code access. **Cloning it alone does not supply all the river-map and forcing datasets needed for the standard simulations.** Obtain the required data separately through the official distribution.
 
+[`variable_table/README.md`](variable_table/README.md) describes the shared variable tables. The three CSVs document map products, model outputs, and Restart state; their distinct schemas remain separate. Future tools should resolve them from `${CMF_BASE}/variable_table/`.
+
 Build settings are in [adm/Mkinclude](adm/Mkinclude), with compiler-specific examples in [adm/](adm/). The [compilation script](gosh/compile.sh) and [sample experiments](gosh/) provide execution entry points. Configure paths, libraries, and options for your environment before building or running; the presence of a configuration example does not establish that it has been tested on your system.
 
 ### Python utilities
