@@ -88,6 +88,17 @@ Outputs are individual tiles at `<MAP_DIR>/<HIRES>_nc/<AREA>.<VAR>.nc`; the wrap
 
 The NetCDF C library must be installed and discoverable (typically through `nc-config`); Python uses only its standard library.
 
+## Convert high-resolution tiles in an external package (`t03`)
+
+Use `t03-convert_external_highres.sh` when the source maps live outside this v5 repository. Set `MAP_ROOT`, `MAPS`, `HIRES`, and `VARS` at the top of the script. It resolves the shared converter and `variable_table/map_variables.csv` relative to its own location, warns and skips missing map/resolution directories, and stops on conversion errors. It copies each selected `location.txt` to `<MAP_DIR>/<HIRES>_nc/`; existing NetCDF outputs are skipped unless the script is run with `--force`.
+
+```sh
+map/tools/script_bin2nc/t03-convert_external_highres.sh
+map/tools/script_bin2nc/t03-convert_external_highres.sh --force
+```
+
+The default settings point to the maintainer's v400 data package. Edit `MAP_ROOT` before using the script on another workstation. It writes converted files alongside the external source maps and does not copy map data into this repository.
+
 ## Supported formats and dependencies
 
 The workflow supports registered `float32` or `int32` rasters with dimensions `NX,NY` or `NX,NY,NLFP`, including multi-variable direct-access files such as `nextxy.bin` and layered files such as `fldhgt.bin`. Data type, record order, dimensions, missing values, and variable metadata come from the registry and `params.txt`; the Binary inputs are not modified.
