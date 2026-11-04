@@ -27,9 +27,11 @@ The script copies `src_main/MAIN_cmf` into `RUNDIR`, changes to that directory, 
 
 ## Mekong two-year NetCDF map tests
 
-[`mek02-longterm_netcdf.sh`](mek02-longterm_netcdf.sh) and [`legacy02-longterm_netcdf.sh`](legacy02-longterm_netcdf.sh) run the same 2000–2001 Mekong case with yearly NetCDF runoff, NetCDF model output, a Binary input matrix, and NetCDF annual Restarts. Both carry the 2000 year-end `.nc` Restart into 2001. The map interface is the test variable: `mek02` reads individual NetCDF map files with `LMAPCDF=.FALSE.`, while `legacy02` reads the consolidated `rivclim.nc` and `rivpar.nc` containers with `LMAPCDF=.TRUE.`. Those containers were generated from the selected `nextxy_noedge` and `rivwth_merit` products. Each script writes to a separate directory: `out/mek02-longterm_mapnc/` and `out/legacy02-longterm_netcdf/`.
+[`mek02-longterm_netcdf.sh`](mek02-longterm_netcdf.sh) and [`legacy02-longterm_netcdf.sh`](legacy02-longterm_netcdf.sh) run the same 2000–2001 Mekong case with yearly NetCDF runoff (`CROFFREQ="YEAR"`), NetCDF model output, a Binary input matrix, and NetCDF annual Restarts. The forcing reader selects `runoffYYYY.nc` from the model calendar and switches files at January 1; both scripts still split the simulation by year to demonstrate the Restart handoff. They carry the 2000 year-end `.nc` Restart into 2001. The map interface is the test variable: `mek02` reads individual NetCDF map files with `LMAPCDF=.FALSE.`, while `legacy02` reads the consolidated `rivclim.nc` and `rivpar.nc` containers with `LMAPCDF=.TRUE.`. Those containers were generated from the selected `nextxy_noedge` and `rivwth_merit` products. Each script writes to a separate directory: `out/mek02-longterm_mapnc/` and `out/legacy02-longterm_netcdf/`.
 
 Build the NetCDF-enabled executable with `./gosh_sample/compile_netcdf.sh` from any directory, then run either sample from `gosh_sample/`:
+
+These annual samples use `IFRQ_INP=24` and `DROFUNIT=86400000` for daily mm/day values; file grouping is selected separately by `CROFFREQ="YEAR"`. The [runoff input guide](../inp/README.md#supported-input-formats-and-simulation-settings) documents the four grouping modes, legacy `LINPDAY` behavior, and CF-time checks.
 
 ```sh
 ./gosh_sample/compile_netcdf.sh

@@ -85,6 +85,10 @@ while [ "$YEAR" -le "$END_YEAR" ]; do
     NEXT_YEAR=$((YEAR + 1))
     RUNOFF_FILE="${RUNOFF_DIR}/runoff${YEAR}.nc"
     YEAR_NAMELIST="${RUNDIR}/input_cmf_${YEAR}.nam"
+    if [ ! -f "$RUNOFF_FILE" ]; then
+        printf '[ERROR] Missing annual runoff file: %s\n' "$RUNOFF_FILE" >&2
+        exit 1
+    fi
 
     printf '\n==================================================\n'
     printf '[STEP 2/3] Configure year %s\n' "$YEAR"
@@ -143,14 +147,16 @@ IFRQ_RST = ${IFRQ_RST}     ! 0=end only; 1-24=hourly; 30=monthly (also writes at
 /
 &NFORCE
 LINPCDF = .TRUE.           ! TRUE reads NetCDF runoff; independent of the model-output format.
-LINPDAY = .FALSE.          ! FALSE uses one time-series NetCDF file for this annual run.
+CROFFREQ = "YEAR"          ! One NetCDF file per calendar year; the reader switches at January 1.
 LINTERP = .TRUE.           ! TRUE maps runoff through CINPMAT; FALSE uses nearest-grid mapping.
 CINPMAT = "${INPMAT}"     ! Binary runoff-to-river input-mapping matrix.
 DROFUNIT = ${DROFUNIT}     ! Divide input units by this factor to obtain runoff depth rate [m/s].
-CROFCDF = "${RUNOFF_FILE}" ! NetCDF runoff file for this simulation year.
-CVNROF = "${CVNROF}"      ! Runoff data variable within CROFCDF.
-CVNTIME = "${CVNTIME}"    ! CF time-coordinate variable within CROFCDF.
-SYEARIN = 0                ! 0 uses CF time metadata to locate the first input record.
+CVNTIME = "${CVNTIME}"    ! CF time-coordinate variable within each annual file.
+CVNROF = "${CVNROF}"      ! Runoff data variable within each annual file.
+CROFDIR = "${RUNOFF_DIR}" ! Directory containing annual runoff NetCDF files.
+CROFPRE = "runoff"         ! Annual filename prefix: runoffYYYY.nc.
+CROFSUF = ".nc"            ! Annual filename suffix.
+SYEARIN = 0                ! Resolve each file's requested record from CF time metadata.
 /
 &NOUTPUT
 COUTDIR = "./"            ! Output directory relative to the model run directory.

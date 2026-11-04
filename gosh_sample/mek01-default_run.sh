@@ -58,7 +58,8 @@ ROFFTAG="test-mek_1deg"       # Select inp/test-mek_1deg/runoff and its input ma
 IFRQ_INP=24                   # Runoff update interval [hours]; examples: 1, 2, 3, 6, 12, 24.
 DROFUNIT=86400000             # Input runoff units / DROFUNIT -> m/s; 86400000 converts mm/day.
 LINPCDF=".FALSE."             # TRUE: read NetCDF runoff; FALSE: read binary runoff.
-LINPDAY=".TRUE."              # TRUE: daily files; FALSE: one-period NetCDF file (binary forces TRUE).
+LINPDAY=".TRUE."              # Legacy compatibility setting; CROFFREQ selects the active grouping.
+CROFFREQ="DAY"                 # Explicit daily grouping; records are indexed from 00:00 each date.
 LINTERP=".TRUE."              # TRUE: map runoff with input matrix; FALSE: use nearest-grid conversion.
 CROFPRE="Roff____"            # Daily filename prefix: Roff____YYYYMMDD.one.
 CROFSUF=".one"                # Daily filename suffix.
@@ -194,7 +195,8 @@ IFRQ_RST = ${IFRQ_RST}       ! 0=end only; 1-24=hour interval; 30=monthly (nonze
 /
 &NFORCE
 LINPCDF  = ${LINPCDF}         ! TRUE: read NetCDF runoff; FALSE: read binary runoff.
-LINPDAY  = ${LINPDAY}         ! TRUE: daily files; FALSE: one-period NetCDF file (binary forces TRUE).
+LINPDAY  = ${LINPDAY}         ! Legacy compatibility setting; CROFFREQ selects the active grouping.
+CROFFREQ = "${CROFFREQ}"     ! Explicit grouping mode; DAY/MON/YEAR/SEQ.
 LINTERP  = ${LINTERP}         ! TRUE: map runoff with input matrix; FALSE: use nearest-grid conversion.
 CINPMAT  = "${INPMAT}"        ! Runoff-to-river input-mapping matrix.
 DROFUNIT = ${DROFUNIT}        ! Input runoff units / DROFUNIT -> m/s; 86400000 converts mm/day.

@@ -1,6 +1,6 @@
 # Mekong 1-degree annual NetCDF runoff sample
 
-This sample provides yearly NetCDF runoff for 2000 and 2001, converted from the daily binary fields in [`../test-mek_1deg/`](../test-mek_1deg/). The binary source remains unchanged. The values are format-converted without rescaling and are intended for the v5 single-file NetCDF forcing workflow.
+This sample provides yearly NetCDF runoff for 2000 and 2001, converted from the daily binary fields in [`../test-mek_1deg/`](../test-mek_1deg/). The binary source remains unchanged. The values are format-converted without rescaling and are intended for the v5 `CROFFREQ="YEAR"` NetCDF workflow.
 
 ## Contents and data contract
 
