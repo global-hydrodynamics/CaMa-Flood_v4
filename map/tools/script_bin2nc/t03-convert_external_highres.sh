@@ -10,7 +10,8 @@ MAP_ROOT="/Users/yamadai/work/CaMa_v400/cmf_v400_data/map_full"
 MAPS="glb_15min glb_06min glb_03min"
 HIRES="1min"
 VARS="catmxy downxy elevtn uparea hand flddif rivwth"
-COMPRESSION_LEVEL=6
+COMPRESSION_LEVEL=3
+JOBS=8
 FORCE=0
 
 # Resolve the converter and metadata registry from this script's v5 repository.
@@ -59,8 +60,8 @@ STEP="Convert external high-resolution maps"
 printf '\n==================================================\n'
 printf '[STEP 1/1] Convert selected external high-resolution map tiles\n'
 printf '==================================================\n'
-printf 'Map root: %s\nMaps: %s\nHigh-resolution directories: %s\nVariables: %s\nCompression level: %s\n' \
-    "$MAP_ROOT" "$MAPS" "$HIRES" "$VARS" "$COMPRESSION_LEVEL"
+printf 'Map root: %s\nMaps: %s\nHigh-resolution directories: %s\nVariables: %s\nCompression level: %s\nWorkers: %s\n' \
+    "$MAP_ROOT" "$MAPS" "$HIRES" "$VARS" "$COMPRESSION_LEVEL" "$JOBS"
 
 # Traverse map, resolution, and variable selections independently.
 for map in $MAPS; do
@@ -88,32 +89,30 @@ for map in $MAPS; do
         cp "$SOURCE_LOCATION" "$OUTPUT_DIR/location.txt"
         printf '[INFO] Copied %s to %s/location.txt\n' "$SOURCE_LOCATION" "$OUTPUT_DIR"
 
-        for var in $VARS; do
-            printf '\n[INFO] Map=%s resolution=%s variable=%s\n' "$map" "$re" "$var"
-            if [ "$FORCE" -eq 1 ]; then
-                if python3 "$CONVERTER" --map-dir "$MAP_DIR" --hires "$re" \
-                    --variable "$var" --registry "$REGISTRY" \
-                    --compression-level "$COMPRESSION_LEVEL" --force; then
-                    :
-                else
-                    EXIT_STATUS=$?
-                    printf '[ERROR] Conversion failed: map=%s resolution=%s variable=%s\n' \
-                        "$map" "$re" "$var" >&2
-                    exit "$EXIT_STATUS"
-                fi
+        printf '\n[INFO] Map=%s resolution=%s variables=%s\n' "$map" "$re" "$VARS"
+        if [ "$FORCE" -eq 1 ]; then
+            if python3 "$CONVERTER" --map-dir "$MAP_DIR" --hires "$re" \
+                --variables "$VARS" --registry "$REGISTRY" \
+                --compression-level "$COMPRESSION_LEVEL" --jobs "$JOBS" --force; then
+                :
             else
-                if python3 "$CONVERTER" --map-dir "$MAP_DIR" --hires "$re" \
-                    --variable "$var" --registry "$REGISTRY" \
-                    --compression-level "$COMPRESSION_LEVEL"; then
-                    :
-                else
-                    EXIT_STATUS=$?
-                    printf '[ERROR] Conversion failed: map=%s resolution=%s variable=%s\n' \
-                        "$map" "$re" "$var" >&2
-                    exit "$EXIT_STATUS"
-                fi
+                EXIT_STATUS=$?
+                printf '[ERROR] Conversion failed: map=%s resolution=%s variables=%s\n' \
+                    "$map" "$re" "$VARS" >&2
+                exit "$EXIT_STATUS"
             fi
-        done
+        else
+            if python3 "$CONVERTER" --map-dir "$MAP_DIR" --hires "$re" \
+                --variables "$VARS" --registry "$REGISTRY" \
+                --compression-level "$COMPRESSION_LEVEL" --jobs "$JOBS"; then
+                :
+            else
+                EXIT_STATUS=$?
+                printf '[ERROR] Conversion failed: map=%s resolution=%s variables=%s\n' \
+                    "$map" "$re" "$VARS" >&2
+                exit "$EXIT_STATUS"
+            fi
+        fi
     done
 done
 

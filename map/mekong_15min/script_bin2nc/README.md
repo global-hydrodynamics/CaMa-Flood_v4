@@ -27,7 +27,7 @@ Run the map-local `s03` to convert the selected registered `1min/` tile binaries
 ./s03-convert_highres_netcdf.sh
 ```
 
-Outputs go to `1min_nc/`, one NetCDF file per area and source binary (for example, `1min.catmxy.nc`); `1min/location.txt` is copied there as geometry metadata. Multi-record files contain all registered records as separate variables. The default compression level is 6 with lossless zlib/shuffle; change `COMPRESSION_LEVEL` in the script to select 0–9 (0 disables deflate). Existing NetCDF files are skipped even if the level changes; use `./s03-convert_highres_netcdf.sh --force` to rebuild them. Forced conversion preserves the old file unless the replacement completes successfully. See the shared guide for configuration and limitations.
+Outputs go to `1min_nc/`, one NetCDF file per area and source binary (for example, `1min.catmxy.nc`); `1min/location.txt` is copied there as geometry metadata. Multi-record files contain all registered records as separate variables. The default compression level is 3 with lossless zlib/shuffle, and `JOBS=8` sets the maximum number of parallel Python workers. Edit `COMPRESSION_LEVEL` (0–9; 0 disables deflate) or `JOBS` at the top of the script. Existing NetCDF files are skipped even if these settings change; use `./s03-convert_highres_netcdf.sh --force` to rebuild them. Forced conversion preserves the old file unless the replacement completes successfully. `--force` is the only shell command-line option. See the shared guide for configuration and limitations.
 
 ## Legacy consolidated NetCDF files
 

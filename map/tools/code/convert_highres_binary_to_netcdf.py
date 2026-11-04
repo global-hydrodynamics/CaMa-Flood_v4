@@ -7,6 +7,7 @@ import array
 import ctypes
 import ctypes.util
 import csv
+from concurrent.futures import ProcessPoolExecutor, as_completed
 import math
 import os
 from pathlib import Path
@@ -342,45 +343,112 @@ def write_netcdf(
 def convert_variable(
     map_dir: Path,
     hires: str,
-    variable: str,
+    variables: list[str],
     registry_path: Path,
     force: bool,
     compression_level: int,
-) -> int:
+    jobs: int,
+) -> tuple[int, int]:
     hires_dir = map_dir / hires
     areas = read_location(hires_dir / "location.txt")
     rows = registry_rows(registry_path)
     output_dir = map_dir / f"{hires}_nc"
-    converted = skipped = 0
-    for area in areas:
-        source = hires_dir / f"{area['carea']}.{variable}.bin"
-        selected = rows_for_tile(rows, hires, str(area["carea"]), variable)
-        if not source.is_file():
-            raise ConversionError(f"registered tile input is missing: {source}")
-        selected = validate_tile(source, area, selected)
-        output = output_dir / f"{area['carea']}.{variable}.nc"
-        if output.exists() and not force:
-            print(f"SKIP {output}: already exists (pass --force to overwrite)")
+    tasks = []
+    skipped_tasks = []
+    for variable in variables:
+        for area in areas:
+            source = hires_dir / f"{area['carea']}.{variable}.bin"
+            selected = rows_for_tile(rows, hires, str(area["carea"]), variable)
+            if not source.is_file():
+                raise ConversionError(f"registered tile input is missing: {source}")
+            selected = validate_tile(source, area, selected)
+            output = output_dir / f"{area['carea']}.{variable}.nc"
+            task = (source, output, area, selected, compression_level, force)
+            if output.exists() and not force:
+                skipped_tasks.append(task)
+            else:
+                tasks.append(task)
+
+    if not tasks and not skipped_tasks:
+        raise ConversionError(f"no tiles found for {hires} {' '.join(variables)}")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    total = len(tasks) + len(skipped_tasks)
+    converted = skipped = failed = completed = 0
+
+    def report(status: str, task, detail: str = "") -> None:
+        nonlocal completed, converted, skipped, failed
+        completed += 1
+        if status == "SUCCESS":
+            converted += 1
+        elif status == "SKIP":
             skipped += 1
-            continue
-        output_dir.mkdir(parents=True, exist_ok=True)
-        if force and output.exists():
-            # Build the replacement completely before atomically replacing the old file.
-            replacement = output.with_name(f".{output.name}.replacement")
-            replacement.unlink(missing_ok=True)
-            try:
-                write_netcdf(source, replacement, area, selected, compression_level)
-                os.replace(replacement, output)
-            except Exception:
-                replacement.unlink(missing_ok=True)
-                raise
         else:
-            write_netcdf(source, output, area, selected, compression_level)
-        print(f"SUCCESS {source} -> {output}")
-        converted += 1
-    if converted == 0 and skipped == 0:
-        raise ConversionError(f"no tiles found for {hires} {variable}")
-    return converted
+            failed += 1
+        source = task[0]
+        suffix = f" ({detail})" if detail else ""
+        print(f"[{completed}/{total}] {status:<7} {hires}/{source.name}{suffix}", flush=True)
+
+    for task in skipped_tasks:
+        report("SKIP", task)
+
+    if jobs == 1:
+        for task in tasks:
+            try:
+                _convert_highres_task(task)
+                report("SUCCESS", task)
+            except Exception as error:
+                report("FAILED", task, str(error))
+                break
+    elif tasks:
+        executor = ProcessPoolExecutor(max_workers=jobs)
+        futures = {executor.submit(_convert_highres_task, task): task for task in tasks}
+        failed_once = False
+        try:
+            for future in as_completed(futures):
+                task = futures[future]
+                if future.cancelled():
+                    continue
+                try:
+                    future.result()
+                    report("SUCCESS", task)
+                except Exception as error:
+                    report("FAILED", task, str(error))
+                    if not failed_once:
+                        failed_once = True
+                        for pending in futures:
+                            if pending is not future:
+                                pending.cancel()
+        except KeyboardInterrupt:
+            for future in futures:
+                future.cancel()
+            executor.shutdown(wait=True, cancel_futures=True)
+            raise
+        else:
+            executor.shutdown(wait=True, cancel_futures=True)
+
+    print(
+        f"\nCompleted: {completed}\nConverted: {converted}\nSkipped:   {skipped}\nFailed:    {failed}",
+        flush=True,
+    )
+    if failed:
+        raise RuntimeError(f"{failed} high-resolution conversion task(s) failed")
+    return converted, skipped
+
+
+def _convert_highres_task(task) -> None:
+    source, output, area, rows, compression_level, force = task
+    if force and output.exists():
+        # Stage a complete replacement before atomically replacing the old file.
+        replacement = output.with_name(f".{output.name}.replacement")
+        replacement.unlink(missing_ok=True)
+        try:
+            write_netcdf(source, replacement, area, rows, compression_level)
+            os.replace(replacement, output)
+        except Exception:
+            replacement.unlink(missing_ok=True)
+            raise
+    else:
+        write_netcdf(source, output, area, rows, compression_level)
 
 
 def main() -> int:
@@ -388,24 +456,38 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--map-dir", type=Path, required=True, help="map root containing high-resolution directories")
     parser.add_argument("--hires", required=True, help="high-resolution directory tag, such as 1min")
-    parser.add_argument("--variable", required=True, help="registered high-resolution Binary file stem, such as catmxy")
+    selection = parser.add_mutually_exclusive_group(required=True)
+    selection.add_argument("--variable", help="one registered high-resolution Binary file stem (legacy option)")
+    selection.add_argument("--variables", help="space-separated registered Binary file stems")
+    parser.add_argument("--jobs", type=int, default=1, help="maximum parallel worker processes (default: 1)")
     parser.add_argument("--registry", type=Path, default=repo_root / "variable_table/map_variables.csv", help="map variable registry")
     parser.add_argument("--force", action="store_true", help="replace existing NetCDF files")
     parser.add_argument(
-        "--compression-level", type=int, choices=range(10), default=6,
-        help="lossless NetCDF4 zlib/deflate level (0 disables deflate; default: 6)",
+        "--compression-level", type=int, choices=range(10), default=3,
+        help="lossless NetCDF4 zlib/deflate level (0 disables deflate; default: 3)",
     )
     args = parser.parse_args()
     args.map_dir = args.map_dir.resolve()
     args.registry = args.registry.resolve()
+    if args.jobs < 1:
+        parser.error("--jobs must be at least 1")
+    variables = [args.variable] if args.variable else args.variables.split()
+    variables = list(dict.fromkeys(variables))
+    if not variables:
+        parser.error("--variables must contain at least one variable name")
     try:
-        count = convert_variable(
-            args.map_dir, args.hires, args.variable, args.registry, args.force, args.compression_level
+        converted, skipped = convert_variable(
+            args.map_dir, args.hires, variables, args.registry, args.force, args.compression_level, args.jobs
         )
+    except KeyboardInterrupt:
+        print("ERROR: interrupted; active conversion workers have been stopped and collected", file=sys.stderr)
+        return 130
     except (OSError, ValueError, RuntimeError) as error:
         print(f"ERROR: {error}", file=sys.stderr)
         return 1
-    print(f"SUCCESS: converted {count} tile(s) for {args.hires} {args.variable}")
+    print(
+        f"SUCCESS: converted {converted} tile(s), skipped {skipped} for {args.hires} {' '.join(variables)}"
+    )
     return 0
 
 

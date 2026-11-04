@@ -23,7 +23,10 @@ HIRES="1min"
 VARS="catmxy downxy elevtn uparea hand flddif rivwth"
 
 # Lossless zlib/deflate compression level (0 disables deflate; range 0-9).
-COMPRESSION_LEVEL=6
+COMPRESSION_LEVEL=3
+
+# Maximum number of parallel Python worker processes.
+JOBS=8
 
 # Existing NetCDF outputs are skipped by default. Pass --force to replace them.
 FORCE=0
@@ -73,8 +76,8 @@ STEP="Convert selected high-resolution tiles"
 printf '\n==================================================\n'
 printf '[STEP 1/1] Convert registered high-resolution variables\n'
 printf '==================================================\n'
-printf 'Map: %s\nHigh-resolution directories: %s\nVariables: %s\nCompression level: %s\n\n' \
-    "$MAP_DIR" "$HIRES" "$VARS" "$COMPRESSION_LEVEL"
+printf 'Map: %s\nHigh-resolution directories: %s\nVariables: %s\nCompression level: %s\nWorkers: %s\n\n' \
+    "$MAP_DIR" "$HIRES" "$VARS" "$COMPRESSION_LEVEL" "$JOBS"
 
 # Preserve the geometry metadata beside the converted tile rasters.
 for re in $HIRES; do
@@ -88,27 +91,24 @@ for re in $HIRES; do
     cp "$SOURCE_LOCATION" "$OUTPUT_DIR/location.txt"
     printf '[INFO] Copied %s to %s/location.txt\n' "$SOURCE_LOCATION" "$OUTPUT_DIR"
 
-    # Convert one registered Binary stem at a time; Python handles tile layout,
-    # registry validation, chunked I/O, NetCDF creation, and read-back checks.
-    for var in $VARS; do
-        if [ "$FORCE" -eq 1 ]; then
-            if python3 "$CONVERTER" --map-dir "$MAP_DIR" --hires "$re" --variable "$var" \
-                --compression-level "$COMPRESSION_LEVEL" --force; then
-                :
-            else
-                EXIT_STATUS=$?
-                exit "$EXIT_STATUS"
-            fi
+    # Python creates and schedules the registered variable-by-tile tasks.
+    if [ "$FORCE" -eq 1 ]; then
+        if python3 "$CONVERTER" --map-dir "$MAP_DIR" --hires "$re" --variables "$VARS" \
+            --compression-level "$COMPRESSION_LEVEL" --jobs "$JOBS" --force; then
+            :
         else
-            if python3 "$CONVERTER" --map-dir "$MAP_DIR" --hires "$re" --variable "$var" \
-                --compression-level "$COMPRESSION_LEVEL"; then
-                :
-            else
-                EXIT_STATUS=$?
-                exit "$EXIT_STATUS"
-            fi
+            EXIT_STATUS=$?
+            exit "$EXIT_STATUS"
         fi
-    done
+    else
+        if python3 "$CONVERTER" --map-dir "$MAP_DIR" --hires "$re" --variables "$VARS" \
+            --compression-level "$COMPRESSION_LEVEL" --jobs "$JOBS"; then
+            :
+        else
+            EXIT_STATUS=$?
+            exit "$EXIT_STATUS"
+        fi
+    fi
 done
 
 printf '\n[SUCCESS] High-resolution Binary-to-NetCDF conversion completed.\n'
