@@ -32,7 +32,8 @@ def reordered_registry(destination: Path) -> Path:
 
 
 def run_alias_case(run_dir: Path, *, netcdf: bool, split: bool, variables: str,
-                   registry_path: Path | None = None) -> subprocess.CompletedProcess[str]:
+                   registry_path: Path | None = None,
+                   omit_registry_settings: bool = False) -> subprocess.CompletedProcess[str]:
     script = SAMPLE_SCRIPT.read_text(encoding="utf-8")
     script = re.sub(r'^RUNDIR=.*$', f'RUNDIR="{run_dir}"', script, count=1, flags=re.MULTILINE)
     script = re.sub(r'^END_MONTH=.*$', "END_MONTH=1", script, count=1, flags=re.MULTILINE)
@@ -58,16 +59,17 @@ def run_alias_case(run_dir: Path, *, netcdf: bool, split: bool, variables: str,
         'CSUBPRE  = "Roff____"          ! Test subsurface input filename prefix.\n'
         'CSUBSUF  = ".one"             ! Test subsurface input filename suffix.',
     )
+    if registry_path is not None:
+        script = script.replace(
+            'COUTVAR_TABLE = ""', f'COUTVAR_TABLE = "{registry_path}"', 1
+        )
+    if omit_registry_settings:
+        script = re.sub(r'^CMF_BASE = .*\nCOUTVAR_TABLE = .*\n', '', script,
+                        count=1, flags=re.MULTILINE)
     test_script = run_dir.parent / f"{run_dir.name}.sh"
     test_script.write_text(script, encoding="utf-8")
-    environment = None
-    if registry_path is not None:
-        import os
-
-        environment = os.environ.copy()
-        environment["CMF_OUTPUT_VARIABLES"] = str(registry_path)
     result = subprocess.run(
-        ["sh", str(test_script)], cwd=ROOT / "gosh_sample", env=environment,
+        ["sh", str(test_script)], cwd=ROOT / "gosh_sample",
         text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False,
     )
     for log_name in ("run.stdout.log", "log_CaMa.txt"):
@@ -90,6 +92,14 @@ def read_netcdf_values(path: Path, variable: str) -> np.ndarray:
 
 @unittest.skipUnless(BIN_EXECUTABLE.is_file(), "build src_main/MAIN_cmf first")
 class OutputAliasIntegrationTests(unittest.TestCase):
+    def test_existing_namelist_without_registry_settings_still_runs(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="cmf-output-alias-old-nml-") as temporary:
+            run_dir = Path(temporary) / "run"
+            result = run_alias_case(run_dir, netcdf=False, split=False, variables="outflw",
+                                    omit_registry_settings=True)
+            self.assertEqual(result.returncode, 0, result.stdout)
+            self.assertTrue((run_dir / "outflw2000.bin").is_file())
+
     def test_binary_alias_pairs_have_identical_values_and_requested_names(self) -> None:
         with tempfile.TemporaryDirectory(prefix="cmf-output-alias-bin-") as temporary:
             run_dir = Path(temporary) / "run"
@@ -139,6 +149,17 @@ class OutputAliasIntegrationTests(unittest.TestCase):
                 self.assertIn(f"{name} requires LROSPLIT=.TRUE.", result.stdout)
                 self.assertFalse((run_dir / f"{name}2000.bin").exists())
                 self.assertFalse((run_dir / "outflw2000.bin").exists())
+
+    def test_missing_registry_reports_the_configured_path(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="cmf-output-alias-missing-registry-") as temporary:
+            root = Path(temporary)
+            missing_registry = root / "missing-output-variables.csv"
+            run_dir = root / "run"
+            result = run_alias_case(run_dir, netcdf=False, split=True,
+                                    variables="runoff", registry_path=missing_registry)
+            self.assertNotEqual(result.returncode, 0, result.stdout)
+            self.assertIn(f"Cannot open output registry: {missing_registry}", result.stdout)
+            self.assertFalse((run_dir / "runoff2000.bin").exists())
 
 
 if __name__ == "__main__":

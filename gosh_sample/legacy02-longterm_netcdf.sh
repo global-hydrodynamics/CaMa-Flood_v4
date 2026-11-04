@@ -6,7 +6,6 @@ set -eu
 
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 CMF_BASE=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd -P)
-export CMF_BASE
 
 # -------------------------- User settings ------------------------------
 # Simulation years are inclusive; the model ends at January 1 of END_YEAR+1.
@@ -159,6 +158,8 @@ CROFPRE = "runoff"         ! Annual filename prefix: runoffYYYY.nc.
 CROFSUF = ".nc"            ! Annual filename suffix.
 /
 &NOUTPUT
+CMF_BASE = "${CMF_BASE}"     ! CaMa-Flood repository/package root.
+COUTVAR_TABLE = ""            ! Defaults to CMF_BASE/variable_table/output_variables.csv.
 COUTDIR = "./"            ! Output directory relative to the model run directory.
 CVARSOUT = "${CVARSOUT}"  ! Comma-separated list of output variables to write.
 COUTTAG = "${YEAR}"       ! Year tag appended to each output filename.

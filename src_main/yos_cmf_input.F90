@@ -22,10 +22,12 @@ INTEGER(KIND=JPIM)              :: NSETFILE                !! input namelist fil
 INTEGER(KIND=JPIM)              :: TMPNAM                  !! temporal I/O   file FIG
 CHARACTER(LEN=256)              :: CLOGOUT                 !! default log    file name
 CHARACTER(LEN=256)              :: CSETFILE                !! input namelist file name
+CHARACTER(LEN=512)              :: CMF_BASE                !! CaMa-Flood installation/repository root
 
 DATA LLOGOUT       /.TRUE./
 DATA CLOGOUT       /'./log_CaMa.txt'/
 DATA CSETFILE      /'input_cmf.nam'/
+DATA CMF_BASE      /'.'/
 
 !================================================
 !*** NAMELIST/NRUNVER/

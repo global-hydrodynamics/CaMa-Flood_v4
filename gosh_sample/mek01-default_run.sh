@@ -13,7 +13,6 @@ set -eu
 
 # CaMa-Flood base directory (contains src_main/, map/, and inp/).
 CMF_BASE=$(cd .. && pwd)
-export CMF_BASE
 
 # Simulation working directory; the model executable and outputs are placed here.
 RUNDIR="${CMF_BASE}/out/mek01-default_run"
@@ -204,6 +203,8 @@ CROFPRE  = "${CROFPRE}"       ! Runoff filename prefix before the date.
 CROFSUF  = "${CROFSUF}"       ! Runoff filename suffix.
 /
 &NOUTPUT
+CMF_BASE = "${CMF_BASE}"       ! CaMa-Flood repository/package root.
+COUTVAR_TABLE = ""              ! Defaults to CMF_BASE/variable_table/output_variables.csv.
 COUTDIR  = "${COUTDIR}"       ! Output directory relative to the model run directory.
 CVARSOUT = "${CVARSOUT}"      ! Comma-separated list of output variables.
 COUTTAG  = "${START_YEAR}"    ! Tag appended to output filenames.
