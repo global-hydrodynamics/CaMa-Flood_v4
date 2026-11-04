@@ -7,11 +7,11 @@ set -eu
 # User settings.
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 MAP_ROOT="/Users/yamadai/work/CaMa_v400/cmf_v400_data/map_full"
-MAPS="glb_15min glb_06min glb_03min"
-HIRES="1min"
-VARS="catmxy downxy elevtn uparea hand flddif rivwth"
+MAPS="glb_01min"
+HIRES="15sec 3sec"
+VARS="catmxy"
 COMPRESSION_LEVEL=3
-JOBS=8
+JOBS=16
 FORCE=0
 
 # Resolve the converter and metadata registry from this script's v5 repository.
