@@ -181,3 +181,8 @@ Before changing the architecture, trace and document the ordering and dependenci
 
 This section records a future direction only. It does not authorize Fortran changes, MAIN/DRV extraction, a new Coupler interface, or HeatLink modifications.
 
+## Restart I/O procedure organization
+
+The Restart module now follows the established principal-procedure / utility split: `CMF_RESTART_INIT` and `CMF_RESTART_WRITE` identify model states and option-dependent behavior, while private generic `RESTART_UTIL_READ` / `RESTART_UTIL_WRITE` overloads handle kinds and delegate to Binary or NetCDF representation utilities. The JPRM/JPRD overload pair remains distinguishable when `JPRB` equals `JPRD`; the single-kind paths convert through the double-precision utility interface where required by the existing file precision contract. This refactor retains record order, filenames, NetCDF schema, bifurcation companion behavior, and Restart timing.
+
+The focused validation compared the pre-refactor and refactored Mekong Restart runs: Binary restart files and selected model outputs were byte-identical for the tested Normal case; NetCDF restart files and selected outputs were also byte-identical. Both NetCDF Normal and Storage-only Restart write/read smoke cases completed. Default Binary, NetCDF-enabled, and `JPRB == JPRD` builds succeeded. These checks cover the tested sample configurations only; optional groundwater, reservoir, levee, MPI, and coupled-driver configurations were not exercised. See [VR-0117](../research/records/validation_runs/VR-0117.md).
