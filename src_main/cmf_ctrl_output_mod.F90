@@ -7,6 +7,7 @@ MODULE CMF_CTRL_OUTPUT_MOD
 ! -- CMF_OUTPUT_INIT   : Create & Open standard output files
 ! -- CMF_OUTPUT_WRITE  : Write output to files
 ! -- CMF_OUTPUT_END    : Close standard output files
+! -- CMF_OUTTXT_WRTE   : Write discharge time series at requested gauges
 !
 ! (C) D.Yamazaki & E. Dutra  (U-Tokyo/FCUL)  Aug 2019
 !
@@ -24,21 +25,22 @@ USE PARKIND1,                ONLY: JPRD
 USE YOS_CMF_INPUT,           ONLY: LOGNAM,  IFRQ_OUT, CMF_BASE
 USE YOS_CMF_INPUT,           ONLY: CSUFBIN, CSUFVEC, CSUFPTH, CSUFCDF
 USE YOS_CMF_INPUT,           ONLY: LPTHOUT, LDAMOUT, LLEVEE,  LWEVAP, LGDWDLY, LOUTINS,LROSPLIT
+
 IMPLICIT NONE
 !============================
 SAVE
 !*** NAMELIST/NOUTPUT/ from inputnam
-CHARACTER(LEN=256)              ::  COUTDIR           ! OUTPUT DIRECTORY
-CHARACTER(LEN=256)              ::  CVARSOUT          ! Comma-separated list of output variables to save 
-CHARACTER(LEN=256)              ::  COUTTAG           ! Output Tag Name for each experiment
-CHARACTER(LEN=512)              ::  COUTVAR_TABLE     ! Output-variable metadata CSV path
+CHARACTER(LEN=256)              ::  COUTDIR           !! Output directory.
+CHARACTER(LEN=256)              ::  CVARSOUT          !! Comma-separated output variable names.
+CHARACTER(LEN=256)              ::  COUTTAG           !! Output tag for this experiment.
+CHARACTER(LEN=512)              ::  COUTVAR_TABLE     !! Output-variable metadata CSV path.
 !
-LOGICAL                         ::  LOUTVEC           ! TRUE FOR VECTORIAL OUTPUT, FALSE FOR NX,NY OUTPUT
-LOGICAL                         ::  LOUTCDF           ! true for netcdf outptu false for binary
-INTEGER(KIND=JPIM)              ::  NDLEVEL           ! NETCDF DEFLATION LEVEL 
+LOGICAL                         ::  LOUTVEC           !! Write vector output instead of an NX-by-NY map.
+LOGICAL                         ::  LOUTCDF           !! Write NetCDF output instead of Binary output.
+INTEGER(KIND=JPIM)              ::  NDLEVEL           !! NetCDF deflation level.
 !
-LOGICAL                         ::  LOUTTXT           ! TRUE FOR Text output for some gauges
-CHARACTER(LEN=256)              ::  CGAUTXT           ! List of Gauges (ID, IX, IY)
+LOGICAL                         ::  LOUTTXT           !! Write text output for selected gauges.
+CHARACTER(LEN=256)              ::  CGAUTXT           !! Gauge list file (ID, name, IX, IY).
 !
 NAMELIST/NOUTPUT/ CMF_BASE,COUTVAR_TABLE,COUTDIR,CVARSOUT,COUTTAG,LOUTCDF,NDLEVEL, &
                   LOUTVEC,IFRQ_OUT,LOUTTXT,CGAUTXT
@@ -88,18 +90,30 @@ END INTERFACE OUTPUT_WRITE
 
 CONTAINS
 !####################################################################
-! -- CMF_OUTPUT_NMLIST : Read output file info from namelist
-! -- CMF_OUTPUT_INIT   : Create & Open standard output files
-! -- CMF_OUTPUT_WRITE  : Write output to files
-! -- CMF_OUTPUT_END    : Close standard output files
+! -- CMF_OUTPUT_NMLIST : Read output settings from the namelist
+! -- CMF_OUTPUT_INIT   : Create and open standard output files
+! -- CMF_OUTPUT_WRITE  : Write output records
+! -- CMF_OUTPUT_END    : Close output files
+! -- CMF_OUTTXT_WRTE   : Write discharge time series at requested gauges
+!
+! Shared output utilities
+! -- INFER_CMF_BASE    : Resolve the installation root from input paths
+! -- OUTPUT_WRITE_R4   : Write JPRM output arrays
+! -- OUTPUT_WRITE_R8   : Convert and write JPRD output arrays
+! -- FIND_OUTPUT       : Find an initialized output by name
+! -- WRITE_OUTPUT_MAP  : Write one map record
+! -- WRITE_OUTPUT_PTH  : Write one bifurcation-path record
+! -- WRTE_OUTBIN       : Write one Binary map record
+! -- WRTE_OUTPTH       : Write one Binary bifurcation-path record
 ! --
 !####################################################################
 SUBROUTINE CMF_OUTPUT_NMLIST
-! reed setting from namelist
+! Read output settings from the namelist.
 ! -- Called from CMF_DRV_NMLIST
 USE YOS_CMF_INPUT,      ONLY: CSETFILE,NSETFILE
 USE YOS_CMF_INPUT,      ONLY: CDIMINFO
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
+
 IMPLICIT NONE
 !================================================
 WRITE(LOGNAM,*) ""
@@ -158,6 +172,7 @@ WRITE(LOGNAM,*) "CMF::OUTPUT_NMLIST: end"
 END SUBROUTINE CMF_OUTPUT_NMLIST
 
 FUNCTION INFER_CMF_BASE(DIMINFO_PATH) RESULT(BASE)
+! Infer the installation root from the map-dimension path or executable path.
 IMPLICIT NONE
 CHARACTER(LEN=*),INTENT(IN) :: DIMINFO_PATH
 CHARACTER(LEN=512) :: BASE
@@ -187,18 +202,20 @@ ENDIF
 END FUNCTION INFER_CMF_BASE
 !####################################################################
 
-
-
-
-
 !####################################################################
 SUBROUTINE CMF_OUTPUT_INIT
 ! Initialize output module (create/open files)
+!+ CREATE_OUTBIN         : Open a Binary output file.
+!+ CREATE_OUTCDF         : Define and open a NetCDF output file.
+!+ LOAD_OUTPUT_REGISTRY  : Read and validate the complete CSV registry.
+!+ LOAD_OUTPUT_METADATA  : Resolve selected output metadata and aliases.
+!+ CHECK_OUTPUT_OPTION   : Check whether a required model option is enabled.
 ! -- Called from CMF_DRV_INIT
 USE YOS_CMF_INPUT,           ONLY: NX,NY
 USE YOS_CMF_TIME,            ONLY: ISYYYY, ISMM,   ISDD,   ISHOUR, ISMIN
 USE YOS_CMF_MAP,             ONLY: NSEQMAX,NPTHOUT,NPTHLEV,REGIONTHIS
 USE CMF_UTILS_MOD,           ONLY: INQUIRE_FID
+
 IMPLICIT NONE
 !* Local variables 
 CHARACTER(LEN=256)              :: CTIME, CTMP
@@ -302,15 +319,14 @@ IRECOUT=0  ! Initialize Output record to 1 (shared in netcdf & binary)
 
 CONTAINS
 !==========================================================
-!+ CREATE_OUTBIN            : Open a Binary output file.
-!+ CREATE_OUTCDF            : Define and open a NetCDF output file.
-!+ LOAD_OUTPUT_REGISTRY    : Read and validate the complete CSV registry once.
-!+ LOAD_OUTPUT_METADATA   : Resolve selected output metadata and aliases.
-!+ READ_OUTPUT_REGISTRY_ROW : Read one row by its name column.
-!+ SPLIT_CSV_RECORD         : Split a CSV record while honoring quoted commas.
-!+ CSV_COLUMN               : Find a CSV column by header name.
+!+ CREATE_OUTBIN         : Open a Binary output file.
+!+ CREATE_OUTCDF         : Define and open a NetCDF output file.
+!+ LOAD_OUTPUT_REGISTRY  : Read and validate the complete CSV registry.
+!+ LOAD_OUTPUT_METADATA  : Resolve selected output metadata and aliases.
+!+ CHECK_OUTPUT_OPTION   : Check whether a required model option is enabled.
 !==========================================================
 SUBROUTINE CREATE_OUTBIN
+! Open the selected output as a Binary file.
 IMPLICIT NONE
 !================================================
 IF( TRIM(VAROUT(JF)%CVNAME)=='pthflw' ) THEN   !! bifurcation channel
@@ -332,14 +348,9 @@ ELSE                   !!  2D default map output
   ENDIF
 ENDIF
 
-
 END SUBROUTINE CREATE_OUTBIN
-!==========================================================
-!+
-!+
-!+
-!==========================================================
 SUBROUTINE CREATE_OUTCDF
+! Define and open the selected output as a NetCDF file.
 #ifdef UseCDF_CMF
 USE YOS_CMF_INPUT,           ONLY: RMIS
 USE YOS_CMF_MAP,             ONLY: D1LON, D1LAT, NPTHOUT, NPTHLEV, PTH_ID, PTH_IX, PTH_IY, PTH_JX, PTH_JY, &
@@ -347,6 +358,7 @@ USE YOS_CMF_MAP,             ONLY: D1LON, D1LAT, NPTHOUT, NPTHLEV, PTH_ID, PTH_I
                                    PTH_DST, PTH_ELEVTN, PTH_DEPTH, PTH_WTH, PTH_IBSN, PTH_JBSN
 USE CMF_UTILS_MOD,           ONLY: NCERROR
 USE NETCDF
+
 IMPLICIT NONE
 INTEGER(KIND=JPIM)  :: TIMEID,VARID,LATID,LONID,NPTHOUTID,NPTHLEVID,I
 CHARACTER(LEN=32)   :: CMETH
@@ -449,7 +461,6 @@ ENDIF
 CMETH = 'time: ' // AGGREGATION_METHOD(VAROUT(JF)%AGGREGATE)
 CALL NCERROR( NF90_PUT_ATT(VAROUT(JF)%NCID, VAROUT(JF)%VARID, 'cell_methods', TRIM(CMETH)) )
 
-
 CALL NCERROR( NF90_ENDDEF(VAROUT(JF)%NCID) )
 
 !=== put lon lat info ===
@@ -488,8 +499,10 @@ END SUBROUTINE CREATE_OUTCDF
 !==========================================================
 
 SUBROUTINE LOAD_OUTPUT_REGISTRY(LOAD_ERROR)
+! Read the CSV registry and resolve metadata inherited by aliases.
 USE YOS_CMF_INPUT, ONLY: RMIS
 USE CMF_UTILS_MOD, ONLY: SPLIT_CSV_RECORD, CSV_COLUMN
+
 IMPLICIT NONE
 CHARACTER(LEN=*),INTENT(OUT) :: LOAD_ERROR
 CHARACTER(LEN=8192) :: REGISTRY_LINE
@@ -498,6 +511,7 @@ TYPE(TOUTPUT_METADATA),ALLOCATABLE :: TEMP_REGISTRY(:)
 INTEGER(KIND=JPIM) :: CSV_UNIT,IOS,NHEADER,NFIELDS,NROWS,ROW,COL,PARSE_STATUS
 INTEGER(KIND=JPIM) :: IDX_NAME,IDX_ALIAS,IDX_LONG,IDX_UNITS,IDX_TIME,IDX_MISSING,IDX_OPTION,CANON
 REAL(KIND=JPRM) :: SENTINEL
+!================================================
 LOAD_ERROR=''
 IF (ALLOCATED(OUTPUT_REGISTRY)) DEALLOCATE(OUTPUT_REGISTRY)
 ALLOCATE(OUTPUT_REGISTRY(256))
@@ -628,6 +642,7 @@ END SUBROUTINE LOAD_OUTPUT_REGISTRY
 
 SUBROUTINE LOAD_OUTPUT_METADATA(NAME,LONG_NAME,UNITS,AGGREGATE,MISSING_VALUE,HAS_MISSING_VALUE, &
                                 REQUIRED_OPTION,FOUND,ERROR_MESSAGE)
+! Return the resolved metadata for one selected output name.
 IMPLICIT NONE
 CHARACTER(LEN=*),INTENT(IN) :: NAME
 CHARACTER(LEN=*),INTENT(OUT) :: LONG_NAME,UNITS,REQUIRED_OPTION,ERROR_MESSAGE
@@ -635,6 +650,7 @@ INTEGER(KIND=JPIM),INTENT(OUT) :: AGGREGATE
 REAL(KIND=JPRM),INTENT(OUT) :: MISSING_VALUE
 LOGICAL,INTENT(OUT) :: FOUND,HAS_MISSING_VALUE
 INTEGER(KIND=JPIM) :: ROW
+!================================================
 FOUND=.FALSE.; HAS_MISSING_VALUE=.FALSE.
 ERROR_MESSAGE='Unknown output name: '//TRIM(NAME)
 DO ROW=1,SIZE(OUTPUT_REGISTRY)
@@ -654,11 +670,14 @@ ENDDO
 END SUBROUTINE LOAD_OUTPUT_METADATA
 
 SUBROUTINE CHECK_OUTPUT_OPTION(NAME,REQUIRED_OPTION,ERROR_MESSAGE)
+! Report whether the output's required model option is enabled.
 USE YOS_CMF_INPUT, ONLY: LOUTINS
+
 IMPLICIT NONE
 CHARACTER(LEN=*),INTENT(IN) :: NAME,REQUIRED_OPTION
 CHARACTER(LEN=*),INTENT(OUT) :: ERROR_MESSAGE
 LOGICAL :: ENABLED
+!================================================
 ERROR_MESSAGE=''; ENABLED=.TRUE.
 SELECT CASE (TRIM(REQUIRED_OPTION))
   CASE ('none',''); RETURN
@@ -679,10 +698,6 @@ END SUBROUTINE CHECK_OUTPUT_OPTION
 END SUBROUTINE CMF_OUTPUT_INIT
 !####################################################################
 
-
-
-
-
 !####################################################################
 SUBROUTINE CMF_OUTPUT_WRITE
 ! Driver-compatible dispatcher. Array association is explicit here; CSV strings
@@ -694,8 +709,10 @@ USE YOS_CMF_DIAG, ONLY: D2RIVDPH,D2FLDDPH,D2FLDFRC,D2FLDARE,D2SFCELV,D2STORGE, &
   D2OUTFLW_oAVG,D2RIVOUT_oAVG,D2FLDOUT_oAVG,D2PTHOUT_oAVG,D1PTHFLW_oAVG, &
   D2RIVVEL_oAVG,D2GDWRTN_oAVG,D2RUNOFF_oAVG,D2ROFSUB_oAVG,D2WEVAPEX_oAVG, &
   D2OUTFLW_oMAX,D2STORGE_oMAX,D2RIVDPH_oMAX,D2DAMINF_oAVG,D2OUTINS,D2LEVDPH
+
 IMPLICIT NONE
 INTEGER(KIND=JPIM) :: JF
+!================================================
 IF (MOD(JHOUR,IFRQ_OUT)/=0 .OR. JMIN/=0) RETURN
 IRECOUT=IRECOUT+1
 WRITE(LOGNAM,*) 'CMF::OUTPUT_WRITE: write at time: ',JYYYYMMDD,JHHMM,IRECOUT
@@ -755,17 +772,20 @@ WRITE(LOGNAM,*) 'CMF::OUTPUT_WRITE: end'
 END SUBROUTINE CMF_OUTPUT_WRITE
 
 SUBROUTINE OUTPUT_WRITE_R4(NAME,ARRAY)
+! Write a JPRM output array.
 USE YOS_CMF_INPUT, ONLY: NX,NY
 USE YOS_CMF_MAP, ONLY: NSEQMAX,NPTHOUT,NPTHLEV
 USE CMF_UTILS_MOD, ONLY: vec2map_R2R
 #ifdef UseMPI_CMF
 USE CMF_CTRL_MPI_MOD, ONLY: CMF_MPI_AllReduce_R2MAP
 #endif
+
 IMPLICIT NONE
 CHARACTER(LEN=*),INTENT(IN) :: NAME
 REAL(KIND=JPRM),INTENT(IN) :: ARRAY(:,:)
 REAL(KIND=JPRM) :: MAP(NX,NY)
 INTEGER(KIND=JPIM) :: JF
+!================================================
 JF=FIND_OUTPUT(NAME)
 IF (JF==0) STOP 'OUTPUT_WRITE: requested name is not initialized'
 IF (TRIM(NAME)=='pthflw') THEN
@@ -786,17 +806,20 @@ CALL WRITE_OUTPUT_MAP(JF,MAP)
 END SUBROUTINE OUTPUT_WRITE_R4
 
 SUBROUTINE OUTPUT_WRITE_R8(NAME,ARRAY)
+! Convert and write a JPRD output array.
 USE YOS_CMF_INPUT, ONLY: NX,NY
 USE YOS_CMF_MAP, ONLY: NSEQMAX,NPTHOUT,NPTHLEV
 USE CMF_UTILS_MOD, ONLY: vec2map_D2R
 #ifdef UseMPI_CMF
 USE CMF_CTRL_MPI_MOD, ONLY: CMF_MPI_AllReduce_R2MAP
 #endif
+
 IMPLICIT NONE
 CHARACTER(LEN=*),INTENT(IN) :: NAME
 REAL(KIND=JPRD),INTENT(IN) :: ARRAY(:,:)
 REAL(KIND=JPRM) :: MAP(NX,NY),VEC(NSEQMAX),PTH(NPTHOUT,NPTHLEV)
 INTEGER(KIND=JPIM) :: JF
+!================================================
 JF=FIND_OUTPUT(NAME)
 IF (JF==0) STOP 'OUTPUT_WRITE: requested name is not initialized'
 IF (TRIM(NAME)=='pthflw') THEN
@@ -819,9 +842,11 @@ CALL WRITE_OUTPUT_MAP(JF,MAP)
 END SUBROUTINE OUTPUT_WRITE_R8
 
 INTEGER(KIND=JPIM) FUNCTION FIND_OUTPUT(NAME)
+! Return the output-table index matching NAME, or zero when absent.
 IMPLICIT NONE
 CHARACTER(LEN=*),INTENT(IN) :: NAME
 INTEGER(KIND=JPIM) :: JF
+!================================================
 FIND_OUTPUT=0
 IF (.NOT.ALLOCATED(VAROUT)) RETURN
 DO JF=1,NVARSOUT
@@ -833,18 +858,21 @@ ENDDO
 END FUNCTION FIND_OUTPUT
 
 SUBROUTINE WRITE_OUTPUT_MAP(JF,MAP)
+! Write one map output record in the selected format.
 #ifdef UseCDF_CMF
 USE NETCDF
 USE YOS_CMF_TIME, ONLY: KMINSTART,KMINNEXT
 USE CMF_UTILS_MOD, ONLY: NCERROR
 #endif
 USE YOS_CMF_MAP, ONLY: REGIONTHIS
+
 IMPLICIT NONE
 INTEGER(KIND=JPIM),INTENT(IN) :: JF
 REAL(KIND=JPRM),INTENT(IN) :: MAP(:,:)
 #ifdef UseCDF_CMF
 REAL(KIND=JPRB) :: XTIME
 #endif
+!================================================
 IF (LOUTCDF) THEN
 #ifdef UseCDF_CMF
   IF (REGIONTHIS==1) THEN
@@ -860,8 +888,8 @@ ELSEIF (REGIONTHIS==1) THEN
 ENDIF
 END SUBROUTINE WRITE_OUTPUT_MAP
 
-! Write the already interval-averaged bifurcation field in Binary or NetCDF form.
 SUBROUTINE WRITE_OUTPUT_PTH(JF,DATA)
+! Write one bifurcation-path output record in the selected format.
 #ifdef UseCDF_CMF
 USE NETCDF
 USE YOS_CMF_TIME, ONLY: KMINSTART,KMINNEXT
@@ -871,6 +899,7 @@ USE YOS_CMF_MAP, ONLY: REGIONTHIS,NPTHOUT,NPTHLEV
 #ifdef UseMPI_CMF
 USE CMF_CTRL_MPI_MOD, ONLY: CMF_MPI_AllReduce_R1PTH
 #endif
+
 IMPLICIT NONE
 INTEGER(KIND=JPIM),INTENT(IN) :: JF
 REAL(KIND=JPRM),INTENT(IN) :: DATA(NPTHOUT,NPTHLEV)
@@ -878,6 +907,7 @@ REAL(KIND=JPRM) :: PTH(NPTHOUT,NPTHLEV)
 #ifdef UseCDF_CMF
 REAL(KIND=JPRB) :: XTIME
 #endif
+!================================================
 PTH=DATA
 #ifdef UseMPI_CMF
 CALL CMF_MPI_AllReduce_R1PTH(PTH)
@@ -897,35 +927,38 @@ ENDIF
 END SUBROUTINE WRITE_OUTPUT_PTH
 
 SUBROUTINE WRTE_OUTBIN(IFN,IREC,MAP)
+! Write one map record to a direct-access Binary file.
 IMPLICIT NONE
 INTEGER(KIND=JPIM),INTENT(IN) :: IFN,IREC
 REAL(KIND=JPRM),INTENT(IN) :: MAP(:,:)
+!================================================
 WRITE(IFN,REC=IREC) MAP
 END SUBROUTINE WRTE_OUTBIN
 
 SUBROUTINE WRTE_OUTPTH(IFN,IREC,MAP)
+! Write one bifurcation-path record to a direct-access Binary file.
 USE YOS_CMF_MAP, ONLY: NPTHOUT,NPTHLEV
+
 IMPLICIT NONE
 INTEGER(KIND=JPIM),INTENT(IN) :: IFN,IREC
 REAL(KIND=JPRM),INTENT(IN) :: MAP(NPTHOUT,NPTHLEV)
+!================================================
 WRITE(IFN,REC=IREC) MAP
 END SUBROUTINE WRTE_OUTPTH
 
 !####################################################################
 
-
-
-
-
 !####################################################################
 SUBROUTINE CMF_OUTPUT_END
 ! Finalize output module (close files)
+!+ WRTE_mapR2vecD : Write map-grid coordinates for vector output.
 ! -- Called from CMF_DRV_END
 #ifdef UseCDF_CMF
 USE NETCDF
 USE CMF_UTILS_MOD,           ONLY: NCERROR
 #endif
 USE YOS_CMF_MAP,             ONLY: REGIONTHIS
+
 IMPLICIT NONE
 ! Local variables
 INTEGER(KIND=JPIM)              :: JF
@@ -955,17 +988,16 @@ ENDIF
 
 WRITE(LOGNAM,*) "CMF::OUTPUT_END: end"
 
-
 CONTAINS
 !==========================================================
-!+ WRTE_mapR2vecD
-!+
-!+
+!+ WRTE_mapR2vecD : Write map-grid coordinates for vector output.
 !==========================================================
-SUBROUTINE WRTE_mapR2vecD       !! 1D sequence vector informtion required to convert MPI distributed vector output to 2D map
+SUBROUTINE WRTE_mapR2vecD
+! Write the index-to-map table needed to reconstruct vector output as a map.
 USE YOS_CMF_INPUT,      ONLY: TMPNAM
 USE YOS_CMF_MAP,        ONLY: I1SEQX, I1SEQY, NSEQMAX
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
+
 IMPLICIT NONE
 !* local variable
 CHARACTER(LEN=256)         :: CFILE1
@@ -985,18 +1017,18 @@ ENDIF
 END SUBROUTINE WRTE_mapR2vecD
 !================================================
 
-
 END SUBROUTINE CMF_OUTPUT_END
 !####################################################################
 
-
-
 !####################################################################
 SUBROUTINE CMF_OUTTXT_WRTE
+! Write discharge time series for the configured gauge locations.
 USE YOS_CMF_DIAG,       ONLY: D2OUTFLW
 USE YOS_CMF_TIME,       ONLY: IYYYYMMDD,ISYYYY
 USE YOS_CMF_MAP,        ONLY: I2VECTOR
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
+
+IMPLICIT NONE
 
 ! local
 INTEGER(KIND=JPIM)                  :: GID, GIX, GIY, GISEQ
@@ -1015,8 +1047,7 @@ CHARACTER(len=256),SAVE             :: COUTTXT
 LOGICAL,SAVE                        :: IsOpen
 DATA IsOpen       /.FALSE./
 
-! ======
-
+!================================================
 IF( LOUTTXT )THEN
 
   IF( .not. IsOpen)THEN
@@ -1063,7 +1094,6 @@ IF( LOUTTXT )THEN
 
     CFMT="(i10,"//TRIM(CLEN)//"(x,a9))"
     WRITE(LOGOUTTXT,CFMT) NGAUGEX, ( WriteName(IGAUGE),IGAUGE=1,NGAUGEX )
-
 
     CFMT="(i10,"//TRIM(CLEN)//"(f10.2))"
   ENDIF
