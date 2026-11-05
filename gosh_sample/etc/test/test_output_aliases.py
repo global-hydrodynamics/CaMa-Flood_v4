@@ -23,7 +23,28 @@ def reordered_registry(destination: Path) -> Path:
     with REGISTRY.open(newline="", encoding="utf-8") as source:
         reader = csv.DictReader(source)
         rows = list(reader)
-        fields = list(reversed(reader.fieldnames or []))
+        fields = list(reversed(reader.fieldnames or [])) + ["unused_note"]
+        for row in rows:
+            row["unused_note"] = 'unused, "quoted" field'
+            row["internal_variable"] = "not_a_model_array"
+            row["internal_dtype"] = "informational_only"
+    with destination.open("w", newline="", encoding="utf-8") as output:
+        writer = csv.DictWriter(output, fieldnames=fields)
+        writer.writeheader()
+        writer.writerows(rows)
+    return destination
+
+
+def write_registry(destination: Path, *, duplicate: bool = False,
+                   blank_runoff_units: bool = False) -> Path:
+    with REGISTRY.open(newline="", encoding="utf-8") as source:
+        reader = csv.DictReader(source)
+        rows = list(reader)
+        fields = reader.fieldnames or []
+    if blank_runoff_units:
+        next(row for row in rows if row["name"] == "runoff")["units"] = ""
+    if duplicate:
+        rows.append(dict(next(row for row in rows if row["name"] == "runoff")))
     with destination.open("w", newline="", encoding="utf-8") as output:
         writer = csv.DictWriter(output, fieldnames=fields)
         writer.writeheader()
@@ -115,6 +136,17 @@ class OutputAliasIntegrationTests(unittest.TestCase):
                 self.assertTrue(alias_file.is_file())
                 self.assertEqual(canonical_file.read_bytes(), alias_file.read_bytes())
 
+    def test_double_precision_storage_uses_the_same_registry_writer(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="cmf-output-double-") as temporary:
+            run_dir = Path(temporary) / "run"
+            result = run_alias_case(run_dir, netcdf=False, split=False,
+                                    variables="rivsto,fldsto")
+            self.assertEqual(result.returncode, 0, result.stdout)
+            for name in ("rivsto", "fldsto"):
+                output = run_dir / f"{name}2000.bin"
+                self.assertTrue(output.is_file())
+                self.assertEqual(output.stat().st_size, 80 * 120 * 4)
+
     @unittest.skipUnless(NC_EXECUTABLE.is_file() and NCDUMP, "build NetCDF model and install ncdump")
     def test_netcdf_alias_pairs_inherit_metadata_and_handle_reordered_csv(self) -> None:
         with tempfile.TemporaryDirectory(prefix="cmf-output-alias-nc-") as temporary:
@@ -160,6 +192,47 @@ class OutputAliasIntegrationTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0, result.stdout)
             self.assertIn(f"Cannot open output registry: {missing_registry}", result.stdout)
             self.assertFalse((run_dir / "runoff2000.bin").exists())
+
+    def test_duplicate_registry_names_are_rejected_before_files_open(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="cmf-output-duplicate-registry-") as temporary:
+            root = Path(temporary)
+            registry = write_registry(root / "duplicate.csv", duplicate=True)
+            run_dir = root / "run"
+            result = run_alias_case(run_dir, netcdf=False, split=True,
+                                    variables="runoff", registry_path=registry)
+            self.assertNotEqual(result.returncode, 0, result.stdout)
+            self.assertIn("Duplicate output registry definition: runoff", result.stdout)
+            self.assertFalse((run_dir / "runoff2000.bin").exists())
+
+    def test_missing_required_registry_metadata_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="cmf-output-metadata-") as temporary:
+            root = Path(temporary)
+            registry = write_registry(root / "missing-units.csv", blank_runoff_units=True)
+            run_dir = root / "run"
+            result = run_alias_case(run_dir, netcdf=False, split=True,
+                                    variables="runoff", registry_path=registry)
+            self.assertNotEqual(result.returncode, 0, result.stdout)
+            self.assertIn("Required output metadata is blank for runoff", result.stdout)
+            self.assertFalse((run_dir / "runoff2000.bin").exists())
+
+    @unittest.skipUnless(NC_EXECUTABLE.is_file(), "build the NetCDF model first")
+    def test_unknown_output_name_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="cmf-output-unknown-") as temporary:
+            run_dir = Path(temporary) / "run"
+            result = run_alias_case(run_dir, netcdf=True, split=False,
+                                    variables="not_registered")
+            self.assertNotEqual(result.returncode, 0, result.stdout)
+            self.assertIn("Unknown output name: not_registered", result.stdout)
+            self.assertFalse((run_dir / "o_not_registered2000.nc").exists())
+
+    @unittest.skipUnless(NC_EXECUTABLE.is_file(), "build the NetCDF model first")
+    def test_unverified_netcdf_pthflw_layout_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="cmf-output-pthflw-nc-") as temporary:
+            run_dir = Path(temporary) / "run"
+            result = run_alias_case(run_dir, netcdf=True, split=False, variables="pthflw")
+            self.assertNotEqual(result.returncode, 0, result.stdout)
+            self.assertIn("NetCDF pthflw layout is not verified", result.stdout)
+            self.assertFalse((run_dir / "o_pthflw2000.nc").exists())
 
 
 if __name__ == "__main__":
