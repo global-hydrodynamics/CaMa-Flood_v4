@@ -153,6 +153,10 @@ For implementation, feature development, or refactoring under `src_main/`, read 
 
 For a dedicated final formatting pass, read [`src_main/FORTRAN_STYLE.md`](src_main/FORTRAN_STYLE.md) and focus on the target file. Do not repeat a project-wide design review unless a concrete issue requires it. Preserve scientific behavior, interfaces, data contracts, and runtime behavior; report semantic ambiguities or suspected design defects separately.
 
+## Tutorial development plan
+
+The proposed v5 tutorial workflow and its current decisions are documented in [`docs/tutorial_development_plan.md`](docs/tutorial_development_plan.md). Treat Tutorial 02 as an illustrative outline until its experiment specification is checked against source code and data in a separately scoped task.
+
 ## Source Code Readability for `map/tools/`
 
 These recommendations support human-readable Fortran and Python tools under `map/tools/code/`. Organize code by scientific or computational meaning: keep related operations together, use a blank line when the purpose or data changes, and keep an operation with its error check. Use comments for major process transitions; do not add whitespace or comments mechanically around every statement.
