@@ -63,6 +63,11 @@ def main() -> None:
     for row in rows:
         if row["product_kind"] == "netcdf":
             netcdf_files.setdefault(row["binary_filename"], []).append(row)
+            # A single file-level row is used when its detailed schema lives in
+            # the product documentation rather than in the common registry.
+            if (row["dtype"] == "NetCDF" and row["dimensions"] == "N/A"
+                    and row["netcdf_variable"] == "not_applicable"):
+                continue
             if not row["netcdf_variable"] or row["netcdf_variable"] != row["name"]:
                 raise SystemExit(f"{row['binary_filename']}/{row['name']}: netcdf_variable must match name")
             if row["dtype"] not in {"int32", "float32"}:
@@ -70,6 +75,13 @@ def main() -> None:
             if row["dimensions"] not in {"path", "layer,path"}:
                 raise SystemExit(f"{row['binary_filename']}/{row['name']}: unsupported NetCDF dimensions {row['dimensions']!r}")
     for filename, file_rows in netcdf_files.items():
+        file_level_rows = [
+            row for row in file_rows
+            if row["dtype"] == "NetCDF" and row["dimensions"] == "N/A"
+            and row["netcdf_variable"] == "not_applicable"
+        ]
+        if file_level_rows and len(file_rows) != 1:
+            raise SystemExit(f"{filename}: file-level NetCDF descriptor cannot be mixed with variable rows")
         if len({row["name"] for row in file_rows}) != len(file_rows):
             raise SystemExit(f"{filename}: duplicate NetCDF variable name")
 
