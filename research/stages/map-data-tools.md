@@ -18,7 +18,7 @@ The project plan aims to improve portability and maintenance of map metadata and
 
 - `docs/map_data_inventory.md`, `map/map_variables.csv`, `map/map_metadata_spec.md`, and updated map guidance describing formats, source/reader relationships, and a proposed metadata basis.
 - `map/src/map_data_tools/` with category-11 GrADS CTL generation and binary-to-NetCDF tools plus synthetic tests and a Fortran reader-contract smoke test. The implementation is explicitly limited; it does not yet generate all module-level `CRIVCLINC`/`CRIVPARNC` inputs or cover optional schemes.
-- Root `requirements.txt` and `s00-python_setup.sh` for a local Python environment.
+- Root `requirements.txt` and the local Python setup script (now `s02-python_setup.sh`, formerly `s00-python_setup.sh`).
 - Git-tracked development/test `map/mekong_15min/`, including map products, metadata, CTLs, bifurcation/input-matrix files, and `1min/` layers; a GitHub Actions workflow checks the committed sample.
 - An initial cross-project `research/` framework. Later maintainer instruction explicitly separated research logging from this map project.
 

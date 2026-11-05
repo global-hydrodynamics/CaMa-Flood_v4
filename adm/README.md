@@ -2,6 +2,8 @@
 
 `adm/` contains the Make include files that select a compiler and configure build-time features for CaMa-Flood. The source Makefiles include `adm/Mkinclude`; the selected file supplies compiler commands, flags, library paths, and preprocessor definitions. You normally configure these settings here, then build with the existing Makefiles and scripts.
 
+Beginners can run [`s01-setup_fortran.sh`](../s01-setup_fortran.sh) from the repository root to test GNU Fortran, OpenMP, NetCDF-Fortran, and MPI, then interactively generate a recommended root-level `Mkinclude`. Review that file and copy it to `adm/Mkinclude` manually if you want to activate it. The setup script does not install system packages or replace the active include. Python tools can be prepared separately with [`s02-python_setup.sh`](../s02-python_setup.sh).
+
 ## Quick start: five settings to check
 
 1. **Compiler:** choose an installed compiler configuration and make it the active `adm/Mkinclude`.

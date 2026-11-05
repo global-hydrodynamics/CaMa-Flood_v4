@@ -22,7 +22,7 @@ Run the shell scripts from this directory. The Japan wrappers retain their exist
 | `make_CMF_runoff_info.py` | Reads converted NetCDF metadata or binary CTL metadata | Converted output and its settings | Human-readable grid, interval, and namelist summary; it does not generate an Input Matrix |
 | `tests/test_era5land_tools.py` | Offline compatibility tests using small synthetic fields | Python test dependencies only | No persistent data; all output fixtures use temporary directories |
 
-The root [`requirements.txt`](../../requirements.txt) lists the project Python dependencies, including pandas, xarray, and NetCDF4 for conversion. Run [`s00-python_setup.sh`](../../s00-python_setup.sh) from the repository root to create `.venv`, install those requirements, and verify the conversion imports. Downloading additionally requires `cdsapi` and CDS credentials. A direct pip installation is also possible:
+The root [`requirements.txt`](../../requirements.txt) lists the project Python dependencies, including pandas, xarray, and NetCDF4 for conversion. Run [`s02-python_setup.sh`](../../s02-python_setup.sh) from the repository root to create `.venv`, install those requirements, and verify the conversion imports. Downloading additionally requires `cdsapi` and CDS credentials. A direct pip installation is also possible:
 
 ```bash
 python3 -m pip install numpy pandas xarray netCDF4 'cdsapi>=0.7.7'

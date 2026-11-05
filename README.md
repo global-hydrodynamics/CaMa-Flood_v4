@@ -30,16 +30,20 @@ This repository provides source code, build configurations, execution scripts, a
 
 Build settings are in [adm/Mkinclude](adm/Mkinclude), with compiler-specific examples in [adm/](adm/). The [compilation script](gosh/compile.sh) and [sample experiments](gosh/) provide execution entry points. Configure paths, libraries, and options for your environment before building or running; the presence of a configuration example does not establish that it has been tested on your system.
 
-### Python utilities
+### Development environment setup
 
-Use Python 3.10 or newer on macOS or Linux. The repository setup creates an isolated `.venv/` and installs the shared dependencies for supported Python utilities; it does not change system Python or an existing Conda environment. Some specialist workflows have separate requirements, noted in their component guides.
+From the repository root, run the interactive setup scripts:
 
 ```bash
-bash s00-python_setup.sh
-source .venv/bin/activate
+./s01-setup_fortran.sh
+./s02-python_setup.sh
 ```
 
-The optional ERA5-Land downloader also requires CDS account credentials and dataset terms acceptance. The legacy N-year flood-depth scripts and the GTSM preprocessing notebook use additional dependencies not included in the shared environment. Windows is not supported by this shell setup script.
+The Fortran script diagnoses the compiler and libraries, then can write a recommended machine-specific `./Mkinclude`. Review it before manually copying it to `adm/Mkinclude`; the script never changes the active configuration. The Python script creates the isolated repository `.venv/` and installs `requirements.txt` there, not into system Python. Both scripts ask before creating or replacing files and only diagnose when no terminal is attached.
+
+`mek01` uses Binary inputs and does not require NetCDF. `mek02` requires a working NetCDF-Fortran installation and a NetCDF-enabled build. MPI is optional and remains disabled in the recommended configuration. Python 3.10 or newer is needed for Python utilities; specialist workflows may have additional dependencies documented in their component guides.
+
+The optional ERA5-Land downloader also requires CDS account credentials and dataset terms acceptance. The legacy N-year flood-depth scripts and the GTSM preprocessing notebook use additional dependencies not included in the shared environment. Windows users should use WSL2 with Ubuntu for these shell workflows.
 
 ## Repository Structure
 

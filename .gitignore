@@ -4,6 +4,7 @@
 !LICENSE
 !Mkinclude_*
 !Makefile
+/Mkinclude
 .DS_Store
 #
 *.bin
