@@ -1,4 +1,4 @@
-"""Small end-to-end checks for output-name aliases on the Mekong sample."""
+"""Focused output-registry integration checks on the Mekong sample."""
 
 from __future__ import annotations
 
@@ -36,13 +36,16 @@ def reordered_registry(destination: Path) -> Path:
 
 
 def write_registry(destination: Path, *, duplicate: bool = False,
-                   blank_runoff_units: bool = False) -> Path:
+                   blank_runoff_units: bool = False,
+                   pthflw_long_name: str | None = None) -> Path:
     with REGISTRY.open(newline="", encoding="utf-8") as source:
         reader = csv.DictReader(source)
         rows = list(reader)
         fields = reader.fieldnames or []
     if blank_runoff_units:
         next(row for row in rows if row["name"] == "runoff")["units"] = ""
+    if pthflw_long_name is not None:
+        next(row for row in rows if row["name"] == "pthflw")["long_name"] = pthflw_long_name
     if duplicate:
         rows.append(dict(next(row for row in rows if row["name"] == "runoff")))
     with destination.open("w", newline="", encoding="utf-8") as output:
@@ -54,11 +57,13 @@ def write_registry(destination: Path, *, duplicate: bool = False,
 
 def run_alias_case(run_dir: Path, *, netcdf: bool, split: bool, variables: str,
                    registry_path: Path | None = None,
-                   omit_registry_settings: bool = False) -> subprocess.CompletedProcess[str]:
+                   omit_registry_settings: bool = False,
+                   output_interval: int = 24) -> subprocess.CompletedProcess[str]:
     script = SAMPLE_SCRIPT.read_text(encoding="utf-8")
     script = re.sub(r'^RUNDIR=.*$', f'RUNDIR="{run_dir}"', script, count=1, flags=re.MULTILINE)
     script = re.sub(r'^END_MONTH=.*$', "END_MONTH=1", script, count=1, flags=re.MULTILINE)
     script = re.sub(r'^END_DAY=.*$', "END_DAY=2", script, count=1, flags=re.MULTILINE)
+    script = re.sub(r'^IFRQ_OUT=.*$', f'IFRQ_OUT={output_interval}', script, count=1, flags=re.MULTILINE)
     script = re.sub(r'^CVARSOUT=.*$', f'CVARSOUT="{variables}"', script, count=1, flags=re.MULTILINE)
     netcdf_logical = ".TRUE." if netcdf else ".FALSE."
     script = re.sub(r'^LOUTCDF=.*$', f'LOUTCDF="{netcdf_logical}"', script,
@@ -100,15 +105,19 @@ def run_alias_case(run_dir: Path, *, netcdf: bool, split: bool, variables: str,
     return result
 
 
-def read_netcdf_values(path: Path, variable: str) -> np.ndarray:
-    result = subprocess.run([NCDUMP, "-v", variable, str(path)], text=True,
+def read_netcdf_numbers(path: Path, variable: str) -> list[float]:
+    result = subprocess.run([NCDUMP, "-p", "9,17", "-v", variable, str(path)], text=True,
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-    match = re.search(rf"\b{re.escape(variable)}\s*=\s*(.*?);", result.stdout, re.DOTALL)
+    data_section = result.stdout.split("data:", 1)[1]
+    match = re.search(rf"\b{re.escape(variable)}\s*=\s*(.*?);", data_section, re.DOTALL)
     if match is None:
         raise AssertionError(f"ncdump did not show variable data for {variable}")
     values = re.findall(r"[-+]?(?:\d+\.?\d*|\.\d+)(?:[EeDd][-+]?\d+)?", match.group(1))
-    return array("f", (float(value.replace("D", "E").replace("d", "e"))
-                        for value in values)).tobytes()
+    return [float(value.replace("D", "E").replace("d", "e")) for value in values]
+
+
+def read_netcdf_values(path: Path, variable: str) -> np.ndarray:
+    return array("f", read_netcdf_numbers(path, variable)).tobytes()
 
 
 @unittest.skipUnless(BIN_EXECUTABLE.is_file(), "build src_main/MAIN_cmf first")
@@ -225,14 +234,60 @@ class OutputAliasIntegrationTests(unittest.TestCase):
             self.assertIn("Unknown output name: not_registered", result.stdout)
             self.assertFalse((run_dir / "o_not_registered2000.nc").exists())
 
-    @unittest.skipUnless(NC_EXECUTABLE.is_file(), "build the NetCDF model first")
-    def test_unverified_netcdf_pthflw_layout_is_rejected(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="cmf-output-pthflw-nc-") as temporary:
-            run_dir = Path(temporary) / "run"
-            result = run_alias_case(run_dir, netcdf=True, split=False, variables="pthflw")
-            self.assertNotEqual(result.returncode, 0, result.stdout)
-            self.assertIn("NetCDF pthflw layout is not verified", result.stdout)
-            self.assertFalse((run_dir / "o_pthflw2000.nc").exists())
+    @unittest.skipUnless(NC_EXECUTABLE.is_file() and NCDUMP, "build NetCDF model and install ncdump")
+    def test_pthflw_netcdf_matches_binary_layout_metadata_and_records(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="cmf-output-pthflw-") as temporary:
+            root = Path(temporary)
+            binary_dir = root / "binary"
+            netcdf_dir = root / "netcdf"
+            binary_result = run_alias_case(binary_dir, netcdf=False, split=False,
+                                           variables="pthflw", output_interval=6)
+            self.assertEqual(binary_result.returncode, 0, binary_result.stdout)
+            registry = write_registry(root / "pthflw-output-variables.csv",
+                                      pthflw_long_name="Bifurcation path flow from test registry")
+            netcdf_result = run_alias_case(netcdf_dir, netcdf=True, split=False,
+                                           variables="pthflw", registry_path=registry,
+                                           output_interval=6)
+            self.assertEqual(netcdf_result.returncode, 0, netcdf_result.stdout)
+
+            binary_path = binary_dir / "pthflw2000.pth"
+            netcdf_path = netcdf_dir / "o_pthflw2000.nc"
+            self.assertTrue(binary_path.is_file())
+            self.assertTrue(netcdf_path.is_file())
+            header = subprocess.run([NCDUMP, "-s", "-h", str(netcdf_path)], text=True,
+                                    stdout=subprocess.PIPE, check=True).stdout
+            self.assertRegex(header, r"NPTHOUT = 382 ;")
+            self.assertRegex(header, r"NPTHLEV = 5 ;")
+            self.assertRegex(header, r"float pthflw\(time, NPTHLEV, NPTHOUT\)")
+            self.assertIn('pthflw:long_name = \"Bifurcation path flow from test registry\"', header)
+            self.assertIn('pthflw:units = \"m3/s\"', header)
+            self.assertIn('pthflw:cell_methods = \"time: mean\"', header)
+            self.assertIn('pthflw:_DeflateLevel = 3', header)
+            self.assertIn('pthflw:_Shuffle = \"true\"', header)
+            self.assertNotIn('pthflw:_FillValue', header)
+
+            with REGISTRY.open(newline="", encoding="utf-8") as source:
+                pthflw_metadata = next(row for row in csv.DictReader(source)
+                                       if row["name"] == "pthflw")
+            self.assertEqual(pthflw_metadata["dimensions"],
+                             "Binary: NPTHOUT,NPTHLEV; NetCDF: NPTHOUT,NPTHLEV,time")
+            self.assertEqual(pthflw_metadata["status"], "confirmed")
+            self.assertEqual(pthflw_metadata["netcdf_dtype"], "float32")
+
+            binary_values = binary_path.read_bytes()
+            netcdf_bytes = read_netcdf_values(netcdf_path, "pthflw")
+            self.assertEqual(binary_values, netcdf_bytes)
+            record_bytes = 4 * 382 * 5
+            self.assertEqual(len(binary_values) % record_bytes, 0)
+            self.assertGreaterEqual(len(binary_values) // record_bytes, 2)
+            time_count = re.search(r"time = UNLIMITED ; // \((\d+) currently\)", header)
+            self.assertIsNotNone(time_count, header)
+            self.assertGreaterEqual(int(time_count.group(1)), 2)
+            timestamps = read_netcdf_numbers(netcdf_path, "time")
+            self.assertEqual(len(timestamps), int(time_count.group(1)))
+            self.assertTrue(all(later > earlier for earlier, later in zip(timestamps, timestamps[1:])))
+            self.assertRegex(header, r"time:units = \"seconds since ")
+            self.assertTrue(any(value != 0.0 for value in array("f", binary_values)))
 
 
 if __name__ == "__main__":
