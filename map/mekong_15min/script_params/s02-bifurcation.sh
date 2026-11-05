@@ -4,7 +4,7 @@
 #
 # Inputs: params.txt, nextxy.bin, basin.bin, bifori.txt, rivhgt.bin,
 #         and inpdim_<ROFFTAG>.txt in the map root.
-# Outputs: bifprm.csv, bifprm.nc, bifbsn.bin, bifcol.bin; optional check maps.
+# Outputs: bifprm.csv, netcdf/bifprm.nc, bifbsn.bin, bifcol.bin; optional check maps.
 # Usage: ./s02-bifurcation.sh [check_map]
 set -eu
 
@@ -20,7 +20,7 @@ ROFFTAG="test-glb_1deg"         # Runoff dataset ID used to derive INPDIM.
 INPDIM="inpdim_${ROFFTAG}.txt"  # Runoff-grid dimensions file derived from ROFFTAG.
 RIVHGT="rivhgt.bin"             # Channel-depth map used to estimate bifurcation depth.
 BIFPRM_CSV="bifprm.csv"         # Finalized, named bifurcation parameter table.
-BIFPRM_NC="bifprm.nc"           # NetCDF conversion of the same CSV table.
+BIFPRM_NC="netcdf/bifprm.nc"    # NetCDF conversion of the same CSV table.
 
 # ----------------------------------------------------------------------
 # User settings end here. Program paths and processing steps follow.
@@ -63,10 +63,9 @@ if [ "$#" -gt 1 ] || { [ -n "$CHECK_MAP" ] && [ "$CHECK_MAP" != check_map ]; }; 
     exit 2
 fi
 
-# Keep any existing text table visible; current simulation readers still expect it.
+# Keep any existing legacy text table visible; this workflow does not modify it.
 if [ -f "$MAP_DIR/bifprm.txt" ]; then
     printf 'WARNING: existing bifprm.txt is a legacy product and will not be changed.\n' >&2
-    printf '         The current simulation reader is not yet migrated to bifprm.csv/bifprm.nc.\n' >&2
 fi
 
 # 1. Filter bifurcation paths by channel width and estimate their bifurcation depth.
@@ -84,6 +83,7 @@ printf '[SUCCESS] Generated %s\n' "$BIFPRM_CSV"
 # 2. Convert the finalized CSV without reordering or recalculating its rows.
 STEP="Convert finalized bifurcation CSV to NetCDF"
 printf '\n==================================================\n[STEP 2/3] Convert CSV to NetCDF\n==================================================\n\n'
+mkdir -p "$(dirname "$BIFPRM_NC")"
 python3 "$EXEC_CONVERT" "$BIFPRM_CSV" "$BIFPRM_NC"
 printf '[SUCCESS] Generated %s from %s\n' "$BIFPRM_NC" "$BIFPRM_CSV"
 

@@ -145,7 +145,7 @@ CFLDHGT = "${MAP_NETCDF_DIR}/fldhgt.nc" ! Floodplain elevation-profile threshold
 CRIVWTH = "${RIVWTH}"                 ! River-channel width [m], selected above.
 CRIVHGT = "${MAP_NETCDF_DIR}/rivhgt.nc" ! River-channel depth [m].
 CRIVMAN = "${MAP_NETCDF_DIR}/rivman.nc" ! River Manning roughness coefficient.
-CPTHOUT = "${MAPDIR}/bifprm.nc"     ! Bifurcation channel parameters.
+CPTHOUT = "${MAP_NETCDF_DIR}/bifprm.nc" ! Bifurcation channel parameters.
 /
 &NRESTART
 CRESTSTO = "${CRESTSTO}"  ! Input restart path when LRESTART is true; NONE means no input restart.

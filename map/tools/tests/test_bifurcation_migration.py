@@ -30,7 +30,7 @@ MAP_INPUTS = (
 CHANNEL_INPUTS = (
     *MAP_INPUTS, "ctmare.bin", "width.bin", "inpmat_test-glb_1deg.bin",
 )
-OUTPUTS = ("bifprm.csv", "bifprm.nc", "bifbsn.bin", "bifcol.bin")
+OUTPUTS = ("bifprm.csv", "netcdf/bifprm.nc", "bifbsn.bin", "bifcol.bin")
 CHECK_OUTPUTS = ("check_bif_dphwth.bin", "check_bif_bsnmod.bin")
 NETCDF4_AVAILABLE = __import__("importlib.util", fromlist=["find_spec"]).find_spec("netCDF4") is not None
 
@@ -183,6 +183,8 @@ class BifurcationMigrationTests(unittest.TestCase):
 
         default = self.run_s02(v5)
         self.assertEqual(default.returncode, 0, default.stdout + default.stderr)
+        self.assertTrue((v5 / "netcdf" / "bifprm.nc").is_file())
+        self.assertFalse((v5 / "bifprm.nc").exists())
         for name in (*CHECK_OUTPUTS, "bpoint.bin", "bifmod.bin"):
             self.assertFalse((v5 / name).exists(), name)
 
@@ -201,7 +203,9 @@ class BifurcationMigrationTests(unittest.TestCase):
         for name in ("bifbsn.bin", "bifcol.bin"):
             self.assertEqual((v5 / name).read_bytes(), (legacy / name).read_bytes(), name)
         self.assert_csv_matches_legacy(v5 / "bifprm.csv", legacy / "bifprm.txt", SAMPLE / "lonlat.bin")
-        self.assert_netcdf_matches_csv(v5 / "bifprm.csv", v5 / "bifprm.nc")
+        self.assertTrue((v5 / "netcdf" / "bifprm.nc").is_file())
+        self.assertFalse((v5 / "bifprm.nc").exists())
+        self.assert_netcdf_matches_csv(v5 / "bifprm.csv", v5 / "netcdf" / "bifprm.nc")
         for name in ("bifbsn.bin", "bifcol.bin"):
             self.assertEqual((v5 / name).stat().st_size, 80 * 120 * 4, name)
         self.assertEqual((v5 / "check_bif_dphwth.bin").read_bytes(),
