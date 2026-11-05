@@ -1,8 +1,8 @@
 ! Shared v5 map-tool copy of map/src/src_param/set_bifparam.F90.
-! Scientific implementation and binary/text layouts are preserved.
 ! Filter original bifurcation paths to the requested number of layers, estimate
-! the channel depth for each retained path, and write bifprm.txt. When requested
-! with the optional fifth argument "check_map", it also writes the two-record
+! channel depth, and write bifprm.csv. The independent converter creates
+! bifprm.nc from that same finalized table. With optional "check_map", also write
+! the two-record
 ! check-only raster check_bif_dphwth.bin (depth, then width). This program does
 ! not modify basin.bin.
       program param_bif_set_params
@@ -12,9 +12,7 @@
 ! (if needed, number of bifurcation layers can be modified.)
 ! The source table can contain up to 10 width layers; the workflow may retain fewer.
 ! ================================================
-#ifdef UseCDF_CMF
-USE NETCDF
-#endif
+      use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
       implicit none
 ! ===================
 ! Command-line options and input mode
@@ -34,6 +32,8 @@ USE NETCDF
 
 ! Working arrays
       integer, allocatable      :: basin(:,:)  !! basin identifier
+      real, allocatable         :: map_lon(:,:)  !! unit-catchment outlet longitude [degrees_east]
+      real, allocatable         :: map_lat(:,:)  !! unit-catchment outlet latitude [degrees_north]
 
       real, allocatable         :: rivhgt(:,:)  !! channel depth/height [m]
       real, allocatable         :: bifdph(:,:)  !! bifurcation depth [m]
@@ -54,6 +54,7 @@ USE NETCDF
       integer                  :: ipth  !! bifurcation-path index
       integer                  :: npth  !! bifurcation-path count
       integer                  :: npth_new  !! number of paths retained after the layer/width filter
+      integer                  :: pth_id  !! row index in the finalized CSV
       integer                  :: ilev  !! bifurcation-layer index
       integer                  :: nlev  !! layer count
       integer                  :: nlev_new  !! requested/retained bifurcation width-layer count
@@ -77,8 +78,6 @@ USE NETCDF
       parameter              (imis = -9999)
       parameter              (rmis = 1.e+20)
 
-      character*256            :: cfmt  !! formatted output record format
-      character*256            :: clen  !! formatted width-field length
 ! ================================================
 print *, 'set_bifparam: read parameters from arguments'
 
@@ -137,6 +136,7 @@ print *, 'set_bifparam: read parameters from arguments'
       allocate(nextx(nx,ny),nexty(nx,ny))
       allocate(rivhgt(nx,ny),bifdph(nx,ny),bifwth(nx,ny))
       allocate(basin(nx,ny))
+      allocate(map_lon(nx,ny),map_lat(nx,ny))
 
 ! ===================
 print *, 'set_bifparam: read nextxy.bin'
@@ -157,6 +157,26 @@ print *, 'set_bifparam: read nextxy.bin'
       open(11,file=cbasin,form='unformatted',access='direct',recl=4*nx*ny,status='old',iostat=ios)
       read(11,rec=1) basin
       close(11)      
+
+! lonlat.bin contains unit-catchment outlet longitude in record 1 and latitude
+! in record 2. Use those outlet coordinates rather than regular cell centers.
+      open(11,file='./lonlat.bin',form='unformatted',access='direct', &
+           recl=4*nx*ny,status='old',iostat=ios)
+      if( ios/=0 )then
+        print *, 'ERROR: cannot open lonlat.bin'
+        stop 2
+      endif
+      read(11,rec=1,iostat=ios) map_lon
+      if( ios/=0 )then
+        print *, 'ERROR: cannot read longitude record from lonlat.bin'
+        stop 2
+      endif
+      read(11,rec=2,iostat=ios) map_lat
+      if( ios/=0 )then
+        print *, 'ERROR: cannot read latitude record from lonlat.bin'
+        stop 2
+      endif
+      close(11)
 
 ! =============================
 print *, 'set_bifparam: read bifori.txt'
@@ -191,7 +211,7 @@ print *, 'set_bifparam: read bifori.txt'
 
 !************************************
         !! Keep a path only if at least one requested-layer width is positive.
-        !! The first pass counts rows so bifprm.txt can start with its final count.
+        !! The first pass counts rows so CSV generation follows the existing filter.
         isData=0
         do ilev=1, nlev_new
           if( wth(ilev)>0 ) isData=1
@@ -210,16 +230,21 @@ print *, 'set_bifparam: read bifori.txt'
 ! ===============================
 
 
-! Write the table header: retained path count, layer count, then the unchanged
-! legacy row layout (endpoints, length, elevation, depth, widths, lat/lon, basins).
+! Write a named CSV in the existing path order. Assign pth_id only after the
+! BIFLAYER filter has selected each final data row.
       open(21,file=cbifprm,form='formatted')
-      write(21,'(2i8,a)') npth_new, nlev_new, &
-      '  npath_new, nlev_new, (ix,iy), (jx,jy), length, elevtn, depth, (width1, width2, ... wodth_nlev), (lat,lon), (basins)'
+      write(21,'(a)',advance='no') 'pth_id,ix,iy,jx,jy,length,elevtn,depth'
+      do ilev=1,nlev_new
+        write(21,'(a)',advance='no') ',width_'
+        write(21,'(i0)',advance='no') ilev
+      enddo
+      write(21,'(a)') ',start_lat,start_lon,end_lat,end_lon,ibsn,jbsn'
 
       cbifway='./bifori.txt'
       open(12,file=cbifway,form='formatted')
       read(12,*) npth, nlev
 
+      pth_id=0
       do ipth=1, npth
         read(12,*) ix, iy, jx, jy, len, elv, (wth(ilev),ilev=1,nlev), lat, lon
 
@@ -233,12 +258,23 @@ print *, 'set_bifparam: read bifori.txt'
 
 
         if( isData==1 )then
+          if( min(ix,iy,jx,jy)<1 .or. ix>nx .or. jx>nx .or. iy>ny .or. jy>ny )then
+            print *, 'ERROR: retained bifurcation path has endpoint outside map dimensions:', ix,iy,jx,jy
+            stop 2
+          endif
+          if( .not.ieee_is_finite(map_lon(jx,jy)) .or. .not.ieee_is_finite(map_lat(jx,jy)) .or. &
+              map_lon(jx,jy)<-9990.0 .or. map_lat(jx,jy)<-9990.0 .or. &
+              abs(map_lon(jx,jy))>360.0 .or. abs(map_lat(jx,jy))>90.0 )then
+            print *, 'ERROR: retained bifurcation path has missing/invalid outlet coordinates:', jx,jy
+            stop 2
+          endif
+          pth_id=pth_id+1
           if( wth(1)<=0 )then
             dph=-9999
             wth(1)=0.0
           else                           !! if channel connectivity exist, set depth following bifurcation channel width.
 ! ================================================
-! [3] Estimate pathway depths and write bifprm.txt
+! [3] Estimate pathway depths and write the bifprm.csv row
 ! ================================================
 ! Estimate river-channel bifurcation depth from layer-1 width, apply the
 ! 0.5 m lower bound, and cap it at the deeper endpoint's existing channel depth.
@@ -259,10 +295,18 @@ print *, 'set_bifparam: read bifori.txt'
             ibsn=basin(jx,jy)
           endif
 
-          write(clen,'(i2)') 3+nlev_new
-          cfmt='(4i8,'//trim(clen)//'f12.2,2f10.3,2i8)'
-          write(21,cfmt) ix, iy, jx, jy, len, elv, dph, &
-                            (wth(ilev),ilev=1,nlev_new), lat, lon, ibsn, jbsn
+          write(21,'(i0,4(",",i0))',advance='no') pth_id,ix,iy,jx,jy
+          write(21,'(",",f0.2)',advance='no') len
+          write(21,'(",",f0.2)',advance='no') elv
+          write(21,'(",",f0.2)',advance='no') dph
+          do ilev=1,nlev_new
+            write(21,'(",",f0.2)',advance='no') wth(ilev)
+          enddo
+          write(21,'(",",f0.3)',advance='no') lat
+          write(21,'(",",f0.3)',advance='no') lon
+          write(21,'(",",es24.16e3)',advance='no') map_lat(jx,jy)
+          write(21,'(",",es24.16e3)',advance='no') map_lon(jx,jy)
+          write(21,'(",",i0,",",i0)') ibsn,jbsn
         endif
       end do
       close(12)
@@ -290,24 +334,6 @@ print *, 'set_bifparam: read bifori.txt'
 
 
 
-#ifdef UseCDF_CMF
-      CONTAINS
-!!================================================
-      SUBROUTINE NCERROR(STATUS,STRING)
-      USE NETCDF
-      IMPLICIT NONE
-      INTEGER,INTENT(IN)       :: STATUS
-      CHARACTER(LEN=*),INTENT(IN),OPTIONAL :: STRING
-
-! ======
-      IF ( STATUS /= 0 ) THEN
-        PRINT*, TRIM(NF90_STRERROR(STATUS))
-        IF( PRESENT(STRING) ) PRINT*,TRIM(STRING)
-        PRINT*,'PROGRAM STOP ! '
-        STOP 10
-      ENDIF
-      END SUBROUTINE NCERROR
-#endif
 !!================================================
 
       end program param_bif_set_params

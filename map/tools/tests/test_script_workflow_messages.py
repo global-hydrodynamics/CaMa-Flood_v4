@@ -49,13 +49,25 @@ class WorkflowMessageTests(unittest.TestCase):
                 encoding="ascii",
             )
             path.chmod(0o755)
+        if script_name == "s02-bifurcation.sh":
+            converter = self.code_dir / "python3"
+            converter.write_text(
+                "#!/bin/sh\n"
+                "printf 'python3 %s\\n' \"$*\" >> \"$MOCK_LOG\"\n"
+                "if [ \"${FAIL_MATCH:-}\" = python3 ] || [ \"${FAIL_MATCH:-}\" = python3:\"${2:-}\" ]; then\n"
+                "    exit \"${FAIL_STATUS:-23}\"\n"
+                "fi\n"
+                ": > \"$3\"\n",
+                encoding="ascii",
+            )
+            converter.chmod(0o755)
         return script
 
     def run_script(
         self, script: Path, fail_match: str | None = None, cwd: Path | None = None,
         args: tuple[str, ...] = (),
     ) -> subprocess.CompletedProcess[str]:
-        env = {**os.environ, "MOCK_LOG": str(self.log)}
+        env = {**os.environ, "MOCK_LOG": str(self.log), "PATH": f"{self.code_dir}:{os.environ['PATH']}"}
         if fail_match:
             env["FAIL_MATCH"] = fail_match
             env["FAIL_STATUS"] = "23"
@@ -67,18 +79,20 @@ class WorkflowMessageTests(unittest.TestCase):
     def calls(self) -> list[str]:
         return self.log.read_text(encoding="ascii").splitlines() if self.log.exists() else []
 
-    def assert_success(self, result: subprocess.CompletedProcess[str], script_name: str) -> None:
+    def assert_success(
+        self, result: subprocess.CompletedProcess[str], script_name: str, success_count: int = 1,
+    ) -> None:
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(result.stdout.count("[SUCCESS]"), 1)
+        self.assertEqual(result.stdout.count("[SUCCESS]"), success_count)
         self.assertIn(f"[SUCCESS] {script_name}", result.stdout)
         self.assertNotIn("[ERROR]", result.stdout + result.stderr)
 
     def assert_failure(
         self, result: subprocess.CompletedProcess[str], script_name: str,
-        step: str, expected_status: int = 23,
+        step: str, expected_status: int = 23, expected_success_count: int = 0,
     ) -> None:
         self.assertEqual(result.returncode, expected_status, result.stdout + result.stderr)
-        self.assertEqual(result.stdout.count("[SUCCESS]"), 0)
+        self.assertEqual(result.stdout.count("[SUCCESS]"), expected_success_count)
         self.assertIn(f"!!! ERROR: {script_name} FAILED !!!", result.stderr)
         self.assertIn(f"!!! Step: {step}", result.stderr)
         self.assertIn(f"!!! Exit status: {expected_status}", result.stderr)
@@ -103,17 +117,25 @@ class WorkflowMessageTests(unittest.TestCase):
                 self.assert_failure(result, script.name, step)
                 self.assertEqual(len(self.calls()), expected_calls)
 
-    def test_s02_success_and_second_program_failure(self) -> None:
+    def test_s02_runs_generation_conversion_then_basin_merge_and_stops_on_each_failure(self) -> None:
         executables = ("param_bif_set_params", "param_bif_set_basin")
         script = self.install("s02-bifurcation.sh", executables)
         result = self.run_script(script)
-        self.assert_success(result, script.name)
-        self.assertEqual([line.split()[0] for line in self.calls()], list(executables))
-        self.log.unlink()
+        self.assert_success(result, script.name, success_count=4)
+        self.assertEqual([line.split()[0] for line in self.calls()], [
+            "param_bif_set_params", "python3", "param_bif_set_basin",
+        ])
 
-        result = self.run_script(script, "param_bif_set_basin:")
-        self.assert_failure(result, script.name, "Merge basins connected by bifurcation pathways")
-        self.assertEqual([line.split()[0] for line in self.calls()], list(executables))
+        for fail_match, step, expected, successes in (
+            ("param_bif_set_params", "Filter bifurcation paths and estimate bifurcation-channel depth", 1, 0),
+            ("python3", "Convert finalized bifurcation CSV to NetCDF", 2, 1),
+            ("param_bif_set_basin:", "Merge basins connected by bifurcation pathways", 3, 2),
+        ):
+            with self.subTest(fail_match=fail_match):
+                self.log.unlink(missing_ok=True)
+                result = self.run_script(script, fail_match)
+                self.assert_failure(result, script.name, step, expected_success_count=successes)
+                self.assertEqual(len(self.calls()), expected)
 
     def test_s03_success_and_program_failure(self) -> None:
         script = self.install("s03-generate_inpmat.sh", ("param_inpmat_generate",))

@@ -2,6 +2,7 @@
 ! This includes the out-of-region downstream cell that CALC_1D_SEQ can append
 ! because its traversal step does not re-check the destination region label.
 program analysis_check_mpi_bifurcation
+  use bifprm_csv_mod, only: bifprm_path, read_bifprm_csv
   implicit none
 
   ! Map dimensions, region labels, and grid-traversal counters.
@@ -12,7 +13,6 @@ program analysis_check_mpi_bifurcation
   integer                  :: ucsv  !! CSV output unit
   integer                  :: ios  !! I/O status code
   integer                  :: i  !! pathway or grid traversal index
-  integer                  :: k  !! bifurcation layer index
   integer                  :: ix, iy  !! x/y grid index
   integer                  :: jx, jy  !! target x/y grid index
   integer                  :: regcount  !! highest positive MPI region ID
@@ -32,6 +32,7 @@ program analysis_check_mpi_bifurcation
   integer, allocatable      :: upstream_now(:,:)  !! visited upstream-link count
   integer, allocatable      :: queue_x(:)  !! queued river-cell x indices
   integer, allocatable      :: queue_y(:)  !! queued river-cell y indices
+  type(bifprm_path), allocatable :: paths(:)  !! finalized bifurcation table rows
 
   ! Bifurcation endpoints and their assigned MPI regions.
   integer, allocatable      :: path_ix(:), path_iy(:)  !! upstream bifurcation endpoints
@@ -45,17 +46,13 @@ program analysis_check_mpi_bifurcation
   logical, allocatable      :: down_valid(:)  !! downstream endpoint belongs to its region's local vector
   logical, allocatable      :: retained_path(:)  !! both endpoints occur in a reconstructed local vector
   logical, allocatable      :: valid_coords(:)  !! both endpoints lie within the map bounds
-  real, allocatable         :: widths(:)  !! bifurcation widths [m]
   real, allocatable         :: path_elv(:)  !! pathway elevation [m]
   real, allocatable         :: path_lat(:)  !! pathway latitude [deg]
   real, allocatable         :: path_lon(:)  !! pathway longitude [deg]
   real, allocatable         :: path_w1(:)  !! first-layer bifurcation width [m]
-  real                     :: len  !! pathway length [m]
-  real                     :: dph  !! bifurcation depth [m]
   character(len=512)       :: region_file  !! MPI-region map filename
   character(len=512)       :: arg  !! command-line argument
   character(len=512)       :: csv_file  !! optional dropped-path CSV filename
-  character(len=512)       :: line  !! formatted input row
   character(len=24)        :: kind_label  !! pathway classification label
   logical                  :: write_csv  !! whether to write the dropped-path CSV
 
@@ -97,22 +94,17 @@ program analysis_check_mpi_bifurcation
   close(u)
   if(ios/=0) call die('cannot read nextxy.bin records 1 and 2')
 
-  open(newunit=u,file='bifprm.txt',status='old',action='read',iostat=ios)
-  if(ios/=0) call die('cannot open bifprm.txt')
-  read(u,*,iostat=ios) npth,nlev
-  if(ios/=0.or.npth<0.or.nlev<1) call die('invalid bifprm.txt header')
-  allocate(widths(nlev),path_ix(npth),path_iy(npth),path_jx(npth),path_jy(npth), &
+  call read_bifprm_csv('bifprm.csv',paths,npth,nlev)
+  allocate(path_ix(npth),path_iy(npth),path_jx(npth),path_jy(npth), &
            path_elv(npth),path_lat(npth),path_lon(npth),path_w1(npth),region_up(npth),region_down(npth))
   allocate(up_valid(npth),down_valid(npth),retained_path(npth),valid_coords(npth))
   do i=1,npth
-    read(u,'(A)',iostat=ios) line
-    if(ios/=0) call die('unexpected end of bifprm.txt')
-    read(line,*,iostat=ios) path_ix(i),path_iy(i),path_jx(i),path_jy(i),len,path_elv(i),dph, &
-      (widths(k),k=1,nlev),path_lat(i),path_lon(i)
-    if(ios/=0) call die('cannot parse bifprm.txt pathway')
-    path_w1(i)=widths(1)
+    path_ix(i)=paths(i)%ix; path_iy(i)=paths(i)%iy
+    path_jx(i)=paths(i)%jx; path_jy(i)=paths(i)%jy
+    path_elv(i)=paths(i)%elevtn
+    path_lat(i)=paths(i)%start_lat; path_lon(i)=paths(i)%start_lon
+    path_w1(i)=paths(i)%widths(1)
   end do
-  close(u)
 
   up_valid=.false.; down_valid=.false.; retained_path=.false.; valid_coords=.false.
   region_up=-9999; region_down=-9999

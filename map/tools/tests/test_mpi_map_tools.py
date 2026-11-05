@@ -31,6 +31,16 @@ class MpiMapToolsTests(unittest.TestCase):
             capture_output=True,
             text=True,
         )
+        subprocess.run(
+            [
+                shutil.which("gfortran"), "-O0", "-fcheck=all", "-ffree-line-length-none",
+                "-J", str(cls.bin), "-c", str(CODE / "mod_bifprm_csv.F90"),
+                "-o", str(cls.bin / "mod_bifprm_csv.o"),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
         for source in (
             "param_mpi_set_basin.F90",
             "param_mpi_set_region.F90",
@@ -42,6 +52,8 @@ class MpiMapToolsTests(unittest.TestCase):
             ]
             if source in {"param_mpi_set_basin.F90", "analysis_mpi_region_color.F90"}:
                 command.extend(["-I", str(cls.bin), str(cls.bin / "mod_map_color.o")])
+            if source in {"param_mpi_set_basin.F90", "analysis_check_mpi_bifurcation.F90"}:
+                command.extend(["-I", str(cls.bin), str(cls.bin / "mod_bifprm_csv.o")])
             command.extend([str(CODE / source), "-o", str(cls.bin / source.removesuffix(".F90"))])
             subprocess.run(command, check=True, capture_output=True, text=True)
         subprocess.run(
@@ -65,12 +77,35 @@ class MpiMapToolsTests(unittest.TestCase):
 
     def make_map(self, root: Path, *, bifprm_text: str | None = None) -> Path:
         root.mkdir(parents=True, exist_ok=True)
-        for name in ("params.txt", "basin.bin", "nextxy.bin", "bifprm.txt"):
+        for name in ("params.txt", "basin.bin", "nextxy.bin", "bifprm.txt", "lonlat.bin"):
             shutil.copy2(MAP / name, root / name)
         if bifprm_text is not None:
             (root / "bifprm.txt").write_text(bifprm_text, encoding="ascii")
+        self.write_csv_from_legacy(root)
         (root / "script_params").mkdir(exist_ok=True)
         return root
+
+    @staticmethod
+    def write_csv_from_legacy(root: Path) -> None:
+        lines = (root / "bifprm.txt").read_text(encoding="ascii").splitlines()
+        npath, nlayer = map(int, lines[0].split()[:2])
+        nx, ny = (int(line.split()[0]) for line in (root / "params.txt").read_text().splitlines()[:2])
+        outlet_values = struct.unpack(f"<{2 * nx * ny}f", (root / "lonlat.bin").read_bytes())
+        header = ["pth_id", "ix", "iy", "jx", "jy", "length", "elevtn", "depth"]
+        header.extend(f"width_{layer}" for layer in range(1, nlayer + 1))
+        header.extend(("start_lat", "start_lon", "end_lat", "end_lon", "ibsn", "jbsn"))
+        with (root / "bifprm.csv").open("w", newline="", encoding="ascii") as stream:
+            writer = csv.writer(stream, lineterminator="\n")
+            writer.writerow(header)
+            for pth_id, line in enumerate(lines[1:], 1):
+                values = line.split()
+                ix, iy, jx, jy = map(int, values[:4])
+                offset = (jy - 1) * nx + (jx - 1)
+                end_lon = outlet_values[offset]
+                end_lat = outlet_values[nx * ny + offset]
+                row = [pth_id, ix, iy, jx, jy, *values[4:7 + nlayer], values[7 + nlayer],
+                       values[8 + nlayer], end_lat, end_lon, values[-2], values[-1]]
+                writer.writerow(row)
 
     def run_mpi(self, map_root: Path, mode: str = "normal", counts=(4, 8, 16)):
         self.run_basin_aggregation(map_root, mode)
@@ -258,6 +293,11 @@ class MpiMapToolsTests(unittest.TestCase):
                 "1 1 npath nlev\n1 1 2 1 1.0 10.0 0.5 5.0 10.0 100.0\n",
                 encoding="ascii",
             )
+            (root / "bifprm.csv").write_text(
+                "pth_id,ix,iy,jx,jy,length,elevtn,depth,width_1,start_lat,start_lon,end_lat,end_lon,ibsn,jbsn\n"
+                "1,1,1,2,1,1.0,10.0,0.5,5.0,10.0,100.0,10.0,100.1,1,2\n",
+                encoding="ascii",
+            )
             result = subprocess.run(
                 [str(self.bin / "analysis_check_mpi_bifurcation"), "mpireg-2.bin"],
                 cwd=root,
@@ -343,8 +383,9 @@ class MpiMapToolsTests(unittest.TestCase):
             shutil.copy2(self.bin / "analysis_check_mpi_bifurcation", code_dir / "analysis_check_mpi_bifurcation")
             shutil.copy2(TOOLS / "script_analysis" / "a05-check_mpi_bifurcation.sh", script_dir)
             (script_dir / "code").symlink_to("../../tools/code")
-            for name in ("params.txt", "nextxy.bin", "bifprm.txt"):
+            for name in ("params.txt", "nextxy.bin", "bifprm.txt", "lonlat.bin"):
                 shutil.copy2(MAP / name, map_root / name)
+            self.write_csv_from_legacy(map_root)
             (map_root / "mpireg-1.bin").write_bytes(struct.pack("<9600i", *([1] * 9600)))
             result = subprocess.run(
                 [str(script_dir / "a05-check_mpi_bifurcation.sh"), "mpireg-1.bin"],
@@ -389,6 +430,24 @@ class MpiMapToolsTests(unittest.TestCase):
                     raise AssertionError(f"Layer-3 sort case failed: {result.stdout}\n{result.stderr}")
                 outputs.append((root / "bifbsn_mpi.tmp").read_bytes())
             self.assertEqual(outputs[0], outputs[1])
+
+    def test_csv_header_reordering_preserves_mpi_basin_result(self):
+        with tempfile.TemporaryDirectory(prefix="cmf-mpi-csv-header-") as tmp:
+            root = self.make_map(Path(tmp) / "map")
+            baseline = self.run_basin_aggregation(root)
+            baseline_map = (root / "bifbsn_mpi.tmp").read_bytes()
+            with (root / "bifprm.csv").open(newline="", encoding="ascii") as stream:
+                reader = csv.DictReader(stream)
+                fieldnames = list(reversed(reader.fieldnames or []))
+                rows = list(reader)
+            with (root / "bifprm.csv").open("w", newline="", encoding="ascii") as stream:
+                writer = csv.DictWriter(stream, fieldnames=fieldnames, lineterminator="\n")
+                writer.writeheader()
+                writer.writerows(rows)
+            reordered = self.run_basin_aggregation(root)
+            self.assertIn("Valid basin cells", baseline.stdout)
+            self.assertIn("Valid basin cells", reordered.stdout)
+            self.assertEqual((root / "bifbsn_mpi.tmp").read_bytes(), baseline_map)
 
     def test_shell_entry_points_have_valid_syntax(self):
         for script in (

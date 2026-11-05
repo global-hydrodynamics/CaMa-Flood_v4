@@ -15,6 +15,7 @@ RETIRED_ANALYSIS_BINS := analysis_get_rivinfo analysis_get_upbasin analysis_get_
 ALLOC_SOURCES := $(wildcard $(CODE_DIR)/allocate_*.F90)
 ALLOC_BINS := $(patsubst %.F90,%,$(ALLOC_SOURCES))
 COLOR_MODULE_OBJECT := $(CODE_DIR)/mod_map_color.o
+BIFPRM_CSV_MODULE_OBJECT := $(CODE_DIR)/mod_bifprm_csv.o
 ALLOCATION_MODULE_OBJECT := $(CODE_DIR)/mod_allocation_map_io.o
 
 .PHONY: all region params param analysis allocate clean
@@ -57,11 +58,17 @@ $(CODE_DIR)/allocate_%: $(CODE_DIR)/allocate_%.F90 $(ALLOCATION_MODULE_OBJECT)
 $(COLOR_MODULE_OBJECT): $(CODE_DIR)/mod_map_color.F90
 	cd "$(CODE_DIR)" && $(FC) $(FFLAGS) $(INC) -c mod_map_color.F90 -o mod_map_color.o
 
-$(CODE_DIR)/param_bif_set_basin: $(CODE_DIR)/param_bif_set_basin.F90 $(COLOR_MODULE_OBJECT)
-	cd "$(CODE_DIR)" && $(FC) $(FFLAGS) $(LFLAGS) $(INC) $(LIB) mod_map_color.o param_bif_set_basin.F90 -o param_bif_set_basin $(LIB)
+$(BIFPRM_CSV_MODULE_OBJECT): $(CODE_DIR)/mod_bifprm_csv.F90
+	cd "$(CODE_DIR)" && $(FC) $(FFLAGS) $(INC) -c mod_bifprm_csv.F90 -o mod_bifprm_csv.o
 
-$(CODE_DIR)/param_mpi_set_basin: $(CODE_DIR)/param_mpi_set_basin.F90 $(COLOR_MODULE_OBJECT)
-	cd "$(CODE_DIR)" && $(FC) $(FFLAGS) $(LFLAGS) $(INC) $(LIB) mod_map_color.o param_mpi_set_basin.F90 -o param_mpi_set_basin $(LIB)
+$(CODE_DIR)/param_bif_set_basin: $(CODE_DIR)/param_bif_set_basin.F90 $(COLOR_MODULE_OBJECT) $(BIFPRM_CSV_MODULE_OBJECT)
+	cd "$(CODE_DIR)" && $(FC) $(FFLAGS) $(LFLAGS) $(INC) $(LIB) mod_map_color.o mod_bifprm_csv.o param_bif_set_basin.F90 -o param_bif_set_basin $(LIB)
+
+$(CODE_DIR)/param_mpi_set_basin: $(CODE_DIR)/param_mpi_set_basin.F90 $(COLOR_MODULE_OBJECT) $(BIFPRM_CSV_MODULE_OBJECT)
+	cd "$(CODE_DIR)" && $(FC) $(FFLAGS) $(LFLAGS) $(INC) $(LIB) mod_map_color.o mod_bifprm_csv.o param_mpi_set_basin.F90 -o param_mpi_set_basin $(LIB)
+
+$(CODE_DIR)/analysis_check_mpi_bifurcation: $(CODE_DIR)/analysis_check_mpi_bifurcation.F90 $(BIFPRM_CSV_MODULE_OBJECT)
+	cd "$(CODE_DIR)" && $(FC) $(FFLAGS) $(LFLAGS) $(INC) $(LIB) mod_bifprm_csv.o analysis_check_mpi_bifurcation.F90 -o analysis_check_mpi_bifurcation $(LIB)
 
 $(CODE_DIR)/analysis_mpi_region_color: $(CODE_DIR)/analysis_mpi_region_color.F90 $(COLOR_MODULE_OBJECT)
 	cd "$(CODE_DIR)" && $(FC) $(FFLAGS) $(LFLAGS) $(INC) $(LIB) mod_map_color.o analysis_mpi_region_color.F90 -o analysis_mpi_region_color $(LIB)

@@ -1,6 +1,6 @@
 # Variable tables
 
-This directory contains shared, machine-readable specifications for variables and data structures used by CaMa-Flood v5. These tables describe model and file contracts across datasets; they are not dataset catalogs.
+This directory contains shared, machine-readable specifications for variables and data structures used by CaMa-Flood v5. These tables describe model and file contracts across datasets; they are not dataset catalogs. The map registry includes binary, text-table, and static NetCDF products; bifurcation CSV/NetCDF products are generated together from one finalized CSV table. The schema and their temporary simulation-reader incompatibility are described in [map_metadata_spec.md](map_metadata_spec.md#bifurcation-parameter-tables).
 
 - [`map_variables.csv`](map_variables.csv) documents map variables and products, including their meanings, units, types, dimensions, record layouts, missing values, and processing roles. See [`map_metadata_spec.md`](map_metadata_spec.md) for its schema and design notes.
 - [`output_variables.csv`](output_variables.csv) documents model output names, meanings, units, internal variables, file precision, dimensions, temporal semantics, and output conditions.

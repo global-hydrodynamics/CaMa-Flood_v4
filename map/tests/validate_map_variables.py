@@ -11,7 +11,7 @@ REGISTRY = ROOT / "variable_table" / "map_variables.csv"
 INTEGER_RANGES = {"int8": (-128, 127), "int16": (-32768, 32767),
                   "int32": (-2147483648, 2147483647)}
 FLOAT_TYPES = {"float32"}
-PRODUCT_KINDS = {"binary_map", "binary_mult", "text_meta", "text_table"}
+PRODUCT_KINDS = {"binary_map", "binary_mult", "text_meta", "text_table", "netcdf"}
 
 
 def main() -> None:
@@ -58,6 +58,20 @@ def main() -> None:
                 raise SystemExit(f"{filename}: name must contain one variable short-name per row")
         if kinds == {"binary_mult"} and len(file_rows) == 1 and not has_3d_array:
             raise SystemExit(f"{filename}: binary_mult requires multiple variable rows or a multidimensional array")
+
+    netcdf_files: dict[str, list[dict[str, str]]] = {}
+    for row in rows:
+        if row["product_kind"] == "netcdf":
+            netcdf_files.setdefault(row["binary_filename"], []).append(row)
+            if not row["netcdf_variable"] or row["netcdf_variable"] != row["name"]:
+                raise SystemExit(f"{row['binary_filename']}/{row['name']}: netcdf_variable must match name")
+            if row["dtype"] not in {"int32", "float32"}:
+                raise SystemExit(f"{row['binary_filename']}/{row['name']}: unsupported NetCDF dtype {row['dtype']!r}")
+            if row["dimensions"] not in {"path", "layer,path"}:
+                raise SystemExit(f"{row['binary_filename']}/{row['name']}: unsupported NetCDF dimensions {row['dimensions']!r}")
+    for filename, file_rows in netcdf_files.items():
+        if len({row["name"] for row in file_rows}) != len(file_rows):
+            raise SystemExit(f"{filename}: duplicate NetCDF variable name")
 
     explicit = 0
     blanks = 0
