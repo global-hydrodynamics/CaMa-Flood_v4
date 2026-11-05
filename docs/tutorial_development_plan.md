@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-This document records a planned tutorial framework, not an implemented workflow. It defines how a scientific experiment is specified, checked against CaMa-Flood, implemented and validated, and then explained in a reproducible tutorial. No tutorial scripts, experiment, package changes, or reference results are delivered by this plan. The current work is documentation-only on `feature/gosh-refactor`.
+This document records a planned tutorial framework, not an implemented workflow. It defines how a scientific experiment is specified, checked against CaMa-Flood, implemented and validated, and then explained in a reproducible tutorial. Tutorial 02 now has a source-reviewed experiment specification, but its scripts, execution, package changes, and reference results remain unimplemented. The current documentation work is on `feature/gosh-refactor`.
 
 The framework is intended to become the primary beginner-oriented entry point for v5 experiments when its materials are implemented and validated. Existing `gosh_sample/` workflows remain available as implementation references; this plan does not remove or reorganize them.
 
@@ -44,11 +44,9 @@ As appropriate to an experiment, guide users through inspecting the tutorial and
 
 The tutorial README should explain the reproducible workflow without duplicating detailed source-code documentation. Experiment-specific scientific rationale belongs in its specification and interpretation section; common authoring requirements belong in the shared guide.
 
-## Tutorial 02: initial illustrative example
+## Tutorial 02: source-reviewed specification
 
-Tutorial 02 is an illustrative example, not a task to finalize its experiment design: a proposed 2000–2003 Mekong simulation with a 2000 spin-up year, annual Restart continuity, NetCDF runoff/output/Restart, and Default, Kinematic Wave, and No Floodplain configurations. It compares discharge at about five GRDC gauge locations, not observed discharge records. A planned January–December seasonal plot will test whether daily Default discharge in 2000 differs from later years; no outcome is assumed.
-
-The exact scientific settings, supported scheme switches, data availability, Restart details, and comparison procedures will be finalized separately after source-code and dataset investigation. This outline is not an implementation specification, and no Tutorial 02 experiment or result is claimed here.
+Tutorial 02 specifies a 2000–2003 Mekong simulation with annual Restart handoffs, NetCDF runoff/output/Restart, and local-inertial, Kinematic Wave, and No Floodplain configurations. It uses GRDC locations only and includes a proposed spin-up visualization; it claims no experiment result. The source-reviewed specification and remaining design/data questions are in [`tutorial/tutorial02-mekong_netcdf_3exp/experiment_spec.md`](../tutorial/tutorial02-mekong_netcdf_3exp/experiment_spec.md). Scripts, four-year execution, figures, package changes, and tutorial authoring remain separate future work.
 
 ## Repository and beginner-package policy
 
@@ -69,8 +67,8 @@ These are goals of the proposed framework, not demonstrated outcomes.
 ## Open design questions and next steps
 
 - Decide where per-tutorial experiment specifications and the common authoring guide will live, and how their filenames and revision history will be organized.
-- Investigate Tutorial 02's exact namelist settings, physical-scheme switches, annual input/output and Restart contracts, and the required source/data availability before finalizing its specification.
+- Resolve the open Tutorial 02 comparison and reproducibility decisions recorded in its specification, then authorize implementation and full execution validation as a separate stage.
 - Define a maintainable way to capture representative terminal evidence and regenerate figures while keeping generated outputs out of Git.
 - Determine how the beginner distribution assembly will select Tutorial 02 files and verify that the two editing exercises are omitted from the package.
 
-Next, investigate the Tutorial 02 outline against `src_main/`, available Mekong data, and current scripts; record discrepancies and questions; then prepare the finalized experiment specification as a separately scoped task. Do not infer or implement its scientific settings from this outline alone.
+The Tutorial 02 outline has been checked against `src_main/`, the available map/runoff metadata, and current sample scripts. The specification records source-verified behavior separately from maintainer decisions, local-only data availability, and execution requirements. Do not treat the specification as evidence that its settings have been approved for implementation or that the experiment has been run.
