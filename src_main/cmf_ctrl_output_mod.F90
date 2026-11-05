@@ -66,7 +66,7 @@ LOGICAL                         :: HAS_MISSING_VALUE = .FALSE.
 END TYPE TVAROUT 
 TYPE(TVAROUT),ALLOCATABLE       :: VAROUT(:)          ! output variable TYPE set
 
-! Runtime output metadata. Internal array selection remains an explicit Fortran
+! Runtime output metadata from output_variables.csv . Internal array selection remains an explicit Fortran
 ! dispatcher; registry internal_variable/internal_dtype columns are informational.
 TYPE TOUTPUT_METADATA
   CHARACTER(LEN=256) :: NAME
@@ -172,7 +172,11 @@ CLOSE(NSETFILE)
 WRITE(LOGNAM,*) "CMF::OUTPUT_NMLIST: end"
 
 END SUBROUTINE CMF_OUTPUT_NMLIST
+!####################################################################
 
+
+
+!####################################################################
 SUBROUTINE CMF_OUTPUT_INIT
 ! Initialize output metadata and create/open the selected output files.
 ! -- Called from CMF_DRV_INIT
@@ -200,12 +204,12 @@ IF ( NVARSOUT == 0 ) THEN
   RETURN
 ENDIF
 
-!*** 2. Load the registry and resolve each requested variable.
+!*** 2. Load the registry (output_variables.csv) and resolve each requested variable.
 CALL OUTPUT_UTIL_LOAD_REGISTRY
 ALLOCATE(VAROUT(NVARSOUT))
 WRITE(CTIME,'(A14,I4.4,A1,I2.2,A1,I2.2,A1,I2.2,A1,I2.2)') 'seconds since ',ISYYYY,'-',ISMM,'-',ISDD,' ',ISHOUR,":",ISMIN
 
-!* Resolve all selected metadata through the configured registry.
+!* Resolve all selected metadata through the configured registry (output_variables.csv).
 DO JF=1,NVARSOUT
   VAROUT(JF)%CVNAME=TRIM(CVNAMES(JF))
 CALL OUTPUT_UTIL_LOAD_METADATA(CVNAMES(JF),VAROUT(JF)%CVLNAME,VAROUT(JF)%CVUNITS, &
@@ -234,7 +238,11 @@ END DO
 IRECOUT=0  ! Initialize Output record to 1 (shared in netcdf & binary)
 
 END SUBROUTINE CMF_OUTPUT_INIT
+!####################################################################
 
+
+
+!####################################################################
 SUBROUTINE CMF_OUTPUT_WRITE
 ! Driver-compatible dispatcher. Array association is explicit here; CSV strings
 ! are never used to look up Fortran storage.
@@ -306,7 +314,12 @@ DO JF=1,NVARSOUT
 ENDDO
 WRITE(LOGNAM,*) 'CMF::OUTPUT_WRITE: end'
 END SUBROUTINE CMF_OUTPUT_WRITE
+!####################################################################
 
+
+
+
+!####################################################################
 SUBROUTINE CMF_OUTPUT_END
 ! Finalize output module (close files)
 !+ WRTE_mapR2vecD : Write map-grid coordinates for vector output.
@@ -347,7 +360,12 @@ ENDIF
 WRITE(LOGNAM,*) "CMF::OUTPUT_END: end"
 
 END SUBROUTINE CMF_OUTPUT_END
+!####################################################################
 
+
+
+
+!####################################################################
 SUBROUTINE CMF_OUTTXT_WRTE
 ! Write discharge time series for the configured gauge locations.
 USE YOS_CMF_DIAG,            ONLY: D2OUTFLW
@@ -435,6 +453,11 @@ IF( LOUTTXT )THEN
 ENDIF
 
 END SUBROUTINE CMF_OUTTXT_WRTE
+!####################################################################
+
+
+
+
 
 !####################################################################
 ! Public generic-specific compatibility procedures
@@ -508,7 +531,9 @@ CHARACTER(LEN=*),INTENT(IN) :: MESSAGE
 WRITE(LOGNAM,*) 'CMF::OUTPUT_INIT: ERROR: ',TRIM(MESSAGE)
 STOP 9
 END SUBROUTINE OUTPUT_UTIL_FATAL
+!####################################################################
 
+!####################################################################
 FUNCTION OUTPUT_UTIL_INFER_CMF_BASE(DIMINFO_PATH) RESULT(BASE)
 ! Infer the installation root from the map-dimension path or executable path.
 IMPLICIT NONE
@@ -567,7 +592,9 @@ ELSE                   !!  2D default map output
 ENDIF
 
 END SUBROUTINE OUTPUT_UTIL_CREATE_OUTBIN
+!####################################################################
 
+!####################################################################
 SUBROUTINE OUTPUT_UTIL_CREATE_OUTCDF(JF,CTIME)
 ! Define and open the selected output as a NetCDF file.
 #ifdef UseCDF_CMF
@@ -721,7 +748,9 @@ WRITE(LOGNAM,*) 'CFILE: ',TRIM(VAROUT(JF)%CFILE),' CVAR:',TRIM(VAROUT(JF)%CVNAME
 WRITE(LOGNAM,*) 'OPEN IN UNIT: ',VAROUT(JF)%NCID
 #endif
 END SUBROUTINE OUTPUT_UTIL_CREATE_OUTCDF
+!####################################################################
 
+!####################################################################
 SUBROUTINE OUTPUT_UTIL_LOAD_REGISTRY()
 ! Read the CSV registry and resolve metadata inherited by aliases.
 USE YOS_CMF_INPUT,           ONLY: RMIS
@@ -867,7 +896,9 @@ IF (LEN_TRIM(LOAD_ERROR)>0) THEN
   CALL OUTPUT_UTIL_FATAL(LOAD_ERROR)
 ENDIF
 END SUBROUTINE OUTPUT_UTIL_LOAD_REGISTRY
+!####################################################################
 
+!####################################################################
 SUBROUTINE OUTPUT_UTIL_LOAD_METADATA(NAME,LONG_NAME,UNITS,AGGREGATE,MISSING_VALUE,HAS_MISSING_VALUE, &
                                 REQUIRED_OPTION)
 ! Return the resolved metadata for one selected output name.
@@ -921,8 +952,9 @@ SELECT CASE (TRIM(REQUIRED_OPTION))
 END SELECT
 IF (.NOT.ENABLED) CALL OUTPUT_UTIL_FATAL(TRIM(NAME)//' requires '//TRIM(REQUIRED_OPTION)//'=.TRUE.')
 END SUBROUTINE OUTPUT_UTIL_CHECK_OPTION
+!####################################################################
 
-
+!####################################################################
 SUBROUTINE OUTPUT_UTIL_WRITE_R4(NAME,ARRAY)
 ! Write a JPRM output array.
 USE YOS_CMF_INPUT,           ONLY: NX,NY
@@ -957,7 +989,9 @@ CALL CMF_MPI_AllReduce_R2MAP(MAP)
 #endif
 CALL OUTPUT_UTIL_WRITE_MAP(JF,MAP)
 END SUBROUTINE OUTPUT_UTIL_WRITE_R4
+!####################################################################
 
+!####################################################################
 SUBROUTINE OUTPUT_UTIL_WRITE_R8(NAME,ARRAY)
 ! Convert and write a JPRD output array.
 USE YOS_CMF_INPUT,           ONLY: NX,NY
@@ -1011,7 +1045,9 @@ DO JF=1,NVARSOUT
   ENDIF
 ENDDO
 END FUNCTION OUTPUT_UTIL_FIND_OUTPUT
+!####################################################################
 
+!####################################################################
 SUBROUTINE OUTPUT_UTIL_WRITE_MAP(JF,MAP)
 ! Write one map output record in the selected format.
 #ifdef UseCDF_CMF
@@ -1042,7 +1078,9 @@ ELSEIF (REGIONTHIS==1) THEN
   CALL OUTPUT_UTIL_WRITE_BINARY_MAP(VAROUT(JF)%BINID,IRECOUT,MAP)
 ENDIF
 END SUBROUTINE OUTPUT_UTIL_WRITE_MAP
+!####################################################################
 
+!####################################################################
 SUBROUTINE OUTPUT_UTIL_WRITE_PTH(JF,DATA)
 ! Write one bifurcation-path output record in the selected format.
 #ifdef UseCDF_CMF
@@ -1081,7 +1119,9 @@ ELSE
   CALL OUTPUT_UTIL_WRITE_BINARY_PTH(VAROUT(JF)%BINID,IRECOUT,PTH)
 ENDIF
 END SUBROUTINE OUTPUT_UTIL_WRITE_PTH
+!####################################################################
 
+!####################################################################
 SUBROUTINE OUTPUT_UTIL_WRITE_BINARY_MAP(IFN,IREC,MAP)
 ! Write one map record to a direct-access Binary file.
 IMPLICIT NONE
