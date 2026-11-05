@@ -54,6 +54,10 @@ The reusable Binary-to-NetCDF conversion command is documented in [`map/tools/RE
 
 New model output files and Restart files use lossless NetCDF-4 deflate level 3 with shuffle. `NDLEVEL` controls main and sediment output compression and defaults to 3; set it to 0 to disable deflate. Restart precision and variables are unchanged. See the shared [NetCDF output conventions](../docs/netcdf_output_conventions.md) for the inventory and format exception.
 
+## Runoff forcing implementation
+
+`cmf_ctrl_forcing_mod.F90` keeps the six principal `CMF_FORCING_*` procedures together: `NMLIST` exposes defaults and the model-time-origin update, `INIT` selects source and input-matrix initialization, `GET` reads and bounds runoff values, `COM` gathers flood fraction and maps it back to the runoff grid, `PUT` shows the runoff/subsurface/evaporation array associations, and `END` closes forcing resources. Private `FORCING_UTIL_*` procedures hold Namelist validation, Binary/NetCDF I/O, input-matrix handling, and interpolation details. Evaporation retains its existing weighted mapping path. This organization is a readability refactor; it does not define a new forcing format or alter the file and unit contracts. See [the runoff input guide](../inp/README.md) for `CROFFREQ`, supported formats, temporal alignment, and `DROFUNIT`.
+
 ## Restart files
 
 `LRESTART` controls whether the model reads an initial state from `CRESTSTO`. `LRESTCDF=.FALSE.` selects the direct-access Binary format; `LRESTCDF=.TRUE.` selects NetCDF. Binary files use the `.bin` suffix and NetCDF files use `.nc`. `LRESTDBL` selects Float64 (`.TRUE.`) or Float32 (`.FALSE.`) only for Binary Restart. NetCDF Restart variables are written as Float64 regardless of `LRESTDBL`. These file precisions are independent of internal kinds: storage arrays use `JPRD`, while previous-step flow/depth arrays use `JPRB`, which is 4-byte with `SinglePrec_CMF` and 8-byte otherwise.
