@@ -85,7 +85,26 @@ def main() -> None:
     gap_ids = {row["gap_id"] for row in tables["knowledge_gaps.csv"]}
     intervention_ids = {row["intervention_id"] for row in tables["human_interventions.csv"]}
     decision_ids = {path.stem for path in (ROOT / "decisions").glob("ADR-*.md")}
-    record_ids = task_ids | validation_ids | discussion_ids | gap_ids | intervention_ids | decision_ids
+    # Detailed Markdown records are valid references even when they have no CSV index row.
+    detail_record_ids = {
+        path.stem
+        for directory, pattern in (
+            ("discussions", "DR-*.md"),
+            ("knowledge_gaps", "KG-*.md"),
+            ("human_interventions", "HI-*.md"),
+            ("validation_runs", "VR-*.md"),
+        )
+        for path in (ROOT / "records" / directory).glob(pattern)
+    }
+    record_ids = (
+        task_ids
+        | validation_ids
+        | discussion_ids
+        | gap_ids
+        | intervention_ids
+        | decision_ids
+        | detail_record_ids
+    )
 
     for lineno, row in enumerate(tables["events.csv"], start=2):
         validate_timestamp(row, lineno)
