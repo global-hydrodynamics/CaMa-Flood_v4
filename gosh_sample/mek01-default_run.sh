@@ -184,7 +184,7 @@ CFLDHGT = "${MAPDIR}/fldhgt.bin"    ! Floodplain elevation profile [m].
 CRIVWTH = "${RIVWTH}"               ! River channel width [m].
 CRIVHGT = "${MAPDIR}/rivhgt.bin"    ! River channel depth [m].
 CRIVMAN = "${MAPDIR}/rivman.bin"    ! River Manning roughness [s m-1/3].
-CPTHOUT = "${MAPDIR}/bifprm.txt"    ! Bifurcation channel parameters.
+CPTHOUT = "${MAPDIR}/bifprm.csv"    ! Bifurcation channel parameters.
 /
 &NRESTART
 CRESTDIR = "./"              ! Restart-output directory relative to the run directory.

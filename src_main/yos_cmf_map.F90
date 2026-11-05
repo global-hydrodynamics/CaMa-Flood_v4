@@ -83,10 +83,16 @@ INTEGER(KIND=JPIM)                       ::  NPTHOUT            !! NUMBER OF FLO
 INTEGER(KIND=JPIM)                       ::  NPTHLEV            !! NUMBER OF FLOODPLAIN PATH LAYER
 INTEGER(KIND=JPIM),ALLOCATABLE           ::  PTH_UPST(:)        !! FLOOD PATHWAY UPSTREAM   ISEQ
 INTEGER(KIND=JPIM),ALLOCATABLE           ::  PTH_DOWN(:)        !! FLOOD PATHWAY DOWNSTREAM JSEQ
+INTEGER(KIND=JPIM),ALLOCATABLE           ::  PTH_ID(:)          !! Configuration-specific one-based pathway row ID
+INTEGER(KIND=JPIM),ALLOCATABLE           ::  PTH_IX(:),PTH_IY(:),PTH_JX(:),PTH_JY(:) !! Endpoint map indices
+INTEGER(KIND=JPIM),ALLOCATABLE           ::  PTH_IBSN(:),PTH_JBSN(:) !! Ascending numeric basin IDs
 REAL(KIND=JPRB),ALLOCATABLE              ::  PTH_DST(:)         !! FLOOD PATHWAY DISTANCE [m]
 REAL(KIND=JPRB),ALLOCATABLE              ::  PTH_ELV(:,:)         !! FLOOD PATHWAY ELEVATION [m]
 REAL(KIND=JPRB),ALLOCATABLE              ::  PTH_WTH(:,:)         !! FLOOD PATHWAY WIDTH [m]
 REAL(KIND=JPRB),ALLOCATABLE              ::  PTH_MAN(:)         !! FLOOD PATHWAY Manning
+REAL(KIND=JPRB),ALLOCATABLE              ::  PTH_ELEVTN(:),PTH_DEPTH(:) !! Source table elevation/depth [m]
+REAL(KIND=JPRB),ALLOCATABLE              ::  PTH_START_LAT(:),PTH_START_LON(:) !! Source pathway coordinates
+REAL(KIND=JPRB),ALLOCATABLE              ::  PTH_END_LAT(:),PTH_END_LON(:) !! Ending unit-catchment outlet coordinates
 
 !================================================
 ! input matrix (converted from NX:NY*INPN to NSEQMAX*INPN)

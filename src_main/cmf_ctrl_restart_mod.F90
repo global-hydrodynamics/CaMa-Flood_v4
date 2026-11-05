@@ -271,11 +271,14 @@ SUBROUTINE READ_REST_CDF
 #ifdef UseCDF_CMF
 USE NETCDF
 USE YOS_CMF_INPUT,    ONLY: NX, NY
-USE YOS_CMF_MAP,      ONLY: NPTHOUT, NPTHLEV, PTH_UPST, PTH_DOWN
+USE YOS_CMF_MAP,      ONLY: NPTHOUT, NPTHLEV, PTH_UPST, PTH_DOWN, PTH_ID, PTH_IX, PTH_IY, PTH_JX, PTH_JY
 USE CMF_UTILS_MOD,    ONLY: NCERROR, mapP2vecP, mapP2vecD
 IMPLICIT NONE
 ! local variables
-INTEGER(KIND=JPIM)    ::  NCID,VARID
+INTEGER(KIND=JPIM)    ::  NCID,VARID,STATUS,PATHID,LAYERID,PATHLEN,LAYERLEN,NFOUND,I,NDIMS,XTYPE,DIMIDS(NF90_MAX_VAR_DIMS)
+INTEGER(KIND=JPIM)    ::  ID_VAR(5),ID_DATA(NPTHOUT)
+CHARACTER(LEN=8),PARAMETER :: PATH_NAMES(5)=[CHARACTER(LEN=8) :: 'pth_id','ix','iy','jx','jy']
+INTEGER(KIND=JPIM),ALLOCATABLE :: MAP_DATA(:,:)
 INTEGER(KIND=JPIM)    ::  IPTH
 CHARACTER(LEN=256)    ::  CFILE
 REAL(KIND=JPRD)       ::  P2TEMP(NX,NY), P1PTH(NPTHOUT,NPTHLEV)  !! NetCDF restart is in Double Precision
@@ -284,6 +287,55 @@ CFILE=TRIM(CRESTSTO)
 WRITE(LOGNAM,*)'READ_REST: read restart netcdf: ', TRIM(CFILE)
 
 CALL NCERROR( NF90_OPEN(CFILE,NF90_NOWRITE,NCID), 'OPENING '//CFILE)
+
+! Static pathway identifiers prevent same-sized but differently ordered maps
+! from silently assigning saved pathway flows to the wrong connections.
+IF (LPTHOUT) THEN
+  CALL NCERROR(NF90_INQ_DIMID(NCID,'NPTHOUT',PATHID),'finding pathway count dimension')
+  CALL NCERROR(NF90_INQ_DIMID(NCID,'NPTHLEV',LAYERID),'finding pathway layer dimension')
+  CALL NCERROR(NF90_INQUIRE_DIMENSION(NCID,PATHID,LEN=PATHLEN),'reading pathway count dimension')
+  CALL NCERROR(NF90_INQUIRE_DIMENSION(NCID,LAYERID,LEN=LAYERLEN),'reading pathway layer dimension')
+  IF (PATHLEN/=NPTHOUT .OR. LAYERLEN/=NPTHLEV) THEN
+    WRITE(LOGNAM,*) 'ERROR [READ_REST_CDF]: bifurcation dimensions differ: restart=',PATHLEN,LAYERLEN, &
+                    ' current map=',NPTHOUT,NPTHLEV
+    STOP 9
+  ENDIF
+  NFOUND=0
+  DO I=1,SIZE(PATH_NAMES)
+    STATUS=NF90_INQ_VARID(NCID,TRIM(PATH_NAMES(I)),ID_VAR(I))
+    IF (STATUS==NF90_NOERR) NFOUND=NFOUND+1
+  ENDDO
+  IF (NFOUND==0) THEN
+    WRITE(LOGNAM,*) 'WARNING [READ_REST_CDF]: legacy Restart has no bifurcation path IDs; path correspondence is unverified.'
+  ELSEIF (NFOUND/=SIZE(PATH_NAMES)) THEN
+    WRITE(LOGNAM,*) 'ERROR [READ_REST_CDF]: Restart contains partial bifurcation path identity metadata.'
+    STOP 9
+  ELSE
+    ALLOCATE(MAP_DATA(NPTHOUT,5))
+    DO I=1,SIZE(PATH_NAMES)
+      CALL NCERROR(NF90_INQUIRE_VARIABLE(NCID,ID_VAR(I),XTYPE=XTYPE,NDIMS=NDIMS,DIMIDS=DIMIDS), &
+                   'inspecting '//TRIM(PATH_NAMES(I)))
+      IF (XTYPE/=NF90_INT .OR. NDIMS/=1 .OR. DIMIDS(1)/=PATHID) THEN
+        WRITE(LOGNAM,*) 'ERROR [READ_REST_CDF]: ',TRIM(PATH_NAMES(I)), &
+                        ' must be an int32 variable on the NPTHOUT dimension.'
+        STOP 9
+      ENDIF
+      CALL NCERROR(NF90_GET_VAR(NCID,ID_VAR(I),ID_DATA),'reading '//TRIM(PATH_NAMES(I)))
+      MAP_DATA(:,I)=ID_DATA
+    ENDDO
+    DO IPTH=1,NPTHOUT
+      IF (MAP_DATA(IPTH,1)/=PTH_ID(IPTH) .OR. MAP_DATA(IPTH,2)/=PTH_IX(IPTH) .OR. &
+          MAP_DATA(IPTH,3)/=PTH_IY(IPTH) .OR. MAP_DATA(IPTH,4)/=PTH_JX(IPTH) .OR. &
+          MAP_DATA(IPTH,5)/=PTH_JY(IPTH)) THEN
+        WRITE(LOGNAM,*) 'ERROR [READ_REST_CDF]: bifurcation path identity differs at row ',IPTH, &
+          ' restart (id,ix,iy,jx,jy)=',MAP_DATA(IPTH,:), &
+          ' current (id,ix,iy,jx,jy)=',PTH_ID(IPTH),PTH_IX(IPTH),PTH_IY(IPTH),PTH_JX(IPTH),PTH_JY(IPTH)
+        STOP 9
+      ENDIF
+    ENDDO
+    DEALLOCATE(MAP_DATA)
+  ENDIF
+ENDIF
 
 CALL NCERROR( NF90_INQ_VARID(NCID,'rivsto',VARID))
 CALL NCERROR( NF90_GET_VAR(NCID,VARID,P2TEMP,(/1,1,1/),(/NX,NY,1/) ) )
@@ -559,7 +611,8 @@ USE NETCDF
 USE YOS_CMF_INPUT,      ONLY: DMIS
 USE YOS_CMF_TIME,       ONLY: KMINNEXT, KMINSTART, ISYYYY,ISMM,ISDD, ISHOUR, ISMIN
 USE YOS_CMF_TIME,       ONLY: JYYYYMMDD,JHOUR
-USE YOS_CMF_MAP,        ONLY: D1LON,    D1LAT,     REGIONTHIS, NSEQMAX
+USE YOS_CMF_MAP,        ONLY: D1LON, D1LAT, REGIONTHIS, NSEQMAX, NPTHOUT, NPTHLEV, &
+                              PTH_ID, PTH_IX, PTH_IY, PTH_JX, PTH_JY
 USE CMF_UTILS_MOD,      ONLY: NCERROR,  vecP2mapP
 #ifdef UseMPI_CMF
 USE CMF_CTRL_MPI_MOD,   ONLY: CMF_MPI_AllReduce_P2MAP, CMF_MPI_AllReduce_P1PTH
@@ -568,7 +621,9 @@ IMPLICIT NONE
 !* local variables
 CHARACTER(LEN=256)         :: CFILE, CDATE, CTIME, CVAR
 INTEGER(KIND=JPIM)         :: NCID,  VARID, LATID, LONID, TIMEID, JF, &
-                              NPTHOUTID,    NPTHLEVID,    STATUS, IOUT
+                              NPTHOUTID,    NPTHLEVID,    STATUS, IOUT, I
+CHARACTER(LEN=8),PARAMETER :: PATH_NAMES(5)=[CHARACTER(LEN=8) :: 'pth_id','ix','iy','jx','jy']
+INTEGER(KIND=JPIM),ALLOCATABLE :: PATH_DATA(:,:)
 REAL(KIND=JPRB)            :: XTIME ! seconds since start of the run ! 
 REAL(KIND=JPRD)            :: P2VEC(NSEQMAX,1), P2TEMP(NX,NY), P1PTH(NPTHOUT,NPTHLEV)
 !================================================
@@ -595,6 +650,13 @@ IF( REGIONTHIS==1 )THEN   !! write restart only on master node
   IF ( LPTHOUT ) THEN
     CALL NCERROR( NF90_DEF_DIM(NCID, 'NPTHOUT', NPTHOUT, NPTHOUTID) )
     CALL NCERROR( NF90_DEF_DIM(NCID, 'NPTHLEV', NPTHLEV, NPTHLEVID) )
+    DO I=1,SIZE(PATH_NAMES)
+      CALL NCERROR(NF90_DEF_VAR(NCID,TRIM(PATH_NAMES(I)),NF90_INT,(/NPTHOUTID/),VARID))
+      CALL NCERROR(NF90_PUT_ATT(NCID,VARID,'long_name',TRIM(PATH_NAMES(I))//' bifurcation-path map index'))
+      CALL NCERROR(NF90_PUT_ATT(NCID,VARID,'units','1'))
+      CALL NCERROR(NF90_PUT_ATT(NCID,VARID,'description', &
+        'Configuration-specific path table identity; indices are one-based map grid coordinates.'))
+    ENDDO
   ENDIF 
   
   !! Define spatial and optional bifurcation dimensions.
@@ -696,6 +758,18 @@ IF( REGIONTHIS==1 )THEN   !! write restart only on master node
   
   CALL NCERROR ( NF90_INQ_VARID(NCID,'lat',VARID),'getting id' )
   CALL NCERROR( NF90_PUT_VAR(NCID,VARID,D1LAT))
+
+
+  IF (LPTHOUT) THEN
+    ALLOCATE(PATH_DATA(NPTHOUT,5))
+    PATH_DATA(:,1)=PTH_ID; PATH_DATA(:,2)=PTH_IX; PATH_DATA(:,3)=PTH_IY
+    PATH_DATA(:,4)=PTH_JX; PATH_DATA(:,5)=PTH_JY
+    DO I=1,SIZE(PATH_NAMES)
+      CALL NCERROR(NF90_INQ_VARID(NCID,TRIM(PATH_NAMES(I)),VARID))
+      CALL NCERROR(NF90_PUT_VAR(NCID,VARID,PATH_DATA(:,I)))
+    ENDDO
+    DEALLOCATE(PATH_DATA)
+  ENDIF
 
 ENDIF  !! regionthis=1: definition
 

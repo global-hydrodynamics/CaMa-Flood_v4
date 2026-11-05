@@ -6,8 +6,8 @@ New CaMa-Flood-generated NetCDF data use NetCDF-4 with lossless zlib/deflate lev
 
 | Writer | Format and storage | Notes |
 | --- | --- | --- |
-| `src_main/cmf_ctrl_output_mod.F90` | NetCDF-4; deflate from `NDLEVEL` (default 3), shuffle enabled | `NDLEVEL=0` disables deflate; coordinate variables remain uncompressed. |
-| `src_main/cmf_ctrl_restart_mod.F90` | NetCDF-4; deflate level 3, shuffle enabled | Restart state variables remain Float64. |
+| `src_main/cmf_ctrl_output_mod.F90` | NetCDF-4; deflate from `NDLEVEL` (default 3), shuffle enabled | `NDLEVEL=0` disables deflate; coordinate variables remain uncompressed. `pthflw` stores path-by-layer interval means and includes static bifurcation-table metadata. |
+| `src_main/cmf_ctrl_restart_mod.F90` | NetCDF-4; deflate level 3, shuffle enabled | Restart state variables remain Float64; bifurcation Restarts include path ID and endpoint-index metadata for compatibility checks. |
 | `src_main/sediment/cmf_ctrl_sedout_mod.F90` | NetCDF-4; shared `NDLEVEL` (default 3), shuffle enabled | Uses the main output setting. |
 | `map/tools/code/convert_map_binary_to_netcdf.py` | NetCDF-4; deflate level 3, shuffle enabled | Applies to converted raster variables; source values and types are preserved. |
 | `map/tools/code/convert_highres_binary_to_netcdf.py` | NetCDF-4; configurable level, default 3; shuffle enabled | Existing tile files are skipped; use `--force` to regenerate. |

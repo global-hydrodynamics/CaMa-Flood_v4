@@ -67,7 +67,7 @@ The first v5 model run uses the committed Mekong map and runoff sample:
 - Runoff: `inp/test-mek_1deg/` (20 × 30 daily float32 grid, `mm/day`; 1980 onward).
 - Simulation: 2000-01-01 00:00 through 2001-01-01 00:00, 366 days.
 - Execution: non-MPI, one OpenMP thread, adaptive timestep enabled, bifurcation enabled, reservoir operation disabled, zero initial storage.
-- Channel width: `rivwth_merit.bin`; bifurcation table: `bifprm.txt`.
+- Channel width: `rivwth_merit.bin`; the recorded initial run used `bifprm.txt`. The maintained mek01/mek02 scripts now exercise the v5 CSV and NetCDF table readers, respectively; see the current validation record for those format checks.
 - Runoff conversion: `DROFUNIT=86400000`; daily files use `Roff____YYYYMMDD.one`.
 - Outputs: daily binary `outflw`, `storge`, `sfcelv`, and `flddph`; bifurcation `pthflw`; final restart.
 - Run directory: ignored `out/mek01-default_run/`.
