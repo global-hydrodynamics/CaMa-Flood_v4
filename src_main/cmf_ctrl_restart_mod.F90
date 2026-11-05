@@ -111,6 +111,10 @@ CLOSE(NSETFILE)
 
 END SUBROUTINE CMF_RESTART_NMLIST
 !####################################################################
+
+
+
+!####################################################################
 SUBROUTINE CMF_RESTART_INIT
 ! Initialize model state from the selected Restart representation.
 ! Called from CMF_DRV_INIT.
@@ -167,6 +171,10 @@ IF (LSTOONLY) D2FLDSTO_PRE(:,:)=REAL(P2FLDSTO(:,:),KIND=JPRB)
 
 END SUBROUTINE CMF_RESTART_INIT
 !####################################################################
+
+
+
+!####################################################################
 SUBROUTINE CMF_RESTART_WRITE
 ! Write model state after the current step when its configured Restart time is due.
 ! Called from CMF_DRV_ADVANCE and the synchronized HeatLink driver.
@@ -217,6 +225,10 @@ CALL RESTART_UTIL_CLOSE_WRITE(REST_UNIT,NCID,CFILE)
 
 END SUBROUTINE CMF_RESTART_WRITE
 !####################################################################
+
+
+
+!####################################################################
 LOGICAL FUNCTION restart_is_write_time()
 ! Report whether the configured Restart time is due for coupled helpers.
 ! MAIN uses this query to synchronize HeatLink Restart writes after its update.
@@ -232,6 +244,11 @@ IF (IFRQ_RST==30) THEN
   IF (JDD==1 .AND. JHOUR==0 .AND. JMIN==0) restart_is_write_time=.TRUE.
 ENDIF
 END FUNCTION restart_is_write_time
+!####################################################################
+
+
+
+
 !####################################################################
 ! Private Restart implementation utilities
 ! -- RESTART_UTIL_OPEN_READ / CLOSE_READ : Open and close the selected input

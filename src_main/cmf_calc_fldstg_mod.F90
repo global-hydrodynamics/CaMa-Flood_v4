@@ -15,8 +15,8 @@ MODULE CMF_CALC_FLDSTG_MOD
 CONTAINS
 !####################################################################
 ! -- CMF_CALC_FLDSTG_DEF  !! default flood stage calculation
-! -- CMF_OPT_FLDSTG_ES    !! optimized code for vector processor (such as Earth Simulator), activated using LSTG_ES=.TRUE. option).
-! -- CMP_OPT_FLDSTG_SIMD  !! SIMD implementation primary for OpenMP (not fast enough)
+! -- CMF_OPT_FLDSTG_ES    !! vector-processor implementation, selected by LSTG_ES
+! -- CMF_OPT_FLDSTG_SIMD  !! experimental split-search SIMD implementation (validation required)
 !####################################################################
 SUBROUTINE CMF_CALC_FLDSTG_DEF
 USE PARKIND1,           ONLY: JPIM, JPRB, JPRD
@@ -115,25 +115,30 @@ END SUBROUTINE CMF_CALC_FLDSTG_DEF
 !
 !####################################################################
 SUBROUTINE CMF_OPT_FLDSTG_SIMD
+! Split irregular layer search from SIMD-friendly residual-storage interpolation.
+! The search reproduces the reference DEF layer baseline; the SIMD loop then
+! evaluates safe candidate formulas and selects the physical case using MERGE.
+! Experimental CPU SIMD implementation; scientific and speed equivalence must
+! be checked against CMF_CALC_FLDSTG_DEF before enabling it in a model run.
 USE PARKIND1,           ONLY: JPIM, JPRB, JPRD
 USE YOS_CMF_INPUT,      ONLY: NLFP
 USE YOS_CMF_MAP,        ONLY: NSEQALL, D2GRAREA, D2RIVLEN, D2RIVWTH, D2RIVELV
-USE YOS_CMF_MAP,        ONLY: D2RIVSTOMAX, D2FLDSTOMAX, D2FLDHGT, D2FLDGRD, DFRCINC
+USE YOS_CMF_MAP,        ONLY: D2RIVSTOMAX, D2FLDSTOMAX, D2FLDGRD, DFRCINC
 USE YOS_CMF_PROG,       ONLY: P2RIVSTO, P2FLDSTO
 USE YOS_CMF_DIAG,       ONLY: D2RIVDPH, D2FLDDPH, D2FLDFRC, D2FLDARE, D2SFCELV, D2STORGE
 USE YOS_CMF_DIAG,       ONLY: P0GLBSTOPRE2, P0GLBSTONEW2, P0GLBRIVSTO, P0GLBFLDSTO, P0GLBFLDARE
+
 IMPLICIT NONE
+INTEGER(KIND=JPIM) :: ISTG(NSEQALL)
+REAL(KIND=JPRB)    :: DSTO_fil(NSEQALL), DWTH_fil(NSEQALL), DDPH_fil(NSEQALL)
+REAL(KIND=JPRB)    :: DGRD(NSEQALL), DWTH_inc(NSEQALL)
 
-!*** LOCAL
-INTEGER(KIND=JPIM)         :: ISTG(NSEQALL)
-REAL(KIND=JPRB)            :: DGRD(NSEQALL)
-REAL(KIND=JPRB)            :: DSTO_fil(NSEQALL)
-REAL(KIND=JPRB)            :: DDPH_fil(NSEQALL)
-
-INTEGER(KIND=JPIM),SAVE    :: ISEQ, I, ILFP
-LOGICAL,SAVE               :: Mask
-REAL(KIND=JPRD),SAVE       :: PSTOALL
-REAL(KIND=JPRB),SAVE       :: DSTOALL, DWTH_fil, DSTO_add, DWTH_add, Dmod, Dtmp
+INTEGER(KIND=JPIM) :: ISEQ, I
+REAL(KIND=JPRD)    :: PSTOALL
+REAL(KIND=JPRB)    :: DSTOALL, DSTO_add, DSTO_quad, DSTO_sat
+REAL(KIND=JPRB)    :: DWTH_safe, DGRD_safe, DENOM_safe, DWTH_add
+REAL(KIND=JPRB)    :: DRAD, DDPH_regular, DDPH_saturated, DRIVDPH
+LOGICAL           :: LFLOOD, LREGULAR, LSATURATED
 !================================================
 P0GLBSTOPRE2=0._JPRD
 P0GLBSTONEW2=0._JPRD
@@ -141,88 +146,95 @@ P0GLBRIVSTO =0._JPRD
 P0GLBFLDSTO =0._JPRD
 P0GLBFLDARE =0._JPRD
 
-! Estimate water depth and flood extent from water storage
-!   Solution for Equations (1) and (2) in [Yamazaki et al. 2011 WRR].
-
-!$OMP PARALLEL DO PRIVATE(I,ILFP,PSTOALL) REDUCTION(+:P0GLBSTOPRE2)
+!*** 1. Find the active floodplain layer and save its baseline state.
+! The iteration and accumulation order match CMF_CALC_FLDSTG_DEF.
+!$OMP PARALLEL DO PRIVATE(I,PSTOALL) REDUCTION(+:P0GLBSTOPRE2)
 DO ISEQ=1, NSEQALL
   PSTOALL = P2RIVSTO(ISEQ,1) + P2FLDSTO(ISEQ,1)
   P0GLBSTOPRE2 = P0GLBSTOPRE2 + PSTOALL
 
-  I=0 !! all water in channel
+  I=0
   DSTO_fil(ISEQ)=0._JPRB
   DDPH_fil(ISEQ)=0._JPRB
+  DWTH_fil(ISEQ)=D2RIVWTH(ISEQ,1)
+  DWTH_inc(ISEQ)=D2GRAREA(ISEQ,1) / D2RIVLEN(ISEQ,1) * DFRCINC
+  DGRD(ISEQ)=1._JPRB
+
   IF (PSTOALL > D2RIVSTOMAX(ISEQ,1)) THEN
     I=1
     DSTO_fil(ISEQ)=D2RIVSTOMAX(ISEQ,1)
-    DDPH_fil(ISEQ)=0._JPRB
-    DO ILFP=1, NLFP
-      IF (PSTOALL <= D2FLDSTOMAX(ISEQ,1,ILFP)) EXIT
-      I=ILFP+1 !! water in river and ith floodplain layer
-      DSTO_fil(ISEQ)=D2FLDSTOMAX(ISEQ,1,I-1)
-      DDPH_fil(ISEQ)=D2FLDHGT(ISEQ,1,I-1)
-    END DO
+    DO WHILE (PSTOALL > D2FLDSTOMAX(ISEQ,1,I) .AND. I<=NLFP)
+      DSTO_fil(ISEQ)=D2FLDSTOMAX(ISEQ,1,I)
+      DWTH_fil(ISEQ)=DWTH_fil(ISEQ)+DWTH_inc(ISEQ)
+      DDPH_fil(ISEQ)=DDPH_fil(ISEQ)+D2FLDGRD(ISEQ,1,I)*DWTH_inc(ISEQ)
+      I=I+1
+      IF (I>NLFP) EXIT
+    ENDDO
+    IF (I<=NLFP) DGRD(ISEQ)=D2FLDGRD(ISEQ,1,I)
   ENDIF
-  IF( I==0 .or. I==NLFP+1 )THEN
-    DGRD(ISEQ)=1.E10_JPRB
-  ELSE
-    DGRD(ISEQ)=D2FLDGRD(ISEQ,1,I)
-  ENDIF
-END DO
-!$OMP END PARALLEL DO 
+  ISTG(ISEQ)=I
+ENDDO
+!$OMP END PARALLEL DO
 
-!$OMP PARALLEL DO SIMD PRIVATE(PSTOALL,DSTOALL,DWTH_fil,DSTO_add,DWTH_add,Dtmp,Dmod,Mask)
+!*** 2. Interpolate residual storage in SIMD; no per-cell IF branches.
+! Both candidate formulas must remain valid even when MERGE discards them.
+!$OMP PARALLEL DO SIMD PRIVATE(PSTOALL,DSTOALL,DSTO_add,DSTO_quad,DSTO_sat, &
+!$OMP& DWTH_safe,DGRD_safe,DENOM_safe,DWTH_add,DRAD,DDPH_regular,DDPH_saturated, &
+!$OMP& DRIVDPH,LFLOOD,LREGULAR,LSATURATED)
 DO ISEQ=1, NSEQALL
   PSTOALL = P2RIVSTO(ISEQ,1) + P2FLDSTO(ISEQ,1)
-  DSTOALL = REAL( PSTOALL, KIND=JPRB)
+  DSTOALL = REAL(PSTOALL,KIND=JPRB)
 
-  DWTH_fil = D2GRAREA(ISEQ,1) / D2RIVLEN(ISEQ,1) * DFRCINC
-  DWTH_fil=DWTH_fil*ISTG(ISEQ)
+  LFLOOD     = ISTG(ISEQ)>0
+  LREGULAR   = LFLOOD .AND. ISTG(ISEQ)<=NLFP
+  LSATURATED = ISTG(ISEQ)>NLFP
+  DSTO_add = DSTOALL-DSTO_fil(ISEQ)
 
-  !! calculate storage, width, depth increment for regular case ( 0<I<=NLFP )
-  DSTO_add =  DSTOALL - DSTO_fil(ISEQ)
-  DWTH_add = -DWTH_fil + ( DWTH_fil**2. + 2._JPRB * DSTO_add / D2RIVLEN(ISEQ,1) / DGRD(ISEQ) )**0.5_JPRB
-  D2FLDDPH(ISEQ,1) = DDPH_fil(ISEQ) +DGRD(ISEQ) * DWTH_add
+  ! Set unused residuals to zero BEFORE evaluating candidate equations.
+  DSTO_quad = MERGE(DSTO_add,0._JPRB,LREGULAR)
+  DSTO_sat  = MERGE(DSTO_add,0._JPRB,LSATURATED)
+  DWTH_safe = MERGE(DWTH_fil(ISEQ),1._JPRB,LFLOOD)
+  DGRD_safe = MERGE(DGRD(ISEQ),1._JPRB,LREGULAR)
+  DENOM_safe = MERGE(DWTH_inc(ISEQ)*NLFP,1._JPRB,LFLOOD)
 
-  !! Case when all catchment is flooded
-  Mask = ( ISTG(ISEQ)<=NLFP ) 
-   DWTH_add=merge(DWTH_add,0._JPRB,Mask)
-   Dtmp=D2FLDDPH(ISEQ,1)
-   Dmod=DDPH_fil(ISEQ) + DSTO_add / DWTH_fil / D2RIVLEN(ISEQ,1)
-   D2FLDDPH(ISEQ,1)=merge(Dtmp,Dmod,Mask)
+  DRAD = DWTH_fil(ISEQ)**2._JPRB + &
+&        2._JPRB*DSTO_quad/D2RIVLEN(ISEQ,1)/DGRD_safe
+  DWTH_add = -DWTH_fil(ISEQ)+SQRT(MAX(DRAD,0._JPRB))
+  DWTH_add = MERGE(DWTH_add,0._JPRB,LREGULAR)
 
-  !! Case when all water stay in channel
-  Mask = ( ISTG(ISEQ) >0 ) 
-   Dmod=D2RIVWTH(ISEQ,1)
-   DWTH_add=merge(DWTH_add,Dmod,Mask)
-   Dtmp=D2FLDDPH(ISEQ,1)
-   D2FLDDPH(ISEQ,1)=merge(Dtmp,0._JPRB,Mask)
+  DDPH_regular = DDPH_fil(ISEQ)+DGRD_safe*DWTH_add
+  DDPH_saturated = DDPH_fil(ISEQ)+DSTO_sat/DWTH_safe/D2RIVLEN(ISEQ,1)
+  D2FLDDPH(ISEQ,1) = MERGE(MERGE(DDPH_regular,DDPH_saturated,LREGULAR), &
+&                         0._JPRB,LFLOOD)
 
-  P2RIVSTO(ISEQ,1) = D2RIVSTOMAX(ISEQ,1) + D2RIVLEN(ISEQ,1) * D2RIVWTH(ISEQ,1) * D2FLDDPH(ISEQ,1)
+  ! Preserve the DEF storage partition and its distinct channel-only clamp.
+  P2RIVSTO(ISEQ,1) = D2RIVSTOMAX(ISEQ,1) + &
+&                    D2RIVLEN(ISEQ,1)*D2RIVWTH(ISEQ,1)*D2FLDDPH(ISEQ,1)
   P2RIVSTO(ISEQ,1) = MIN(P2RIVSTO(ISEQ,1),PSTOALL)
-  D2RIVDPH(ISEQ,1) = REAL(P2RIVSTO(ISEQ,1),JPRB) / D2RIVLEN(ISEQ,1) / D2RIVWTH(ISEQ,1)
-  D2RIVDPH(ISEQ,1) = MAX( D2RIVDPH(ISEQ,1), 0._JPRB )
-!
-  P2FLDSTO(ISEQ,1) = PSTOALL - P2RIVSTO(ISEQ,1)
-  P2FLDSTO(ISEQ,1) = MAX( P2FLDSTO(ISEQ,1), 0._JPRD )
+  DRIVDPH = REAL(P2RIVSTO(ISEQ,1),JPRB)/D2RIVLEN(ISEQ,1)/D2RIVWTH(ISEQ,1)
+  D2RIVDPH(ISEQ,1) = MERGE(DRIVDPH,MAX(DRIVDPH,0._JPRB),LFLOOD)
 
-  D2FLDFRC(ISEQ,1) = (-D2RIVWTH(ISEQ,1)+DWTH_fil+DWTH_add)*D2RIVLEN(ISEQ,1) / D2GRAREA(ISEQ,1)
-  D2FLDFRC(ISEQ,1) = MAX( D2FLDFRC(ISEQ,1),0._JPRB)
-  D2FLDFRC(ISEQ,1) = MIN( D2FLDFRC(ISEQ,1),1._JPRB)
+  P2FLDSTO(ISEQ,1) = PSTOALL-P2RIVSTO(ISEQ,1)
+  P2FLDSTO(ISEQ,1) = MAX(P2FLDSTO(ISEQ,1),0._JPRD)
+
+  D2FLDFRC(ISEQ,1) = (-D2RIVWTH(ISEQ,1)+DWTH_fil(ISEQ)+DWTH_add)/DENOM_safe
+  D2FLDFRC(ISEQ,1) = MERGE(D2FLDFRC(ISEQ,1),0._JPRB,LFLOOD)
+  D2FLDFRC(ISEQ,1) = MAX(D2FLDFRC(ISEQ,1),0._JPRB)
+  D2FLDFRC(ISEQ,1) = MIN(D2FLDFRC(ISEQ,1),1._JPRB)
   D2FLDARE(ISEQ,1) = D2GRAREA(ISEQ,1)*D2FLDFRC(ISEQ,1)
-
-  D2SFCELV(ISEQ,1) = D2RIVELV(ISEQ,1) + D2RIVDPH(ISEQ,1)
-  D2STORGE(ISEQ,1) = REAL(P2RIVSTO(ISEQ,1)+P2FLDSTO(ISEQ,1),KIND=JPRB)
-END DO
+ENDDO
 !$OMP END PARALLEL DO SIMD
 
+!*** 3. Update diagnostic fields and accumulated totals.
 !$OMP PARALLEL DO SIMD REDUCTION(+:P0GLBSTONEW2,P0GLBRIVSTO,P0GLBFLDSTO,P0GLBFLDARE)
 DO ISEQ=1, NSEQALL
-  P0GLBSTONEW2     = P0GLBSTONEW2 + P2RIVSTO(ISEQ,1) + P2FLDSTO(ISEQ,1)
-  P0GLBRIVSTO      = P0GLBRIVSTO  + P2RIVSTO(ISEQ,1)
-  P0GLBFLDSTO      = P0GLBFLDSTO  + P2FLDSTO(ISEQ,1)
-  P0GLBFLDARE      = P0GLBFLDARE  + D2FLDARE(ISEQ,1)
-END DO
+  D2SFCELV(ISEQ,1) = D2RIVELV(ISEQ,1)+D2RIVDPH(ISEQ,1)
+  D2STORGE(ISEQ,1) = REAL(P2RIVSTO(ISEQ,1)+P2FLDSTO(ISEQ,1),KIND=JPRB)
+  P0GLBSTONEW2     = P0GLBSTONEW2+P2RIVSTO(ISEQ,1)+P2FLDSTO(ISEQ,1)
+  P0GLBRIVSTO      = P0GLBRIVSTO+P2RIVSTO(ISEQ,1)
+  P0GLBFLDSTO      = P0GLBFLDSTO+P2FLDSTO(ISEQ,1)
+  P0GLBFLDARE      = P0GLBFLDARE+D2FLDARE(ISEQ,1)
+ENDDO
 !$OMP END PARALLEL DO SIMD
 
 END SUBROUTINE CMF_OPT_FLDSTG_SIMD
