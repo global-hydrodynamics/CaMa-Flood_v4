@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-This document records a planned tutorial framework, not an implemented workflow. It defines how a scientific experiment is specified, checked against CaMa-Flood, implemented and validated, and then explained in a reproducible tutorial. Tutorial 02 now has a source-reviewed experiment specification, but its scripts, execution, package changes, and reference results remain unimplemented. The current documentation work is on `feature/gosh-refactor`.
+This document describes the staged tutorial framework. Tutorial 02 now has a researcher-approved specification, four implemented experiment scripts, completed 2000–2003 simulations, analysis scripts, and reference figures on `feature/gosh-refactor`. The beginner-facing README and any package assembly changes remain separate follow-up work.
 
 The framework is intended to become the primary beginner-oriented entry point for v5 experiments when its materials are implemented and validated. Existing `gosh_sample/` workflows remain available as implementation references; this plan does not remove or reorganize them.
 
@@ -49,11 +49,11 @@ The tutorial README should explain the reproducible workflow without duplicating
 
 ## Tutorial 02: four-experiment specification
 
-Tutorial 02 specifies a 2000–2003 Mekong simulation with annual Restart handoffs, NetCDF runoff/output/Restart, and four configurations: Default, No Bifurcation, Kinematic Wave, and No Floodplain. It uses GRDC locations only and includes hydrograph and annual-maximum spatial comparisons; no experiment result is claimed. The source-reviewed specification and remaining validation questions are in [`tutorial/tutorial02-mekong_netcdf_4exp/experiment_spec.md`](../tutorial/tutorial02-mekong_netcdf_4exp/experiment_spec.md). Scripts, four-year execution, figures, package changes, and tutorial authoring remain future work.
+Tutorial 02 specifies a 2000–2003 Mekong simulation with annual Restart handoffs, NetCDF runoff/output/Restart, and four configurations: Default, No Bifurcation, Kinematic Wave, and No Floodplain. Four GRDC locations and one MRC-referenced Can Tho model location are used only for simulation-output sampling. The four-year execution, daily hydrograph comparisons, and annual-maximum spatial figures have been generated and checked; no observed discharge comparison is made. The current specification, evidence, and remaining scientific questions are in [`tutorial/tutorial02-mekong_netcdf_4exp/experiment_spec.md`](../tutorial/tutorial02-mekong_netcdf_4exp/experiment_spec.md). The beginner-facing README and package integration remain future work.
 
 ## Repository and beginner-package policy
 
-The GitHub repository is for development and should retain the complete validated experiment implementation. For Tutorial 02 this is planned to include `mek_default.sh`, `mek_nobif.sh`, `mek_kine.sh`, `mek_nofld.sh`, its experiment specification and tutorial README, visualization tools, and verified reference figures. Generated simulation outputs, Restart files, and run logs are not to be tracked.
+The GitHub repository is for development and should retain the complete validated experiment implementation. Tutorial 02 now has `mek_default.sh`, `mek_nobif.sh`, `mek_kine.sh`, `mek_nofld.sh`, its experiment specification, visualization tools, and verified reference figures. The beginner README is still pending. Generated simulation outputs, Restart files, and run logs are not to be tracked.
 
 The downloadable beginner package has a different teaching purpose. Its planned Tutorial 02 contents include the tutorial documentation, visualization tools, verified reference figures, and only `mek_default.sh`. Users will practice creating the No Bifurcation, Kinematic Wave, and No Floodplain scripts by copying and editing the Default configuration. Those three scripts remain in GitHub and are excluded during package assembly, rather than deleted from the repository. Packaging behavior has not been implemented by this plan.
 
@@ -69,8 +69,8 @@ These are goals of the proposed framework, not demonstrated outcomes.
 
 ## Open design questions and next steps
 
-- Review the remaining Tutorial 02 scientific choices and validate the four-experiment design's numerical settings before authorizing implementation and full execution.
+- Review the executed Tutorial 02 station interpretation, spin-up implications, and the observed Prek Kdam/Can Tho behavior before writing the beginner-facing README.
 - Define a maintainable way to capture representative terminal evidence and regenerate figures while keeping generated outputs out of Git.
 - Determine how the beginner distribution assembly will select Tutorial 02 files and verify that the three variant scripts are omitted from the package.
 
-The Tutorial 02 design has been revised after interactive researcher review of source and dataset findings. The specification distinguishes maintainer-approved experiment settings from source-verified constraints, remaining scientific questions, and execution requirements. It is approved as a design record only; no scripts or simulation results are claimed.
+The Tutorial 02 design was revised after interactive researcher review of source and dataset findings, then implemented and executed in four yearly experiments. The specification distinguishes approved settings, verified source/data contracts, actual runtime observations, and unresolved interpretation questions. Results are operationally checked but are not observation-validated. The next stage is maintainer review and beginner-facing tutorial authoring.
