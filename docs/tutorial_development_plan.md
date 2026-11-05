@@ -24,13 +24,16 @@ The tutorial is the human-facing account of an implemented and validated experim
 
 ## Planned workflow
 
-1. Draft an experiment specification with the researcher and an AI assistant; label it as provisional.
-2. Inspect source code, namelist handling, data, and existing workflows. Resolve technical facts from evidence and list unresolved scientific choices for the researcher.
-3. Revise the specification into a technically grounded English document. Keep unresolved design decisions explicit.
-4. Implement the experiment scripts and any in-scope support changes under a separately approved task.
-5. Run the experiments and validate the requested outputs and comparisons. Record exact commands, environment, and observed results; distinguish execution success from scientific interpretation.
-6. Use the common authoring guide to write the tutorial from the verified implementation and evidence.
-7. Check consistency among specification, scripts, actual data and outputs, tutorial commands, figures, and package contents. Regeneration requires revalidation; old logs or figures must not be presented as current evidence without checking them again.
+1. **Researcher–AI experiment design:** Discuss the scientific objective and prepare a provisional experiment-specification draft.
+2. **AI source and data investigation:** Inspect model code, namelists, datasets, and existing workflows to establish technical facts and constraints.
+3. **Interactive scientific review:** Present confirmed facts, incompatibilities, feasible configurations, and unresolved scientific choices to the researcher. The researcher makes the scientific decisions, with further discussion as needed.
+4. **Specification revision and approval:** Incorporate those decisions into the version-controlled specification. Repeat investigation and review until the researcher approves a scientifically meaningful and technically feasible design. Source-code investigation alone is not design approval.
+5. **Experiment implementation:** Develop scripts and in-scope support tools from the approved specification under a separately approved task.
+6. **Execution and scientific verification:** Run the experiments, check technical behavior, and produce comparisons from actual outputs. Record commands, environment, and observations; the researcher reviews important scientific interpretations.
+7. **Tutorial generation:** Use the approved specification, validated implementation, execution evidence, and common authoring guide to write the human-facing tutorial.
+8. **Final consistency review:** Check the scientific objectives, specification, scripts, data, outputs, figures, tutorial, and package contents together.
+
+Execution results may expose technical or scientific issues and return the work to interactive review and specification revision. The specification is an evolving design record, not a one-pass translation into settings. An AI must not finalize a scientific design solely because it has found a technically valid configuration.
 
 Experiment design, implementation and validation, and tutorial writing are separate stages. Findings from source inspection may revise the specification before implementation. A tutorial may describe only operations and results that were actually checked.
 
@@ -44,15 +47,15 @@ As appropriate to an experiment, guide users through inspecting the tutorial and
 
 The tutorial README should explain the reproducible workflow without duplicating detailed source-code documentation. Experiment-specific scientific rationale belongs in its specification and interpretation section; common authoring requirements belong in the shared guide.
 
-## Tutorial 02: source-reviewed specification
+## Tutorial 02: four-experiment specification
 
-Tutorial 02 specifies a 2000–2003 Mekong simulation with annual Restart handoffs, NetCDF runoff/output/Restart, and local-inertial, Kinematic Wave, and No Floodplain configurations. It uses GRDC locations only and includes a proposed spin-up visualization; it claims no experiment result. The source-reviewed specification and remaining design/data questions are in [`tutorial/tutorial02-mekong_netcdf_3exp/experiment_spec.md`](../tutorial/tutorial02-mekong_netcdf_3exp/experiment_spec.md). Scripts, four-year execution, figures, package changes, and tutorial authoring remain separate future work.
+Tutorial 02 specifies a 2000–2003 Mekong simulation with annual Restart handoffs, NetCDF runoff/output/Restart, and four configurations: Default, No Bifurcation, Kinematic Wave, and No Floodplain. It uses GRDC locations only and includes hydrograph and annual-maximum spatial comparisons; no experiment result is claimed. The source-reviewed specification and remaining validation questions are in [`tutorial/tutorial02-mekong_netcdf_4exp/experiment_spec.md`](../tutorial/tutorial02-mekong_netcdf_4exp/experiment_spec.md). Scripts, four-year execution, figures, package changes, and tutorial authoring remain future work.
 
 ## Repository and beginner-package policy
 
-The GitHub repository is for development and should retain the complete validated experiment implementation. For Tutorial 02 this is planned to include `mek_default.sh`, `mek_kine.sh`, `mek_nofld.sh`, its experiment specification and tutorial README, a visualization script, and verified reference figures. Generated simulation outputs, Restart files, and run logs are not to be tracked.
+The GitHub repository is for development and should retain the complete validated experiment implementation. For Tutorial 02 this is planned to include `mek_default.sh`, `mek_nobif.sh`, `mek_kine.sh`, `mek_nofld.sh`, its experiment specification and tutorial README, visualization tools, and verified reference figures. Generated simulation outputs, Restart files, and run logs are not to be tracked.
 
-The downloadable beginner package has a different teaching purpose. Its planned Tutorial 02 contents include the tutorial documentation, visualization script, verified reference figures, and only the default GOSH experiment script. Users will practice creating the Kinematic Wave and No Floodplain scripts by copying and editing the default. The two additional scripts remain in GitHub and are excluded during package assembly, rather than deleted from the repository. Packaging behavior has not been implemented by this plan.
+The downloadable beginner package has a different teaching purpose. Its planned Tutorial 02 contents include the tutorial documentation, visualization tools, verified reference figures, and only `mek_default.sh`. Users will practice creating the No Bifurcation, Kinematic Wave, and No Floodplain scripts by copying and editing the Default configuration. Those three scripts remain in GitHub and are excluded during package assembly, rather than deleted from the repository. Packaging behavior has not been implemented by this plan.
 
 ## Long-term goals
 
@@ -66,9 +69,8 @@ These are goals of the proposed framework, not demonstrated outcomes.
 
 ## Open design questions and next steps
 
-- Decide where per-tutorial experiment specifications and the common authoring guide will live, and how their filenames and revision history will be organized.
-- Resolve the open Tutorial 02 comparison and reproducibility decisions recorded in its specification, then authorize implementation and full execution validation as a separate stage.
+- Review the remaining Tutorial 02 scientific choices and validate the four-experiment design's numerical settings before authorizing implementation and full execution.
 - Define a maintainable way to capture representative terminal evidence and regenerate figures while keeping generated outputs out of Git.
-- Determine how the beginner distribution assembly will select Tutorial 02 files and verify that the two editing exercises are omitted from the package.
+- Determine how the beginner distribution assembly will select Tutorial 02 files and verify that the three variant scripts are omitted from the package.
 
-The Tutorial 02 outline has been checked against `src_main/`, the available map/runoff metadata, and current sample scripts. The specification records source-verified behavior separately from maintainer decisions, local-only data availability, and execution requirements. Do not treat the specification as evidence that its settings have been approved for implementation or that the experiment has been run.
+The Tutorial 02 design has been revised after interactive researcher review of source and dataset findings. The specification distinguishes maintainer-approved experiment settings from source-verified constraints, remaining scientific questions, and execution requirements. It is approved as a design record only; no scripts or simulation results are claimed.
