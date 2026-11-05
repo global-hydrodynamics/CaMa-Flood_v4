@@ -20,9 +20,11 @@ The existing source and maintainer-confirmed decisions are the authority for beh
 **Procedure conventions:**
 
 - Principal procedures called by a driver or another model module use the `CMF_` prefix. This distinguishes model entry points and reduces name collisions when CaMa-Flood is coupled to another model such as IFS.
-- Generic utilities placed at module scope for reuse across procedures use a module-specific functional prefix followed by `_UTIL_`, such as `MAP_UTIL_*`, `FORCING_UTIL_*`, or `OUTPUT_UTIL_*`. Utilities may provide shared I/O, input checks, error reporting, and data conversion.
-- Procedures specific to one principal procedure may be internal under that procedure's `CONTAINS`; they do not require `CMF_` or `_UTIL_` prefixes.
-- Consider responsibility, current callers, and plausible reuse when choosing scope. Prefer a module-level utility for shared work and a procedure-local helper for work owned by one procedure.
+- Module-level implementation utilities use a module-specific functional prefix followed by `_UTIL_`, such as `MAP_UTIL_*`, `FORCING_UTIL_*`, or `OUTPUT_UTIL_*`. Utilities may provide I/O, input checks, error reporting, and data conversion; a utility need not have multiple callers.
+- In new or substantially refactored modules, place the principal `CMF_*` procedures first so their workflow is visible before implementation details. Group module-level implementation utilities below the principal procedures.
+- Mark implementation utilities `PRIVATE` where this preserves existing interfaces. Identify supported public interfaces explicitly where practical; preserve established public procedures, generics, and data contracts unless a separate change is approved.
+- These are recommendations for new or substantially refactored v5 modules, not requirements imposed retroactively on legacy code or external contributions.
+- Internal procedures may still be used when their scope and host association are beneficial. Moving a helper to module scope requires its former host-associated inputs to be passed explicitly; do not promote temporaries to module state.
 - Put new procedures in the module that owns their responsibility unless a substantive reason supports a different location. Avoid creating modules solely to wrap a small utility.
 - Do not rename established procedures just to enforce a naming convention. Apply naming conventions to new code and focused module refactors while preserving public interfaces.
 - `USE MODULE, ONLY: ...` is common and is preferred for new dependencies when practical. Preserve existing imports and their build guards during unrelated edits.

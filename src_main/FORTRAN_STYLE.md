@@ -68,9 +68,10 @@ Use blank lines to separate logically distinct statement groups when a numbered 
 
 For new or substantially updated modules, document the source hierarchy as follows:
 
-- Immediately after module-level `CONTAINS`, list principal `CMF_` procedures with one-line purposes. If module-level shared utilities are present, list them separately under a clear label.
+- Immediately after module-level `CONTAINS`, list principal `CMF_` procedures with one-line purposes. In new or substantially refactored modules, place these procedures first and group module-level implementation utilities below them under a separate label. Use the module-specific `*_UTIL_*` prefix for those utilities; they need not have multiple callers.
+- Prefer `PRIVATE` for implementation utilities when existing public interfaces remain intact. Explicitly identify public interfaces where practical, and preserve established interfaces during structural refactoring.
 - Immediately after a principal procedure declaration, give its one-line purpose. If it has internal procedures, list them in source order with one-line purposes.
-- Immediately after that procedure's internal `CONTAINS`, repeat the same internal-procedure list; the two lists must match.
+- Immediately after that procedure's internal `CONTAINS`, repeat the same internal-procedure list; the two lists must match. This rule applies to internal helpers; module-level utilities instead belong in the module inventory.
 - Put a concise purpose comment immediately after each internal procedure declaration. List only procedures actually defined in that scope; identify compile-time-conditional procedures where useful.
 - Keep summaries focused on responsibility and data flow. The scientific meaning of the procedure belongs to the design guidance in `FORTRAN_DESIGN.md`.
 - When editing an existing module, update affected lists and summaries without imposing this structure on unrelated files or renaming procedures.
