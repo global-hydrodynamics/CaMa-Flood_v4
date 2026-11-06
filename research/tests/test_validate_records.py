@@ -31,7 +31,7 @@ class ResearchValidatorTests(unittest.TestCase):
                         "Focused fixture", "validated", "contemporaneous", "", missing, "", "public_summary",
                     ])
 
-            _, errors = validate_records(research)
+            _, errors, _ = validate_records(research)
             self.assertTrue(any("VR-0099" in error for error in errors))
             self.assertTrue(any("VR-0100" in error for error in errors))
 
@@ -57,7 +57,7 @@ class ResearchValidatorTests(unittest.TestCase):
                     "pending", "restricted",
                 ])
 
-            _, errors = validate_records(research)
+            _, errors, _ = validate_records(research)
             self.assertEqual(errors, [])
 
     def test_reports_csv_width_and_duplicate_global_adr_ids(self) -> None:
@@ -70,7 +70,7 @@ class ResearchValidatorTests(unittest.TestCase):
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(f"# ADR-0001: {title}\n", encoding="utf-8")
 
-            _, errors = validate_records(research)
+            _, errors, _ = validate_records(research)
             self.assertTrue(any("expected 13 columns, found 2" in error for error in errors))
             self.assertTrue(any("duplicate decision ID ADR-0001" in error for error in errors))
 
@@ -119,7 +119,7 @@ class ResearchValidatorTests(unittest.TestCase):
                     "EV-0001 summary; no original validation data", "Original validation record missing; inference only",
                 ])
 
-            tables, errors = validate_records(research)
+            tables, errors, _ = validate_records(research)
             self.assertEqual(errors, [])
             self.assertNotIn("VR-0009", {row["validation_id"] for row in tables["validation_runs.csv"]})
 
@@ -137,8 +137,39 @@ class ResearchValidatorTests(unittest.TestCase):
                     "basis", "Original validation record missing; inference only",
                 ])
 
-            _, errors = validate_records(research)
+            _, errors, _ = validate_records(research)
             self.assertTrue(any("also exists as a validation record" in error for error in errors))
+
+    def test_malformed_target_table_skips_dependent_refs_but_runs_other_checks(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            research = write_tables(Path(temporary))
+            event_path = research / "events.csv"
+            columns = SCHEMAS["events.csv"]
+            event_path.write_text(",".join(columns[:-1]) + "\n", encoding="utf-8")
+            with (research / "validation_runs.csv").open("a", newline="", encoding="utf-8") as stream:
+                csv.writer(stream).writerow([
+                    "VR-0001", "EV-9999", "", "commit", "", "test command", "", "", "", "",
+                    "not-a-result", "", "", "", "", "", "",
+                ])
+
+            _, errors, skipped = validate_records(research)
+            self.assertTrue(any("invalid result 'not-a-result'" in error for error in errors))
+            self.assertFalse(any("unknown ID 'EV-9999'" in error for error in errors))
+            self.assertTrue(any("events.csv is structurally invalid" in item for item in skipped))
+
+    def test_overlong_row_still_checks_recoverable_reference_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            research = write_tables(Path(temporary))
+            row = [
+                "DT-0001", "Fixture task", "branch", "owner", "EV-9999", "commit", "", "",
+                "Codex", "", "Task", "", "", "", "", "", "", "", "", "", "", "", "extra",
+            ]
+            with (research / "development_tasks.csv").open("a", newline="", encoding="utf-8") as stream:
+                csv.writer(stream).writerow(row)
+
+            _, errors, _ = validate_records(research)
+            self.assertTrue(any("expected 22 columns, found 23" in error for error in errors))
+            self.assertTrue(any("start_event_id references unknown ID 'EV-9999'" in error for error in errors))
 
 
 if __name__ == "__main__":

@@ -29,31 +29,41 @@ ID_COLUMNS = {
     "legacy_validation_refs.csv": ("legacy_validation_id", "VR"),
 }
 
-def load_table(filename: str, root: Path, errors: list[str]) -> list[dict[str, str]]:
-    """Read one fixed-schema CSV and collect, rather than short-circuit, errors."""
+def load_table(filename: str, root: Path, errors: list[str], unavailable: set[str]) -> list[dict[str, str]]:
+    """Read one CSV, retaining usable columns so independent checks can continue."""
     path = root / filename
+    rows: list[dict[str, str]] = []
     if not path.is_file():
         errors.append(f"{filename}: missing file")
+        unavailable.add(filename)
         return []
     try:
         with path.open(newline="", encoding="utf-8-sig") as stream:
             reader = csv.reader(stream)
             header = next(reader, None)
-            if header != SCHEMAS[filename]:
+            expected = SCHEMAS[filename]
+            if header != expected:
                 errors.append(f"{filename}: expected header {SCHEMAS[filename]!r}; got {header!r}")
+            if header is None or any(header.count(column) != 1 for column in expected):
+                unavailable.add(filename)
                 return []
-            rows: list[dict[str, str]] = []
+            column_index = {
+                column: header.index(column) if column in header else -1
+                for column in expected
+            }
             id_col, prefix = ID_COLUMNS[filename]
             seen: set[str] = set()
             for row in reader:
                 lineno = reader.line_num
                 if len(row) != len(header):
-                    errors.append(f"{filename}:{lineno}: expected {len(header)} columns, found {len(row)}")
-                    if len(row) < len(header):
-                        row.extend([""] * (len(header) - len(row)))
-                    else:
-                        continue
-                item = dict(zip(header, row))
+                    errors.append(f"{filename}:{lineno}: expected {len(expected)} columns, found {len(row)}")
+                    unavailable.add(filename)
+                # Keep the known fields from overlong rows; ignoring such rows hid
+                # references and local errors that were still recoverable.
+                item = {
+                    column: row[index] if 0 <= index < len(row) else ""
+                    for column, index in column_index.items()
+                }
                 record_id = item[id_col]
                 if not re.fullmatch(rf"{prefix}-[0-9]{{4}}", record_id):
                     errors.append(f"{filename}:{lineno}: invalid {id_col} {record_id!r}")
@@ -63,7 +73,8 @@ def load_table(filename: str, root: Path, errors: list[str]) -> list[dict[str, s
                 rows.append(item)
     except (OSError, UnicodeError, csv.Error) as exc:
         errors.append(f"{filename}: cannot read CSV: {exc}")
-        return []
+        unavailable.add(filename)
+        return rows
     return rows
 
 def validate_timestamp(row: dict[str, str], lineno: int, errors: list[str]) -> None:
@@ -94,10 +105,12 @@ def check_refs(rows: list[dict[str, str]], field: str, valid: set[str], filename
             if reference not in valid:
                 errors.append(f"{filename}:{lineno}: {field} references unknown ID {reference!r}")
 
-def validate_records(root: Path = ROOT) -> tuple[dict[str, list[dict[str, str]]], list[str]]:
-    """Return parsed tables and every structural/reference error; never modify files."""
+def validate_records(root: Path = ROOT) -> tuple[dict[str, list[dict[str, str]]], list[str], list[str]]:
+    """Return parsed tables, all identifiable errors, and checks skipped on bad inputs."""
     errors: list[str] = []
-    tables = {name: load_table(name, root, errors) for name in SCHEMAS}
+    skipped: list[str] = []
+    unavailable: set[str] = set()
+    tables = {name: load_table(name, root, errors, unavailable) for name in SCHEMAS}
     event_ids = {row["event_id"] for row in tables["events.csv"]}
     task_ids = {row["task_id"] for row in tables["development_tasks.csv"]}
     validation_ids = {row["validation_id"] for row in tables["validation_runs.csv"]}
@@ -184,11 +197,11 @@ def validate_records(root: Path = ROOT) -> tuple[dict[str, list[dict[str, str]]]
             errors.append(f"events.csv:{lineno}: unknown evidence_class {row['evidence_class']!r}")
         if row["privacy_status"] not in {"public_summary", "restricted_reference", "unavailable"}:
             errors.append(f"events.csv:{lineno}: unknown privacy_status {row['privacy_status']!r}")
-        if row["task_id"] and row["task_id"] not in task_ids:
-            errors.append(f"events.csv:{lineno}: unknown task_id {row['task_id']!r}")
-        for record_id in (item.strip() for item in row["record_refs"].split(";") if item.strip()):
-            if record_id not in record_ids:
-                errors.append(f"events.csv:{lineno}: record_refs references unknown ID {record_id!r}")
+        if row["task_id"]:
+            if "development_tasks.csv" in unavailable:
+                skipped.append("events.csv.task_id -> development_tasks.csv is structurally invalid; reference check not reliable")
+            elif row["task_id"] not in task_ids:
+                errors.append(f"events.csv:{lineno}: unknown task_id {row['task_id']!r}")
 
     for lineno, row in enumerate(tables["discussions.csv"], start=2):
         summary_path = root.parent / row["summary_path"]
@@ -199,6 +212,8 @@ def validate_records(root: Path = ROOT) -> tuple[dict[str, list[dict[str, str]]]
         ("knowledge_gaps.csv", tables["knowledge_gaps.csv"], "gap_id", "knowledge_gaps", "KG"),
         ("human_interventions.csv", tables["human_interventions.csv"], "intervention_id", "human_interventions", "HI"),
     ):
+        if filename in unavailable:
+            continue
         indexed = {row[id_col] for row in rows}
         detail = {path.stem for path in (record_dir / directory).glob(prefix + "-*.md")}
         for record_id in sorted(indexed - detail):
@@ -212,7 +227,7 @@ def validate_records(root: Path = ROOT) -> tuple[dict[str, list[dict[str, str]]]
 
     for row in legacy_validation_rows:
         legacy_id = row["legacy_validation_id"]
-        if legacy_id in validation_ids or legacy_id in detail_ids:
+        if ("validation_runs.csv" not in unavailable and legacy_id in validation_ids) or legacy_id in detail_ids:
             errors.append(f"legacy_validation_refs.csv: {legacy_id} also exists as a validation record")
         if row["confidence"] not in {"high", "medium", "low"}:
             errors.append(f"legacy_validation_refs.csv: {legacy_id} has invalid confidence {row['confidence']!r}")
@@ -220,23 +235,43 @@ def validate_records(root: Path = ROOT) -> tuple[dict[str, list[dict[str, str]]]
             errors.append(f"legacy_validation_refs.csv: {legacy_id} must be explicitly marked inference-only")
         if not row["likely_scope"] or not row["likely_outcome"] or not row["evidence_basis"]:
             errors.append(f"legacy_validation_refs.csv: {legacy_id} requires scope, outcome, and evidence basis")
-        if row["candidate_validation_id"] and row["candidate_validation_id"] not in validation_ids:
+        if (row["candidate_validation_id"] and "validation_runs.csv" not in unavailable
+                and row["candidate_validation_id"] not in validation_ids):
             errors.append(f"legacy_validation_refs.csv: {legacy_id} candidate_validation_id is not an existing validation")
+    if "validation_runs.csv" in unavailable and legacy_validation_rows:
+        skipped.append("legacy_validation_refs.csv validation-ID checks -> validation_runs.csv is structurally invalid")
 
-    check_refs(tables["development_tasks.csv"], "start_event_id", event_ids, "development_tasks.csv", errors)
-    check_refs(tables["development_tasks.csv"], "end_event_id", event_ids, "development_tasks.csv", errors)
-    check_refs(tables["discussions.csv"], "event_id", event_ids, "discussions.csv", errors, required=True, many=True)
-    check_refs(tables["knowledge_gaps.csv"], "event_id", event_ids, "knowledge_gaps.csv", errors, required=True, many=True)
-    check_refs(tables["human_interventions.csv"], "event_id", event_ids, "human_interventions.csv", errors, required=True)
-    check_refs(tables["human_interventions.csv"], "task_id", task_ids, "human_interventions.csv", errors)
-    check_refs(tables["validation_runs.csv"], "event_id", event_ids, "validation_runs.csv", errors, required=True)
-    check_refs(tables["validation_runs.csv"], "task_id", task_ids, "validation_runs.csv", errors)
-    check_refs(legacy_validation_rows, "event_id", event_ids, "legacy_validation_refs.csv", errors, required=True)
-    check_refs(legacy_validation_rows, "task_id", task_ids, "legacy_validation_refs.csv", errors, required=True)
-    check_refs(
-        tables["development_tasks.csv"], "validation_ids", validation_ids | detail_ids | legacy_validation_ids,
-        "development_tasks.csv", errors, many=True,
-    )
+    def refs(source: str, field: str, target: str, valid: set[str], *, required: bool = False,
+             many: bool = False) -> None:
+        if target in unavailable:
+            skipped.append(f"{source}.{field} -> {target} is structurally invalid; reference check not reliable")
+            return
+        check_refs(tables[source], field, valid, source, errors, required=required, many=many)
+
+    refs("development_tasks.csv", "start_event_id", "events.csv", event_ids)
+    refs("development_tasks.csv", "end_event_id", "events.csv", event_ids)
+    refs("discussions.csv", "event_id", "events.csv", event_ids, required=True, many=True)
+    refs("knowledge_gaps.csv", "event_id", "events.csv", event_ids, required=True, many=True)
+    refs("human_interventions.csv", "event_id", "events.csv", event_ids, required=True)
+    refs("human_interventions.csv", "task_id", "development_tasks.csv", task_ids)
+    refs("validation_runs.csv", "event_id", "events.csv", event_ids, required=True)
+    refs("validation_runs.csv", "task_id", "development_tasks.csv", task_ids)
+    refs("legacy_validation_refs.csv", "event_id", "events.csv", event_ids, required=True)
+    refs("legacy_validation_refs.csv", "task_id", "development_tasks.csv", task_ids, required=True)
+    if {"validation_runs.csv", "legacy_validation_refs.csv"} & unavailable:
+        skipped.append("development_tasks.csv.validation_ids -> validation records are structurally invalid; reference check not reliable")
+    else:
+        check_refs(
+            tables["development_tasks.csv"], "validation_ids", validation_ids | detail_ids | legacy_validation_ids,
+            "development_tasks.csv", errors, many=True,
+        )
+    if any(name in unavailable for name in SCHEMAS):
+        skipped.append("events.csv.record_refs -> one or more record indexes are structurally invalid; reference check not reliable")
+    else:
+        for lineno, row in enumerate(tables["events.csv"], start=2):
+            for record_id in (item.strip() for item in row["record_refs"].split(";") if item.strip()):
+                if record_id not in record_ids:
+                    errors.append(f"events.csv:{lineno}: record_refs references unknown ID {record_id!r}")
 
     # Verify root-relative paths in structured path fields and local Markdown links.
     for filename, field in (("knowledge_gaps.csv", "record_path"), ("human_interventions.csv", "record_path")):
@@ -260,7 +295,17 @@ def validate_records(root: Path = ROOT) -> tuple[dict[str, list[dict[str, str]]]
                 line = content.count("\n", 0, match.start()) + 1
                 errors.append(f"{markdown.relative_to(root)}:{line}: broken local link {target!r}")
 
-    return tables, errors
+    # Skip index/detail comparisons only where the corresponding index could not
+    # be trusted. Independent detail-file and Markdown-link checks still ran.
+    for filename, directory in (
+        ("discussions.csv", "discussions"),
+        ("knowledge_gaps.csv", "knowledge_gaps"),
+        ("human_interventions.csv", "human_interventions"),
+    ):
+        if filename in unavailable:
+            skipped.append(f"{filename} <-> records/{directory}/ index/detail check not reliable")
+
+    return tables, errors, sorted(set(skipped))
 
 
 def next_identifiers(tables: dict[str, list[dict[str, str]]], root: Path = ROOT) -> dict[str, str]:
@@ -293,13 +338,17 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Read-only research record consistency checks.")
     parser.add_argument("--next-ids", action="store_true", help="print the next unused ID for each record type")
     args = parser.parse_args()
-    tables, errors = validate_records()
+    tables, errors, skipped = validate_records()
     if errors:
         print(f"Research record validation found {len(errors)} error(s):", file=sys.stderr)
         for message in errors:
             print(f"ERROR: {message}", file=sys.stderr)
-        if not args.next_ids:
-            raise SystemExit(1)
+    if skipped:
+        print(f"Research record validation skipped {len(skipped)} dependent check(s):", file=sys.stderr)
+        for message in sorted(set(skipped)):
+            print(f"SKIPPED: {message}", file=sys.stderr)
+    if (errors or skipped) and not args.next_ids:
+        raise SystemExit(1)
 
     if args.next_ids:
         print("Next unused IDs (suggestions only; not reserved):")
