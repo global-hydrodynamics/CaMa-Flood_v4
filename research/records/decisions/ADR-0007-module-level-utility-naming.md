@@ -1,4 +1,4 @@
-# ADR-0003: Name module-level shared utilities with a module-specific prefix
+# ADR-0007: Name module-level shared utilities with a module-specific prefix
 
 - Status: accepted and implemented
 - Date: 2026-11-03

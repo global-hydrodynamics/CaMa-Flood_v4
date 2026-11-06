@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import argparse
 import re
 import sys
 from datetime import date, datetime
@@ -26,31 +27,44 @@ ID_COLUMNS = {
     "validation_runs.csv": ("validation_id", "VR"),
 }
 
-def fail(message: str) -> None:
-    print(f"ERROR: {message}", file=sys.stderr)
-    raise SystemExit(1)
-
-def load_table(filename: str) -> list[dict[str, str]]:
-    path = ROOT / filename
+def load_table(filename: str, root: Path, errors: list[str]) -> list[dict[str, str]]:
+    """Read one fixed-schema CSV and collect, rather than short-circuit, errors."""
+    path = root / filename
     if not path.is_file():
-        fail(f"missing {path.relative_to(ROOT)}")
-    with path.open(newline="", encoding="utf-8") as stream:
-        reader = csv.DictReader(stream)
-        if reader.fieldnames != SCHEMAS[filename]:
-            fail(f"{filename}: expected header {SCHEMAS[filename]!r}; got {reader.fieldnames!r}")
-        rows = list(reader)
-    id_col, prefix = ID_COLUMNS[filename]
-    seen: set[str] = set()
-    for lineno, row in enumerate(rows, start=2):
-        record_id = row.get(id_col, "")
-        if not re.fullmatch(rf"{prefix}-[0-9]{{4}}", record_id):
-            fail(f"{filename}:{lineno}: invalid {id_col} {record_id!r}")
-        if record_id in seen:
-            fail(f"{filename}:{lineno}: duplicate {record_id}")
-        seen.add(record_id)
+        errors.append(f"{filename}: missing file")
+        return []
+    try:
+        with path.open(newline="", encoding="utf-8-sig") as stream:
+            reader = csv.reader(stream)
+            header = next(reader, None)
+            if header != SCHEMAS[filename]:
+                errors.append(f"{filename}: expected header {SCHEMAS[filename]!r}; got {header!r}")
+                return []
+            rows: list[dict[str, str]] = []
+            id_col, prefix = ID_COLUMNS[filename]
+            seen: set[str] = set()
+            for row in reader:
+                lineno = reader.line_num
+                if len(row) != len(header):
+                    errors.append(f"{filename}:{lineno}: expected {len(header)} columns, found {len(row)}")
+                    if len(row) < len(header):
+                        row.extend([""] * (len(header) - len(row)))
+                    else:
+                        continue
+                item = dict(zip(header, row))
+                record_id = item[id_col]
+                if not re.fullmatch(rf"{prefix}-[0-9]{{4}}", record_id):
+                    errors.append(f"{filename}:{lineno}: invalid {id_col} {record_id!r}")
+                elif record_id in seen:
+                    errors.append(f"{filename}:{lineno}: duplicate {record_id}")
+                seen.add(record_id)
+                rows.append(item)
+    except (OSError, UnicodeError, csv.Error) as exc:
+        errors.append(f"{filename}: cannot read CSV: {exc}")
+        return []
     return rows
 
-def validate_timestamp(row: dict[str, str], lineno: int) -> None:
+def validate_timestamp(row: dict[str, str], lineno: int, errors: list[str]) -> None:
     value, precision = row["timestamp"], row["timestamp_precision"]
     try:
         if precision == "date":
@@ -58,44 +72,92 @@ def validate_timestamp(row: dict[str, str], lineno: int) -> None:
         elif precision in {"minute", "second"}:
             parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
             if parsed.tzinfo is None or parsed.utcoffset() is None:
-                fail(f"events.csv:{lineno}: datetime must include a timezone offset")
+                errors.append(f"events.csv:{lineno}: datetime must include a timezone offset")
+                return
             if precision == "minute" and parsed.second != 0:
-                fail(f"events.csv:{lineno}: minute precision cannot include nonzero seconds")
+                errors.append(f"events.csv:{lineno}: minute precision cannot include nonzero seconds")
         else:
-            fail(f"events.csv:{lineno}: timestamp_precision must be date, minute, or second")
+            errors.append(f"events.csv:{lineno}: timestamp_precision must be date, minute, or second")
     except ValueError as exc:
-        fail(f"events.csv:{lineno}: invalid ISO 8601 timestamp {value!r}: {exc}")
+        errors.append(f"events.csv:{lineno}: invalid ISO 8601 timestamp {value!r}: {exc}")
 
-def check_refs(rows: list[dict[str, str]], field: str, valid: set[str], filename: str, required: bool = False, many: bool = False) -> None:
+def check_refs(rows: list[dict[str, str]], field: str, valid: set[str], filename: str,
+               errors: list[str], required: bool = False, many: bool = False) -> None:
     for lineno, row in enumerate(rows, start=2):
         value = row.get(field, "")
         if required and not value:
-            fail(f"{filename}:{lineno}: {field} is required")
+            errors.append(f"{filename}:{lineno}: {field} is required")
         refs = [item.strip() for item in value.split(";") if item.strip()] if many else ([value] if value else [])
         for reference in refs:
             if reference not in valid:
-                fail(f"{filename}:{lineno}: {field} references unknown ID {reference!r}")
+                errors.append(f"{filename}:{lineno}: {field} references unknown ID {reference!r}")
 
-def main() -> None:
-    tables = {name: load_table(name) for name in SCHEMAS}
+def validate_records(root: Path = ROOT) -> tuple[dict[str, list[dict[str, str]]], list[str]]:
+    """Return parsed tables and every structural/reference error; never modify files."""
+    errors: list[str] = []
+    tables = {name: load_table(name, root, errors) for name in SCHEMAS}
     event_ids = {row["event_id"] for row in tables["events.csv"]}
     task_ids = {row["task_id"] for row in tables["development_tasks.csv"]}
     validation_ids = {row["validation_id"] for row in tables["validation_runs.csv"]}
     discussion_ids = {row["discussion_id"] for row in tables["discussions.csv"]}
     gap_ids = {row["gap_id"] for row in tables["knowledge_gaps.csv"]}
     intervention_ids = {row["intervention_id"] for row in tables["human_interventions.csv"]}
-    decision_ids = {path.stem for path in (ROOT / "decisions").glob("ADR-*.md")}
-    # Detailed Markdown records are valid references even when they have no CSV index row.
-    detail_record_ids = {
-        path.stem
-        for directory, pattern in (
-            ("discussions", "DR-*.md"),
-            ("knowledge_gaps", "KG-*.md"),
-            ("human_interventions", "HI-*.md"),
-            ("validation_runs", "VR-*.md"),
-        )
-        for path in (ROOT / "records" / directory).glob(pattern)
+    record_dir = root / "records"
+    detail_paths = {
+        "DR": sorted((record_dir / "discussions").glob("DR-*.md")),
+        "KG": sorted((record_dir / "knowledge_gaps").glob("KG-*.md")),
+        "HI": sorted((record_dir / "human_interventions").glob("HI-*.md")),
+        # Detailed validation reports are optional companions to validation_runs.csv.
+        "VR": sorted((record_dir / "validation_runs").glob("VR-*.md")),
     }
+    detail_record_ids = {path.stem for paths in detail_paths.values() for path in paths}
+    id_labels = {"DR": "Discussion ID", "KG": "Gap ID", "HI": "Intervention ID", "VR": "Validation ID"}
+    for prefix, paths in detail_paths.items():
+        for path in paths:
+            try:
+                content = path.read_text(encoding="utf-8")
+            except (OSError, UnicodeError) as exc:
+                errors.append(f"{path.relative_to(root)}: cannot read detail record: {exc}")
+                continue
+            match = re.search(rf"^#\s+({prefix}-\d{{4}})\b", content, re.MULTILINE)
+            if not match:
+                label = id_labels[prefix]
+                match = re.search(rf"^-\s*{re.escape(label)}:\s*`?({prefix}-\d{{4}})\b", content, re.MULTILINE)
+            if not match:
+                errors.append(f"{path.relative_to(root)}: missing {prefix}-#### heading")
+            elif not path.stem.startswith(match.group(1)):
+                errors.append(f"{path.relative_to(root)}: filename does not match heading ID {match.group(1)}")
+    decision_paths = sorted((root / "decisions").glob("ADR-*.md")) + sorted(
+        (record_dir / "decisions").glob("ADR-*.md")
+    )
+    decision_ids: set[str] = set()
+    decision_paths_by_id: dict[str, list[Path]] = {}
+    for path in decision_paths:
+        try:
+            content = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeError) as exc:
+            errors.append(f"{path.relative_to(root)}: cannot read decision record: {exc}")
+            continue
+        match = re.search(r"^#\s+(ADR-\d{4})\b", content, re.MULTILINE)
+        if not match:
+            errors.append(f"{path.relative_to(root)}: missing ADR-#### heading")
+            continue
+        decision_id = match.group(1)
+        decision_ids.add(decision_id)
+        decision_paths_by_id.setdefault(decision_id, []).append(path)
+        if not path.stem.startswith(decision_id + "-"):
+            errors.append(f"{path.relative_to(root)}: filename does not match heading ID {decision_id}")
+    for decision_id, paths in decision_paths_by_id.items():
+        if len(paths) > 1:
+            errors.append(f"duplicate decision ID {decision_id}: " + ", ".join(str(p.relative_to(root)) for p in paths))
+
+    # Detailed Markdown records are valid references even when they have no CSV index row.
+    detail_ids = set(detail_record_ids)
+    for paths in detail_paths.values():
+        for path in paths:
+            match = re.match(r"^(DR|KG|HI|VR)-\d{4}", path.stem)
+            if match:
+                detail_ids.add(match.group(0))
     record_ids = (
         task_ids
         | validation_ids
@@ -103,43 +165,126 @@ def main() -> None:
         | gap_ids
         | intervention_ids
         | decision_ids
+        | {path.stem for path in decision_paths}
         | detail_record_ids
     )
 
     for lineno, row in enumerate(tables["events.csv"], start=2):
-        validate_timestamp(row, lineno)
-        if row["event_type"] not in {"project_authorization", "discussion", "maintainer_decision", "implementation_instruction", "implementation", "knowledge_discovery", "human_intervention", "validation", "failure", "research_milestone", "status_update"}:
-            fail(f"events.csv:{lineno}: unknown event_type {row['event_type']!r}")
-        if row["outcome_status"] not in {"proposed", "approved", "instructed", "implemented", "validated", "failed", "unresolved", "observed"}:
-            fail(f"events.csv:{lineno}: unknown outcome_status {row['outcome_status']!r}")
+        validate_timestamp(row, lineno, errors)
+        if row["event_type"] not in {"project_authorization", "discussion", "maintainer_decision", "implementation_instruction", "implementation", "knowledge_discovery", "knowledge_gap", "human_intervention", "validation", "failure", "research_milestone", "status_update"}:
+            errors.append(f"events.csv:{lineno}: unknown event_type {row['event_type']!r}")
+        if row["outcome_status"] not in {"proposed", "approved", "instructed", "implemented", "validated", "failed", "unresolved", "observed", "pass", "partial_pass", "open"}:
+            errors.append(f"events.csv:{lineno}: unknown outcome_status {row['outcome_status']!r}")
         if row["evidence_class"] not in {"contemporaneous", "retrospective", "prospective"}:
-            fail(f"events.csv:{lineno}: unknown evidence_class {row['evidence_class']!r}")
+            errors.append(f"events.csv:{lineno}: unknown evidence_class {row['evidence_class']!r}")
         if row["privacy_status"] not in {"public_summary", "restricted_reference", "unavailable"}:
-            fail(f"events.csv:{lineno}: unknown privacy_status {row['privacy_status']!r}")
+            errors.append(f"events.csv:{lineno}: unknown privacy_status {row['privacy_status']!r}")
         if row["task_id"] and row["task_id"] not in task_ids:
-            fail(f"events.csv:{lineno}: unknown task_id {row['task_id']!r}")
+            errors.append(f"events.csv:{lineno}: unknown task_id {row['task_id']!r}")
         for record_id in (item.strip() for item in row["record_refs"].split(";") if item.strip()):
             if record_id not in record_ids:
-                fail(f"events.csv:{lineno}: record_refs references unknown ID {record_id!r}")
+                errors.append(f"events.csv:{lineno}: record_refs references unknown ID {record_id!r}")
 
     for lineno, row in enumerate(tables["discussions.csv"], start=2):
-        summary_path = ROOT.parent / row["summary_path"]
+        summary_path = root.parent / row["summary_path"]
         if not summary_path.is_file():
-            fail(f"discussions.csv:{lineno}: missing summary_path {row['summary_path']!r}")
+            errors.append(f"discussions.csv:{lineno}: missing summary_path {row['summary_path']!r}")
+    for filename, rows, id_col, directory, prefix in (
+        ("discussions.csv", tables["discussions.csv"], "discussion_id", "discussions", "DR"),
+        ("knowledge_gaps.csv", tables["knowledge_gaps.csv"], "gap_id", "knowledge_gaps", "KG"),
+        ("human_interventions.csv", tables["human_interventions.csv"], "intervention_id", "human_interventions", "HI"),
+    ):
+        indexed = {row[id_col] for row in rows}
+        detail = {path.stem for path in (record_dir / directory).glob(prefix + "-*.md")}
+        for record_id in sorted(indexed - detail):
+            errors.append(f"{filename}: indexed {record_id} has no detail file in records/{directory}/")
+        for record_id in sorted(detail - indexed):
+            errors.append(f"records/{directory}/{record_id}.md: detail file is missing its {filename} row")
 
-    check_refs(tables["development_tasks.csv"], "start_event_id", event_ids, "development_tasks.csv")
-    check_refs(tables["development_tasks.csv"], "end_event_id", event_ids, "development_tasks.csv")
-    check_refs(tables["discussions.csv"], "event_id", event_ids, "discussions.csv", required=True)
-    check_refs(tables["knowledge_gaps.csv"], "event_id", event_ids, "knowledge_gaps.csv", required=True)
-    check_refs(tables["human_interventions.csv"], "event_id", event_ids, "human_interventions.csv", required=True)
-    check_refs(tables["human_interventions.csv"], "task_id", task_ids, "human_interventions.csv")
-    check_refs(tables["validation_runs.csv"], "event_id", event_ids, "validation_runs.csv", required=True)
-    check_refs(tables["validation_runs.csv"], "task_id", task_ids, "validation_runs.csv")
-    check_refs(tables["development_tasks.csv"], "validation_ids", validation_ids, "development_tasks.csv", many=True)
+    for row in tables["validation_runs.csv"]:
+        if row["result"] not in {"pass", "partial_pass", "inconclusive", "fail"}:
+            errors.append(f"validation_runs.csv: {row['validation_id']} has invalid result {row['result']!r}")
 
-    print("Research record schemas and IDs are valid.")
-    print("Rows:", ", ".join(f"{name}={len(rows)}" for name, rows in tables.items()))
-    print("Empty tables are valid for categories with no verified records; the check does not imply missing history.")
+    check_refs(tables["development_tasks.csv"], "start_event_id", event_ids, "development_tasks.csv", errors)
+    check_refs(tables["development_tasks.csv"], "end_event_id", event_ids, "development_tasks.csv", errors)
+    check_refs(tables["discussions.csv"], "event_id", event_ids, "discussions.csv", errors, required=True, many=True)
+    check_refs(tables["knowledge_gaps.csv"], "event_id", event_ids, "knowledge_gaps.csv", errors, required=True, many=True)
+    check_refs(tables["human_interventions.csv"], "event_id", event_ids, "human_interventions.csv", errors, required=True)
+    check_refs(tables["human_interventions.csv"], "task_id", task_ids, "human_interventions.csv", errors)
+    check_refs(tables["validation_runs.csv"], "event_id", event_ids, "validation_runs.csv", errors, required=True)
+    check_refs(tables["validation_runs.csv"], "task_id", task_ids, "validation_runs.csv", errors)
+    check_refs(tables["development_tasks.csv"], "validation_ids", validation_ids | detail_ids, "development_tasks.csv", errors, many=True)
+
+    # Verify root-relative paths in structured path fields and local Markdown links.
+    for filename, field in (("knowledge_gaps.csv", "record_path"), ("human_interventions.csv", "record_path")):
+        for lineno, row in enumerate(tables[filename], start=2):
+            target = root.parent / row[field]
+            if row[field] and not target.is_file():
+                errors.append(f"{filename}:{lineno}: missing {field} {row[field]!r}")
+    link_pattern = re.compile(r"!?\[[^]]*\]\((?:<([^>]+)>|([^\s)]+))(?:\s+[^)]*)?\)")
+    for markdown in sorted(root.rglob("*.md")):
+        try:
+            content = markdown.read_text(encoding="utf-8")
+        except (OSError, UnicodeError) as exc:
+            errors.append(f"{markdown.relative_to(root)}: cannot read Markdown: {exc}")
+            continue
+        for match in link_pattern.finditer(content):
+            target = (match.group(1) or match.group(2) or "").split("#", 1)[0]
+            if not target or ":" in target.split("/", 1)[0]:
+                continue
+            resolved = (markdown.parent / target).resolve()
+            if not resolved.exists():
+                line = content.count("\n", 0, match.start()) + 1
+                errors.append(f"{markdown.relative_to(root)}:{line}: broken local link {target!r}")
+
+    return tables, errors
+
+
+def next_identifiers(tables: dict[str, list[dict[str, str]]], root: Path = ROOT) -> dict[str, str]:
+    """Suggest the next unused IDs without reserving or writing them."""
+    sources = {
+        "EV": [row["event_id"] for row in tables["events.csv"]],
+        "DT": [row["task_id"] for row in tables["development_tasks.csv"]],
+        "DR": [row["discussion_id"] for row in tables["discussions.csv"]]
+        + [path.stem for path in (root / "records/discussions").glob("DR-*.md")],
+        "KG": [row["gap_id"] for row in tables["knowledge_gaps.csv"]]
+        + [path.stem for path in (root / "records/knowledge_gaps").glob("KG-*.md")],
+        "HI": [row["intervention_id"] for row in tables["human_interventions.csv"]]
+        + [path.stem for path in (root / "records/human_interventions").glob("HI-*.md")],
+        "VR": [row["validation_id"] for row in tables["validation_runs.csv"]]
+        + [path.stem for path in (root / "records/validation_runs").glob("VR-*.md")],
+        "ADR": [match.group(1) for path in list((root / "decisions").glob("ADR-*.md"))
+                + list((root / "records/decisions").glob("ADR-*.md"))
+                if (match := re.search(r"^#\s+(ADR-\d{4})\b", path.read_text(encoding="utf-8"), re.MULTILINE))],
+    }
+    result: dict[str, str] = {}
+    for prefix, values in sources.items():
+        numbers = [int(match.group(1)) for value in values
+                   if (match := re.fullmatch(rf"{prefix}-(\d{{4}})(?:-.+)?", value))]
+        result[prefix] = f"{prefix}-{max(numbers, default=0) + 1:04d}"
+    return result
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Read-only research record consistency checks.")
+    parser.add_argument("--next-ids", action="store_true", help="print the next unused ID for each record type")
+    args = parser.parse_args()
+    tables, errors = validate_records()
+    if errors:
+        print(f"Research record validation found {len(errors)} error(s):", file=sys.stderr)
+        for message in errors:
+            print(f"ERROR: {message}", file=sys.stderr)
+        if not args.next_ids:
+            raise SystemExit(1)
+
+    if args.next_ids:
+        print("Next unused IDs (suggestions only; not reserved):")
+        for record_type, value in next_identifiers(tables).items():
+            print(f"  {record_type}: {value}")
+    elif not errors:
+        print("Research record schemas, IDs, and references are valid.")
+        print("Rows:", ", ".join(f"{name}={len(rows)}" for name, rows in tables.items()))
+        print("Empty tables are valid for categories with no verified records; the check does not imply missing history.")
 
 if __name__ == "__main__":
     main()

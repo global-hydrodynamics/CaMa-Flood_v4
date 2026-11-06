@@ -1,4 +1,4 @@
-# ADR-0004: Standardize Fortran log hierarchy and diagnostic context
+# ADR-0008: Standardize Fortran log hierarchy and diagnostic context
 
 - Status: accepted and applied to `CMF_CTRL_MAPS_MOD`
 - Date: 2026-11-03

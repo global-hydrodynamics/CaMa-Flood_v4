@@ -95,3 +95,5 @@ map/tools/code/*.s
 map/tools/code/__pycache__/
 map/tools/**/__pycache__/
 map/tools/**/*.pyc
+# Verified local research backup; never commit this safety copy.
+/research_bak261106/

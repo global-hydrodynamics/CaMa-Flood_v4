@@ -1,4 +1,4 @@
-# ADR-0001: Scope individual Map input to the legacy Binary variable set
+# ADR-0005: Scope individual Map input to the legacy Binary variable set
 
 - Status: accepted
 - Date: 2026-11-03
@@ -22,7 +22,7 @@ This preserves the shared ECMWF code path and avoids inventing a new namelist pa
 
 ## Consequences and compatibility constraints
 
-- Keep the old consolidated read routines and special-variable interface separate from individual-file input. The two identified NetCDF handle lifecycle defects in the slope reads were later repaired under a separate maintainer instruction (ADR-0002); no equation, option meaning, or individual-file contract changed.
+- Keep the old consolidated read routines and special-variable interface separate from individual-file input. The two identified NetCDF handle lifecycle defects in the slope reads were later repaired under a separate maintainer instruction (ADR-0006); no equation, option meaning, or individual-file contract changed.
 - Do not add individual slope-variable readers or new file contracts in this implementation.
 - Report consolidated-mode runtime behavior as unverified until a suitable fixture is available.
 - Preserve the existing slope calculation equations.

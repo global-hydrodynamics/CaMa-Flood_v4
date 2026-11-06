@@ -1,4 +1,4 @@
-# ADR-0002: Repair legacy consolidated NetCDF slope-reader handles
+# ADR-0006: Repair legacy consolidated NetCDF slope-reader handles
 
 - Status: accepted and implemented
 - Date: 2026-11-03
@@ -25,4 +25,4 @@ Repair the handle usage without changing the scientific equations, variable mean
 - Maintainer instruction and scope: `EV-0291`.
 - Implementation: `src_main/cmf_ctrl_maps_mod.F90`, `EV-0292`.
 - Build and Mekong regression validation: `EV-0293`, `VR-0093`.
-- Related input-path boundary: `ADR-0001-map-input-path-scope.md`; open legacy coverage question: `KG-0027`.
+- Related input-path boundary: `ADR-0005-map-input-path-scope.md`; open legacy coverage question: `KG-0027`.

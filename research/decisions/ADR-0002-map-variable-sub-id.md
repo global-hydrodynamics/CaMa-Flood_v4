@@ -27,8 +27,8 @@ The registry uses `sub_id` as its second column, followed by `workflow_stage`. C
 
 ## Evidence and implementation links
 
-- Specification: [`map/map_metadata_spec.md`](../../map/map_metadata_spec.md).
-- Registry: [`map/map_variables.csv`](../../map/map_variables.csv).
+- Specification: [`map/map_metadata_spec.md`](../../variable_table/map_metadata_spec.md).
+- Registry: [`map/map_variables.csv`](../../variable_table/map_variables.csv).
 - Implementation and evidence summary: [`DR-0013`](../records/discussions/DR-0013.md); validation `VR-0031`.
 
 ## Supersedes / superseded by

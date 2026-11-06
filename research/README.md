@@ -21,13 +21,14 @@ For a substantial task, record its objective, approved scope, owner, branch, sta
 
 ## Recording workflow
 
-1. Assign the next unused stable ID. Never recycle an ID.
+1. Preview candidate IDs with `python3 research/validate_records.py --next-ids`; these are suggestions, not reservations. Check the current worktree and never recycle an ID. ADR IDs are shared across both decision-record directories.
 2. Add the event and reference IDs to `events.csv`. Use a timestamp with timezone when available; use `YYYY-MM-DD` with `timestamp_precision=date` when time is not known.
 3. Add the task or validation row where relevant and create a detailed Markdown record from its template when context, alternatives, or evidence need explanation.
 4. Separate proposals, maintainer approval, instructions, implementation, and validation. Mark evidence as contemporaneous, retrospective, or prospective.
 5. Link public evidence by URL, commit, or repository path. For a private source, store only an approved archive identifier and access classification; never commit raw transcripts, credentials, private paths, or restricted data. If the source cannot be accessed or identified, record that limitation.
 6. Have the human maintainer review AI-generated discussion summaries before treating them as research records. Do not include hidden reasoning or infer missing conversation content.
-7. Run `python3 research/validate_records.py` after editing record tables. Commit the record update with the work it documents or in a follow-up commit that points to the completed work.
+7. Keep structured indexes and detail files synchronized for discussions, knowledge gaps, and human interventions. Validation-run detail Markdown is optional; the CSV is the analysis index, and detailed reports may also stand alone as evidence.
+8. Run `python3 research/validate_records.py` after changing records. The read-only validator reports all identifiable errors in one run, checks relative Markdown links and index/detail consistency, and exits nonzero while unresolved dangling references remain. Commit the record update with the work it documents or in a follow-up commit that points to the completed work.
 
 ## Proactive knowledge-gap review
 
