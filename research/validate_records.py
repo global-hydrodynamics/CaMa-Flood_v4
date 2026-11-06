@@ -17,6 +17,7 @@ SCHEMAS = {
     "knowledge_gaps.csv": ["gap_id", "event_id", "category", "evidence_basis", "status", "record_path", "formalized_in", "verification_ref"],
     "human_interventions.csv": ["intervention_id", "event_id", "task_id", "category", "trigger", "impact", "record_path", "review_status"],
     "validation_runs.csv": ["validation_id", "event_id", "task_id", "source_commit", "working_tree_state", "command", "environment_ref", "dataset_ref", "expected", "observed", "result", "comparison_method", "absolute_error", "relative_error", "tolerance", "scientific_interpretation", "evidence_refs"],
+    "legacy_validation_refs.csv": ["legacy_validation_id", "event_id", "task_id", "likely_scope", "likely_outcome", "candidate_validation_id", "confidence", "evidence_basis", "record_status"],
 }
 ID_COLUMNS = {
     "events.csv": ("event_id", "EV"),
@@ -25,6 +26,7 @@ ID_COLUMNS = {
     "knowledge_gaps.csv": ("gap_id", "KG"),
     "human_interventions.csv": ("intervention_id", "HI"),
     "validation_runs.csv": ("validation_id", "VR"),
+    "legacy_validation_refs.csv": ("legacy_validation_id", "VR"),
 }
 
 def load_table(filename: str, root: Path, errors: list[str]) -> list[dict[str, str]]:
@@ -99,6 +101,8 @@ def validate_records(root: Path = ROOT) -> tuple[dict[str, list[dict[str, str]]]
     event_ids = {row["event_id"] for row in tables["events.csv"]}
     task_ids = {row["task_id"] for row in tables["development_tasks.csv"]}
     validation_ids = {row["validation_id"] for row in tables["validation_runs.csv"]}
+    legacy_validation_rows = tables["legacy_validation_refs.csv"]
+    legacy_validation_ids = {row["legacy_validation_id"] for row in legacy_validation_rows}
     discussion_ids = {row["discussion_id"] for row in tables["discussions.csv"]}
     gap_ids = {row["gap_id"] for row in tables["knowledge_gaps.csv"]}
     intervention_ids = {row["intervention_id"] for row in tables["human_interventions.csv"]}
@@ -161,6 +165,7 @@ def validate_records(root: Path = ROOT) -> tuple[dict[str, list[dict[str, str]]]
     record_ids = (
         task_ids
         | validation_ids
+        | legacy_validation_ids
         | discussion_ids
         | gap_ids
         | intervention_ids
@@ -205,6 +210,19 @@ def validate_records(root: Path = ROOT) -> tuple[dict[str, list[dict[str, str]]]
         if row["result"] not in {"pass", "partial_pass", "inconclusive", "fail"}:
             errors.append(f"validation_runs.csv: {row['validation_id']} has invalid result {row['result']!r}")
 
+    for row in legacy_validation_rows:
+        legacy_id = row["legacy_validation_id"]
+        if legacy_id in validation_ids or legacy_id in detail_ids:
+            errors.append(f"legacy_validation_refs.csv: {legacy_id} also exists as a validation record")
+        if row["confidence"] not in {"high", "medium", "low"}:
+            errors.append(f"legacy_validation_refs.csv: {legacy_id} has invalid confidence {row['confidence']!r}")
+        if row["record_status"] != "Original validation record missing; inference only":
+            errors.append(f"legacy_validation_refs.csv: {legacy_id} must be explicitly marked inference-only")
+        if not row["likely_scope"] or not row["likely_outcome"] or not row["evidence_basis"]:
+            errors.append(f"legacy_validation_refs.csv: {legacy_id} requires scope, outcome, and evidence basis")
+        if row["candidate_validation_id"] and row["candidate_validation_id"] not in validation_ids:
+            errors.append(f"legacy_validation_refs.csv: {legacy_id} candidate_validation_id is not an existing validation")
+
     check_refs(tables["development_tasks.csv"], "start_event_id", event_ids, "development_tasks.csv", errors)
     check_refs(tables["development_tasks.csv"], "end_event_id", event_ids, "development_tasks.csv", errors)
     check_refs(tables["discussions.csv"], "event_id", event_ids, "discussions.csv", errors, required=True, many=True)
@@ -213,7 +231,12 @@ def validate_records(root: Path = ROOT) -> tuple[dict[str, list[dict[str, str]]]
     check_refs(tables["human_interventions.csv"], "task_id", task_ids, "human_interventions.csv", errors)
     check_refs(tables["validation_runs.csv"], "event_id", event_ids, "validation_runs.csv", errors, required=True)
     check_refs(tables["validation_runs.csv"], "task_id", task_ids, "validation_runs.csv", errors)
-    check_refs(tables["development_tasks.csv"], "validation_ids", validation_ids | detail_ids, "development_tasks.csv", errors, many=True)
+    check_refs(legacy_validation_rows, "event_id", event_ids, "legacy_validation_refs.csv", errors, required=True)
+    check_refs(legacy_validation_rows, "task_id", task_ids, "legacy_validation_refs.csv", errors, required=True)
+    check_refs(
+        tables["development_tasks.csv"], "validation_ids", validation_ids | detail_ids | legacy_validation_ids,
+        "development_tasks.csv", errors, many=True,
+    )
 
     # Verify root-relative paths in structured path fields and local Markdown links.
     for filename, field in (("knowledge_gaps.csv", "record_path"), ("human_interventions.csv", "record_path")):
@@ -252,6 +275,7 @@ def next_identifiers(tables: dict[str, list[dict[str, str]]], root: Path = ROOT)
         "HI": [row["intervention_id"] for row in tables["human_interventions.csv"]]
         + [path.stem for path in (root / "records/human_interventions").glob("HI-*.md")],
         "VR": [row["validation_id"] for row in tables["validation_runs.csv"]]
+        + [row["legacy_validation_id"] for row in tables["legacy_validation_refs.csv"]]
         + [path.stem for path in (root / "records/validation_runs").glob("VR-*.md")],
         "ADR": [match.group(1) for path in list((root / "decisions").glob("ADR-*.md"))
                 + list((root / "records/decisions").glob("ADR-*.md"))
@@ -283,6 +307,12 @@ def main() -> None:
             print(f"  {record_type}: {value}")
     elif not errors:
         print("Research record schemas, IDs, and references are valid.")
+        legacy_ids = [row["legacy_validation_id"] for row in tables["legacy_validation_refs.csv"]]
+        if legacy_ids:
+            print(
+                f"NOTE: {len(legacy_ids)} historical validation reference(s) are acknowledged in "
+                "legacy_validation_refs.csv as inference only; original validation records were not recovered."
+            )
         print("Rows:", ", ".join(f"{name}={len(rows)}" for name, rows in tables.items()))
         print("Empty tables are valid for categories with no verified records; the check does not imply missing history.")
 

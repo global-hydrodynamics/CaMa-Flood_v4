@@ -80,9 +80,65 @@ class ResearchValidatorTests(unittest.TestCase):
             decisions = research / "decisions"
             decisions.mkdir()
             (decisions / "ADR-0004-existing.md").write_text("# ADR-0004: Existing\n", encoding="utf-8")
-            suggestions = next_identifiers({name: [] for name in SCHEMAS}, research)
+            with (research / "legacy_validation_refs.csv").open("a", newline="", encoding="utf-8") as stream:
+                csv.writer(stream).writerow([
+                    "VR-0009", "EV-0001", "DT-0001", "fixture scope", "inferred only", "",
+                    "low", "fixture evidence", "Original validation record missing; inference only",
+                ])
+            tables = {name: [] for name in SCHEMAS}
+            tables["legacy_validation_refs.csv"] = [{
+                column: value for column, value in zip(
+                    SCHEMAS["legacy_validation_refs.csv"],
+                    ["VR-0009", "EV-0001", "DT-0001", "fixture scope", "inferred only", "",
+                     "low", "fixture evidence", "Original validation record missing; inference only"],
+                )
+            }]
+            suggestions = next_identifiers(tables, research)
             self.assertEqual(suggestions["ADR"], "ADR-0005")
+            self.assertEqual(suggestions["VR"], "VR-0010")
             self.assertFalse((research / "events.csv").read_text(encoding="utf-8").strip().endswith("EV-0001"))
+
+    def test_inference_ledger_acknowledges_missing_validation_without_recreating_it(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            research = write_tables(Path(temporary))
+            with (research / "events.csv").open("a", newline="", encoding="utf-8") as stream:
+                csv.writer(stream).writerow([
+                    "EV-0001", "2026-11-06", "date", "validation", "Codex", "agent",
+                    "Historical validation referenced", "validated", "retrospective", "DT-0001",
+                    "DT-0001;VR-0009", "existing summary only", "public_summary",
+                ])
+            with (research / "development_tasks.csv").open("a", newline="", encoding="utf-8") as stream:
+                csv.writer(stream).writerow([
+                    "DT-0001", "Fixture task", "branch", "owner", "EV-0001", "commit", "", "",
+                    "Codex", "", "Historical task", "EV-0001", "", "VR-0009", "", "", "", "", "", "", "", "",
+                ])
+            with (research / "legacy_validation_refs.csv").open("a", newline="", encoding="utf-8") as stream:
+                csv.writer(stream).writerow([
+                    "VR-0009", "EV-0001", "DT-0001", "Scope reconstructed from the event",
+                    "Likely pass; source event records validated status", "", "medium",
+                    "EV-0001 summary; no original validation data", "Original validation record missing; inference only",
+                ])
+
+            tables, errors = validate_records(research)
+            self.assertEqual(errors, [])
+            self.assertNotIn("VR-0009", {row["validation_id"] for row in tables["validation_runs.csv"]})
+
+    def test_inference_ledger_cannot_claim_an_existing_validation_as_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            research = write_tables(Path(temporary))
+            with (research / "validation_runs.csv").open("a", newline="", encoding="utf-8") as stream:
+                csv.writer(stream).writerow([
+                    "VR-0009", "EV-0001", "DT-0001", "commit", "", "test command", "", "", "", "",
+                    "pass", "", "", "", "", "", "",
+                ])
+            with (research / "legacy_validation_refs.csv").open("a", newline="", encoding="utf-8") as stream:
+                csv.writer(stream).writerow([
+                    "VR-0009", "EV-0001", "DT-0001", "scope", "inferred", "", "low",
+                    "basis", "Original validation record missing; inference only",
+                ])
+
+            _, errors = validate_records(research)
+            self.assertTrue(any("also exists as a validation record" in error for error in errors))
 
 
 if __name__ == "__main__":
