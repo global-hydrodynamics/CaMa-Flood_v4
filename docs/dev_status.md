@@ -9,6 +9,10 @@ Snapshot: branch-local project status proposal, 2026-11-06. Based on `origin/mas
 
 ## Registered active projects
 
+### Tutorial01 manual-authoring milestone (2026-11-08)
+
+Tutorial01 is implemented and operationally tested from a disposable `feature/gosh-refactor` checkout: the v5 model built, completed the 40-day Mekong run, and the developer reset removed only tutorial/build outputs while preserving `config/Mkinclude`. The manual and first-experiment assessment are under [`proj_sample/tutorial01-get_started/`](../proj_sample/tutorial01-get_started/); the original design and authoring instructions remain available there. Full Python requirements could not be installed because package-index DNS was unavailable, but the Tutorial01 standard-library CTL tools ran successfully. This does not establish a downloadable release package, Linux portability, or scientific validation. See [the tutorial plan](tutorial_development_plan.md#tutorial-01-implementation-and-manual-authoring-experiment), DT-0082, and VR-0125.
+
 The documentation reorganization project was completed and merged to `master` in PR #121; it is no longer active. Map modernization continues under Issue #122. Research logging is a separate, cross-project case-study activity; its current framework edits use `feature/map-data-tools` by maintainer instruction, but the research activity is not tied to that feature branch and has no dedicated Issue. Historical work is not reconstructed in this status table.
 
 | Project / scope and coordination record | Owner | Persistent working branch | Main modules or files | Current progress | Potential conflicts | Next actions |

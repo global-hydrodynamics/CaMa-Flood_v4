@@ -85,6 +85,12 @@ Four independent experiment scripts and three visualization programs plus a sequ
 
 The experiment specification records selected locations, actual output checks, runtime evidence, and open scientific interpretation questions. The beginner-facing README and package assembly remain deferred. See DT-0078, DR-0062, KG-0034, and VR-0123.
 
+## Tutorial 01 implementation and manual-authoring experiment
+
+The maintainer approved an exploratory first AI-assisted manual-authoring task based on a separate experiment design and writing guide. Tutorial01 now has a branch-based first-run script, a developer reset, a beginner manual, and an assessment of the authoring process under `proj_sample/tutorial01-get_started/`; the original design and guidelines are retained as comparison sources. A disposable checkout was used to build `src_main/MAIN_cmf`, execute the 40-day 2000-01-01 through 2000-02-10 Mekong run, inspect five 40-record Binary outputs and CTLs, and execute reset after the run. The reset left `config/Mkinclude` byte-for-byte unchanged. This verifies the observed macOS workflow only; it is not scientific validation or release-package validation.
+
+The setup probe found GNU Fortran 14.2.0, OpenMP, NetCDF-Fortran 4.6.2, GNU Make 3.81, and MPI Fortran on the tested Mac. The optional repository Python requirements could not be installed because package-index access failed, while the tutorial's standard-library CTL tools still ran under Python 3.15.2. The experiment assessment proposes an evidence ledger, clearer separation of shell output from application logs, dependency-scope notes, and an explicit repository/package revision statement for future authoring. No new scientific knowledge gap was found. See DT-0082, VR-0125, and the [Tutorial 01 assessment](../../proj_sample/tutorial01-get_started/manual_authoring_assessment.md).
+
 
 ## v4/v5 build configuration separation (2026-11-08)
 

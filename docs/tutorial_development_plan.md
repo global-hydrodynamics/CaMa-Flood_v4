@@ -57,6 +57,12 @@ The GitHub repository is for development and should retain the complete validate
 
 The downloadable beginner package has a different teaching purpose. Its planned Tutorial 02 contents include the tutorial documentation, visualization tools, verified reference figures, and only `mek_default.sh`. Users will practice creating the No Bifurcation, Kinematic Wave, and No Floodplain scripts by copying and editing the Default configuration. Those three scripts remain in GitHub and are excluded during package assembly, rather than deleted from the repository. Packaging behavior has not been implemented by this plan.
 
+## Tutorial 01 implementation and manual-authoring experiment
+
+Tutorial 01 is implemented under [`proj_sample/tutorial01-get_started/`](../proj_sample/tutorial01-get_started/). Its manual documents a clean build and a 40-day Mekong run using bundled inputs, with results isolated under the tutorial's `out/` directory. The workflow was executed in a disposable checkout of `feature/gosh-refactor` on macOS Apple Silicon; the reset script was also run after the simulation and preserved `config/Mkinclude`. This is operational validation of the development branch, not validation of a separately assembled release package or scientific correctness.
+
+The first manual-authoring experiment and its assessment are recorded in the Tutorial 01 directory. The original manual-writing guidelines and experiment design are retained there unchanged for comparison. The run succeeded with system Python because its CTL scripts use the standard library; installation of the full optional Python requirements was blocked by package-index DNS access in the test environment. Tutorial 02's beginner-facing README and package integration remain separate follow-up work.
+
 ## Long-term goals
 
 - **Human learning:** help students and researchers design, run, debug, and interpret simulations.

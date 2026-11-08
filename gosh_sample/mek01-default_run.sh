@@ -14,8 +14,8 @@ set -eu
 # CaMa-Flood base directory (contains src_main/, map/, and inp/).
 CMF_BASE=$(cd .. && pwd)
 
-# Simulation working directory; the model executable and outputs are placed here.
-RUNDIR="${CMF_BASE}/out/mek01-default_run"
+# Simulation working directory; wrappers may override it to isolate sample outputs.
+RUNDIR=${RUNDIR:-"${CMF_BASE}/out/mek01-default_run"}
 
 # -------------------------- User settings ------------------------------
 # Simulation interval. The end time is exclusive; this interval is 40 days.
@@ -44,7 +44,7 @@ NEXTXY="${MAPDIR}/nextxy_noedge.bin"
 RIVWTH="${MAPDIR}/rivwth_merit.bin"
 
 # CPU execution settings; this sample runs with OpenMP and without MPI.
-OMP_NUM_THREADS=4             # Number of OpenMP threads (non-MPI execution).
+OMP_NUM_THREADS=${OMP_NUM_THREADS:-4}  # Number of OpenMP threads (non-MPI execution).
 
 # Model features and initial conditions.
 LADPSTP=".TRUE."              # TRUE: use adaptive time stepping.
