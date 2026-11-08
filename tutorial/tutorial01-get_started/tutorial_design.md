@@ -4,7 +4,7 @@
 
 ## Learner outcome
 
-Starting from a v5 checkout or qualifying package with bundled Mekong sample inputs and a prepared configuration, the learner builds or updates `MAIN_cmf`, runs a 40-day Mekong simulation using a standalone educational GOSH script, and finds the results under this tutorial's `out/` directory. The starting presence of the executable is not prescribed.
+Starting from a v5 checkout or qualifying package with bundled Mekong sample inputs and a prepared configuration, the learner builds or updates `MAIN_cmf`, reads the experiment specification and standalone educational GOSH script, runs a 40-day Mekong simulation, and finds the results in the project-specific directory `tutorial/tutorial01-get_started/out/${PROJ}/`. The starting presence of the executable or output directory is not prescribed.
 
 ## Repository layout to introduce
 
@@ -24,7 +24,7 @@ CaMa-Flood_v4/
     ├── tutorial_design.md
     ├── tutorial01-get_started.sh    # Standalone educational GOSH experiment
     ├── manual_tutorial01-get_started.md
-    └── out/                          # Generated tutorial results; Git-ignored
+    └── out/tutorial01-get_started/   # Default project results; Git-ignored
 ```
 
 The repository also contains root setup scripts and shared tools; include them in the explanatory text, not necessarily in this compact tree. `tutorial/design/` is developer-facing material and need not appear in the learner's main tree.
@@ -43,7 +43,9 @@ The repository also contains root setup scripts and shared tools; include them i
 - Runoff: `inp/test-mek_1deg/runoff/`, daily Binary `mm/day` files named `Roff____YYYYMMDD.one`; the sample grid is 20 × 30.
 - Runoff-to-map files: `map/mekong_15min/inpdim_test-mek_1deg.txt` and `inpmat_test-mek_1deg.bin`, generated for this map/runoff grid pairing.
 - Simulation: 2000-01-01 00:00 to 2000-02-10 00:00 exclusive (40 days), non-MPI, base timestep 3600 seconds, adaptive timestep and bifurcation enabled, reservoir operation disabled, one OpenMP thread.
-- Preserve the scientific and I/O settings of `gosh_sample/mek01-default_run.sh`. The tutorial's complete standalone script changes only repository-relative context, output isolation to `tutorial/tutorial01-get_started/out/`, and OpenMP thread count to one. The maintained `gosh_sample/` script remains unchanged.
+- Preserve the scientific and I/O settings of `gosh_sample/mek01-default_run.sh`. The tutorial's complete standalone script changes only repository-relative context, output isolation under `tutorial/tutorial01-get_started/out/${PROJ}/`, the project name, and OpenMP thread count to one. The maintained `gosh_sample/` script remains unchanged.
+- Define `PROJ="tutorial01-get_started"` using the established experiment-name convention. Construct `RUNDIR` as the Tutorial01 script directory's `out/${PROJ}/`. Generated executable copy, Namelist, logs, model outputs, CTLs, and Restart files all belong there.
+- A rerun of the same project may replace only that project's known generated files. Changing `PROJ` creates a separate experiment directory and must preserve the previous project directory. Do not remove the shared `out/` parent or other project subdirectories.
 - Output variables: `outflw`, `storge`, `sfcelv`, `flddph`, and `fldfrc`; daily Binary output and standard end-of-run Binary Restart.
 
 ## Required workflow
@@ -54,20 +56,20 @@ The repository also contains root setup scripts and shared tools; include them i
 4. Activate `config/Mkinclude` by copying the reviewed staged `Mkinclude` manually; `config/` already exists.
 5. From `${cmf_root}`, enter `src_main/` and run `make all` to build or update the current model executable.
 6. Locate and list bundled map, runoff, input-dimension, and input-matrix files before explaining their settings and relationships.
-7. Inspect short, relevant settings excerpts in the standalone Tutorial01 GOSH script.
-8. From `tutorial/tutorial01-get_started/`, execute `./tutorial01-get_started.sh`.
-9. Inspect the generated Namelist, logs, CTLs, model outputs, and Restart under `out/`.
+7. Read `tutorial_design.md`, then inspect the plain-text standalone Tutorial01 GOSH configuration and its experiment settings.
+8. From `tutorial/tutorial01-get_started/`, execute `./tutorial01-get_started.sh`; the default project output is `out/tutorial01-get_started/`.
+9. Inspect the generated Namelist, logs, CTLs, model outputs, and Restart under the project-specific directory.
 
 Map generation and visualization are not required.
 
 ## Acceptance criteria
 
 - Running `make all` from `src_main/` returns zero and leaves an executable `MAIN_cmf`, whether it is newly built or updated.
-- The standalone tutorial script is executable, does not call or source `gosh_sample/mek01-default_run.sh`, and runs from its documented directory.
+- The standalone tutorial script defines the default `PROJ`, constructs its `RUNDIR` under `out/${PROJ}/`, does not call or source `gosh_sample/mek01-default_run.sh`, and runs from its documented directory.
 - Tutorial01 and the model return zero; `log_CaMa.txt` reaches normal calculation completion.
-- Five expected daily Binary output variables and their CTLs, namelist, logs, and end Restart products are created under only `tutorial/tutorial01-get_started/out/`.
+- Five expected daily Binary output variables and their CTLs, Namelist, logs, executable copy, and end Restart products are created under only `tutorial/tutorial01-get_started/out/tutorial01-get_started/`.
 - Each daily output contains 40 records for the 40-day interval. The end time is exclusive; timestamp details follow the model's output convention.
 - Bundled map, runoff, and matching input-matrix files remain unchanged.
-- In a disposable checkout, the developer reset can remove the build products and only this tutorial's `out/`, while preserving `config/Mkinclude` and input data.
+- In a disposable checkout, the developer reset can remove build products and one explicitly selected Tutorial01 project directory while preserving `config/Mkinclude`, bundled inputs, the `out/` parent, and unrelated project directories.
 
 Successful execution is operational evidence, not scientific validation.

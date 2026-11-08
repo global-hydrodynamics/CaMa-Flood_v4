@@ -9,16 +9,22 @@ These evolving instructions apply to learner-facing manuals under `tutorial/`. T
 - Never invent terminal output, file listings, figures, or results. Distinguish verified behavior, design intent, interpretation, and unresolved information.
 - Operational execution and file checks do not establish scientific validity.
 - Keep representative stdout/stderr excerpts separate from application log files, and say which source is authoritative. Abbreviate long output explicitly.
+- After asking a beginner to inspect a directory, show a concise expected-output excerpt taken from a checked repository. Include enough actual entries to identify the directory's role; mark omitted lines and explain that environment-dependent fields may differ. Never make up filenames, permissions, sizes, or timestamps.
+- For interactive setup procedures, capture real output and describe the exact prompt, available response, resulting action, and what to do when a required check fails. Do not invent prompts from source inspection alone.
 
 ## Make instructions easy to follow
 
 - Explain why each major step is needed, what to run, what should appear, and how the reader can interpret the result.
 - Use copyable fenced command blocks without shell prompt characters such as `$`. Label commands and observed output separately.
 - Keep detailed manual-generation provenance (tested revision, environment, commands, results, limitations, and evidence sources) in a developer record under the tutorial `design/` directory, not in the learner-facing manual.
-- At the start of each major command-oriented section in a beginner manual, return to the repository root with `cd "${cmf_root}"`, then enter the relevant subdirectory with a relative `cd` (for example, `cd src_main`). Show `pwd` before `ls` when inspecting a directory. Keep related commands together and avoid unnecessary directory changes within a section.
+- At the start of each major command-oriented section in a beginner manual, establish the repository root with `cd "${cmf_root}"`, then enter a relevant subdirectory with a relative `cd` (for example, `cd src_main`). Show `pwd` before `ls` when inspecting a directory. Repeat navigation only at a new section or after the working directory has changed; do not repeat it before every command within one section.
 - Establish `cmf_root` once immediately after the reader confirms the repository root with `pwd`: `cmf_root="$(pwd)"`. Explain that it is a shell variable available in that same terminal session; it is not automatically available in a new terminal. Use `${cmf_root}` consistently for repository-root notation and commands.
 - For Tutorial01 and future beginner tutorials in this project, use `cd "${cmf_root}"`, `cd src_main`, then `make all`; verify that `MAIN_cmf` exists or has been updated. A GOSH workflow normally launches the executable; do not tell beginners to invoke `MAIN_cmf` directly without its required namelist and working-directory context.
 - Explain important filenames, settings, units, time conventions, and input/output relationships without reproducing whole specifications.
+- Introduce technical ideas in the order a beginner encounters them: locate and list the real data first, explain its role, then show the configuration that selects it. Use short actual excerpts rather than large metadata dumps.
+- Prefer simple commands that teach the intended task. For example, use `cat` to demonstrate that a shell script is readable text, then recommend an available text editor; do not teach regular expressions when the goal is to inspect configuration.
+- Explain interactive responses and next steps where users must make a choice. Keep executable-specific or environment-specific output excerpts concise and label omitted lines.
+- Keep project naming and output isolation clear. Explain how the configured project name selects its output directory and how separate names preserve experiments; place project-specific names and examples in that tutorial's design.
 - Show before/after evidence when it helps explain a state change, such as executable creation or output generation.
 - Inspect the current v5 map-tool layout before describing optional preprocessing. Do not direct users to obsolete paths such as legacy `src_param/`. Do not require map generation when a bundled sample is part of the tutorial.
 

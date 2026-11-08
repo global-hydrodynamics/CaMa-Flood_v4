@@ -1,50 +1,50 @@
 # Manual Design — Tutorial01: Get Started
 
-**Audience:** first-time CaMa-Flood users who can follow terminal commands but may not know Fortran build systems, river maps, runoff forcing, or the repository's data layout.
+**Audience:** first-time CaMa-Flood users comfortable copying terminal commands, but unfamiliar with the v5 repository, Fortran builds, river maps, runoff forcing, and GOSH experiments.
 
 The experiment contract is [`../tutorial_design.md`](../tutorial_design.md). Shared evidence and writing instructions are in [`../../agent_manual_authoring.md`](../../agent_manual_authoring.md).
 
 ## Learning outcomes
 
-After reading the manual, learners should be able to:
+Readers should be able to:
 
-- Understand the basic CaMa-Flood repository layout, confirm its root with `pwd`, and use `${cmf_root}` as the absolute root path for later sections.
-- Explain the relationship between Fortran source, the compiled executable, and a GOSH experiment script.
-- Prepare the required Fortran configuration without creating the existing `config/` directory, and understand the role of the Python setup procedure.
-- Compile or update the model from `src_main/` with `make all`, whether an executable is absent or already present.
-- Identify the selected Mekong river map and understand the `MAPDIR`, `NEXTXY`, and `RIVWTH` choices.
-- Identify the runoff dataset, its filenames, interval, and units.
-- Explain why a runoff-to-map input matrix is needed and locate its dimension descriptor and matrix file.
-- Read the main settings in a standalone GOSH script and connect them to repository files.
-- Run the model and locate its outputs, logs, CTLs, and Restart files.
-- Distinguish successful execution and file checks from scientific validation.
+- Identify the repository root and main directories; keep its absolute path in `cmf_root` for one terminal session.
+- Prepare the Fortran build configuration and recognize the interactive setup scripts' checks, prompts, and next actions.
+- Build or update `MAIN_cmf` with `make all` from `src_main/`.
+- Read `tutorial_design.md` to understand the experiment contract and connect its settings to the visible standalone GOSH script.
+- Inspect and understand the selected map, runoff, and runoff-to-map files before changing related settings.
+- Explain how `PROJ` isolates an experiment's outputs and how to rerun or create another project safely.
+- Run the sample and distinguish operational completion from scientific validation.
 
-Later tutorials may assume these basic repository and execution concepts; they should explain their own new technical content.
+## Manual-wide conventions
 
-## Instructional sequence
+- Begin by explaining that the v5 development checkout is the tutorial environment and that a successful run does not validate scientific accuracy.
+- Immediately after showing the repository root with `pwd`, set `cmf_root="$(pwd)"` in the same shell session and explain that a new terminal must define it again.
+- At the start of each major command section, establish the root with `cd "${cmf_root}"`. Then enter a relevant subdirectory with a relative path when needed. Use `pwd` before listing a directory. Within one major section, do not repeat root-navigation commands before every related command.
+- For directory inspection, show a concise **Expected output** block based on real output. Include representative file names and properties; if entries are omitted, mark the excerpt as abbreviated. Explain that owners, dates, and some sizes vary by checkout or platform.
+- Use the five-part instructional pattern—Purpose, Commands, Expected output, Explanation, Required action—where it helps the reader. Interactive setup sections combine the last three under **Output and required actions**. Do not force the pattern onto trivial steps.
+- Introduce data progressively: locate and list files, explain what they represent, then show the settings that select them.
+- Keep command blocks short and literal. Avoid advanced shell pipelines when `cat`, `ls`, or opening the file in an editor teaches the intended concept more directly.
+- Put terminal output in separate blocks from instructions. Identify representative environment-dependent details and do not invent prompts or output.
 
-1. Introduce the build-and-run goal and state that it is not scientific validation.
-2. Obtain the tested source route, inspect the repository root with `pwd` and `ls -l`, and set `cmf_root="$(pwd)"` in the same terminal session.
-3. Explain the main root directories without listing every file.
-4. Prepare Fortran and Python environments from the repository root and activate `config/Mkinclude`.
-5. Build or update `MAIN_cmf` from `${cmf_root}/src_main/` with `make all`; do not require that it was absent beforehand.
-6. Inspect the Tutorial01 GOSH script and identify where its experiment settings are defined.
-7. Inspect the river-map directory, then connect its files to `MAPDIR`, `NEXTXY`, and `RIVWTH`.
-8. Inspect the runoff directory, then connect its daily filenames to `ROFFTAG`, `RUNOFF_DIR`, `CROFFREQ`, `CROFPRE`, and `CROFSUF`; introduce frequency and units afterward.
-9. Inspect the input-dimension and input-matrix files, then explain `INPDIM`, `INPMAT`, and `LINTERP`.
-10. Run the standalone tutorial script and inspect outputs, CTLs, logs, and Restart files.
+## Required demonstrations by section
 
-## Teaching emphasis
+| Section | Learner should understand | Inspect and demonstrate | Expected output required? | Learner action and successful completion |
+| --- | --- | --- | --- | --- |
+| Get the repository and identify its root | The checked-out folder is the repository root; `cmf_root` is a shell variable, not a persistent system setting. | Clone the approved branch; run `pwd`; immediately assign `cmf_root="$(pwd)"`. | Yes: short `pwd` and root listing context. | Keep the same terminal session for subsequent commands or define the variable again in a new one. |
+| Explore the root | `src_main/`, `config/`, `map/`, `inp/`, `gosh_sample/`, `tutorial/`, and setup scripts have distinct roles. | From the root run `cd "${cmf_root}"`, `pwd`, and `ls -l`. | Yes: actual `ls -l` lines showing all required directories and both setup scripts. | Recognize the named components; no files are changed. |
+| Prepare Fortran configuration | The setup script tests tools and sample readiness, offers configuration generation, and does not install dependencies. `config/Mkinclude` is the v5 active file; `adm/Mkinclude` is legacy. | Run `bash s01-setup_fortran.sh` interactively in the repository root. | Yes: representative component checks, configuration summary, exact generation prompt, and final activation guidance from captured output. | Review `[OK]` / `[--]` checks. If required compiler or NetCDF-Fortran checks fail, follow the printed installation/module guidance and rerun; do not expect a configuration file. If accepting a generated `Mkinclude`, inspect it and protect any existing `config/Mkinclude` before copying. |
+| Prepare Python tools | `s02-python_setup.sh` diagnoses Python and offers an isolated repository `.venv`; package installation is not required for Tutorial01's standard-library CTL tools. | Run `bash s02-python_setup.sh` from the same root. | Yes: interpreter candidate, venv status, action prompt, and the no-change response when declining. | Decide whether to create/update `.venv`; an installation/network failure does not by itself block the Tutorial01 CTL scripts. |
+| Build or update CaMa-Flood | `make all` from `src_main/` builds the v5 executable; its prior presence is not a prerequisite. GOSH starts it with the required namelist and working directory. | Enter `src_main/`, run `make all`, then `ls -lh MAIN_cmf`. | Yes: successful target completion and executable listing, without fixed timestamp or machine path. | Continue when `MAIN_cmf` is present after the build. Do not run it directly from the manual's shell. |
+| Read the experiment specification and GOSH settings | The design specification is the concise experiment contract; the shell script is a plain-text, editable run configuration. | In the Tutorial01 directory, inspect `tutorial_design.md` and run `cat tutorial01-get_started.sh`. | Yes: a short excerpt or stated visible indicators from the file; do not reproduce the full script. | Read the specification before running. Open the script in an available text editor to inspect settings; learners need not modify them. Explain how to quit without saving in terminal editors. |
+| River map | The map is the model's river-grid topology and physical fields; `MAPDIR`, `NEXTXY`, and `RIVWTH` select relevant inputs. | List `params.txt`, `nextxy_noedge.bin`, `ctmare.bin`, `elevtn.bin`, and `rivwth_merit.bin`; then show the corresponding GOSH excerpt. | Yes: real file names and sizes from `ls -lh`. | Identify the default selected connectivity and width files and relate the map dimensions/bounds to `params.txt`. |
+| Runoff forcing | Runoff is daily forcing on a 1-degree grid and uses dated Binary files; interval and units are distinct settings. | List January 1, January 2, and February 9 sample files; then show `ROFFTAG`, `RUNOFF_DIR`, `IFRQ_INP`, `CROFFREQ`, `CROFPRE`, `CROFSUF`, and `DROFUNIT`. | Yes: real filenames/sizes and a short settings excerpt. | Explain how the prefix/date/suffix form the filename and recognize that the exclusive end date means the February 9 file is the last input day. |
+| Runoff-to-map mapping | The 20 × 30 forcing grid differs from the 80 × 120 river map; the dimension descriptor and matrix connect them. | List `inpdim_test-mek_1deg.txt` and `inpmat_test-mek_1deg.bin`, display the descriptor, then show `INPDIM`, `INPMAT`, and `LINTERP`. | Yes: actual file sizes and descriptor contents. | Identify the paired grid sizes and matrix filename; no regeneration is required. |
+| Project and execution | `PROJ` names an experiment and determines its isolated directory, allowing parallel experiments to retain separate outputs. | Show `PROJ="tutorial01-get_started"` and `RUNDIR="${SCRIPT_DIR}/out/${PROJ}"` in the GOSH script; run from the Tutorial01 directory. | Yes: startup output with the project name and run directory, success/status, and a concise output listing. | Keep the default project name for this run. Explain that Tutorial02 uses this convention to distinguish experiment outputs. Repeating the same project replaces only its known generated files; another project name selects another directory. |
+| Verify results and optional reset | Shell output, model log, CTL metadata, model outputs, and Restart files are different evidence sources. The developer reset is destructive and project-scoped. | Inspect `out/${PROJ}/`, output CTL `TDEF`, model completion log, and Restart files. Explain reset usage separately. | Yes: representative real `ls` lines, CTL time definition, and final model-log lines. | Confirm normal status, expected files, and 40 records; do not infer scientific correctness. Learners should not run the developer reset. |
 
-- Immediately after the learner confirms the repository root with `pwd`, define `cmf_root="$(pwd)"` once and explain that it remains available only in the same terminal shell session. Use `${cmf_root}` consistently thereafter.
-- At the start of every major command-oriented section, first run `cd "${cmf_root}"`, then enter the section's relevant subdirectory using a relative path. Include `pwd` before directory listings. Keep each section independently navigable and do not rely on the previous section's final working directory.
-- Begin each data topic by returning to the repository root, entering the data directory relatively, and listing representative real files. Explain what those files contain before showing the GOSH settings that select them. Keep listings short.
+## Experiment facts that the manual may summarize
 
-- Define source code, compiler, executable, GOSH, river map, runoff forcing, input matrix, simulation interval, model output, and Restart when first introduced.
-- Explain that the runoff grid is coarser than the model map and that the input matrix links runoff values to map cells.
-- Explain the end time as exclusive and describe the daily output timestamps using captured CTL/model evidence.
-- The GOSH script is standalone so learners can see the experiment settings. Explain that it is an educational copy of the maintained `gosh_sample` workflow with isolated output and one thread.
-- Distinguish shell output from `log_CaMa.txt` and generated metadata.
-- Do not include scientific visualization, observational comparison, or claims of physical accuracy.
-- Mention the reset script only as optional developer tooling; ordinary learners do not need to run it.
-- Do not assume `MAIN_cmf` or `out/` is absent before the learner starts. Explain that `make all` builds required targets and that the sample script creates `out/` and replaces its known Tutorial01-generated files on rerun.
+The settings table should state: project `tutorial01-get_started`; map `map/mekong_15min`; runoff `inp/test-mek_1deg`; mapping descriptor `inpdim_test-mek_1deg.txt` and matrix `inpmat_test-mek_1deg.bin`; 2000-01-01 00:00 through 2000-02-10 00:00 exclusive; `DT=3600` seconds with adaptive stepping; non-MPI and one OpenMP thread; daily Binary outputs `outflw`, `storge`, `sfcelv`, `flddph`, and `fldfrc`; project output under `tutorial/tutorial01-get_started/out/${PROJ}/`.
+
+The manual should not repeat the complete experiment specification, reproduce the whole shell script, introduce visualization or observational comparison, or claim that the simulated values are scientifically validated.

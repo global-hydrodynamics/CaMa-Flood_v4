@@ -1,46 +1,39 @@
-# Tutorial01 — Get Started with CaMa-Flood v5
+# Tutorial01: Get Started with CaMa-Flood v5
 
-This tutorial builds or updates the CaMa-Flood v5 model, introduces the bundled Mekong map and runoff samples, and runs a 40-day simulation. It assumes you can enter commands in a terminal; each command section starts from the repository root so it does not depend on where the previous section ended.
+This tutorial builds CaMa-Flood, inspects a small Mekong experiment, and runs it for 40 days. The run demonstrates that the workflow works; it is not a scientific validation of the model.
 
-The example uses the Mekong 15-minute river map and daily 1-degree runoff from 2000-01-01 00:00 through 2000-02-10 00:00. The end time is exclusive, so runoff through February 9 is included. Successful execution shows that the workflow runs; it does not establish scientific accuracy.
+## 1. Find the repository root
 
-## 1. Get the repository
-
-Run these commands from a directory where you keep projects. Change `~/work` if you use another location.
-
-**Commands**
+Open a terminal and change to the directory where you cloned CaMa-Flood. Confirm that you are at the repository root:
 
 ```bash
-mkdir -p ~/work
-cd ~/work
-git clone --branch feature/gosh-refactor --depth 1 --single-branch \
-  https://github.com/global-hydrodynamics/CaMa-Flood_v4.git CaMa-Flood_v5
-cd CaMa-Flood_v5
 pwd
 cmf_root="$(pwd)"
-```
-
-`pwd` prints the repository root. The next command saves that absolute path in the shell variable `cmf_root`. Keep using the same terminal window: this variable remains available in that shell session, but a new terminal starts without it, so define it again there.
-
-## 2. Explore the repository
-
-The root contains the v5 source, compiler configuration, sample inputs, maintained workflows, and tutorials. Start by locating these parts; later sections inspect the sample files themselves.
-
-**Commands**
-
-```bash
-cd "${cmf_root}"
-pwd
 ls -l
 ```
 
-The checkout includes `src_main/` for the v5 model source, `config/` for its active build configuration, `map/` and `inp/` for map and runoff data, `gosh_sample/` for maintained example workflows, and `tutorial/` for beginner materials. Root setup scripts include `s01-setup_fortran.sh` and `s02-python_setup.sh`.
+`cmf_root` is available for the rest of this tutorial in the same terminal session. It is an ordinary shell variable, so it will not automatically exist in a new terminal window.
 
-## 3. Prepare the local tools
+### Expected output
 
-The Fortran setup script checks compiler and library availability and stages a suggested `Mkinclude` configuration. Review that file before copying it into the existing v5 configuration directory. The Python setup script diagnoses or prepares the repository's optional Python tools.
+This abbreviated excerpt is from an actual repository-root `ls -l`; sizes, dates, and owner names vary between checkouts.
 
-**Check and stage the Fortran configuration**
+```text
+drwxr-xr-x   ... config
+drwxr-xr-x   ... gosh_sample
+drwxr-xr-x   ... inp
+drwxr-xr-x   ... map
+drwxr-xr-x   ... src_main
+drwxr-xr-x   ... tutorial
+-rwxr-xr-x   ... s01-setup_fortran.sh
+-rwxr-xr-x   ... s02-python_setup.sh
+```
+
+The main directories are `src_main/` (v5 model source), `map/` (river maps and map tools), `inp/` (runoff datasets), `gosh_sample/` (maintained run examples), and `tutorial/` (beginner tutorials). The root setup scripts diagnose and prepare local development environments.
+
+## 2. Prepare the local environment
+
+Both setup commands run from the repository root. `s01-setup_fortran.sh` checks the Fortran build environment and offers to generate a suggested configuration. `s02-python_setup.sh` checks Python and offers a repository-local virtual environment for optional Python packages.
 
 ```bash
 cd "${cmf_root}"
@@ -48,31 +41,63 @@ pwd
 bash s01-setup_fortran.sh
 ```
 
-If the setup script staged `Mkinclude` in the repository root and you accept its settings, activate it for v5:
+### Fortran setup: output and required actions
+
+The script checks tools and capabilities needed for the selected build, including GNU Make, a Fortran compiler, OpenMP, NetCDF-Fortran, MPI, and sample inputs. A successful check is marked `[OK]`. If a required check is unavailable, the script prints guidance for installing or loading that dependency; address the missing requirement and run the diagnostic again.
+
+After the diagnostic, an interactive terminal displays a prompt like this:
+
+```text
+Installed components:
+  [OK] GNU Make           GNU Make 3.81
+  [OK] GNU Fortran        GNU Fortran (Homebrew GCC 14.2.0_1) 14.2.0
+  [OK] OpenMP             -fopenmp compile, link, and run passed
+  [OK] NetCDF-Fortran     4.6.2
+  [OK] MPI Fortran        mpifort compile/link test passed
+...
+Recommended configuration:
+  Compiler: GNU Fortran (OpenMP enabled)
+  NetCDF: Enabled (NF90_DOUBLE read/write test passed)
+  MPI: Disabled by default
+  Precision: SinglePrec_CMF, matching standard GNU templates
+...
+Generate ./Mkinclude? [Y/n]: y
+[SUCCESS] Generated ./Mkinclude
+To activate this configuration:
+Existing config/Mkinclude was not changed. Back it up before choosing to replace it.
+Legacy v4 builds continue to use adm/Mkinclude.
+```
+
+The example shows a user choosing `y`. The suggested file is created at the repository root; the setup script does not overwrite the active `config/Mkinclude`. Review the generated configuration before activating it. Since `config/Mkinclude` already exists, back it up before replacing it, and copy the suggested file only if you intend to change the active v5 configuration:
 
 ```bash
-cd "${cmf_root}"
-pwd
 cp Mkinclude config/Mkinclude
 ```
 
-`config/` is part of the checkout, so there is no need to create it. This v5 tutorial uses `config/Mkinclude`; leave the legacy `adm/Mkinclude` configuration alone.
+The copy replaces an existing `config/Mkinclude`. If you want to keep the current compiler configuration, do not run the copy command; use the configuration already prepared for your environment.
 
-**Check the Python environment**
+The Python setup is also run from the repository root:
 
 ```bash
-cd "${cmf_root}"
-pwd
 bash s02-python_setup.sh
 ```
 
-The tutorial's CTL utilities use Python's standard library. Installing the complete optional Python requirements is not necessary for this sample run.
+If `.venv` does not exist, the script reports a Python interpreter candidate and asks whether to create or update the repository-local environment. In the captured example, the user answered `n`:
 
-## 4. Build or update the model
+```text
+Repository environment:
+  [--] not present
+Selected interpreter for .venv: python3 (...)
+Packages will be installed only inside .venv, never into the system interpreter.
+Create/update .venv and install requirements? [Y/n]: n
+Python environment was not changed.
+```
 
-`src_main/` contains the v5 Fortran source. The explicit `all` target builds or updates the model executable `MAIN_cmf`. It works whether the executable is not present yet or needs rebuilding; this tutorial does not require a particular starting state.
+Answer `y` only if you want the optional packages installed in `.venv/`; they are not installed into the system Python. Tutorial01's model run and the included CTL-generation tools do not require those optional packages. Interpreter paths and diagnostic results depend on your computer.
 
-**Commands**
+## 3. Build the model
+
+CaMa-Flood is written in Fortran. A compiler translates its source files into an executable program. Build or update the v5 executable with the repository's standard target, `make all`:
 
 ```bash
 cd "${cmf_root}"
@@ -82,30 +107,49 @@ make all
 ls -lh MAIN_cmf
 ```
 
-The final listing should show an executable named `MAIN_cmf`. The tutorial GOSH script copies it into its run directory and starts the model there with the matching namelist. Do not launch `MAIN_cmf` directly from an unrelated directory.
+The build may print unused-import warnings from existing source files. In the checked build, `make all` returned zero and the final command showed:
 
-## 5. Find the Tutorial01 experiment settings
+```text
+-rwxr-xr-x ... MAIN_cmf  600K
+```
 
-Tutorial01 is a standalone GOSH example: its settings are visible in the tutorial directory, so you can connect experiment choices to their input files. It follows the maintained Mekong sample while keeping generated results separate under Tutorial01.
+This confirms that the executable was produced in that checkout; its size and listing details can vary. Do not run `MAIN_cmf` directly from this terminal: the experiment script prepares its Namelist and working directory.
 
-**Commands**
+## 4. Read the experiment plan and script
+
+A GOSH script is a plain-text shell script that records experiment settings and the commands used to run the model. First read the [Tutorial Design Specification](tutorial_design.md), which describes the purpose, computational conditions, input datasets, and expected products for this experiment.
 
 ```bash
 cd "${cmf_root}"
 cd tutorial/tutorial01-get_started
 pwd
-ls -l
-grep -nE '^# (River map configuration|Daily binary runoff sample|The dimension descriptor)' \
-  tutorial01-get_started.sh
+cat tutorial_design.md
+cat tutorial01-get_started.sh
 ```
 
-The matches point to the script's map, runoff, and input-matrix configuration groups. The following sections first locate the actual files, then show the corresponding settings.
+`cat` prints a file in the terminal. The GOSH script is several screens long, so you do not need to read it all at once. Open it in an ordinary text editor to inspect its settings. `nano` and `vi` or `vim` are terminal editors; Visual Studio Code is a graphical editor that may be installed separately. Other plain-text editors for your operating system are also suitable. A word processor is not suitable because it can add document formatting to the script.
 
-## 6. Locate the river map
+If available, you can inspect without saving using `nano tutorial01-get_started.sh` and exit with Ctrl-X, choosing not to save if asked. In `vi` or `vim`, press Esc, type `:q!`, and press Enter to quit without saving. Editor commands are optional and availability varies by system.
 
-The Mekong map directory contains a parameter file describing the grid and Binary files that provide river connectivity and physical map fields.
+### Experiment settings at a glance
 
-**Commands**
+| Category | Tutorial01 setting |
+|---|---|
+| Project | `PROJ="tutorial01-get_started"` |
+| River map | `map/mekong_15min/` |
+| Runoff | `inp/test-mek_1deg/`, daily binary files |
+| Runoff-to-map mapping | `inpdim_test-mek_1deg.txt` and `inpmat_test-mek_1deg.bin` in the map directory |
+| Period | 2000-01-01 00:00 to 2000-02-10 00:00; end time is exclusive (40 days) |
+| Time step | Base `DT=3600` seconds; adaptive time stepping enabled |
+| Execution | Non-MPI, one OpenMP thread; bifurcation enabled |
+| Output | Daily Binary: `outflw`, `storge`, `sfcelv`, `flddph`, `fldfrc` |
+| Output directory | `tutorial/tutorial01-get_started/out/${PROJ}/` |
+
+The rest of the tutorial locates the real input files and shows how the GOSH settings select them.
+
+## 5. Inspect the river map
+
+A river map describes the model grid, river connectivity, and physical properties used by the simulation. Return to the repository root, enter the Mekong map directory, and list a few representative files:
 
 ```bash
 cd "${cmf_root}"
@@ -114,9 +158,19 @@ pwd
 ls -lh params.txt nextxy_noedge.bin ctmare.bin elevtn.bin rivwth_merit.bin
 ```
 
-The listing should include files of roughly these sizes: `params.txt` 384 bytes, `nextxy_noedge.bin` 75 KB, and `ctmare.bin`, `elevtn.bin`, and `rivwth_merit.bin` about 38 KB each. `params.txt` describes an 80 × 120 grid with 10 floodplain layers, 0.25-degree spacing, and map edges at 90–110°E and 5–35°N.
+### Expected output
 
-The corresponding excerpt from `tutorial01-get_started.sh` is:
+These file names and sizes were observed in the bundled checkout. File permissions and timestamps can differ.
+
+```text
+-rw-r--r-- ... params.txt              384B
+-rw-r--r--@ ... nextxy_noedge.bin       75K
+-rw-r--r--@ ... ctmare.bin              38K
+-rw-r--r--@ ... elevtn.bin              38K
+-rw-r--r--@ ... rivwth_merit.bin        38K
+```
+
+`params.txt` describes map dimensions and geographic extent. `nextxy_noedge.bin` contains the selected river connectivity, `ctmare.bin` the unit catchment areas, `elevtn.bin` elevation, and `rivwth_merit.bin` river width. The tutorial script selects the map and products with these settings:
 
 ```sh
 MAPDIR="${CMF_BASE}/map/mekong_15min"
@@ -126,13 +180,11 @@ NEXTXY="${MAPDIR}/nextxy_noedge.bin"
 RIVWTH="${MAPDIR}/rivwth_merit.bin"
 ```
 
-`MAPDIR` selects this directory. `NEXTXY` selects the river-network connectivity file: `nextxy_noedge.bin` excludes river networks affected by the regional boundary, while the commented `nextxy.bin` alternative includes rivers draining outside the domain. `RIVWTH` selects channel width: the default `rivwth_merit.bin` is satellite-derived; `rivwth.bin` is the alternative estimated from upstream area. Other map fields include catchment area, elevation, downstream distance, channel length, floodplain elevation, channel depth, and roughness. The script uses individual Binary map inputs (`LMAPCDF=.FALSE.`) and enables bifurcation routing with `bifprm.csv`.
+The commented lines show alternative map products; the uncommented assignments select the files used here.
 
-## 7. Locate the runoff files
+## 6. Inspect runoff forcing
 
-Runoff forcing is water entering the river model from a coarser land grid. This sample stores one Binary file per day.
-
-**Commands**
+Runoff forcing is water input supplied to the model over time. The sample uses daily binary files on a grid coarser than the river map. Inspect a few dates, including the last day before the exclusive end date:
 
 ```bash
 cd "${cmf_root}"
@@ -141,26 +193,33 @@ pwd
 ls -lh Roff____20000101.one Roff____20000102.one Roff____20000209.one
 ```
 
-Each listed daily file is about 2.3 KB. Names follow the pattern `Roff____YYYYMMDD.one`; for example, `Roff____20000101.one` contains the first day's data. The sample values are runoff rates represented in `mm/day` before conversion to the model's `m/s` units.
+### Expected output
 
-The related GOSH settings are:
+The three observed sample files are each 2.3 KB; the exact display may round sizes differently.
+
+```text
+-rw-r--r--@ ... Roff____20000101.one  2.3K
+-rw-r--r--@ ... Roff____20000102.one  2.3K
+-rw-r--r--@ ... Roff____20000209.one  2.3K
+```
+
+The corresponding GOSH settings identify the dataset, file naming rule, frequency, and unit conversion:
 
 ```sh
 ROFFTAG="test-mek_1deg"
+RUNOFF_DIR="${CMF_BASE}/inp/${ROFFTAG}/runoff"
 IFRQ_INP=24
-DROFUNIT=86400000
 CROFFREQ="DAY"
 CROFPRE="Roff____"
 CROFSUF=".one"
+DROFUNIT=86400000
 ```
 
-`ROFFTAG` selects this dataset and forms `RUNOFF_DIR`. `CROFPRE` and `CROFSUF` describe the filename prefix and suffix. `IFRQ_INP=24` reads runoff at 24-hour intervals, `CROFFREQ="DAY"` identifies daily grouping, and `DROFUNIT=86400000` supplies the conversion from `mm/day` to `m/s`. The 40-day simulation reads dates from January 1 through February 9, including the month boundary.
+`Roff____` + a date in `YYYYMMDD` form + `.one` makes a daily filename. `IFRQ_INP=24` means the forcing interval is 24 hours. `DROFUNIT` converts the supplied `mm/day` runoff values to the model's `m/s` units. The 40-day interval ends at February 10 00:00, so February 9 is the final daily input date.
 
-## 8. Locate the runoff-to-map input matrix
+## 7. Inspect runoff-to-map mapping
 
-The runoff grid has fewer cells than the river map. CaMa-Flood uses a pre-generated input matrix to map runoff-grid values onto model map cells; the dimension descriptor identifies the paired grids and matrix file.
-
-**Commands**
+The runoff grid is 20 × 30 cells, while this Mekong river map is 80 × 120 cells. The input-dimension descriptor and mapping matrix tell the model how runoff-grid values correspond to map cells. These files are stored with the map because the mapping is specific to the map and runoff-grid pairing.
 
 ```bash
 cd "${cmf_root}"
@@ -170,9 +229,30 @@ ls -lh inpdim_test-mek_1deg.txt inpmat_test-mek_1deg.bin
 cat inpdim_test-mek_1deg.txt
 ```
 
-The descriptor lists an 80 × 120 map grid, a 20 × 30 runoff grid, four input mappings, and the matrix filename `inpmat_test-mek_1deg.bin`. The matrix file is about 450 KB. These files are already included and paired for this sample; you do not need to generate them.
+### Expected output
 
-The script selects the pair with:
+Observed sizes and the descriptor contents:
+
+```text
+-rw-r--r--@ ... inpdim_test-mek_1deg.txt       312B
+-rw-r--r--@ ... inpmat_test-mek_1deg.bin       450K
+```
+
+```text
+        80     !! nXX
+       120     !! nYY
+        10     !! floodplain layer
+        20     !! input nXX
+        30     !! input nYY
+         4     !! input num
+inpmat_test-mek_1deg.bin
+      90.000     !! west  edge
+     110.000     !! east  edge
+      35.000     !! north edge
+       5.000     !! south edge
+```
+
+The script points to this pair and turns on input-matrix mapping with `LINTERP`:
 
 ```sh
 INPDIM="${MAPDIR}/inpdim_${ROFFTAG}.txt"
@@ -180,15 +260,15 @@ INPMAT="${MAPDIR}/inpmat_${ROFFTAG}.bin"
 LINTERP=".TRUE."
 ```
 
-The model receives the files as `CDIMINFO` and `CINPMAT`; `LINTERP=".TRUE."` selects the input-matrix mapping path.
+`INPDIM` gives the model and input-grid dimensions and names the matrix file. `INPMAT` is the mapping data itself. With `LINTERP` true, runoff is mapped through this matrix. The supplied files already match this sample; Tutorial01 does not regenerate them.
 
-## 9. Run Tutorial01
+## 8. Run the experiment
 
-The script creates `out/` when needed. On a rerun it reports that it is overwriting previous sample results and removes only the known Tutorial01-generated executable, namelist, logs, output-variable files, and Restart files. It does not remove the whole `out/` directory or unrelated files in it.
+The script defines the project as `PROJ="tutorial01-get_started"` and constructs `RUNDIR` as the Tutorial01 directory's `out/${PROJ}/`. Keeping each experiment under its own project name makes outputs easier to compare and prevents one experiment from replacing another. Tutorial02 uses the same naming convention for its multiple experiments.
 
-Run from the script's directory:
+For this tutorial, leave the project name at its default. The script can be rerun: it replaces known products in the selected project's directory, and does not remove the shared `out/` directory, sibling project directories, or unrelated notes in the selected directory.
 
-**Commands**
+Run it from the Tutorial01 directory:
 
 ```bash
 cd "${cmf_root}"
@@ -197,37 +277,54 @@ pwd
 ./tutorial01-get_started.sh
 ```
 
-The experiment runs from 2000-01-01 00:00 to 2000-02-10 00:00 exclusive, with one OpenMP thread, adaptive time stepping, bifurcation routing, and zero-storage initialization. It reads daily Binary runoff and writes daily Binary `outflw`, `storge`, `sfcelv`, `flddph`, and `fldfrc` outputs. The script generates GrADS CTL descriptions, runs the model, records timing and status, and generates Restart CTLs after a successful run.
+### Expected output
 
-The shell prints step messages and a short runtime summary. The model's detailed progress is written separately to `log_CaMa.txt`.
+This abbreviated excerpt was captured from a completed run. The absolute checkout prefix is shortened; on your computer `RUNDIR` will show your own repository path.
 
-## 10. Inspect the results
+```text
+PROJ = tutorial01-get_started
+RUNDIR = .../tutorial/tutorial01-get_started/out/tutorial01-get_started
+Overwriting previous sample results in: .../out/tutorial01-get_started
+...
+Expected output records: 40 (00Z02jan2000 to 00Z10feb2000)
+...
+Exit status: 0
+...
+[SUCCESS] tutorial01-get_started.sh completed
+Results: .../tutorial/tutorial01-get_started/out/tutorial01-get_started
+```
 
-The run products are kept under Tutorial01's `out/` directory.
+The script first writes the experiment Namelist and planned GrADS CTL files, then runs the model and prepares a Restart CTL. Shell messages go to the terminal; detailed model progress is in `log_CaMa.txt`. Exit status zero and the `[SUCCESS]` message mean the workflow completed without a reported command failure.
 
-**Commands**
+## 9. Inspect the results
+
+The GOSH run directory contains the copied executable, Namelist, model log, timing record, Restart, binary outputs, and CTL metadata. Inspect it from the repository root:
 
 ```bash
 cd "${cmf_root}"
 cd tutorial/tutorial01-get_started
 pwd
-ls -lh out
+ls -lh out/tutorial01-get_started
 ```
 
-The checked run included the expected model, Namelist, logs, five output Binary files and CTLs, and an end-of-run Restart with its bifurcation companion. A few representative observed entries were:
+### Expected output
+
+Representative files from the completed run:
 
 ```text
-outflw2000.bin       1.5M
-outflw2000.ctl       293B
-restart2000021000.bin 450K
-log_CaMa.txt         1.6M
-TDEF 40 LINEAR 00Z02jan2000 1dy
+-rwxr-xr-x ... MAIN_cmf                  600K
+-rw-r--r-- ... flddph2000.bin            1.5M
+-rw-r--r-- ... input_cmf.nam             4.4K
+-rw-r--r-- ... log_CaMa.txt              1.6M
+-rw-r--r-- ... outflw2000.bin            1.5M
+-rw------- ... outflw2000.ctl            293B
+-rw-r--r-- ... restart2000021000.bin     450K
+-rw-r--r-- ... sfcelv2000.bin            1.5M
+-rw-r--r-- ... storge2000.bin            1.5M
 ```
 
-Each daily output contains 80 × 120 cells for 40 records; at four bytes per float32 value, that is 1,536,000 bytes per file. The `out/` directory is Git-ignored.
-
-In the checked run, the `outflw` CTL described 40 daily records beginning at `00Z02jan2000`, and the Restart was timestamped at the exclusive endpoint, 2000-02-10 00:00. These file and log checks show that the example workflow completed. They do not validate hydrological accuracy or compare discharge against observations.
+The files are under `out/tutorial01-get_started/`, not the repository's shared `out/`. The `outflw2000.ctl` file reports `TDEF 40 LINEAR 00Z02jan2000 1dy`; the model's output timestamps follow its output convention, while the simulation end time is exclusive. The model log ends with `CMF::===== CALCULATION END =====` on the observed successful run. File presence, record metadata, and normal completion are workflow checks, not evidence that the simulated values are scientifically correct.
 
 ## Optional developer reset
 
-Ordinary learners do not need to reset the build. Developers preparing a clean demonstration can use [`design/tutorial01-reset.sh`](design/tutorial01-reset.sh) in a disposable checkout. It asks before cleaning unless `--yes` is supplied, removes build products and only Tutorial01's `out/`, and preserves `config/Mkinclude` and bundled input data.
+Ordinary learners do not need the reset utility. Developers collecting a clean demonstration can use `design/tutorial01-reset.sh` in a disposable checkout. It cleans generated `src_main/` build products and removes only the selected `out/PROJECT/` directory; it preserves `config/Mkinclude`, bundled inputs, the shared `out/` parent, and other project directories. It requires confirmation unless `--yes` is supplied. See the developer-only [design materials](design/README.md) for details.
