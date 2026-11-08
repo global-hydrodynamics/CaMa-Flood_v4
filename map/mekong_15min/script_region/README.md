@@ -29,7 +29,7 @@ NORTH="35.0"
 
 ## Build and run
 
-Build the shared executables explicitly from the repository root, using the active compiler configuration in `adm/Mkinclude`:
+Build the shared executables explicitly from the repository root, using the v5 configuration in `config/Mkinclude`:
 
 ```sh
 make -C map/tools/code region

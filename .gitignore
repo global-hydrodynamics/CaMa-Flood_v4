@@ -5,6 +5,7 @@
 !Mkinclude_*
 !Makefile
 /Mkinclude
+/config/Mkinclude
 .DS_Store
 #
 *.bin

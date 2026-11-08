@@ -43,7 +43,7 @@ python3 -B -m unittest map.tools.tests.test_bifurcation_migration -v
 
 It compiles the shared and legacy tools in temporary directories and compares their outputs using the committed Mekong sample, without overwriting tracked map files. The s01-to-s02 chain uses the Git-tracked `map/data/ELSE_GPCC_clm-1981-2010.one` by default; set `CMF_RUNOFF_CLIMATOLOGY=/path/to/compatible-runoff.one` only to test an alternate compatible dataset. This is migration regression evidence, not scientific validation.
 
-Regional executables use the `region_` prefix. Build them with the active compiler settings in `adm/Mkinclude`:
+Regional executables use the `region_` prefix. Build them with the v5 compiler settings in `config/Mkinclude`:
 
 ```sh
 make -C map/tools/code region

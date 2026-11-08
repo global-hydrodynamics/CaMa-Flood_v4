@@ -1,0 +1,52 @@
+#==========================================================
+# CaMa-Flood v5 build configuration (GNU Fortran, macOS/Linux)
+#==========================================================
+RM = /bin/rm -f
+CP = /bin/cp
+
+#======================================
+# Compiler commands and flags
+#======================================
+FCMP = gfortran -fopenmp
+FC = gfortran
+FFLAGS = -O3 -Wall -cpp -ffree-line-length-none -fimplicit-none -ftree-vectorize
+LFLAGS =
+
+#======================================
+# NetCDF-Fortran flags from the active installation
+# Override INC or LIB directly for non-standard installations.
+#======================================
+NF_CONFIG ?= nf-config
+NC_CONFIG ?= nc-config
+NF_FFLAGS ?= $(shell $(NF_CONFIG) --fflags 2>/dev/null)
+NF_FLIBS ?= $(shell $(NF_CONFIG) --flibs 2>/dev/null)
+NC_LIBS ?= $(shell $(NC_CONFIG) --libs 2>/dev/null | sed 's/-lnetcdf//g')
+
+ifeq ($(strip $(INC)),)
+  ifeq ($(strip $(NF_FFLAGS)),)
+    $(error NetCDF-Fortran flags unavailable. Install NetCDF-Fortran or set INC, and set NF_CONFIG if needed.)
+  endif
+  INC = $(NF_FFLAGS)
+endif
+
+ifeq ($(strip $(LIB)),)
+  ifeq ($(strip $(NF_FLIBS)),)
+    $(error NetCDF-Fortran libraries unavailable. Install NetCDF-Fortran or set LIB, and set NF_CONFIG if needed.)
+  endif
+  LIB = $(NF_FLIBS) $(NC_LIBS)
+endif
+
+#======================================
+# Preprocessing options
+# DMPI=-DUseMPI_CMF        : activate MPI parallelization
+# DCDF=-DUseCDF_CMF        : activate NetCDF input/output
+# DSINGLE=-DSinglePrec_CMF : activate Single Precision Mode
+# DHEATLINK=-Dheatlink     : activate river water temperature calculation
+#======================================
+
+#DMPI = -DUseMPI_CMF
+DCDF = -DUseCDF_CMF
+DSINGLE = -DSinglePrec_CMF
+#DHEATLINK = -Dheatlink
+
+CFLAGS = $(DMPI) $(DCDF) $(DSINGLE) $(DHEATLINK)

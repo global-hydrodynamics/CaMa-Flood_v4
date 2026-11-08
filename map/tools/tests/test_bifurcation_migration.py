@@ -97,8 +97,8 @@ class BifurcationMigrationTests(unittest.TestCase):
         cls.build_root = Path(cls.build_tmp.name)
         cls.code_dir = cls.build_root / "map" / "tools" / "code"
         cls.code_dir.mkdir(parents=True)
-        (cls.build_root / "adm").mkdir()
-        shutil.copy2(ROOT / "adm" / "Mkinclude", cls.build_root / "adm" / "Mkinclude")
+        (cls.build_root / "config").mkdir()
+        shutil.copy2(ROOT / "config" / "Mkinclude_gfortran", cls.build_root / "config" / "Mkinclude")
         shutil.copy2(CODE_SOURCE / "Makefile", cls.code_dir / "Makefile")
         shutil.copy2(CODE_SOURCE / "mod_map_color.F90", cls.code_dir / "mod_map_color.F90")
         shutil.copy2(CODE_SOURCE / "mod_bifprm_csv.F90", cls.code_dir / "mod_bifprm_csv.F90")

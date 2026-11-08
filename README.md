@@ -28,7 +28,7 @@ This repository provides source code, build configurations, execution scripts, a
 
 [`variable_table/README.md`](variable_table/README.md) describes the shared variable tables. The three CSVs document map products, model outputs, and Restart state; their distinct schemas remain separate. Future tools should resolve them from `${CMF_BASE}/variable_table/`.
 
-Build settings are in [adm/Mkinclude](adm/Mkinclude), with compiler-specific examples in [adm/](adm/). The [compilation script](gosh/compile.sh) and [sample experiments](gosh/) provide execution entry points. Configure paths, libraries, and options for your environment before building or running; the presence of a configuration example does not establish that it has been tested on your system.
+The legacy v4 source and scripts use [adm/Mkinclude](adm/Mkinclude) and the `adm/` templates. The v5 development tree uses a separate, ignored `config/Mkinclude`; its GNU Fortran default enables OpenMP, NetCDF, and single precision. See the [v5 build guide](config/README.md) and [model source guide](src_main/README.md). The legacy [v4 compilation script](gosh/compile.sh) and experiments remain under `gosh/`.
 
 ### Development environment setup
 
@@ -39,9 +39,9 @@ From the repository root, run the interactive setup scripts:
 ./s02-python_setup.sh
 ```
 
-The Fortran script diagnoses the compiler and libraries, then can write a recommended machine-specific `./Mkinclude`. Review it before manually copying it to `adm/Mkinclude`; the script never changes the active configuration. The Python script creates the isolated repository `.venv/` and installs `requirements.txt` there, not into system Python. Both scripts ask before creating or replacing files and only diagnose when no terminal is attached.
+The Fortran script checks GNU Fortran, OpenMP, and a working NetCDF-Fortran installation, then can write a recommended machine-specific `./Mkinclude`. Review it before manually copying it to `config/Mkinclude`; it never changes the active v5 configuration or legacy `adm/Mkinclude`. The Python script creates the isolated repository `.venv/` and installs `requirements.txt` there, not into system Python. Both scripts ask before creating or replacing files and only diagnose when no terminal is attached.
 
-`mek01` uses Binary inputs and does not require NetCDF. `mek02` requires a working NetCDF-Fortran installation and a NetCDF-enabled build. MPI is optional and remains disabled in the recommended configuration. Python 3.10 or newer is needed for Python utilities; specialist workflows may have additional dependencies documented in their component guides.
+`mek01` uses Binary input data; the standard v5 build still enables NetCDF. `mek02` uses NetCDF runoff and map inputs. MPI is optional and remains disabled in the recommended configuration. Python 3.10 or newer is needed for Python utilities; specialist workflows may have additional dependencies documented in their component guides.
 
 The optional ERA5-Land downloader also requires CDS account credentials and dataset terms acceptance. The legacy N-year flood-depth scripts and the GTSM preprocessing notebook use additional dependencies not included in the shared environment. Windows users should use WSL2 with Ubuntu for these shell workflows.
 
@@ -52,6 +52,9 @@ The optional ERA5-Land downloader also requires CDS account credentials and data
 | [src/](src/) | Fortran numerical model, drivers, shared state, I/O, and optional extensions. |
 | [gosh/](gosh/) | Compilation and execution scripts, example experiments, and namelist templates. |
 | [adm/](adm/) | Compiler, library, precision, parallelization, and build configuration. |
+| [config/](config/) | Separate v5 compiler and library configuration templates. |
+| [src_main/](src_main/) | v5 model-source tree. |
+| [gosh_sample/](gosh_sample/) | v5 sample build and simulation workflows. |
 | [map/](map/) | River-map preprocessing, regionalization, river parameters, input mapping, and gauge/reservoir allocation. |
 | [inp/](inp/) | Runoff forcing download and preparation tools. |
 | [etc/](etc/) | Optional-scheme workflows, parameter preparation, downscaling, validation, and analysis. |

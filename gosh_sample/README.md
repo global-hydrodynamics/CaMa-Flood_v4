@@ -4,6 +4,8 @@ This directory is the v5 development copy of the complete legacy [`gosh/`](../go
 
 ## Build the v5 stand-alone model
 
+Before building, create the ignored v5 `config/Mkinclude` as described in the [build guide](../config/README.md). The v4 `adm/Mkinclude` is not used by these v5 scripts.
+
 From any working directory, run:
 
 ```sh

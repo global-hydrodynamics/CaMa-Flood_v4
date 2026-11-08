@@ -20,7 +20,7 @@ NML_ATM=${NML_ATM:-${ROOT}/gosh/etc/atm_GSWP3.nml}
 
 if [[ ! -x "$EXE" ]]; then
     echo "Executable not found: ${EXE}" >&2
-    echo "Enable heatlink in adm/Mkinclude and run make all in src/." >&2
+    echo "This copied example targets legacy src/; configure its v4 build with adm/Mkinclude." >&2
     exit 1
 fi
 for template in "$NML_COMMON" "$NML_ATM"; do

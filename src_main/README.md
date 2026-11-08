@@ -18,7 +18,7 @@ From any directory in the repository, run:
 make -C src_main all
 ```
 
-This uses [`../adm/Mkinclude`](../adm/Mkinclude) and the existing source Makefiles without changing shared v4 build settings. The default target is `src_main/MAIN_cmf`; object files, module files, and archives are produced inside `src_main/` and its subdirectories.
+This uses the machine-specific [`config/Mkinclude`](../config/README.md) and the v5 Makefiles. If it is missing, Make stops with instructions rather than using the legacy v4 configuration. The default target is `src_main/MAIN_cmf`; object files, module files, and archives are produced inside `src_main/` and its subdirectories.
 
 To remove only the v5 model build products:
 
@@ -30,13 +30,13 @@ Do not use the legacy [`../gosh/compile.sh`](../gosh/compile.sh) as a v5 build e
 
 ## NetCDF-enabled build
 
-On macOS or Linux, install GNU Fortran and NetCDF-Fortran plus the NetCDF C library so that `nf-config` and `nc-config` are available on `PATH`. From the repository root, build the isolated v5 NetCDF executable with:
+On macOS or Linux, install GNU Fortran and NetCDF-Fortran so that `gfortran` and `nf-config` are available on `PATH`, then create `config/Mkinclude` as described in the [v5 build guide](../config/README.md). From the repository root, build the isolated v5 NetCDF executable with:
 
 ```sh
 ./gosh_sample/compile_netcdf.sh
 ```
 
-The wrapper combines flags from both configuration tools and builds a temporary source/build copy, leaving the normal `src_main/MAIN_cmf` binary build and object files intact. It writes `out/bin/MAIN_cmf_netcdf`. The currently verified environment is macOS with Homebrew GNU Fortran and NetCDF; other installations should provide compatible GNU Fortran and NetCDF C/Fortran libraries. See the wrapper and [simulation workflow plan](../docs/model_source_workflow_plan.md) for the commands and current validation evidence.
+The wrapper uses `config/Mkinclude` for the isolated source/build copy and gets the NetCDF flags from `nf-config`; it leaves the normal `src_main/MAIN_cmf` build and object files intact. It writes `out/bin/MAIN_cmf_netcdf`. The currently verified environment is macOS with Homebrew GNU Fortran and NetCDF; other installations should provide compatible GNU Fortran and NetCDF-Fortran libraries. Set `NF_CONFIG` if the tool has a nonstandard path. See the wrapper and [simulation workflow plan](../docs/model_source_workflow_plan.md) for validation limits.
 
 ## Map input formats
 

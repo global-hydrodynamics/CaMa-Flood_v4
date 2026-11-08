@@ -1,5 +1,5 @@
 #!/bin/sh
-# Diagnose the local GNU Fortran setup and optionally write a recommended Mkinclude.
+# Diagnose v5 build requirements and optionally write a recommended Mkinclude.
 set -eu
 
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
@@ -109,15 +109,14 @@ NETCDF_READY=no
 NETCDF_INFO="nf-config not found"
 NETCDF_FFLAGS=""
 NETCDF_FLIBS=""
-NETCDF_CFLAGS=""
 NETCDF_CLIBS=""
-if [ "$GFORTRAN_READY" = yes ] && command -v nf-config >/dev/null 2>&1 && \
-   command -v nc-config >/dev/null 2>&1; then
+if [ "$GFORTRAN_READY" = yes ] && command -v nf-config >/dev/null 2>&1; then
     NETCDF_INFO=$(nf-config --version 2>/dev/null || printf 'version unavailable')
     if NETCDF_FFLAGS=$(nf-config --fflags 2>/dev/null) && \
-       NETCDF_FLIBS=$(nf-config --flibs 2>/dev/null) && \
-       NETCDF_CFLAGS=$(nc-config --cflags 2>/dev/null) && \
-       NETCDF_CLIBS=$(nc-config --libs 2>/dev/null); then
+       NETCDF_FLIBS=$(nf-config --flibs 2>/dev/null); then
+        if command -v nc-config >/dev/null 2>&1; then
+            NETCDF_CLIBS=$(nc-config --libs 2>/dev/null | sed 's/-lnetcdf//g')
+        fi
         cat > "$TMP_DIR/netcdf.f90" <<'EOF'
 program netcdf_check
   use netcdf
@@ -173,7 +172,7 @@ EOF
             NETCDF_INFO="$NETCDF_INFO (NF90_DOUBLE read/write test failed)"
         fi
     else
-        NETCDF_INFO="$NETCDF_INFO (nf-config/nc-config flags unavailable)"
+        NETCDF_INFO="$NETCDF_INFO (nf-config flags unavailable)"
     fi
 fi
 
@@ -399,6 +398,13 @@ if [ "$NATIVE_WINDOWS" = yes ]; then
     exit 1
 fi
 
+if [ "$NETCDF_READY" != yes ]; then
+    printf '\n[ERROR] Working NetCDF-Fortran is required for the standard v5 configuration.\n' >&2
+    printf 'Install NetCDF-Fortran, ensure nf-config is on PATH, and rerun this script.\n' >&2
+    printf 'No configuration was generated; existing files were left unchanged.\n' >&2
+    exit 1
+fi
+
 printf '\nRecommended configuration:\n'
 OMP_CONFIG="OpenMP unavailable"
 if [ "$OPENMP_READY" = yes ]; then
@@ -408,7 +414,7 @@ printf '  Compiler: GNU Fortran (%s)\n' "$OMP_CONFIG"
 if [ "$NETCDF_READY" = yes ]; then
     printf '  NetCDF: Enabled (NF90_DOUBLE read/write test passed)\n'
 else
-    printf '  NetCDF: Disabled (mek02 will require NetCDF-Fortran)\n'
+    printf '  NetCDF: Required for the standard v5 configuration; check failed\n'
 fi
 printf '  MPI: Disabled by default\n'
 printf '  Precision: SinglePrec_CMF, matching standard GNU templates\n'
@@ -441,8 +447,8 @@ STAGED_CONFIG=$(mktemp "$SCRIPT_DIR/.Mkinclude.XXXXXX") || {
 }
 write_recommended_config() {
     cat <<'EOF'
-# Recommended GNU Fortran configuration for CaMa-Flood v5.
-# Review this machine-specific file before copying it to adm/Mkinclude.
+# Recommended CaMa-Flood v5 configuration for GNU Fortran on macOS/Linux.
+# Review this machine-specific staging file before activating it in config/.
 FC = gfortran
 EOF
     if [ "$OPENMP_READY" = yes ]; then
@@ -454,24 +460,25 @@ EOF
 FFLAGS = -O3 -Wall -cpp -ffree-line-length-none -fimplicit-none -ftree-vectorize
 LFLAGS =
 
-# MPI is intentionally disabled in the beginner configuration.
-# Enable DMPI and set FCMP to a tested MPI wrapper only when needed.
-#DMPI=-DUseMPI_CMF
-EOF
-    if [ "$NETCDF_READY" = yes ]; then
-        printf 'DCDF=-DUseCDF_CMF\n'
-        printf 'INC = %s %s\n' "$NETCDF_FFLAGS" "$NETCDF_CFLAGS"
-        printf 'LIB = %s %s\n' "$NETCDF_FLIBS" "$NETCDF_CLIBS"
-    else
-        printf '#DCDF=-DUseCDF_CMF\n'
-        printf 'INC =\nLIB =\n'
-    fi
-    cat <<'EOF'
-# Preserve the precision setting used by standard GNU templates.
-DSINGLE=-DSinglePrec_CMF
-#DATM=-DNoAtom_CMF
+# NetCDF-Fortran flags come from the active installation.
+NF_CONFIG ?= nf-config
+NC_CONFIG ?= nc-config
+NF_FFLAGS ?= $(shell $(NF_CONFIG) --fflags 2>/dev/null)
+NF_FLIBS ?= $(shell $(NF_CONFIG) --flibs 2>/dev/null)
+NC_LIBS ?= $(shell $(NC_CONFIG) --libs 2>/dev/null | sed 's/-lnetcdf//g')
+INC ?= $(NF_FFLAGS)
+LIB ?= $(NF_FLIBS) $(NC_LIBS)
+
+# Preprocessing options
+# DMPI=-DUseMPI_CMF        : activate MPI parallelization
+# DCDF=-DUseCDF_CMF        : activate NetCDF input/output
+# DSINGLE=-DSinglePrec_CMF : activate Single Precision Mode
+# DHEATLINK=-Dheatlink     : activate river water temperature calculation
+#DMPI = -DUseMPI_CMF
+DCDF = -DUseCDF_CMF
+DSINGLE = -DSinglePrec_CMF
 #DHEATLINK=-Dheatlink
-CFLAGS=$(DMPI) $(DCDF) $(DATM) $(DSINGLE) $(DHEATLINK)
+CFLAGS = $(DMPI) $(DCDF) $(DSINGLE) $(DHEATLINK)
 EOF
     :
 }
@@ -491,6 +498,9 @@ STAGED_CONFIG=""
 
 printf '\n[SUCCESS] Generated ./Mkinclude\n\n'
 printf 'To activate this configuration:\n\n'
-printf '  cp Mkinclude adm/Mkinclude\n\n'
-printf 'That command replaces the active build configuration. Back it up first if needed:\n\n'
-printf '  cp adm/Mkinclude adm/Mkinclude.backup\n'
+if [ -e "$SCRIPT_DIR/config/Mkinclude" ]; then
+    printf 'Existing config/Mkinclude was not changed. Back it up before choosing to replace it.\n'
+else
+    printf '  cp Mkinclude config/Mkinclude\n'
+fi
+printf '\nLegacy v4 builds continue to use adm/Mkinclude.\n'

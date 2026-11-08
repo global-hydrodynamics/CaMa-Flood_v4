@@ -25,7 +25,7 @@ The v5 model builds directly from its own tree:
 make -C src_main all
 ```
 
-This uses `src_main/Makefile`, the existing shared default `adm/Mkinclude`, and the existing nested Makefiles. The directory depth is the same as `src/`, so the current relative include paths resolve without changing `adm/`. Build outputs, including `src_main/MAIN_cmf`, object files, module files, and `libcama.a`, stay under `src_main/`. Clean only this build with:
+This uses `src_main/Makefile` and its v5-specific `config/Mkinclude`; the v5 Makefiles fail with an actionable message when that file is missing. The legacy `src/` tree continues to use `adm/Mkinclude`. Build outputs, including `src_main/MAIN_cmf`, object files, module files, and `libcama.a`, stay under `src_main/`. Clean only this build with:
 
 ```sh
 make -C src_main clean
@@ -51,7 +51,7 @@ The complete source inventory includes:
 | `sediment/` | Separate sediment state, calculations, forcing, output and restart path selected with `-Dsediment`. |
 | `ICI/` | Specialized ICI/ILS driver; depends on external ICI/PALM-time/kind and MPI-related build components and an external build layout. |
 
-The root `src_main/Makefile` builds the standard stand-alone target. Preserving optional source directories does not mean their build configurations have been migrated or validated. `adm/` remains shared and unchanged. `adm/Mkinclude_heatlink` includes a workstation-specific NetCDF path, so it is not a portable generic optional-build configuration. Any future separate v5 compiler include must be introduced only for a concrete need and must not alter v4 settings.
+The root `src_main/Makefile` builds the standard stand-alone target. Preserving optional source directories does not mean their optional build combinations have been validated. The v5 build settings are separated under `config/`; the legacy `adm/` configurations, including the workstation-specific `adm/Mkinclude_heatlink`, remain assigned to v4 and are not used as v5 fallback settings.
 
 ### Legacy script findings
 
@@ -119,7 +119,7 @@ Completed:
 
 ## Phase 1A–1D: NetCDF forcing, output, and annual restart workflow
 
-The maintainer authorized NetCDF I/O work while keeping map inputs in Binary format and leaving the legacy `src/` and `gosh/` trees untouched. `gosh_sample/compile_netcdf.sh` builds a separate `MAIN_cmf_netcdf` from an isolated temporary copy using NetCDF-Fortran and NetCDF-C configuration flags. It does not replace the regular `src_main/MAIN_cmf` build. The verified toolchain was macOS/Homebrew GNU Fortran with `nf-config` and `nc-config`; Linux behavior is designed for the same tools but has not been exercised.
+The maintainer authorized NetCDF I/O work while keeping map inputs in Binary format and leaving the legacy `src/` and `gosh/` trees untouched. `gosh_sample/compile_netcdf.sh` builds a separate `MAIN_cmf_netcdf` from an isolated temporary copy using NetCDF-Fortran flags from `nf-config`, supplemented by `nc-config --libs` when available. It does not replace the regular `src_main/MAIN_cmf` build. The earlier verified toolchain was macOS/Homebrew GNU Fortran with both configuration tools; Linux behavior is designed for the same GNU/NetCDF toolchain but has not been exercised.
 
 `inp/test-mek_1deg_nc/s00-convert_binary_to_netcdf.py` generates annual `runoff2000.nc` and `runoff2001.nc` from the unchanged 20 × 30 daily Binary sample in `inp/test-mek_1deg/`. The files contain `runoff(time, latitude, longitude)` in `mm day-1`, with CF daily time bounds and `proleptic_gregorian` calendar. The conversion uses `ncgen`/`ncdump`, has an explicit overwrite option, and is described in the adjacent dataset README. All 731 fields were compared after NetCDF round-trip against the source float32 values with exact equality. The two output files total 1,774,768 bytes (about 1.7 MiB). This proves conversion fidelity for these files, not the scientific validity of the underlying runoff product. The registry row records GitHub sample intent; inclusion in a future v5 downloadable package remains an open policy decision because a v5 package assembly workflow is not yet established.
 
@@ -194,6 +194,10 @@ The focused validation compared the pre-refactor and refactored Mekong Restart r
 The standard Binary and NetCDF-enabled builds passed. Mekong DAY, MON, YEAR, and Binary SEQ samples completed with pre/post byte-identical selected output and Restart files. A grouped NetCDF YEAR run crossing a year boundary and an explicitly dated NetCDF SEQ run also completed with byte-identical outputs and Restart. CF-time NetCDF SEQ without explicit date fields stopped during `NFORCE` validation in both the pre-refactor and refactored executables; this is a pre-existing behavior and was not changed. No focused Forcing test suite was present in the repository. These checks establish consistency for the exercised configurations, not independent scientific validation or optional MPI/coupled pathways. See [VR-0118](../research/records/validation_runs/VR-0118.md).
 
 
+## v4/v5 build configuration separation
+
+The v5 build settings are isolated under `config/`; the legacy v4 trees continue to use `adm/Mkinclude`. V5 Makefiles in `src_main/` and `map/tools/code/` explicitly require `config/Mkinclude` and report setup instructions if it is absent. The standard GNU templates enable NetCDF, OpenMP, and single precision, with MPI and Heatlink disabled. `nf-config` provides NetCDF compile/link flags. The root setup script requires a successful NetCDF-Fortran compile/link/run check before it offers a reviewed root-level `Mkinclude`; the user manually activates it in `config/`. The local active file is ignored by Git. Linux `ifx` is available as an optional template but has not been tested. See [`config/README.md`](../config/README.md).
+
 ## Interactive workstation setup
 
-The repository-root `s01-setup_fortran.sh` diagnoses GNU Fortran, GNU Make, OpenMP, NetCDF-Fortran, and MPI using local compile/link checks, then can generate a recommended, machine-specific `Mkinclude` after confirmation. The user reviews and manually copies that file to `adm/Mkinclude`; the active configuration is never changed by the script. `s02-python_setup.sh` diagnoses Python and, after confirmation, prepares the repository-local `.venv/` from the unchanged `requirements.txt`. Neither script installs operating-system packages, and both run in diagnostic-only mode without an interactive terminal. They report environment/build readiness, not successful sample simulations. See [VR-0119](../research/records/validation_runs/VR-0119.md).
+The repository-root `s01-setup_fortran.sh` diagnoses GNU Fortran, GNU Make, OpenMP, NetCDF-Fortran, and MPI using local compile/link/run checks, then can generate a recommended, machine-specific root `Mkinclude` after confirmation. NetCDF-Fortran must pass its test; the generated v5 settings enable NetCDF, enable OpenMP when supported, and leave MPI disabled. The user reviews and manually copies the staging file to `config/Mkinclude`; the script does not change the active v5 configuration or legacy `adm/Mkinclude`. The `config/` templates provide optimized/debug GNU Fortran and Linux `ifx` settings, with `nf-config` supplying NetCDF flags. `s02-python_setup.sh` diagnoses Python and, after confirmation, prepares the repository-local `.venv/` from the unchanged `requirements.txt`. Neither script installs operating-system packages, and both run in diagnostic-only mode without an interactive terminal. They report environment/build readiness, not successful sample simulations. The previous setup validation VR-0119 predates this configuration separation and does not validate the new v5 build paths.
