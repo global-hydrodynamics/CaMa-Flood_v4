@@ -19,6 +19,7 @@ STATIONS = [
     ("Ubon Ratchathani (Mun)", 60, 80),
     ("Stung Treng", 64, 86),
     ("Prek Kdam (Tonle Sap)", 60, 93),
+    ("My Thuan (Tien)", 64, 99),
     ("Can Tho (Hau/Bassac)", 64, 100),
 ]
 COLORS = {2000: "#1b9e77", 2001: "#d95f02", 2002: "#7570b3", 2003: "#e7298a"}
