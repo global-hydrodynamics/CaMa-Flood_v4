@@ -31,6 +31,11 @@ drwxr-xr-x   ... tutorial
 
 The main directories are `src_main/` (v5 model source), `map/` (river maps and map tools), `inp/` (runoff datasets), `gosh_sample/` (maintained run examples), and `tutorial/` (beginner tutorials). The root setup scripts diagnose and prepare local development environments.
 
+### Learning Check
+
+- [ ] I can locate the model source and the bundled map and runoff directories from the root listing.
+- [ ] I can explain that `cmf_root` is available in this terminal session, but not automatically in a new one.
+
 ## 2. Prepare the local environment
 
 Both setup commands run from the repository root. `s01-setup_fortran.sh` checks the Fortran build environment and offers to generate a suggested configuration. `s02-python_setup.sh` checks Python and offers a repository-local virtual environment for optional Python packages.
@@ -95,6 +100,11 @@ Python environment was not changed.
 
 Answer `y` only if you want the optional packages installed in `.venv/`; they are not installed into the system Python. Tutorial01's model run and the included CTL-generation tools do not require those optional packages. Interpreter paths and diagnostic results depend on your computer.
 
+### Learning Check
+
+- [ ] I can tell from the setup output whether the required Fortran checks passed and what to do if one failed.
+- [ ] I can explain that copying the generated `Mkinclude` replaces `config/Mkinclude`, while declining Python setup leaves Tutorial01's required tools available.
+
 ## 3. Build the model
 
 CaMa-Flood is written in Fortran. A compiler translates its source files into an executable program. Build or update the v5 executable with the repository's standard target, `make all`:
@@ -114,6 +124,11 @@ The build may print unused-import warnings from existing source files. In the ch
 ```
 
 This confirms that the executable was produced in that checkout; its size and listing details can vary. Do not run `MAIN_cmf` directly from this terminal: the experiment script prepares its Namelist and working directory.
+
+### Learning Check
+
+- [ ] I can locate `MAIN_cmf` under `src_main/` after the build.
+- [ ] I can explain that `make all` compiles or updates the executable from the Fortran source.
 
 ## 4. Read the experiment plan and script
 
@@ -146,6 +161,10 @@ If available, you can inspect without saving using `nano tutorial01-get_started.
 | Output directory | `tutorial/tutorial01-get_started/out/${PROJ}/` |
 
 The rest of the tutorial locates the real input files and shows how the GOSH settings select them.
+
+### Learning Check
+
+- [ ] I can find an experiment condition in `tutorial_design.md` and locate the corresponding setting in the script.
 
 ## 5. Inspect the river map
 
@@ -182,6 +201,12 @@ RIVWTH="${MAPDIR}/rivwth_merit.bin"
 
 The commented lines show alternative map products; the uncommented assignments select the files used here.
 
+### Learning Check
+
+- [ ] I can identify the river-connectivity file selected by `NEXTXY`.
+- [ ] I can identify the river-width file selected by `RIVWTH`.
+- [ ] I can explain which map directory `MAPDIR` selects.
+
 ## 6. Inspect runoff forcing
 
 Runoff forcing is water input supplied to the model over time. The sample uses daily binary files on a grid coarser than the river map. Inspect a few dates, including the last day before the exclusive end date:
@@ -216,6 +241,11 @@ DROFUNIT=86400000
 ```
 
 `Roff____` + a date in `YYYYMMDD` form + `.one` makes a daily filename. `IFRQ_INP=24` means the forcing interval is 24 hours. `DROFUNIT` converts the supplied `mm/day` runoff values to the model's `m/s` units. The 40-day interval ends at February 10 00:00, so February 9 is the final daily input date.
+
+### Learning Check
+
+- [ ] I can construct the filename for January 2 by combining the configured prefix, date, and suffix.
+- [ ] I can explain what the 24-hour input interval means and what `DROFUNIT` converts.
 
 ## 7. Inspect runoff-to-map mapping
 
@@ -262,6 +292,12 @@ LINTERP=".TRUE."
 
 `INPDIM` gives the model and input-grid dimensions and names the matrix file. `INPMAT` is the mapping data itself. With `LINTERP` true, runoff is mapped through this matrix. The supplied files already match this sample; Tutorial01 does not regenerate them.
 
+### Learning Check
+
+- [ ] I can distinguish the dimension descriptor from the input-matrix data file.
+- [ ] I can explain why runoff on a 20 × 30 grid needs a mapping matrix for this 80 × 120 river map.
+- [ ] I can explain that `LINTERP` enables runoff mapping through the input matrix.
+
 ## 8. Run the experiment
 
 The script defines the project as `PROJ="tutorial01-get_started"` and constructs `RUNDIR` as the Tutorial01 directory's `out/${PROJ}/`. Keeping each experiment under its own project name makes outputs easier to compare and prevents one experiment from replacing another. Tutorial02 uses the same naming convention for its multiple experiments.
@@ -296,6 +332,11 @@ Results: .../tutorial/tutorial01-get_started/out/tutorial01-get_started
 
 The script first writes the experiment Namelist and planned GrADS CTL files, then runs the model and prepares a Restart CTL. Shell messages go to the terminal; detailed model progress is in `log_CaMa.txt`. Exit status zero and the `[SUCCESS]` message mean the workflow completed without a reported command failure.
 
+### Learning Check
+
+- [ ] I can predict the default output directory from `PROJ="tutorial01-get_started"`.
+- [ ] I can run the script from its documented directory and identify its success message and zero exit status.
+
 ## 9. Inspect the results
 
 The GOSH run directory contains the copied executable, Namelist, model log, timing record, Restart, binary outputs, and CTL metadata. Inspect it from the repository root:
@@ -324,6 +365,11 @@ Representative files from the completed run:
 ```
 
 The files are under `out/tutorial01-get_started/`, not the repository's shared `out/`. The `outflw2000.ctl` file reports `TDEF 40 LINEAR 00Z02jan2000 1dy`; the model's output timestamps follow its output convention, while the simulation end time is exclusive. The model log ends with `CMF::===== CALCULATION END =====` on the observed successful run. File presence, record metadata, and normal completion are workflow checks, not evidence that the simulated values are scientifically correct.
+
+### Learning Check
+
+- [ ] I can locate the discharge output file `outflw2000.bin` and the model log `log_CaMa.txt`.
+- [ ] I can find the 40-record time axis in the CTL and explain why these checks do not establish scientific accuracy.
 
 ## Optional developer reset
 
