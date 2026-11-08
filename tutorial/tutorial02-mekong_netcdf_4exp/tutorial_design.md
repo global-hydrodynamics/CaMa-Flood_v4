@@ -172,9 +172,11 @@ The future beginner-facing README should guide users to inspect the tutorial and
 
 The implemented GitHub development contents are:
 
-- `experiment_spec.md`, `README.md`,
+- `tutorial_design.md` with experiment design and execution evidence,
 - `mek_default.sh`, `mek_nobif.sh`, `mek_kine.sh`, and `mek_nofld.sh`,
 - visualization scripts and verified reference figures.
+
+No Tutorial 02 `manual_design.md` or learner-facing README has been specified yet; their educational scope is a separate design task.
 
 Generated model output, Restart files, and logs are excluded from Git. The four scripts and figures are included in this implementation phase. The beginner-facing tutorial README remains a separate later task; see Appendix B for package policy.
 

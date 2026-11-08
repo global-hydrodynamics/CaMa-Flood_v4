@@ -28,6 +28,8 @@ This repository provides source code, build configurations, execution scripts, a
 
 [`variable_table/README.md`](variable_table/README.md) describes the shared variable tables. The three CSVs document map products, model outputs, and Restart state; their distinct schemas remain separate. Future tools should resolve them from `${CMF_BASE}/variable_table/`.
 
+The canonical v5 tutorial collection is under [`tutorial/`](tutorial/). Start with [Tutorial01](tutorial/tutorial01-get_started/tutorial01-get_started.md) for a tested development-branch build and Mekong run; it is not a substitute for the official downloadable distribution package.
+
 The legacy v4 source and scripts use [adm/Mkinclude](adm/Mkinclude) and the `adm/` templates. The v5 development tree uses a separate, ignored `config/Mkinclude`; its GNU Fortran default enables OpenMP, NetCDF, and single precision. See the [v5 build guide](config/README.md) and [model source guide](src_main/README.md). The legacy [v4 compilation script](gosh/compile.sh) and experiments remain under `gosh/`.
 
 ### Development environment setup
@@ -55,6 +57,7 @@ The optional ERA5-Land downloader also requires CDS account credentials and data
 | [config/](config/) | Separate v5 compiler and library configuration templates. |
 | [src_main/](src_main/) | v5 model-source tree. |
 | [gosh_sample/](gosh_sample/) | v5 sample build and simulation workflows. |
+| [tutorial/](tutorial/) | v5 tutorial specifications, executable examples, and learner-facing manuals. |
 | [map/](map/) | River-map preprocessing, regionalization, river parameters, input mapping, and gauge/reservoir allocation. |
 | [inp/](inp/) | Runoff forcing download and preparation tools. |
 | [etc/](etc/) | Optional-scheme workflows, parameter preparation, downscaling, validation, and analysis. |

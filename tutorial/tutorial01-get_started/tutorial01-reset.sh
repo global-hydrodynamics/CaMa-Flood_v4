@@ -4,7 +4,7 @@ set -eu
 
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 REPO_ROOT=$(CDPATH= cd "$SCRIPT_DIR/../.." && pwd -P)
-EXPECTED_SCRIPT_DIR="$REPO_ROOT/proj_sample/tutorial01-get_started"
+EXPECTED_SCRIPT_DIR="$REPO_ROOT/tutorial/tutorial01-get_started"
 SOURCE_DIR="$REPO_ROOT/src_main"
 OUTPUT_DIR="$SCRIPT_DIR/out"
 CONFIG_FILE="$REPO_ROOT/config/Mkinclude"

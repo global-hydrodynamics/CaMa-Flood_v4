@@ -2,7 +2,7 @@
 
 This tutorial takes a new user from a checkout of the v5 development repository to a short Mekong simulation. It uses the repository's bundled map and runoff sample, builds `src_main/MAIN_cmf`, and writes generated files only to this tutorial's `out/` directory.
 
-The instructions and output examples below were checked on macOS Apple Silicon against `feature/gosh-refactor` on 2026-11-08. The disposable test checkout used the branch plus a copy of the current, uncommitted Tutorial01 files. Once this task is integrated into the branch, the clone command below obtains those files directly. This is not a claim that a separate downloadable v5 release package has been assembled or tested. Paths, timestamps, compiler versions, and file sizes vary by machine.
+The instructions and output examples below were checked on macOS Apple Silicon against source commit `648499305606f381e745e0231614dbcdf9f8322d` from `feature/gosh-refactor` on 2026-11-08. For the canonical-path rerun, the Tutorial01 and shared tutorial files from the current worktree were copied into a disposable checkout. This task's reorganization is not yet committed. This is not a claim that a separate downloadable v5 release package has been assembled or tested. Paths, timestamps, compiler versions, and file sizes vary by machine.
 
 ## 1. Introduction
 
@@ -77,6 +77,7 @@ Run these commands at the repository root:
 ```sh
 pwd
 ls -1 src_main | head -n 12
+ls -1 tutorial
 cat map/mekong_15min/params.txt
 cat map/mekong_15min/inpdim_test-mek_1deg.txt
 ls -l inp/test-mek_1deg/runoff/Roff____20000101.one \
@@ -85,7 +86,17 @@ ls -l inp/test-mek_1deg/runoff/Roff____20000101.one \
 
 ### Observed output
 
-The map metadata reported 80 cells east-west, 120 cells north-south, 10 floodplain layers, 0.25-degree grid spacing, and bounds 90–110°E and 5–35°N. The input-dimension file reported a 20 × 30 runoff grid and named `inpmat_test-mek_1deg.bin`. The first and last runoff files needed by this 40-day run were present.
+The repository contained `tutorial/README.md`, both shared guidelines, and the Tutorial01 and Tutorial02 directories. The map metadata reported 80 cells east-west, 120 cells north-south, 10 floodplain layers, 0.25-degree grid spacing, and bounds 90–110°E and 5–35°N. The input-dimension file reported a 20 × 30 runoff grid and named `inpmat_test-mek_1deg.bin`. The first and last runoff files needed by this 40-day run were present.
+
+The captured `ls -1 tutorial` output was:
+
+```text
+README.md
+manual_authoring_guidelines.md
+tutorial01-get_started
+tutorial02-mekong_netcdf_4exp
+tutorial_development_guidelines.md
+```
 
 ### Explanation
 
@@ -288,7 +299,7 @@ The wrapper keeps generated results separate from other sample runs while reusin
 Run from the repository root:
 
 ```sh
-bash proj_sample/tutorial01-get_started/tutorial01-get_started.sh
+bash tutorial/tutorial01-get_started/tutorial01-get_started.sh
 ```
 
 ### Observed output
@@ -296,9 +307,9 @@ bash proj_sample/tutorial01-get_started/tutorial01-get_started.sh
 The test completed successfully. A representative excerpt from the captured run is:
 
 ```text
-Tutorial output directory does not exist yet: .../proj_sample/tutorial01-get_started/out
+Tutorial output directory does not exist yet: .../tutorial/tutorial01-get_started/out
 CMF_BASE = .../CaMa-Flood_v4
-RUNDIR = .../proj_sample/tutorial01-get_started/out
+RUNDIR = .../tutorial/tutorial01-get_started/out
 MAPDIR = .../map/mekong_15min
 RUNOFF_DIR = .../inp/test-mek_1deg/runoff
 [STEP 1/2] Configure the Mekong simulation
@@ -332,9 +343,9 @@ File presence, expected sizes, time records, and finite values provide a basic o
 List the tutorial results and inspect the discharge CTL and model log:
 
 ```sh
-ls -lh proj_sample/tutorial01-get_started/out
-cat proj_sample/tutorial01-get_started/out/outflw2000.ctl
-tail -n 20 proj_sample/tutorial01-get_started/out/log_CaMa.txt
+ls -lh tutorial/tutorial01-get_started/out
+cat tutorial/tutorial01-get_started/out/outflw2000.ctl
+tail -n 20 tutorial/tutorial01-get_started/out/log_CaMa.txt
 ```
 
 ### Observed output
@@ -353,7 +364,7 @@ The captured output directory contained:
 -rw-r--r--  1 ...  1.5M  storge2000.bin
 ```
 
-The actual listing also included each variable's `.ctl`, a Restart CTL and GrADS visualization copy, `mapdata.txt`, and runtime logs. The listing is excerpted.
+The actual canonical-path listing also included each variable's `.ctl`, a Restart CTL and GrADS visualization copy, `mapdata.txt`, and runtime logs. The listing is excerpted.
 
 The generated discharge CTL reported:
 
@@ -398,12 +409,12 @@ This first tutorial establishes a reproducible build-and-run path using bundled 
 bash s01-setup_fortran.sh
 cp Mkinclude config/Mkinclude
 make -C src_main all
-bash proj_sample/tutorial01-get_started/tutorial01-get_started.sh
+bash tutorial/tutorial01-get_started/tutorial01-get_started.sh
 ```
 
 ### Observed result
 
-The model compiled and completed the 40-day Mekong run in the tested environment. Five daily output variables, their CTL files, logs, and a Restart were created under `proj_sample/tutorial01-get_started/out/`.
+The model compiled and completed the 40-day Mekong run in the tested environment. Five daily output variables, their CTL files, logs, and a Restart were created under `tutorial/tutorial01-get_started/out/`.
 
 ### Explanation
 
@@ -414,7 +425,7 @@ For a new user, the reset script is not part of normal setup. It is for develope
 Use the reset only in a checkout where cleaning `src_main/` and deleting this tutorial's output is acceptable. It asks for confirmation; `--yes` is intended for a disposable test checkout.
 
 ```sh
-bash proj_sample/tutorial01-get_started/tutorial01-reset.sh
+bash tutorial/tutorial01-get_started/tutorial01-reset.sh
 ```
 
 In the tested disposable checkout, the after-run reset removed the tutorial output and executable and reported that `config/Mkinclude` was preserved unchanged. A before/after checksum was identical.

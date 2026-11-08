@@ -1,6 +1,6 @@
 # Tutorial01 Manual-Authoring Experiment: Assessment
 
-This note records what the first AI-assisted manual-authoring run demonstrated. It complements the original, preserved [`manual_guidelines.md`](manual_guidelines.md); it does not replace or silently revise that specification.
+This note records what the first AI-assisted manual-authoring run demonstrated. It complements the original, preserved [original manual guidelines](design_history/manual_guidelines_original.md); it does not replace or silently revise that specification.
 
 ## What the agent could document directly
 
