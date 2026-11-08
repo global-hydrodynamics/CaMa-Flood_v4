@@ -1,42 +1,73 @@
-# Tutorial Design — Tutorial01 Get Started
+# Tutorial Design — Tutorial01: Get Started
 
-**Purpose:** define the first-run actions, inputs, and acceptance criteria for the CaMa-Flood v5 getting-started tutorial. Shared development rules are in [`../tutorial_development_guidelines.md`](../tutorial_development_guidelines.md); the manual's audience and teaching content are in [`manual_design.md`](manual_design.md).
+**Purpose:** define the first-run actions, inputs, and acceptance criteria for the CaMa-Flood v5 getting-started tutorial. Shared implementation instructions are in [`../agent_tutorial_development.md`](../agent_tutorial_development.md); the learner-facing content is specified in [`design/manual_design.md`](design/manual_design.md).
 
 ## Learner outcome
 
-The executable workflow takes a CaMa-Flood v5 checkout or qualifying distribution from an uncompiled state to a completed 40-day Mekong sample run, with outputs isolated to Tutorial01.
+Starting from a v5 checkout or qualifying package with bundled Mekong sample inputs and a prepared configuration, the learner builds or updates `MAIN_cmf`, runs a 40-day Mekong simulation using a standalone educational GOSH script, and finds the results under this tutorial's `out/` directory. The starting presence of the executable is not prescribed.
+
+## Repository layout to introduce
+
+The manual should show a compact tree based on the actual repository, including:
+
+```text
+CaMa-Flood_v4/
+├── config/Mkinclude                 # Active v5 compiler configuration
+├── src_main/                        # v5 Fortran source and MAIN_cmf after build
+├── map/mekong_15min/                # Bundled 80 x 120 river map
+│   ├── params.txt                   # Map dimensions, grid, and geographic bounds
+│   ├── inpdim_test-mek_1deg.txt     # Runoff-grid dimensions and mapping metadata
+│   └── inpmat_test-mek_1deg.bin     # Runoff-to-map input matrix
+├── inp/test-mek_1deg/runoff/        # Bundled daily Binary runoff
+├── gosh_sample/                     # Maintained sample GOSH workflows
+└── tutorial/tutorial01-get_started/
+    ├── tutorial_design.md
+    ├── tutorial01-get_started.sh    # Standalone educational GOSH experiment
+    ├── manual_tutorial01-get_started.md
+    └── out/                          # Generated tutorial results; Git-ignored
+```
+
+The repository also contains root setup scripts and shared tools; include them in the explanatory text, not necessarily in this compact tree. `tutorial/design/` is developer-facing material and need not appear in the learner's main tree.
 
 ## Starting state and prerequisites
 
-- The checkout or package contains `src_main/`, `map/mekong_15min/`, `inp/test-mek_1deg/`, `gosh_sample/`, the root setup scripts, and this tutorial.
-- The model starts uncompiled: `src_main/MAIN_cmf` and generated build products are absent. Map and runoff samples are already present; no dataset download or regeneration is required.
-- GNU Make, GNU Fortran with OpenMP, and NetCDF-Fortran are available for the standard v5 build. The user prepares the Fortran configuration with `s01-setup_fortran.sh` and manually copies the reviewed staging `Mkinclude` to `config/Mkinclude`.
-- The user runs `s02-python_setup.sh` to diagnose or prepare the repository Python environment. Tutorial01's CTL generation uses the standard library, so installation of the full optional package set is not a prerequisite for this simulation.
-- `config/Mkinclude` exists before the developer reset is used. The reset restores the uncompiled/output-free state but must never remove or modify `config/Mkinclude`.
+- A newly obtained checkout or qualifying package contains `src_main/`, `config/`, the bundled `map/mekong_15min/` and `inp/test-mek_1deg/` samples, the root `s01-setup_fortran.sh` and `s02-python_setup.sh`, and Tutorial01.
+- The current state of `src_main/MAIN_cmf` and Tutorial01's `out/` is not prescribed. `make all` builds or updates the required executable, and the sample script replaces only its known generated files on rerun. Sample map, runoff, and matching input-matrix data are included; no scientific data download or map generation is required.
+- GNU Make, GNU Fortran with OpenMP, and NetCDF-Fortran are available. Run `s01-setup_fortran.sh`, review its recommended configuration, and manually copy the staged `Mkinclude` to the existing `config/Mkinclude` location before building.
+- Run `s02-python_setup.sh` for Python environment diagnosis/setup. Tutorial01's CTL tools use Python standard-library features; installing the full optional requirements set is not required for the sample run.
+- The developer reset utility requires `config/Mkinclude` to exist and must preserve it.
 
 ## Experiment inputs and settings
 
-- Map: `map/mekong_15min/`, Binary format, 80 × 120 cells at 0.25 degrees with 10 floodplain layers.
-- Runoff: `inp/test-mek_1deg/runoff/`, daily Binary files named `Roff____YYYYMMDD.one`.
-- Runoff grid and map relationship: `map/mekong_15min/inpdim_test-mek_1deg.txt` and `inpmat_test-mek_1deg.bin`; the runoff grid is 20 × 30.
-- Simulation: 2000-01-01 00:00 to 2000-02-10 00:00 (exclusive), 40 days, 3600-second base timestep, non-MPI, adaptive timestep and bifurcation enabled, one OpenMP thread in the tutorial wrapper.
-- Reuse `gosh_sample/mek01-default_run.sh` without duplicating its scientific configuration. The tutorial wrapper overrides `RUNDIR` to `tutorial/tutorial01-get_started/out/` and `OMP_NUM_THREADS` to 1.
-- Write all run products to the tutorial's `out/`; do not alter the shared Mekong sample's default output location.
+- Map: `map/mekong_15min/`, Binary format, 80 × 120 cells, 0.25-degree grid, and 10 floodplain layers.
+- Runoff: `inp/test-mek_1deg/runoff/`, daily Binary `mm/day` files named `Roff____YYYYMMDD.one`; the sample grid is 20 × 30.
+- Runoff-to-map files: `map/mekong_15min/inpdim_test-mek_1deg.txt` and `inpmat_test-mek_1deg.bin`, generated for this map/runoff grid pairing.
+- Simulation: 2000-01-01 00:00 to 2000-02-10 00:00 exclusive (40 days), non-MPI, base timestep 3600 seconds, adaptive timestep and bifurcation enabled, reservoir operation disabled, one OpenMP thread.
+- Preserve the scientific and I/O settings of `gosh_sample/mek01-default_run.sh`. The tutorial's complete standalone script changes only repository-relative context, output isolation to `tutorial/tutorial01-get_started/out/`, and OpenMP thread count to one. The maintained `gosh_sample/` script remains unchanged.
+- Output variables: `outflw`, `storge`, `sfcelv`, `flddph`, and `fldfrc`; daily Binary output and standard end-of-run Binary Restart.
 
 ## Required workflow
 
-1. Obtain the repository or qualifying package and locate the source, bundled map/runoff inputs, setup scripts, and Tutorial01 files.
-2. Prepare and activate the Fortran configuration with `s01-setup_fortran.sh`. Run `s02-python_setup.sh` for Python environment diagnosis/setup; the broader package installation may be unavailable offline and is not required by this tutorial's standard-library CTL step.
-3. Use `tutorial01-reset.sh` when a reproducible clean build/output state is needed. It runs the `src_main/` clean target and removes only this tutorial's `out/` directory. It preserves the active configuration and all inputs and unrelated outputs.
-4. Build with `make -C src_main all` and run `bash tutorial/tutorial01-get_started/tutorial01-get_started.sh` from the repository root.
-5. Inspect the tutorial output directory, Namelist, CTLs, model and wrapper logs, Binary outputs, and end Restart.
+1. Obtain CaMa-Flood, confirm the repository root with `pwd`, and define `cmf_root="$(pwd)"` in the same terminal session.
+2. Inspect the main directories from `${cmf_root}`.
+3. Prepare the Fortran and Python environments using the root setup scripts.
+4. Activate `config/Mkinclude` by copying the reviewed staged `Mkinclude` manually; `config/` already exists.
+5. From `${cmf_root}`, enter `src_main/` and run `make all` to build or update the current model executable.
+6. Locate and list bundled map, runoff, input-dimension, and input-matrix files before explaining their settings and relationships.
+7. Inspect short, relevant settings excerpts in the standalone Tutorial01 GOSH script.
+8. From `tutorial/tutorial01-get_started/`, execute `./tutorial01-get_started.sh`.
+9. Inspect the generated Namelist, logs, CTLs, model outputs, and Restart under `out/`.
+
+Map generation and visualization are not required.
 
 ## Acceptance criteria
 
-- Before a clean build demonstration, `src_main/MAIN_cmf` is absent; after `make -C src_main all`, it exists and the build returns zero.
-- The tutorial wrapper and model return zero; `log_CaMa.txt` reaches normal calculation completion.
-- Expected output files are created under only `tutorial/tutorial01-get_started/out/`: five daily Binary variables (`outflw`, `storge`, `sfcelv`, `flddph`, `fldfrc`) with 40 records, their CTLs, Namelist, logs, and end Restart products.
-- The bundled Mekong map, runoff files, and matching input matrix are available without download or regeneration.
-- The reset script can restore the uncompiled/output-free state and leaves `config/Mkinclude` unchanged.
+- Running `make all` from `src_main/` returns zero and leaves an executable `MAIN_cmf`, whether it is newly built or updated.
+- The standalone tutorial script is executable, does not call or source `gosh_sample/mek01-default_run.sh`, and runs from its documented directory.
+- Tutorial01 and the model return zero; `log_CaMa.txt` reaches normal calculation completion.
+- Five expected daily Binary output variables and their CTLs, namelist, logs, and end Restart products are created under only `tutorial/tutorial01-get_started/out/`.
+- Each daily output contains 40 records for the 40-day interval. The end time is exclusive; timestamp details follow the model's output convention.
+- Bundled map, runoff, and matching input-matrix files remain unchanged.
+- In a disposable checkout, the developer reset can remove the build products and only this tutorial's `out/`, while preserving `config/Mkinclude` and input data.
 
-The checked run produced five 80 × 120 × 40 float32 outputs and 40 daily records. These checks establish operation and file consistency, not scientific correctness or observational agreement. Exact sizes and timing vary by environment.
+Successful execution is operational evidence, not scientific validation.

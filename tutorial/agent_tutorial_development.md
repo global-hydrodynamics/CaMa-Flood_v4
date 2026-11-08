@@ -1,0 +1,32 @@
+# Agent Instructions: Developing Executable Tutorials
+
+These evolving instructions apply to executable tutorials under `tutorial/`. Tutorial-specific experiment and learning requirements belong in that tutorial's specifications. For repository authorization, branch coordination, research records, and commit rules, follow the root [`AGENTS.md`](../AGENTS.md).
+
+## Inspect and plan
+
+- Read the tutorial's `tutorial_design.md` and inspect relevant scripts, model interfaces, bundled data, metadata, and existing tools before editing.
+- Treat the design specification as the intended user workflow and acceptance contract. Source and data show current behavior; they do not authorize scientific changes.
+- Report conflicts, missing inputs, and unresolved scientific decisions instead of guessing.
+- Reuse maintained tools and workflows where they fit. Avoid duplicate configurations, scientific algorithms, and general-purpose frameworks without a concrete need.
+
+## Implement the tutorial
+
+- In beginner-tutorial designs and manuals, use `make all` from `src_main/` as the standard model build/update command. Do not assume the executable is absent, and do not change the Makefile's default target to make the tutorial command work.
+- Preserve scientific settings, model behavior, file formats, and established interfaces unless an approved design explicitly requires a change.
+- Make prerequisites, inputs, working directories, settings, expected outputs, and success criteria clear and reproducible.
+- Keep runtime outputs and build products in tutorial-specific ignored locations. Track only intentional deliverables called for by the design, such as reviewed reference figures.
+- Scripts should be understandable to their intended learners. Do not turn a small tutorial into a validation framework or duplicate checks already performed by the model.
+- Normally reuse an existing maintained GOSH configuration rather than maintaining a second experiment configuration. **Educational exception:** when learning to read and edit GOSH is a central objective, a tutorial may include a standalone, self-contained GOSH script with its settings visible. Keep it scientifically equivalent to the maintained sample, explain the reason for the copy, and avoid copying scientific algorithms or adding an execution framework.
+- Add a reset procedure only when needed for reproducible initial state or evidence collection. Limit cleanup to explicit generated paths and preserve user configuration and inputs.
+
+## Execute and verify
+
+- Run the documented workflow when the required environment and data are available. Use a disposable checkout when validation requires destructive cleanup or could overwrite valuable results.
+- Check exit status and tutorial-specific contracts such as output files, dimensions, records, metadata, and paths in proportion to risk.
+- Distinguish operational success from scientific validation. Do not invent tolerances or claim scientific correctness from a successful run.
+- Record commands, environment, evidence, limitations, and failed or unavailable checks. Never report an unexecuted check as passed.
+- Keep useful program logs and generated metadata available while authoring the manual; identify which logs are authoritative.
+
+## Evolving guidance
+
+These are working defaults, not finalized standards. Improve them when repeated experience across tutorials shows a reusable need. Keep one-off experiment requirements in the tutorial specification and avoid overfitting shared rules to Tutorial01.

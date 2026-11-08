@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-This document tracks tutorial development status and next stages. The framework's canonical organization and shared rules are in [`tutorial/README.md`](../tutorial/README.md). Tutorial 01 has been implemented and operationally checked; Tutorial 02 has a researcher-approved design, four implemented experiment scripts, completed 2000–2003 simulations, analysis scripts, and reference figures on `feature/gosh-refactor`.
+This document tracks tutorial development status and next stages. The framework's canonical organization and contributor guidance are in [`tutorial/README.md`](../tutorial/README.md) and [`how_to_develop_tutorials.md`](../tutorial/how_to_develop_tutorials.md). Tutorial 01 has been implemented and operationally checked; its standalone educational GOSH and beginner manual are maintained under `tutorial/tutorial01-get_started/`. Tutorial 02 has a researcher-approved design, four implemented experiment scripts, completed 2000–2003 simulations, analysis scripts, and reference figures on `feature/gosh-refactor`.
 
 The framework is intended to become the primary beginner-oriented entry point for v5 experiments when its materials are implemented and validated. Existing `gosh_sample/` workflows remain available as implementation references; this plan does not remove or reorganize them.
 
@@ -11,9 +11,9 @@ The framework is intended to become the primary beginner-oriented entry point fo
 The framework separates tutorial-specific intent from shared agent procedures:
 
 - [`tutorial/README.md`](../tutorial/README.md) explains the specification-driven workflow, roles, learning progression, and precedence.
-- [`tutorial/tutorial_development_guidelines.md`](../tutorial/tutorial_development_guidelines.md) governs implementation and verification of executable tutorials.
-- [`tutorial/manual_authoring_guidelines.md`](../tutorial/manual_authoring_guidelines.md) governs evidence-based manual authoring.
-- Each tutorial uses `tutorial_design.md` for executable scope and `manual_design.md` for audience and teaching content when that manual has been designed.
+- [`tutorial/agent_tutorial_development.md`](../tutorial/agent_tutorial_development.md) governs implementation and verification of executable tutorials.
+- [`tutorial/agent_manual_authoring.md`](../tutorial/agent_manual_authoring.md) governs evidence-based manual authoring.
+- Each tutorial uses `tutorial_design.md` for executable scope and `design/manual_design.md` for audience and teaching content when that manual has been designed.
 
 Tutorial specifications are iterative design records. Source inspection and execution provide evidence about actual behavior, but do not independently approve scientific or educational intent.
 
@@ -34,7 +34,7 @@ Experiment design, implementation and validation, and tutorial writing are separ
 
 ## Manual evidence
 
-Manuals should reflect actual scripts, source interfaces, data, metadata, and execution. Use copyable commands and representative captured output; state when long output is abbreviated, distinguish application logs from shell streams, and never claim an unexecuted operation passed. Shared rules are in [`tutorial/manual_authoring_guidelines.md`](../tutorial/manual_authoring_guidelines.md).
+Manuals should reflect actual scripts, source interfaces, data, metadata, and execution. Use copyable commands and representative captured output; state when long output is abbreviated, distinguish application logs from shell streams, and never claim an unexecuted operation passed. Shared rules are in [`tutorial/agent_manual_authoring.md`](../tutorial/agent_manual_authoring.md).
 
 ## Tutorial 02: four-experiment specification
 
@@ -48,7 +48,7 @@ The downloadable beginner package has a different teaching purpose. Its planned 
 
 ## Tutorial 01 implementation and manual-authoring experiment
 
-Tutorial 01 is implemented under [`tutorial/tutorial01-get_started/`](../tutorial/tutorial01-get_started/). Its tutorial and manual design, runnable wrapper, reset utility, tested manual, and authoring assessment are present. The original design and writing instructions are retained in `design_history/` for comparison. The 40-day Mekong workflow was executed in a disposable checkout on macOS Apple Silicon; the reset script was also run after the simulation and preserved `config/Mkinclude`. This is operational validation of the development branch, not validation of a separately assembled release package or scientific correctness.
+Tutorial 01 is implemented under [`tutorial/tutorial01-get_started/`](../tutorial/tutorial01-get_started/). Its tutorial design, standalone educational GOSH script, and learner manual are at the tutorial root; manual design, reset utility, assessment, preserved original drafts, and developer-only manual-generation evidence are under `design/`. Beginner build instructions standardize on `make all` from `src_main/` to build or update `MAIN_cmf`, without assuming the executable's starting state. The standalone script completed the 40-day Mekong workflow in a disposable checkout on macOS Apple Silicon; its reset preserved `config/Mkinclude`. This is operational validation of the development branch, not validation of a separately assembled release package or scientific correctness. The manual starts each major command section from `${cmf_root}` and introduces map/runoff/matrix files before their selecting settings.
 
 The first manual-authoring experiment and its assessment are recorded in the Tutorial 01 directory. The run succeeded with system Python because its CTL scripts use the standard library; installation of the full optional Python requirements was blocked by package-index DNS access in the test environment. Tutorial 02's manual design, manual, and package integration remain separate follow-up work.
 

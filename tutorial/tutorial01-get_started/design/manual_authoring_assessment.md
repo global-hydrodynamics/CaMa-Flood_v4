@@ -40,3 +40,12 @@ Each tutorial needs its own approved experiment specification, source and data-c
 ## Knowledge-gap review
 
 The milestone review found no new scientific-assumption question that blocks Tutorial01. Remaining process limitations are documented above: Python dependency installation was network-limited, and a release-package workflow is not available. These do not invalidate the tested branch-based Tutorial01 run. The task does not claim scientific validation or portability beyond the tested macOS environment.
+
+
+## Follow-up: standalone educational GOSH and manual revision (2026-11-08)
+
+The reorganization task established that an AI agent can copy an existing workflow into a tutorial-specific standalone script, preserve its experiment values by a direct diff, adjust path/output/thread settings, build and run it in a disposable checkout, collect actual file/CTL/log evidence, and prepare a manual with current repository paths. A standalone script is justified here because reading GOSH settings is an explicit learning objective; otherwise, reuse of the maintained workflow remains preferable.
+
+One repository-specific ambiguity was resolved by execution: plain `make` did not build `MAIN_cmf` because the Makefile's first target is an object rule. The tutorial now says `make all`, which was verified. This demonstrates why manual commands should be executed exactly as written instead of copied from an earlier outline. The shell output, model log, generated CTL, file sizes, and reset checksum were inspected separately.
+
+The manual's explanations of the runoff matrix, filenames, and output-time convention still require interpretation across code, metadata, and maintainer-approved design; those explanations are linked to their evidence and are not scientific validation. The framework now makes the distinction between learner-facing files and `design/` authoring materials explicit, and gives contributors a human-facing process guide. Cross-tutorial effectiveness remains to be evaluated with later tutorials.

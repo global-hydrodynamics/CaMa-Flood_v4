@@ -3,10 +3,11 @@
 set -eu
 
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
-REPO_ROOT=$(CDPATH= cd "$SCRIPT_DIR/../.." && pwd -P)
-EXPECTED_SCRIPT_DIR="$REPO_ROOT/tutorial/tutorial01-get_started"
+TUTORIAL_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd -P)
+REPO_ROOT=$(CDPATH= cd "$TUTORIAL_DIR/../.." && pwd -P)
+EXPECTED_SCRIPT_DIR="$REPO_ROOT/tutorial/tutorial01-get_started/design"
 SOURCE_DIR="$REPO_ROOT/src_main"
-OUTPUT_DIR="$SCRIPT_DIR/out"
+OUTPUT_DIR="$TUTORIAL_DIR/out"
 CONFIG_FILE="$REPO_ROOT/config/Mkinclude"
 
 if [ "$SCRIPT_DIR" != "$EXPECTED_SCRIPT_DIR" ] || [ ! -f "$SOURCE_DIR/Makefile" ]; then

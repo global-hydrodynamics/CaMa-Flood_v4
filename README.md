@@ -28,7 +28,7 @@ This repository provides source code, build configurations, execution scripts, a
 
 [`variable_table/README.md`](variable_table/README.md) describes the shared variable tables. The three CSVs document map products, model outputs, and Restart state; their distinct schemas remain separate. Future tools should resolve them from `${CMF_BASE}/variable_table/`.
 
-The canonical v5 tutorial collection is under [`tutorial/`](tutorial/). Start with [Tutorial01](tutorial/tutorial01-get_started/tutorial01-get_started.md) for a tested development-branch build and Mekong run; it is not a substitute for the official downloadable distribution package.
+The canonical v5 tutorial collection is under [`tutorial/`](tutorial/). Start with [Tutorial01](tutorial/tutorial01-get_started/manual_tutorial01-get_started.md) for a tested development-branch build and Mekong run; it is not a substitute for the official downloadable distribution package.
 
 The legacy v4 source and scripts use [adm/Mkinclude](adm/Mkinclude) and the `adm/` templates. The v5 development tree uses a separate, ignored `config/Mkinclude`; its GNU Fortran default enables OpenMP, NetCDF, and single precision. See the [v5 build guide](config/README.md) and [model source guide](src_main/README.md). The legacy [v4 compilation script](gosh/compile.sh) and experiments remain under `gosh/`.
 
@@ -78,8 +78,8 @@ The existing manuals remain the detailed scientific and workflow references. The
 | --- | --- |
 | Model formulation, basic setup, standard input/output, and execution | [Main manual, v4.20 (Word)](doc/Manual_CaMa-Flood_v420.docx); [user guideline](doc/CaMa-Flood_Guideline.md) |
 | River parameters and runoff input matrices | [Map-parameter tools](map/src/src_param/README.md) |
-| Native-grid runoff remapping | [Composed remapping tools, assumptions, and validation](map/src/src_param/native_inpmat/README.md) |
-| Runoff forcing preparation | [ERA5-Land download and conversion](inp/download_ERA5-Land/ReadMe.md) |
+| Runoff-to-map input matrix | [v5 Input Matrix generation workflow](map/tools/script_params/s03-generate_inpmat.sh) |
+| Runoff forcing preparation | [ERA5-Land download and conversion](inp/ERA5-Land_download/README.md) |
 | Reservoir operation | [Reservoir manual, v4.20 (Word)](doc/Manual_ReservoirOperation_v420.docx); [parameter-preparation workflow](map/src/src_dam/ReadMe.md) |
 | Levee parameters | [Levee guide](doc/levee.md); [Word manual](doc/LeveeParameter.docx) |
 | Upstream inflow | [Upstream inflow manual (Word)](doc/Mannual_UpstreamInflowScheme.docx) |
