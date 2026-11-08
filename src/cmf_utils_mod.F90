@@ -566,23 +566,23 @@ MI = HHMM-HH*100                       !! minute
 !============================
 IF ( YYYY .LT. YYYY0) THEN
   WRITE(LOGNAM,*) 'DATE2MIN: YYYY .LT. YYYY0: Date Problem', YYYY,YYYY0
-  STOP
+  STOP 9
 ENDIF
 IF ( MM.LT.1 .or. MM .GT. 12 ) THEN
   WRITE(LOGNAM,*) 'DATE2MIN: MM:    Date Problem', YYYYMMDD, HHMM
-  STOP
+  STOP 9
 ENDIF
 IF ( DD.LT.1 .or. DD .GT. IMDAYS(YYYY,MM)) THEN
   WRITE(LOGNAM,*) 'DATE2MIN: DD:    Date Problem', YYYYMMDD, HHMM
-  STOP
+  STOP 9
 ENDIF
 IF ( HH.LT.0 .or. HH .GT. 24) THEN
   WRITE(LOGNAM,*) 'DATE2MIN: HH:    Date Problem', YYYYMMDD, HHMM
-  STOP
+  STOP 9
 ENDIF
 IF ( MI.LT.0 .or. MI .GT. 60) THEN
   WRITE(LOGNAM,*) 'DATE2MIN: MI:    Date Problem', YYYYMMDD, HHMM
-  STOP
+  STOP 9
 ENDIF
 
 IY=YYYY0

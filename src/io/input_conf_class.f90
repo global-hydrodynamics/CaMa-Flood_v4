@@ -2,9 +2,9 @@ module input_conf_class
     ! many items are input by namelist
     ! see input_namelist_mod > read_nml_input_item
     use PARKIND1, only: &
-    &   JPIM, JPRB, JPRM
+    &   JPIM, JPIB, JPRB, JPRM
     use YOS_CMF_INPUT, only: &
-    &   LOGNAM
+    &   LOGNAM, LLEAPYR
     use datetime_mod, only: &
     &   DateTime, datetime2string, seconds_since_year_start
 
@@ -26,6 +26,7 @@ module input_conf_class
     &   init_ncconfig, get_nc_dt, get_nc_start_record, & !get_nc_scale_offset, &
     &   read_nc, get_nc_domain, handle_error, same_nc_horizontal_grid
     use netcdf, only: nf90_close
+    use cmf_cf_time_mod, only: cf_calendar_uses_leap_day, cf_find_noleap_record
 #endif
     use time_mod, only: &
     &   dt2sec
@@ -67,6 +68,9 @@ module input_conf_class
 #ifdef UseCDF_CMF
         type(NCConfig) :: &
         &   ncconf
+        type(DateTime) :: file_start_dt
+        integer(kind=JPIM) :: file_start_t = 0_JPIM
+        logical :: skip_leap_records = .FALSE.
 #endif
         ! dynamically changed
         integer(kind=JPIM) :: &
@@ -123,6 +127,8 @@ function init_InputConf(item_name, nml_unit, start_dt) result(obj)
 #ifdef UseCDF_CMF
     integer(kind=JPIM) :: &
     &   nc_dt_sec
+    integer(kind=JPIM) :: ierr
+    character(len=256) :: message
     character(len=CLEN_ITEM) :: &
     &   var_name
 #endif
@@ -222,6 +228,9 @@ function init_InputConf(item_name, nml_unit, start_dt) result(obj)
                 dt_unit = 'sec'
             endif
             rec = get_nc_start_record(obj%ncconf, start_dt)
+            obj%skip_leap_records = cf_calendar_uses_leap_day(obj%ncconf%time_axis%calendar, ierr, message) &
+            &   .and. .not. LLEAPYR
+            obj%file_start_dt = start_dt
             !call get_nc_scale_offset( &
             !&   unit, var_id, &
             !&   scale, offset)
@@ -257,7 +266,7 @@ function init_InputConf(item_name, nml_unit, start_dt) result(obj)
 
     ! Binary annual inputs retain the legacy year-start convention. NetCDF
     ! inputs select their initial record from the file's CF time coordinate.
-    if (.not. is_netcdf) rec = 1_JPIM + seconds_since_year_start(start_dt) / obj%dt
+    if (.not. is_netcdf) rec = 1_JPIM + seconds_since_year_start(start_dt, LLEAPYR) / obj%dt
     obj%rec = rec
     obj%now_t = 0_JPIM
     obj%nxt_t = 0_JPIM
@@ -426,6 +435,10 @@ subroutine update_input(self, arr)
     &   is_end
     real(kind=JPRM), allocatable :: &
     &   arr_file(:,:,:)
+#ifdef UseCDF_CMF
+    integer(kind=JPIM) :: ierr
+    character(len=256) :: message
+#endif
     select case (trim(to_lowercase(self%get_fmt())))
         case ('binary', 'bin')
             call self%get_file_shape(nx, ny, slice_count)
@@ -435,6 +448,15 @@ subroutine update_input(self, arr)
             idx = self%get_slice_index_resolved()
 #ifdef UseCDF_CMF
         case ('netcdf', 'nc')
+            if (self%skip_leap_records) then
+                call cf_find_noleap_record(self%ncconf%time_axis, self%file_start_dt%yyyymmdd, &
+                &   self%file_start_dt%hour, 0_JPIM, int(self%nxt_t, JPIB)-int(self%file_start_t, JPIB), &
+                &   self%rec, ierr, message)
+                if (ierr /= 0) then
+                    write(LOGNAM, '(2a)') '[update_input ERROR] ', trim(message)
+                    stop 9
+                endif
+            endif
             call self%get_file_shape(nx, ny, slice_count)
             allocate(arr_file(nx,ny,1), source=0.0_JPRM)
             idx = 1
@@ -474,6 +496,8 @@ subroutine open_next_file(self, path, start_dt)
     type(DateTime), intent(in) :: start_dt
     type(NCConfig) :: next
     integer :: nx, ny, slice_count, rec, nc_dt
+    integer(kind=JPIM) :: ierr
+    character(len=256) :: message
 
     if (trim(to_lowercase(self%fmt)) /= 'nc' .and. trim(to_lowercase(self%fmt)) /= 'netcdf') then
         write(LOGNAM, '(a)') '[open_next_file ERROR] only NetCDF input supports explicit reopening'
@@ -502,6 +526,10 @@ subroutine open_next_file(self, path, start_dt)
     self%ncconf = next
     self%path = path
     self%rec = rec
+    self%file_start_dt = start_dt
+    self%file_start_t = self%nxt_t
+    self%skip_leap_records = cf_calendar_uses_leap_day(next%time_axis%calendar, ierr, message) &
+    &   .and. .not. LLEAPYR
     ! The next read is still due at nxt_t; preserve the model's elapsed-time schedule.
     self%is_updated = .FALSE.
 end subroutine open_next_file
