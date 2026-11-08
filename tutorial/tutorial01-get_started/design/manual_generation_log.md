@@ -35,3 +35,10 @@ Developer record for the learner manual at [`../manual_tutorial01-get_started.md
 - **Documentation evidence:** repository root, selected map files, daily runoff examples, dimension descriptor, matrix sizes/content, run startup, CTL, and result listing were checked in the disposable checkout. `sh -n`, ignored-output behavior, relative Markdown links, and `git diff --check` are checked as part of completion.
 - **Limits:** only macOS local operational behavior was checked; no scientific or observational validation, Linux portability, or separately assembled package test. Python setup was tested only through diagnosis and declining installation. The maintained `gosh_sample/mek01-default_run.sh`, model source, Makefile, scientific settings, and bundled data were not changed.
 - **Records:** DT-0088 and VR-0131.
+
+## Beginner-level learning outcomes and acquisition instructions
+
+- **Date:** 2026-11-08.
+- **Revision:** Tutorial01's learning outcomes and Learning Checks now assess repository acquisition/navigation, setup, build, GOSH setting and input-file lookup, execution, and output location. They do not assess physical map-variable meanings, scientific parameter rationale, numerical methods, mapping mathematics, or result accuracy. The manual adds Section 0 describing the v5 development repository and the separate official distribution route.
+- **Acquisition evidence:** the official [CaMa-Flood website](https://global-hydrodynamics.github.io/CaMa-Flood/) states that package access follows Google Form registration/license agreement, with a password sent by email. The Tutorial01 workflow remains verified only with the v5 development checkout and its bundled Mekong inputs; no official-package compatibility claim is made.
+- **Validation:** documentation-only review; the model was not rebuilt or rerun. Learning Checks were reviewed against the Tutorial Design and Manual Design specifications. Scientific experiment settings, source code, and input data were not changed.

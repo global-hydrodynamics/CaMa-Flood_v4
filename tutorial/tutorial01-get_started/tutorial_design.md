@@ -2,23 +2,35 @@
 
 **Purpose:** define the first-run actions, inputs, and acceptance criteria for the CaMa-Flood v5 getting-started tutorial. Shared implementation instructions are in [`../agent_tutorial_development.md`](../agent_tutorial_development.md); the learner-facing content is specified in [`design/manual_design.md`](design/manual_design.md).
 
+## Section 0: Obtain CaMa-Flood
+
+Introduce two ways to obtain CaMa-Flood, and distinguish their purpose:
+
+- **v5 development repository:** [`https://github.com/global-hydrodynamics/CaMa-Flood_v4`](https://github.com/global-hydrodynamics/CaMa-Flood_v4) is the GitHub repository for development contributors. Tutorial01's current instructions and sample workflow are verified against this v5 development checkout.
+- **Official distribution package:** the [official CaMa-Flood website](https://global-hydrodynamics.github.io/CaMa-Flood/) describes the general-user package download. Access requires registration and license agreement through a Google Form; the download password is sent by email. Download the archive and extract it into a suitable working directory.
+
+Tutorial01 has not been verified with the official distribution package. Do not imply that its v5 development files, sample inputs, or script are present or compatible there. For this tutorial's workflow, obtain the v5 development repository unless a separately verified package is specified.
+
+Ask learners to clone or download the chosen source, extract it if needed, place it in a suitable location, and identify the resulting CaMa-Flood root directory before Section 1.
+
 ## Learning outcomes
 
-Learning outcomes are observable and distinguish **operational skills** (actions a learner can perform) from **conceptual understanding** (relationships a learner can explain).
+Tutorial01 introduces repository navigation and a first model run; it does not teach river hydrodynamics or numerical modeling. Learning outcomes focus on observable **operational skills** and simple file/configuration relationships.
 
-| Stage | Operational skills | Conceptual understanding | Observable evidence of learning |
+| Stage | Operational skills | Basic relationship to identify | Observable evidence of learning |
 | --- | --- | --- | --- |
-| Find the repository | Confirm the checkout root with `pwd`, assign `cmf_root`, and locate `src_main/`, `map/`, `inp/`, and setup scripts. | Explain that `cmf_root` stores the repository path only in the current shell session. | The learner can name where model source and bundled inputs are located and use the root variable in later commands. |
-| Prepare the environment | Run the setup scripts, recognize check results and prompts, and identify the recommended configuration file. | Explain the difference between the generated root `Mkinclude` and active `config/Mkinclude`; identify Python `.venv` setup as optional for this tutorial's CTL tools. | The learner can decide whether to activate the proposed configuration and avoid replacing an existing active file without a backup. |
-| Build the model | Run `make all` in `src_main/` and locate the resulting `MAIN_cmf`. | Explain that `make all` compiles or updates the executable from Fortran source; the GOSH script later runs it with a prepared Namelist. | The learner can find the executable and describe why it is built before the sample run. |
-| Read experiment settings | Read `tutorial_design.md` and inspect the standalone GOSH script. | Explain the role of an experiment specification versus the script that applies its settings. | The learner can find the experiment conditions in the specification and the corresponding editable values in the script. |
-| Select the river map | List representative map files and inspect `MAPDIR`, `NEXTXY`, and `RIVWTH`. | Explain that `MAPDIR` selects the map directory and the active `NEXTXY` and `RIVWTH` assignments select connectivity and width products within it. | The learner can identify the exact connectivity and width files selected by the sample. |
-| Select runoff forcing | Locate daily runoff files and read `ROFFTAG`, frequency, naming, and unit settings. | Explain how the prefix, date, and suffix form a runoff filename; distinguish a 24-hour input interval from the `mm/day` to `m/s` conversion. | The learner can construct a sample daily filename and explain what `IFRQ_INP` and `DROFUNIT` control. |
-| Map runoff onto the river grid | Inspect the dimension descriptor and input matrix and identify `INPDIM`, `INPMAT`, and `LINTERP`. | Explain why the coarser runoff grid needs a map-specific input matrix to map forcing onto river-map cells, and that `LINTERP` enables mapping through it. | The learner can name the descriptor/matrix pair and explain the purpose of enabling matrix mapping. |
-| Run an experiment | Execute the Tutorial01 script from its documented directory and identify `PROJ` and `RUNDIR`. | Explain how `PROJ` determines an isolated output directory and why another project name keeps experiments separate. | The learner can predict the default output directory and recognize the script's successful completion message and zero exit status. |
-| Inspect results | List project outputs and inspect the model log and output CTL. | Explain which file contains discharge, which records model progress, and what the CTL time definition says; distinguish workflow success from scientific validation. | The learner can locate `outflw2000.bin` and `log_CaMa.txt`, find the 40-record CTL time axis, and state the limit of these checks. |
+| Obtain CaMa-Flood | Clone or download a suitable source, extract an archive if needed, and locate its root folder. | Distinguish the v5 development repository from the official user distribution package. | The learner can identify which source they obtained and point to its root folder. |
+| Find the repository | Confirm the root with `pwd`, assign `cmf_root`, and locate `src_main/`, `map/`, `inp/`, and setup scripts. | Know that `cmf_root` is a shell variable available in the current session. | The learner can name where the model source and bundled inputs are and reuse the root path in commands. |
+| Prepare the environment | Run the setup scripts, recognize check results and prompts, and locate the suggested configuration. | Identify that the suggested root `Mkinclude` is separate from active `config/Mkinclude`; recognize Python setup as optional for this tutorial. | The learner can follow the setup instructions and avoid replacing an active configuration without a backup. |
+| Build the model | Run `make all` in `src_main/` and locate `MAIN_cmf`. | Identify that the executable is produced in `src_main/` from model source. | The learner can find the executable after building. |
+| Read experiment settings | Read this specification and inspect the standalone GOSH script. | Identify where experiment details are described and where the script settings are written. | The learner can locate a setting in the script after finding it in the experiment information. |
+| Locate river-map files | List representative map files and inspect `MAPDIR`, `NEXTXY`, and `RIVWTH`. | Match the script's path and filenames to files in the map directory. | The learner can point out the selected map directory, connectivity file, and width file. |
+| Locate runoff files | List daily runoff files and find the relevant dataset and filename settings. | Match the directory and filename parts in the script to actual sample files. | The learner can locate a dated runoff file and the settings that point to its dataset and naming pattern. |
+| Locate runoff-mapping files | List the input-dimension descriptor and matrix and find `INPDIM` and `INPMAT`. | Match those settings to the two files in the map directory; identify `LINTERP` as another setting in the same block. | The learner can find each referenced file and its setting in the GOSH script. |
+| Run an experiment | Execute the Tutorial01 script from its documented directory and identify `PROJ` and `RUNDIR`. | Match the project name to the output directory shown by the script. | The learner can run the script, recognize its success message, and locate the selected run directory. |
+| Locate results | List the project output and inspect the model log. | Identify which generated file is discharge output and which file is the model log. | The learner can locate `outflw2000.bin`, `log_CaMa.txt`, and see evidence that the run completed. |
 
-Starting from a v5 checkout or qualifying package with bundled Mekong sample inputs and a prepared configuration, the learner completes these stages, runs a 40-day Mekong simulation, and finds the results in `tutorial/tutorial01-get_started/out/${PROJ}/`. The starting presence of the executable or output directory is not prescribed.
+Starting from the v5 development repository with its bundled Mekong samples and a prepared configuration, the learner completes these stages, runs the 40-day experiment, and locates results under `tutorial/tutorial01-get_started/out/${PROJ}/`. The current tutorial has not been verified against the official distribution package. The starting presence of the executable or output directory is not prescribed.
 
 ## Repository layout to introduce
 
@@ -64,12 +76,12 @@ The repository also contains root setup scripts and shared tools; include them i
 
 ## Required workflow
 
-1. Obtain CaMa-Flood, confirm the repository root with `pwd`, and define `cmf_root="$(pwd)"` in the same terminal session.
-2. Inspect the main directories from `${cmf_root}`.
+1. Present the GitHub development repository and official package access routes. State that the Tutorial01 workflow is verified only against the v5 development checkout, not the official package. Ask the learner to obtain the appropriate source, extract an archive if needed, place it in a suitable location, and locate its root folder.
+2. Confirm the v5 development repository root with `pwd`, define `cmf_root="$(pwd)"`, and inspect the main directories. The subsequent workflow uses the v5 checkout; package compatibility is not implied.
 3. Prepare the Fortran and Python environments using the root setup scripts.
 4. Activate `config/Mkinclude` by copying the reviewed staged `Mkinclude` manually; `config/` already exists.
 5. From `${cmf_root}`, enter `src_main/` and run `make all` to build or update the current model executable.
-6. Locate and list bundled map, runoff, input-dimension, and input-matrix files before explaining their settings and relationships.
+6. Locate and list bundled map, runoff, input-dimension, and input-matrix files before relating their names to the GOSH settings.
 7. Read `tutorial_design.md`, then inspect the plain-text standalone Tutorial01 GOSH configuration and its experiment settings.
 8. From `tutorial/tutorial01-get_started/`, execute `./tutorial01-get_started.sh`; the default project output is `out/tutorial01-get_started/`.
 9. Inspect the generated Namelist, logs, CTLs, model outputs, and Restart under the project-specific directory.
@@ -79,6 +91,7 @@ Map generation and visualization are not required.
 ## Acceptance criteria
 
 - Running `make all` from `src_main/` returns zero and leaves an executable `MAIN_cmf`, whether it is newly built or updated.
+- Section 0 identifies the GitHub v5 development repository and the official package route, accurately describes the official site's registration/password process, and does not imply Tutorial01 package compatibility.
 - The standalone tutorial script defines the default `PROJ`, constructs its `RUNDIR` under `out/${PROJ}/`, does not call or source `gosh_sample/mek01-default_run.sh`, and runs from its documented directory.
 - Tutorial01 and the model return zero; `log_CaMa.txt` reaches normal calculation completion.
 - Five expected daily Binary output variables and their CTLs, Namelist, logs, executable copy, and end Restart products are created under only `tutorial/tutorial01-get_started/out/tutorial01-get_started/`.

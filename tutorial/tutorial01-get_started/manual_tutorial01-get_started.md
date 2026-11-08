@@ -1,10 +1,25 @@
 # Tutorial01: Get Started with CaMa-Flood v5
 
-This tutorial builds CaMa-Flood, inspects a small Mekong experiment, and runs it for 40 days. The run demonstrates that the workflow works; it is not a scientific validation of the model.
+This tutorial introduces how to obtain and navigate CaMa-Flood, find the files used by a GOSH script, build and run the model, and locate the outputs. The 40-day sample run demonstrates the workflow; it is not a scientific validation of the model.
+
+## 0. Obtain CaMa-Flood
+
+There are two ways to obtain CaMa-Flood:
+
+1. **v5 development repository:** the [CaMa-Flood GitHub repository](https://github.com/global-hydrodynamics/CaMa-Flood_v4) is intended for users and contributors working with the development source. This Tutorial01 manual was checked with the v5 development checkout and its bundled Mekong samples.
+2. **Official distribution package:** the [official CaMa-Flood website](https://global-hydrodynamics.github.io/CaMa-Flood/) provides package downloads for general users. To access the download, complete the Google Form registration and license agreement. The download password is then sent by email; use it to access the download page.
+
+The official package is a separate distribution from the v5 development repository. This tutorial has not been verified with the official package, so do not assume it contains the same v5 files, scripts, or sample workflow. Use the v5 development checkout for the steps below unless a package version has separately been verified for this tutorial.
+
+Clone or download the selected source. If you downloaded an archive, extract it. Place the repository or extracted package in a suitable working directory on your computer. The remaining sections use the v5 development repository's directory layout.
+
+### Learning Check
+
+- [ ] I can identify which source I obtained and point to its CaMa-Flood root folder.
 
 ## 1. Find the repository root
 
-Open a terminal and change to the directory where you cloned CaMa-Flood. Confirm that you are at the repository root:
+Open a terminal and change to the v5 development repository folder you cloned or extracted. Confirm that you are at its root directory:
 
 ```bash
 pwd
@@ -29,12 +44,12 @@ drwxr-xr-x   ... tutorial
 -rwxr-xr-x   ... s02-python_setup.sh
 ```
 
-The main directories are `src_main/` (v5 model source), `map/` (river maps and map tools), `inp/` (runoff datasets), `gosh_sample/` (maintained run examples), and `tutorial/` (beginner tutorials). The root setup scripts diagnose and prepare local development environments.
+In the verified development checkout, the main directories are `src_main/` (v5 model source), `map/` (river maps and map tools), `inp/` (runoff datasets), `gosh_sample/` (maintained run examples), and `tutorial/` (beginner tutorials). The root setup scripts diagnose and prepare local development environments.
 
 ### Learning Check
 
 - [ ] I can locate the model source and the bundled map and runoff directories from the root listing.
-- [ ] I can explain that `cmf_root` is available in this terminal session, but not automatically in a new one.
+- [ ] I can run `pwd` and set `cmf_root` to this repository's root path for the current terminal session.
 
 ## 2. Prepare the local environment
 
@@ -103,7 +118,7 @@ Answer `y` only if you want the optional packages installed in `.venv/`; they ar
 ### Learning Check
 
 - [ ] I can tell from the setup output whether the required Fortran checks passed and what to do if one failed.
-- [ ] I can explain that copying the generated `Mkinclude` replaces `config/Mkinclude`, while declining Python setup leaves Tutorial01's required tools available.
+- [ ] I can identify which configuration file the setup instructions ask me to copy, and where Python setup reports its result.
 
 ## 3. Build the model
 
@@ -128,7 +143,7 @@ This confirms that the executable was produced in that checkout; its size and li
 ### Learning Check
 
 - [ ] I can locate `MAIN_cmf` under `src_main/` after the build.
-- [ ] I can explain that `make all` compiles or updates the executable from the Fortran source.
+- [ ] I can run `make all` and find `MAIN_cmf` in `src_main/`.
 
 ## 4. Read the experiment plan and script
 
@@ -203,9 +218,7 @@ The commented lines show alternative map products; the uncommented assignments s
 
 ### Learning Check
 
-- [ ] I can identify the river-connectivity file selected by `NEXTXY`.
-- [ ] I can identify the river-width file selected by `RIVWTH`.
-- [ ] I can explain which map directory `MAPDIR` selects.
+- [ ] I can find `MAPDIR` and identify the connectivity and width files selected by `NEXTXY` and `RIVWTH`.
 
 ## 6. Inspect runoff forcing
 
@@ -244,8 +257,8 @@ DROFUNIT=86400000
 
 ### Learning Check
 
-- [ ] I can construct the filename for January 2 by combining the configured prefix, date, and suffix.
-- [ ] I can explain what the 24-hour input interval means and what `DROFUNIT` converts.
+- [ ] I can locate a dated daily runoff file in the listed directory.
+- [ ] I can find the GOSH settings that select the runoff directory and construct its filename.
 
 ## 7. Inspect runoff-to-map mapping
 
@@ -294,9 +307,8 @@ LINTERP=".TRUE."
 
 ### Learning Check
 
-- [ ] I can distinguish the dimension descriptor from the input-matrix data file.
-- [ ] I can explain why runoff on a 20 × 30 grid needs a mapping matrix for this 80 × 120 river map.
-- [ ] I can explain that `LINTERP` enables runoff mapping through the input matrix.
+- [ ] I can locate the two mapping files and match them to `INPDIM` and `INPMAT`.
+- [ ] I can find `LINTERP` in the same GOSH configuration.
 
 ## 8. Run the experiment
 
@@ -334,8 +346,8 @@ The script first writes the experiment Namelist and planned GrADS CTL files, the
 
 ### Learning Check
 
-- [ ] I can predict the default output directory from `PROJ="tutorial01-get_started"`.
-- [ ] I can run the script from its documented directory and identify its success message and zero exit status.
+- [ ] I can find `PROJ` and the output directory shown in the script's startup messages.
+- [ ] I can run the script from its documented directory and recognize successful completion.
 
 ## 9. Inspect the results
 
@@ -369,7 +381,7 @@ The files are under `out/tutorial01-get_started/`, not the repository's shared `
 ### Learning Check
 
 - [ ] I can locate the discharge output file `outflw2000.bin` and the model log `log_CaMa.txt`.
-- [ ] I can find the 40-record time axis in the CTL and explain why these checks do not establish scientific accuracy.
+- [ ] I can recognize the model's normal-completion message in `log_CaMa.txt`.
 
 ## Optional developer reset
 
