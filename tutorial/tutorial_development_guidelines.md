@@ -2,11 +2,13 @@
 
 These shared guidelines apply to all executable tutorials under `tutorial/`. Tutorial-specific requirements belong in that tutorial's `tutorial_design.md`.
 
+These are evolving defaults rather than fixed standards. Refine a shared rule when practical experience shows that it applies to multiple tutorials; keep requirements that are unique to one experiment in its design specification.
+
 ## Repository inspection and reuse
 
 - Inspect the repository, current branch and worktree, authoritative status, relevant source, metadata, data, scripts, and existing documentation before editing.
 - Reuse existing model scripts, analysis programs, and utilities when they satisfy the design. Avoid duplicated scientific algorithms, configurations, or general-purpose frameworks without a concrete need.
-- Follow repository paths and naming conventions. Keep generated outputs isolated in the tutorial's own ignored output directory.
+- Follow repository paths and naming conventions. Keep runtime outputs and build products isolated in tutorial-specific ignored directories. Track intentional, reviewed tutorial deliverables such as reference figures only when the design calls for them; do not confuse these with incidental run output.
 - Preserve the approved persistent branch and scope. Follow the root [`AGENTS.md`](../AGENTS.md) for authorization, coordination, research records, and commit/push rules.
 
 ## Specification and scientific correctness

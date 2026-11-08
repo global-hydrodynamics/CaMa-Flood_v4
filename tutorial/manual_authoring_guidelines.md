@@ -2,6 +2,8 @@
 
 These shared guidelines apply to manuals for all tutorials under `tutorial/`. Each tutorial's `manual_design.md` defines its intended readers, topics, and content organization.
 
+These guidelines are evolving defaults, not a finished standard. Use authoring experience from multiple tutorials to improve shared rules, and keep tutorial-specific examples or required comparisons in the corresponding `manual_design.md`.
+
 ## Evidence-based documentation
 
 - Inspect the actual scripts, source interfaces, configuration, metadata, data, and generated outputs.
@@ -9,6 +11,7 @@ These shared guidelines apply to manuals for all tutorials under `tutorial/`. Ea
 - Never present fabricated terminal output, file listings, figures, or results as observed evidence.
 - Clearly distinguish verified behavior, design intent, interpretation, and unresolved information. Do not present operational success as scientific validation.
 - Record the tested repository revision and environment when they materially affect reproducibility. Do not describe development-branch validation as release-package validation.
+- If a tutorial can be obtained from more than one source, identify which source and revision were actually tested; describe untested package or installation routes separately.
 
 ## Clear explanations and commands
 
@@ -17,6 +20,7 @@ These shared guidelines apply to manuals for all tutorials under `tutorial/`. Ea
 - Use copyable commands, accurate paths and filenames, and appropriate Markdown code fences.
 - Explain variables, filenames, units, time conventions, and output contracts when they help the intended reader.
 - Avoid overwhelming readers with full compiler logs or large file listings; choose excerpts that preserve context and meaning.
+- Show before/after evidence for a state change when it helps the learner understand the result; treat this as a design choice, not a required format for every step.
 - Distinguish shell output, standard error, program-specific log files, and generated metadata. Tell the reader which source is authoritative for each check.
 
 ## Progressive learning

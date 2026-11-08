@@ -1,40 +1,46 @@
 # Manual Design — Tutorial01 Get Started
 
-**Audience:** a new CaMa-Flood user who can use a terminal and follow copyable commands, but is not expected to know Fortran build systems or the repository's map/runoff conventions.
+**Audience:** first-time CaMa-Flood users who can follow terminal commands but are not expected to know Fortran build systems, river maps, runoff forcing, or the repository's data layout.
 
-The technical run contract and success criteria are in [`tutorial_design.md`](tutorial_design.md). Shared writing and evidence conventions are in [`../manual_authoring_guidelines.md`](../manual_authoring_guidelines.md).
+The experiment contract and acceptance criteria are in [`tutorial_design.md`](tutorial_design.md). General evidence, writing, and verification practices are in [`../manual_authoring_guidelines.md`](../manual_authoring_guidelines.md).
 
-## Learning goals
+## Learning objectives
 
-Teach the reader how to obtain the development repository, identify the main v5 components, prepare the build, compile and run a sample, and recognize the files produced. Explain why each operation is performed. Keep the manual focused on first-run operation, not advanced scientific analysis or visualization.
+After reading the manual, a learner should be able to:
 
-## Content outline
+- Obtain the v5 development repository and distinguish it from a separately assembled distribution package.
+- Locate model source, build configuration, the Mekong river map, runoff forcing, and runoff-to-map input matrix.
+- Prepare the Fortran configuration and understand the role of the Python setup script.
+- Compile and run Tutorial01 from the repository root.
+- Identify the main output files, the model log, and Restart products, and recognize the normal completion signals.
+- Explain why a successful run and file checks do not establish scientific validation.
 
-Use these ten sections in order:
+## Prior knowledge for later tutorials
 
-1. **Introduction** — state what the reader will build and run, and distinguish operational success from scientific validation.
-2. **Download CaMa-Flood** — show the tested repository checkout route and distinguish the development branch from an assembled release package.
-3. **Explore the package** — locate source, map, runoff, setup scripts, and tutorial files.
-4. **Set up Fortran and Python** — explain the purpose of `s01`, activation of `config/Mkinclude`, and the optional broader-workflow Python setup.
-5. **Compile the model** — show the build command, executable, and a concise real output excerpt.
-6. **Inspect the sample input data** — explain map metadata, runoff grid, input matrix, and daily forcing filenames.
-7. **Understand the simulation settings** — summarize the 40-day run, non-MPI/bifurcation/adaptive settings, output variables, and wrapper overrides.
-8. **Run Tutorial01** — show the wrapper command and real completion/status output.
-9. **Verify output files** — explain expected products, 40 daily records, CTL time axis, model log, and Restart files.
-10. **Summary and next steps** — recap the workflow and describe the reset script as developer/documentation tooling, not a new-user requirement.
+Later introductory tutorials may assume the learner can use a terminal, activate `config/Mkinclude`, build `src_main/MAIN_cmf`, distinguish map data from runoff forcing and its input matrix, run a sample script, and locate model outputs and logs. They should briefly reference these skills rather than reteach the full first-run workflow.
 
-## Required explanation pattern
+## Instructional sequence
 
-For each operational section, include the step's purpose, command, representative observed output, an explanation, and a checkpoint. Include real before/after terminal output or file listings for the clean build and simulation stages. Do not reproduce the full build or runtime log. State when output is abbreviated and point to the model log when it contains the authoritative program messages.
+Organize the manual in this order:
 
-## Teaching emphasis
+1. **Introduction** — explain the first build/run goal and its limits.
+2. **Download CaMa-Flood** — show the tested GitHub development-checkout route and explain the package-validation distinction.
+3. **Explore the repository** — locate source, map, runoff, setup scripts, and tutorial files.
+4. **Prepare Fortran and Python** — explain `s01`, activation of `config/Mkinclude`, and the role and dependency scope of `s02`.
+5. **Compile the model** — show the absent executable before compilation and its presence after a successful build.
+6. **Inspect the sample inputs** — explain the map, runoff grid, input matrix, and daily forcing filenames.
+7. **Understand the experiment** — summarize the 40-day dates, model options, output variables, and tutorial wrapper overrides.
+8. **Run Tutorial01** — show the command and representative successful completion output.
+9. **Inspect the results** — show the tutorial `out/` directory before and after the run; explain the output records, CTLs, model log, and Restart.
+10. **Summary and next steps** — recap what the learner can now do and describe reset as developer/documentation tooling.
 
-- Define source code, compiler, executable, river map, runoff forcing, input matrix, simulation period, model output, and Restart briefly at first use.
-- Explain that the runoff grid is coarser than the river map and the input matrix provides their mapping.
-- Explain the exclusive end time and why daily mean output records are labeled at interval end.
-- Explain that the reset is only for developers/documentation authors and preserves `config/Mkinclude`.
-- Avoid advanced scheme comparisons, scientific claims, or visual analysis; reserve those for separately designed tutorials.
+## Explanations to emphasize
 
-## Completion criteria
+- Define source code, compiler, executable, river map, runoff forcing, input matrix, simulation period, model output, and Restart when first introduced.
+- Explain that runoff is supplied on a coarser grid and the input matrix maps it to the river-map grid.
+- Explain the exclusive end time and why daily mean output timestamps mark completed intervals.
+- Explain the difference between wrapper output and `log_CaMa.txt`, which contains model progress.
+- Explain that reset is for developers or documentation authors, is not part of normal first-time setup, and preserves `config/Mkinclude`.
+- Avoid advanced scheme comparisons, scientific conclusions, and visualization; those belong in separately designed tutorials.
 
-The manual is complete when a first-time reader can follow the commands from repository root, identify the expected success signals and files, distinguish the model log from wrapper output, and understand which checks do not establish scientific validity. All shown outputs must correspond to captured execution or be clearly labeled as illustrative expectations rather than observed facts.
+The manual should remain a beginner-facing guide, not a copy of the experiment specification or a general authoring checklist. Include the specified before/after build and simulation states, selecting excerpts that help a beginner recognize each transition.

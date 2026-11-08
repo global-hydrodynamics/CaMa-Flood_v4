@@ -2,6 +2,8 @@
 
 This directory is the canonical home for CaMa-Flood v5 tutorials, their specifications, executable workflows, and learner-facing manuals. The framework lets domain experts describe the intended learning and experiment in text, while AI coding agents implement, execute, verify, and document the work. Human experts retain final scientific and educational approval.
 
+The shared guidelines are evolving working guidance, not finalized standards. Use Tutorials 01–03 to identify repeated needs and revise common rules; keep one-off requirements in the tutorial-specific designs.
+
 ## Four document types
 
 | Document | Scope | Defines |
