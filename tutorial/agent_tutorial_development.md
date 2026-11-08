@@ -1,6 +1,6 @@
 # Agent Instructions: Developing Executable Tutorials
 
-These evolving instructions apply to executable tutorials under `tutorial/`. Tutorial-specific experiment and learning requirements belong in that tutorial's specifications. For repository authorization, branch coordination, research records, and commit rules, follow the root [`AGENTS.md`](../AGENTS.md).
+These evolving instructions implement the framework principles in the [tutorial README](README.md); the human-facing process is in [How to develop tutorials](how_to_develop_tutorials.md). Tutorial-specific experiment and learning requirements belong in that tutorial's specifications. Agents investigate and fill minor implementation gaps from evidence, while scientific decisions remain with the human domain expert. For repository authorization, branch coordination, research records, and commit rules, follow the root [`AGENTS.md`](../AGENTS.md).
 
 ## Inspect and plan
 

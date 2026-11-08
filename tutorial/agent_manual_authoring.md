@@ -1,6 +1,6 @@
 # Agent Instructions: Authoring Tutorial Manuals
 
-These evolving instructions apply to learner-facing manuals under `tutorial/`. The tutorial-specific `design/manual_design.md` defines the intended audience and teaching content. Follow the root [`AGENTS.md`](../AGENTS.md) for repository development rules.
+These evolving instructions implement the framework principles in the [tutorial README](README.md); the human-facing process is in [How to develop tutorials](how_to_develop_tutorials.md). They apply to learner-facing manuals under `tutorial/`. Each tutorial's `tutorial_design.md` and `design/manual_design.md` own its scientific and educational intent; manuals are derived from those specifications and verified evidence. Follow the root [`AGENTS.md`](../AGENTS.md) for repository development rules.
 
 ## Ground the manual in evidence
 
@@ -10,6 +10,7 @@ These evolving instructions apply to learner-facing manuals under `tutorial/`. T
 - Operational execution and file checks do not establish scientific validity.
 - Keep representative stdout/stderr excerpts separate from application log files, and say which source is authoritative. Abbreviate long output explicitly.
 - After asking a beginner to inspect a directory, show a concise expected-output excerpt taken from a checked repository. Include enough actual entries to identify the directory's role; mark omitted lines and explain that environment-dependent fields may differ. Never make up filenames, permissions, sizes, or timestamps.
+- In beginner tutorials, prefer directory-listing commands that visually distinguish file types when this helps learners navigate the repository. For this project, use `ls -lF` or `ls -lhF` as appropriate; explain only the relevant markers, and ensure the shown output comes from the exact command. Do not impose this convention on unrelated technical scripts where another format is more appropriate.
 - For interactive setup procedures, capture real output and describe the exact prompt, available response, resulting action, and what to do when a required check fails. Do not invent prompts from source inspection alone.
 
 ## Make instructions easy to follow

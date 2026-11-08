@@ -4,52 +4,62 @@ This tutorial introduces how to obtain and navigate CaMa-Flood, find the files u
 
 ## 0. Obtain CaMa-Flood
 
-There are two ways to obtain CaMa-Flood:
+GitHub is the standard way to obtain the files for Tutorial01. The v5 development repository is available at the [CaMa-Flood GitHub page](https://github.com/global-hydrodynamics/CaMa-Flood_v4).
 
-1. **v5 development repository:** the [CaMa-Flood GitHub repository](https://github.com/global-hydrodynamics/CaMa-Flood_v4) is intended for users and contributors working with the development source. This Tutorial01 manual was checked with the v5 development checkout and its bundled Mekong samples.
-2. **Official distribution package:** the [official CaMa-Flood website](https://global-hydrodynamics.github.io/CaMa-Flood/) provides package downloads for general users. To access the download, complete the Google Form registration and license agreement. The download password is then sent by email; use it to access the download page.
+As checked on 2026-11-08, `master` contains the v5 source and Mekong sample data, but not the Tutorial01 directory or the `s01-setup_fortran.sh` and `s02-python_setup.sh` scripts. It is therefore not ready to run this tutorial. Until those files are integrated, use the verified development branch:
 
-The official package is a separate distribution from the v5 development repository. This tutorial has not been verified with the official package, so do not assume it contains the same v5 files, scripts, or sample workflow. Use the v5 development checkout for the steps below unless a package version has separately been verified for this tutorial.
+```bash
+git clone --branch feature/gosh-refactor --single-branch https://github.com/global-hydrodynamics/CaMa-Flood_v4.git
+```
 
-Clone or download the selected source. If you downloaded an archive, extract it. Place the repository or extracted package in a suitable working directory on your computer. The remaining sections use the v5 development repository's directory layout.
+This creates a local directory named `CaMa-Flood_v4` by default. If you are unfamiliar with Git, open the repository on GitHub, select the `feature/gosh-refactor` branch, choose **Code → Download ZIP**, then extract the archive. Place the cloned or extracted directory in a suitable working location; no fixed machine-specific path is required.
+
+After Tutorial01 and its setup scripts are integrated into `master`, use this simpler command. It clones the default `master` branch and also creates `CaMa-Flood_v4/` locally. This is the intended standard workflow, but it is not yet a verified way to run Tutorial01:
+
+```bash
+git clone https://github.com/global-hydrodynamics/CaMa-Flood_v4.git
+```
+
+The [official CaMa-Flood website](https://global-hydrodynamics.github.io/CaMa-Flood/) provides a separate downloadable distribution package; access requires Google Form registration. The supported v5 package for this tutorial is not ready yet. If you prefer the official package, wait for its release; an older package is not a substitute for this tutorial's v5 workflow.
 
 ### Learning Check
 
-- [ ] I can identify which source I obtained and point to its CaMa-Flood root folder.
+- [ ] I can obtain the currently usable Tutorial01 branch from GitHub and locate its repository root.
+- [ ] I know that default `master` becomes the standard route after integration, and that the supported official v5 package is not ready yet.
 
 ## 1. Find the repository root
 
-Open a terminal and change to the v5 development repository folder you cloned or extracted. Confirm that you are at its root directory:
+Open a terminal and change to the root of the `feature/gosh-refactor` checkout you cloned or extracted. Confirm that you are at its root directory:
 
 ```bash
 pwd
 cmf_root="$(pwd)"
-ls -l
+ls -lF
 ```
 
-`cmf_root` is available for the rest of this tutorial in the same terminal session. It is an ordinary shell variable, so it will not automatically exist in a new terminal window.
+`cmf_root` is available for the rest of this tutorial in the same terminal session. It is an ordinary shell variable, so it will not automatically exist in a new terminal window. In the listing, `-l` shows detailed file information and `-F` adds markers: directories end in `/`, executable files normally end in `*`, and symbolic links may end in `@`. These markers are display aids, not part of the actual filenames.
 
 ### Expected output
 
-This abbreviated excerpt is from an actual repository-root `ls -l`; sizes, dates, and owner names vary between checkouts.
+This abbreviated excerpt is from an actual repository-root `ls -lF` on the verified `feature/gosh-refactor` checkout. Sizes, dates, and owner names vary between computers. `...` marks omitted listing entries.
 
 ```text
-drwxr-xr-x   ... config
-drwxr-xr-x   ... gosh_sample
-drwxr-xr-x   ... inp
-drwxr-xr-x   ... map
-drwxr-xr-x   ... src_main
-drwxr-xr-x   ... tutorial
--rwxr-xr-x   ... s01-setup_fortran.sh
--rwxr-xr-x   ... s02-python_setup.sh
+drwxr-xr-x    7 yamadai  staff   224 Nov  8 10:36 config/
+drwxr-xr-x   11 yamadai  staff   352 Nov  5 22:07 gosh_sample/
+drwxr-xr-x   11 yamadai  staff   352 Nov  4 21:46 inp/
+drwxr-xr-x   10 yamadai  staff   320 Nov  5 22:07 map/
+drwxr-xr-x  109 yamadai  staff  3488 Nov  8 10:36 src_main/
+drwxr-xr-x    9 yamadai  staff   288 Nov  8 18:03 tutorial/
+-rwxr-xr-x    1 yamadai  staff 17484 Nov  8 10:21 s01-setup_fortran.sh*
+-rwxr-xr-x    1 yamadai  staff  9199 Nov  5 22:42 s02-python_setup.sh*
 ```
 
-In the verified development checkout, the main directories are `src_main/` (v5 model source), `map/` (river maps and map tools), `inp/` (runoff datasets), `gosh_sample/` (maintained run examples), and `tutorial/` (beginner tutorials). The root setup scripts diagnose and prepare local development environments.
+The `/` suffix distinguishes directories such as `src_main/` and `tutorial/`; the `*` suffix marks the executable setup scripts. The markers are not part of the names. The main directories are `src_main/` (v5 model source), `map/` (river maps and map tools), `inp/` (runoff datasets), `gosh_sample/` (maintained run examples), and `tutorial/` (beginner tutorials). The root setup scripts diagnose and prepare local development environments.
 
 ### Learning Check
 
 - [ ] I can locate the model source and the bundled map and runoff directories from the root listing.
-- [ ] I can run `pwd` and set `cmf_root` to this repository's root path for the current terminal session.
+- [ ] I can identify directories marked with `/` and executable setup scripts marked with `*`; these markers are not part of the filenames.
 
 ## 2. Prepare the local environment
 
@@ -129,13 +139,13 @@ cd "${cmf_root}"
 cd src_main
 pwd
 make all
-ls -lh MAIN_cmf
+ls -lhF MAIN_cmf
 ```
 
 The build may print unused-import warnings from existing source files. In the checked build, `make all` returned zero and the final command showed:
 
 ```text
--rwxr-xr-x ... MAIN_cmf  600K
+-rwxr-xr-x  1 yamadai  staff   600K Nov  8 10:36 MAIN_cmf*
 ```
 
 This confirms that the executable was produced in that checkout; its size and listing details can vary. Do not run `MAIN_cmf` directly from this terminal: the experiment script prepares its Namelist and working directory.
@@ -189,7 +199,7 @@ A river map describes the model grid, river connectivity, and physical propertie
 cd "${cmf_root}"
 cd map/mekong_15min
 pwd
-ls -lh params.txt nextxy_noedge.bin ctmare.bin elevtn.bin rivwth_merit.bin
+ls -lhF params.txt nextxy_noedge.bin ctmare.bin elevtn.bin rivwth_merit.bin
 ```
 
 ### Expected output
@@ -197,11 +207,11 @@ ls -lh params.txt nextxy_noedge.bin ctmare.bin elevtn.bin rivwth_merit.bin
 These file names and sizes were observed in the bundled checkout. File permissions and timestamps can differ.
 
 ```text
--rw-r--r-- ... params.txt              384B
--rw-r--r--@ ... nextxy_noedge.bin       75K
--rw-r--r--@ ... ctmare.bin              38K
--rw-r--r--@ ... elevtn.bin              38K
--rw-r--r--@ ... rivwth_merit.bin        38K
+-rw-r--r--  1 yamadai  staff    38K Nov  1 12:02 ctmare.bin
+-rw-r--r--  1 yamadai  staff    38K Nov  1 12:02 elevtn.bin
+-rw-r--r--  1 yamadai  staff    75K Nov  1 12:02 nextxy_noedge.bin
+-rw-r--r--  1 yamadai  staff   384B Nov  1 12:02 params.txt
+-rw-r--r--  1 yamadai  staff    38K Nov  1 23:32 rivwth_merit.bin
 ```
 
 `params.txt` describes map dimensions and geographic extent. `nextxy_noedge.bin` contains the selected river connectivity, `ctmare.bin` the unit catchment areas, `elevtn.bin` elevation, and `rivwth_merit.bin` river width. The tutorial script selects the map and products with these settings:
@@ -228,7 +238,7 @@ Runoff forcing is water input supplied to the model over time. The sample uses d
 cd "${cmf_root}"
 cd inp/test-mek_1deg/runoff
 pwd
-ls -lh Roff____20000101.one Roff____20000102.one Roff____20000209.one
+ls -lhF Roff____20000101.one Roff____20000102.one Roff____20000209.one
 ```
 
 ### Expected output
@@ -236,9 +246,9 @@ ls -lh Roff____20000101.one Roff____20000102.one Roff____20000209.one
 The three observed sample files are each 2.3 KB; the exact display may round sizes differently.
 
 ```text
--rw-r--r--@ ... Roff____20000101.one  2.3K
--rw-r--r--@ ... Roff____20000102.one  2.3K
--rw-r--r--@ ... Roff____20000209.one  2.3K
+-rw-r--r--  1 yamadai  staff   2.3K Nov  3 07:06 Roff____20000101.one
+-rw-r--r--  1 yamadai  staff   2.3K Nov  3 07:06 Roff____20000102.one
+-rw-r--r--  1 yamadai  staff   2.3K Nov  3 07:06 Roff____20000209.one
 ```
 
 The corresponding GOSH settings identify the dataset, file naming rule, frequency, and unit conversion:
@@ -268,7 +278,7 @@ The runoff grid is 20 × 30 cells, while this Mekong river map is 80 × 120 cell
 cd "${cmf_root}"
 cd map/mekong_15min
 pwd
-ls -lh inpdim_test-mek_1deg.txt inpmat_test-mek_1deg.bin
+ls -lhF inpdim_test-mek_1deg.txt inpmat_test-mek_1deg.bin
 cat inpdim_test-mek_1deg.txt
 ```
 
@@ -277,8 +287,8 @@ cat inpdim_test-mek_1deg.txt
 Observed sizes and the descriptor contents:
 
 ```text
--rw-r--r--@ ... inpdim_test-mek_1deg.txt       312B
--rw-r--r--@ ... inpmat_test-mek_1deg.bin       450K
+-rw-r--r--  1 yamadai  staff   312B Nov  3 08:24 inpdim_test-mek_1deg.txt
+-rw-r--r--  1 yamadai  staff   450K Nov  3 08:05 inpmat_test-mek_1deg.bin
 ```
 
 ```text
@@ -357,15 +367,15 @@ The GOSH run directory contains the copied executable, Namelist, model log, timi
 cd "${cmf_root}"
 cd tutorial/tutorial01-get_started
 pwd
-ls -lh out/tutorial01-get_started
+ls -lhF out/tutorial01-get_started
 ```
 
 ### Expected output
 
-Representative files from the completed run:
+Representative files from an earlier completed run; the current checkout's run directory is created when the script executes. This excerpt omits other entries. `*` is the `-F` marker for the executable copy:
 
 ```text
--rwxr-xr-x ... MAIN_cmf                  600K
+-rwxr-xr-x ... MAIN_cmf*                 600K
 -rw-r--r-- ... flddph2000.bin            1.5M
 -rw-r--r-- ... input_cmf.nam             4.4K
 -rw-r--r-- ... log_CaMa.txt              1.6M

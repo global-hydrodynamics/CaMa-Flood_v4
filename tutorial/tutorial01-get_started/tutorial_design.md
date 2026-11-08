@@ -4,14 +4,20 @@
 
 ## Section 0: Obtain CaMa-Flood
 
-Introduce two ways to obtain CaMa-Flood, and distinguish their purpose:
+GitHub is the standard acquisition route for Tutorial01. The intended released workflow uses `master` after Tutorial01 and its required setup scripts have been integrated there.
 
-- **v5 development repository:** [`https://github.com/global-hydrodynamics/CaMa-Flood_v4`](https://github.com/global-hydrodynamics/CaMa-Flood_v4) is the GitHub repository for development contributors. Tutorial01's current instructions and sample workflow are verified against this v5 development checkout.
-- **Official distribution package:** the [official CaMa-Flood website](https://global-hydrodynamics.github.io/CaMa-Flood/) describes the general-user package download. Access requires registration and license agreement through a Google Form; the download password is sent by email. Download the archive and extract it into a suitable working directory.
+- **Current integration dependency:** as checked on 2026-11-08, `origin/master` at `19e2c1a` contains the v5 source and Mekong map/runoff samples, but does not contain `tutorial/tutorial01-get_started/`, `s01-setup_fortran.sh`, or `s02-python_setup.sh`. Do not tell learners that the default `master` clone can run Tutorial01 yet.
+- **Temporary verified route:** until integration, use the `feature/gosh-refactor` branch, which contains the Tutorial01 files and setup scripts. For learners using Git, show an explicit branch clone command. For learners using GitHub's interface, have them select `feature/gosh-refactor` before choosing **Code → Download ZIP**.
+- **After integration:** the unqualified clone command below will use the repository's default `master` branch, which is the intended Tutorial01 route once the missing files are integrated:
 
-Tutorial01 has not been verified with the official distribution package. Do not imply that its v5 development files, sample inputs, or script are present or compatible there. For this tutorial's workflow, obtain the v5 development repository unless a separately verified package is specified.
+  ```bash
+  git clone https://github.com/global-hydrodynamics/CaMa-Flood_v4.git
+  ```
 
-Ask learners to clone or download the chosen source, extract it if needed, place it in a suitable location, and identify the resulting CaMa-Flood root directory before Section 1.
+  Git creates a local directory named `CaMa-Flood_v4` by default. The user can instead download a ZIP from the GitHub **Code** menu, extract it, and place the resulting directory in a suitable working location.
+- **Official distribution package:** the [official CaMa-Flood website](https://global-hydrodynamics.github.io/CaMa-Flood/) provides a separate downloadable package and requires registration through a Google Form. The v5 package for this Tutorial01 workflow is not yet available as the supported tutorial distribution. Users who prefer the official package should wait for that release; do not use an older package for this tutorial.
+
+Place the cloned or extracted repository in a suitable working directory; do not assume a fixed machine-specific path. Before Section 1, learners should identify the repository root. Tutorial01's current commands and sample workflow are verified against the development branch, not an official package.
 
 ## Learning outcomes
 
@@ -19,8 +25,8 @@ Tutorial01 introduces repository navigation and a first model run; it does not t
 
 | Stage | Operational skills | Basic relationship to identify | Observable evidence of learning |
 | --- | --- | --- | --- |
-| Obtain CaMa-Flood | Clone or download a suitable source, extract an archive if needed, and locate its root folder. | Distinguish the v5 development repository from the official user distribution package. | The learner can identify which source they obtained and point to its root folder. |
-| Find the repository | Confirm the root with `pwd`, assign `cmf_root`, and locate `src_main/`, `map/`, `inp/`, and setup scripts. | Know that `cmf_root` is a shell variable available in the current session. | The learner can name where the model source and bundled inputs are and reuse the root path in commands. |
+| Obtain CaMa-Flood | Clone the temporary `feature/gosh-refactor` branch or select it before downloading a ZIP; after integration, use the default `master` clone. Locate the resulting root folder. | GitHub is the standard Tutorial01 route; the supported official v5 package is a future release. | The learner can obtain the currently usable branch, identify the root, and recognize that `master` becomes the standard route after integration. |
+| Find the repository | Confirm the root with `pwd`, assign `cmf_root`, and inspect it with `ls -lF` for directories and executable scripts. | `ls -lF` adds display markers such as `/` for directories and `*` for executables; these markers are not filename characters. | The learner can locate `src_main/`, `map/`, `inp/`, and identify directory and executable markers in the listing. |
 | Prepare the environment | Run the setup scripts, recognize check results and prompts, and locate the suggested configuration. | Identify that the suggested root `Mkinclude` is separate from active `config/Mkinclude`; recognize Python setup as optional for this tutorial. | The learner can follow the setup instructions and avoid replacing an active configuration without a backup. |
 | Build the model | Run `make all` in `src_main/` and locate `MAIN_cmf`. | Identify that the executable is produced in `src_main/` from model source. | The learner can find the executable after building. |
 | Read experiment settings | Read this specification and inspect the standalone GOSH script. | Identify where experiment details are described and where the script settings are written. | The learner can locate a setting in the script after finding it in the experiment information. |
@@ -30,7 +36,7 @@ Tutorial01 introduces repository navigation and a first model run; it does not t
 | Run an experiment | Execute the Tutorial01 script from its documented directory and identify `PROJ` and `RUNDIR`. | Match the project name to the output directory shown by the script. | The learner can run the script, recognize its success message, and locate the selected run directory. |
 | Locate results | List the project output and inspect the model log. | Identify which generated file is discharge output and which file is the model log. | The learner can locate `outflw2000.bin`, `log_CaMa.txt`, and see evidence that the run completed. |
 
-Starting from the v5 development repository with its bundled Mekong samples and a prepared configuration, the learner completes these stages, runs the 40-day experiment, and locates results under `tutorial/tutorial01-get_started/out/${PROJ}/`. The current tutorial has not been verified against the official distribution package. The starting presence of the executable or output directory is not prescribed.
+Starting from the `feature/gosh-refactor` development checkout with its bundled Mekong samples and a prepared configuration, the learner completes these stages, runs the 40-day experiment, and locates results under `tutorial/tutorial01-get_started/out/${PROJ}/`. The checkout is temporary until Tutorial01 and its setup scripts reach `master`. The supported official v5 package is not yet available; the tutorial has not been verified against older distribution packages. The starting presence of the executable or output directory is not prescribed.
 
 ## Repository layout to introduce
 
@@ -57,7 +63,7 @@ The repository also contains root setup scripts and shared tools; include them i
 
 ## Starting state and prerequisites
 
-- A newly obtained checkout or qualifying package contains `src_main/`, `config/`, the bundled `map/mekong_15min/` and `inp/test-mek_1deg/` samples, the root `s01-setup_fortran.sh` and `s02-python_setup.sh`, and Tutorial01.
+- The current verified starting point is the `feature/gosh-refactor` checkout, which contains `src_main/`, `config/`, the bundled `map/mekong_15min/` and `inp/test-mek_1deg/` samples, the root `s01-setup_fortran.sh` and `s02-python_setup.sh`, and Tutorial01. `origin/master` does not yet contain Tutorial01 or those two setup scripts. The official v5 package for this workflow is a future distribution; older packages are not a supported substitute.
 - The current state of `src_main/MAIN_cmf` and Tutorial01's `out/` is not prescribed. `make all` builds or updates the required executable, and the sample script replaces only its known generated files on rerun. Sample map, runoff, and matching input-matrix data are included; no scientific data download or map generation is required.
 - GNU Make, GNU Fortran with OpenMP, and NetCDF-Fortran are available. Run `s01-setup_fortran.sh`, review its recommended configuration, and manually copy the staged `Mkinclude` to the existing `config/Mkinclude` location before building.
 - Run `s02-python_setup.sh` for Python environment diagnosis/setup. Tutorial01's CTL tools use Python standard-library features; installing the full optional requirements set is not required for the sample run.
@@ -76,8 +82,8 @@ The repository also contains root setup scripts and shared tools; include them i
 
 ## Required workflow
 
-1. Present the GitHub development repository and official package access routes. State that the Tutorial01 workflow is verified only against the v5 development checkout, not the official package. Ask the learner to obtain the appropriate source, extract an archive if needed, place it in a suitable location, and locate its root folder.
-2. Confirm the v5 development repository root with `pwd`, define `cmf_root="$(pwd)"`, and inspect the main directories. The subsequent workflow uses the v5 checkout; package compatibility is not implied.
+1. Direct learners to GitHub. Until integration, provide `git clone --branch feature/gosh-refactor --single-branch https://github.com/global-hydrodynamics/CaMa-Flood_v4.git` or instructions to select that branch before **Code → Download ZIP**. Mark `git clone https://github.com/global-hydrodynamics/CaMa-Flood_v4.git` as the intended default-`master` method after integration, not a currently runnable Tutorial01 path. Explain that the official v5 package is not yet available and users should wait rather than use an older package. Ask learners to place the obtained checkout in a suitable location.
+2. Confirm the current development checkout root with `pwd`, define `cmf_root="$(pwd)"`, and inspect it with `ls -lF`. Explain that `/` marks directories and `*` normally marks executable files; suffixes are display markers, not part of filenames.
 3. Prepare the Fortran and Python environments using the root setup scripts.
 4. Activate `config/Mkinclude` by copying the reviewed staged `Mkinclude` manually; `config/` already exists.
 5. From `${cmf_root}`, enter `src_main/` and run `make all` to build or update the current model executable.
@@ -91,7 +97,8 @@ Map generation and visualization are not required.
 ## Acceptance criteria
 
 - Running `make all` from `src_main/` returns zero and leaves an executable `MAIN_cmf`, whether it is newly built or updated.
-- Section 0 identifies the GitHub v5 development repository and the official package route, accurately describes the official site's registration/password process, and does not imply Tutorial01 package compatibility.
+- Section 0 identifies GitHub as the standard route, gives the temporary branch and post-integration `master` methods, and does not imply that `master` currently contains Tutorial01 or that an older official package is compatible.
+- The root-directory demonstration uses `ls -lF`, with observed output showing directory and executable markers and an explanation that suffixes are not part of filenames.
 - The standalone tutorial script defines the default `PROJ`, constructs its `RUNDIR` under `out/${PROJ}/`, does not call or source `gosh_sample/mek01-default_run.sh`, and runs from its documented directory.
 - Tutorial01 and the model return zero; `log_CaMa.txt` reaches normal calculation completion.
 - Five expected daily Binary output variables and their CTLs, Namelist, logs, executable copy, and end Restart products are created under only `tutorial/tutorial01-get_started/out/tutorial01-get_started/`.
