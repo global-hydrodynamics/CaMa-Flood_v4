@@ -3,34 +3,33 @@ MODULE CMF_CTRL_RESTART_MOD
 !* PURPOSE: Control CaMa-Flood Restart settings and state I/O
 !
 !* CONTAINS:
-! Principal Restart procedures:
+! Principal Restart procedures describe which model states are restored or saved.
+! RESTART_UTIL_* procedures implement Binary and NetCDF representations.
+!
+!* PRINCIPAL PROCEDURES:
 ! -- CMF_RESTART_NMLIST : Read Restart settings from the namelist
 ! -- CMF_RESTART_INIT   : Initialize model state from a Restart file
 ! -- CMF_RESTART_WRITE  : Write model state at the configured Restart time
-!
-! Restart timing query:
 ! -- restart_is_write_time : Report whether the configured Restart time is due
 !
 ! (C) D.Yamazaki & E. Dutra  (U-Tokyo/FCUL)  Aug 2019
 !
 ! Licensed under the Apache License, Version 2.0 (the "License");
-!   You may not use this file except in compliance with the License.
+!   you may not use this file except in compliance with the License.
 !   You may obtain a copy of the License at: http://www.apache.org/licenses/LICENSE-2.0
 !
 ! Unless required by applicable law or agreed to in writing, software distributed under the License is
 !  distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 ! See the License for the specific language governing permissions and limitations under the License.
 !==========================================================
-! shared variables in module
 USE PARKIND1,                ONLY: JPIM, JPRB, JPRM, JPRD
-USE YOS_CMF_INPUT,           ONLY: LOGNAM,  LSTOONLY, LDAMOUT, LLEVEE, LPTHOUT, LGDWDLY
-USE YOS_CMF_INPUT,           ONLY: CSUFBIN, CSUFPTH,  CSUFCDF
+USE YOS_CMF_INPUT,           ONLY: LOGNAM, LSTOONLY, LDAMOUT, LLEVEE, LPTHOUT, LGDWDLY
+USE YOS_CMF_INPUT,           ONLY: CSUFBIN, CSUFCDF
 IMPLICIT NONE
 !============================
 SAVE
 !*** NAMELIST/NRESTART/: Restart input and output settings
 CHARACTER(LEN=256)              :: CRESTSTO               !! Input Restart file path
-!
 CHARACTER(LEN=256)              :: CRESTDIR               !! Directory for Restart output files
 CHARACTER(LEN=256)              :: CVNREST                !! Prefix for dated Restart output files
 LOGICAL                         :: LRESTCDF               !! TRUE: use NetCDF Restart files
@@ -39,15 +38,42 @@ INTEGER(KIND=JPIM)              :: IFRQ_RST               !! Hours: 0=end; 1-24=
 !
 NAMELIST/NRESTART/ CRESTSTO,CRESTDIR,CVNREST,LRESTCDF,LRESTDBL,IFRQ_RST
 !
+INTERFACE RESTART_UTIL_READ
+  MODULE PROCEDURE RESTART_UTIL_READ_R4
+  MODULE PROCEDURE RESTART_UTIL_READ_R8
+END INTERFACE RESTART_UTIL_READ
+
+INTERFACE RESTART_UTIL_WRITE
+  MODULE PROCEDURE RESTART_UTIL_WRITE_R4
+  MODULE PROCEDURE RESTART_UTIL_WRITE_R8
+END INTERFACE RESTART_UTIL_WRITE
+
+PUBLIC :: CMF_RESTART_NMLIST, CMF_RESTART_INIT, CMF_RESTART_WRITE, restart_is_write_time
+PUBLIC :: CRESTSTO, CRESTDIR, CVNREST, LRESTCDF, LRESTDBL, IFRQ_RST
+PRIVATE :: RESTART_UTIL_READ, RESTART_UTIL_WRITE
+PRIVATE :: RESTART_UTIL_OPEN_READ, RESTART_UTIL_CLOSE_READ
+PRIVATE :: RESTART_UTIL_READ_MAP, RESTART_UTIL_READ_PTH
+#ifdef UseCDF_CMF
+PRIVATE :: RESTART_UTIL_OPEN_READ_CDF, RESTART_UTIL_CLOSE_CDF
+PRIVATE :: RESTART_UTIL_READ_MAP_CDF, RESTART_UTIL_READ_PTH_CDF
+#endif
+PRIVATE :: RESTART_UTIL_OPEN_WRITE, RESTART_UTIL_CLOSE_WRITE, RESTART_UTIL_WRITE_MAP
+PRIVATE :: RESTART_UTIL_WRITE_PTH
+PRIVATE :: RESTART_UTIL_READ_R4, RESTART_UTIL_READ_R8
+PRIVATE :: RESTART_UTIL_WRITE_R4, RESTART_UTIL_WRITE_R8
+#ifdef UseCDF_CMF
+PRIVATE :: RESTART_UTIL_DEFINE_CDF, RESTART_UTIL_DEFINE_MAP_VARIABLE
+PRIVATE :: RESTART_UTIL_WRITE_MAP_CDF
+#endif
+
 CONTAINS
 !####################################################################
 ! Principal Restart procedures
 ! -- CMF_RESTART_NMLIST : Read Restart settings from the namelist
 ! -- CMF_RESTART_INIT   : Initialize model state from a Restart file
 ! -- CMF_RESTART_WRITE  : Write model state at the configured Restart time
-!
-! Restart timing query
 ! -- restart_is_write_time : Report whether the configured Restart time is due
+! Private representation utilities follow the principal procedures.
 !####################################################################
 SUBROUTINE CMF_RESTART_NMLIST
 ! Read Restart settings from the NRESTART namelist.
@@ -59,21 +85,18 @@ IMPLICIT NONE
 WRITE(LOGNAM,*) ""
 WRITE(LOGNAM,*) "!---------------------!"
 
-!*** 1. open namelist
+!*** 1. Open the namelist
 NSETFILE=INQUIRE_FID()
 OPEN(NSETFILE,FILE=CSETFILE,STATUS="OLD")
-WRITE(LOGNAM,*) "CMF::RESTART_NMLIST: namelist OPEN in unit: ", TRIM(CSETFILE), NSETFILE 
+WRITE(LOGNAM,*) "CMF::RESTART_NMLIST: namelist OPEN in unit: ", TRIM(CSETFILE), NSETFILE
 
-!*** 2. default value
-CRESTSTO="restart"   ! input restart file name
-!
-CRESTDIR="./"        ! output restart file directory
-CVNREST ="restart"   ! output restart file prefix
-LRESTCDF=.FALSE.     ! true: netCDF restart file
-LRESTDBL=.TRUE.      ! true: binary restart double precision
-IFRQ_RST=0           ! 0: end only; 1-24: selected hours; 30: month start; all modes write at end
-
-!*** 3. read namelist
+!*** 2. Set defaults and read the namelist
+CRESTSTO="restart"
+CRESTDIR="./"
+CVNREST="restart"
+LRESTCDF=.FALSE.
+LRESTDBL=.TRUE.
+IFRQ_RST=0
 REWIND(NSETFILE)
 READ(NSETFILE,NML=NRESTART)
 
@@ -84,7 +107,6 @@ WRITE(LOGNAM,*) "CVNREST:   ", TRIM(CVNREST)
 WRITE(LOGNAM,*) "LRESTCDF:  ", LRESTCDF
 WRITE(LOGNAM,*) "LRESTDBL:  ", LRESTDBL
 WRITE(LOGNAM,*) "IFRQ_RST:  ", IFRQ_RST
-
 CLOSE(NSETFILE)
 
 END SUBROUTINE CMF_RESTART_NMLIST
@@ -92,741 +114,769 @@ END SUBROUTINE CMF_RESTART_NMLIST
 
 
 
-
-
 !####################################################################
 SUBROUTINE CMF_RESTART_INIT
-! Restore model state from Binary or NetCDF Restart data.
-! Internal subroutines:
-!+ READ_REST_BIN : Read Binary Restart records and optional companion data
-!+ READ_BIN_MAP  : Read one Binary map record and vectorize it
-!+ READ_REST_CDF : Read NetCDF Restart variables into model state
+! Initialize model state from the selected Restart representation.
 ! Called from CMF_DRV_INIT.
-USE YOS_CMF_PROG,   ONLY: P2RIVSTO,    P2FLDSTO,    D2RIVOUT,    D2FLDOUT,    P2GDWSTO, &
-                        & D2RIVOUT_PRE,D2FLDOUT_PRE,D2RIVDPH_PRE,D2FLDSTO_PRE,&
-                        & D1PTHFLW,    D1PTHFLW_PRE, &
-                        & P2DAMSTO,    P2LEVSTO
+USE YOS_CMF_PROG,   ONLY: P2RIVSTO, P2FLDSTO, D2RIVOUT, D2FLDOUT, P2GDWSTO
+USE YOS_CMF_PROG,   ONLY: D2RIVOUT_PRE, D2FLDOUT_PRE, D2RIVDPH_PRE, D2FLDSTO_PRE
+USE YOS_CMF_PROG,   ONLY: D1PTHFLW, D1PTHFLW_PRE, P2DAMSTO, P2LEVSTO
 IMPLICIT NONE
+INTEGER(KIND=JPIM) :: REST_UNIT, REST_RECORD, NCID
 !================================================
-!*** 1. Initialize Restart state before reading
-! Zero defaults keep fields defined when Storage-only omits previous-step
-! state or when an enabled optional scheme has no separately stored flow.
+!*** 1. Initialize all Restart-managed state before reading
+! Zero defaults define fields omitted by Storage-only mode or disabled schemes.
 P2RIVSTO(:,:)=0._JPRD
 P2FLDSTO(:,:)=0._JPRD
 D2RIVOUT(:,:)=0._JPRB
 D2FLDOUT(:,:)=0._JPRB
-
 D2RIVOUT_PRE(:,:)=0._JPRB
 D2FLDOUT_PRE(:,:)=0._JPRB
 D2RIVDPH_PRE(:,:)=0._JPRB
 D2FLDSTO_PRE(:,:)=0._JPRB
-
-IF( LPTHOUT )THEN
+IF (LPTHOUT) THEN
   D1PTHFLW(:,:)=0._JPRB
   D1PTHFLW_PRE(:,:)=0._JPRB
 ENDIF
-IF( LDAMOUT ) then
-  P2DAMSTO(:,:)=0._JPRD
-ENDIF
-IF( LLEVEE ) then
-  P2LEVSTO(:,:)=0._JPRD
-ENDIF
-IF( LGDWDLY ) then
-  P2GDWSTO(:,:)=0._JPRD
-ENDIF
+IF (LGDWDLY) P2GDWSTO(:,:)=0._JPRD
+IF (LDAMOUT) P2DAMSTO(:,:)=0._JPRD
+IF (LLEVEE) P2LEVSTO(:,:)=0._JPRD
 
-!*** 2. Read the selected Restart representation
-IF ( LRESTCDF ) THEN
-  CALL READ_REST_CDF
-ELSE
-  CALL READ_REST_BIN
-ENDIF
+!*** 2. Restore the two storage states present in every Restart
+CALL RESTART_UTIL_OPEN_READ(TRIM(CRESTSTO),REST_UNIT,REST_RECORD,NCID)
+CALL RESTART_UTIL_READ('rivsto',P2RIVSTO,REST_UNIT,REST_RECORD,NCID)
+CALL RESTART_UTIL_READ('fldsto',P2FLDSTO,REST_UNIT,REST_RECORD,NCID)
 
-!*** 3. Seed previous floodplain storage for Storage-only initialization
-! Storage-only Restart starts from the supplied storage state, not a complete
-! saved time-step state; use the loaded storage as its previous-step value.
-IF( LSTOONLY )THEN
-  D2FLDSTO_PRE(:,:)=REAL(P2FLDSTO(:,:),KIND=JPRB)
-ENDIF
-
-CONTAINS
-SUBROUTINE READ_REST_BIN
-! Read direct-access Binary Restart records in their configured order.
-! There is no file header; record position and LRESTDBL must match the writer.
-USE YOS_CMF_INPUT,           ONLY: TMPNAM,  NX,NY
-USE YOS_CMF_MAP,             ONLY: NSEQMAX,NPTHOUT, NPTHLEV
-USE CMF_UTILS_MOD,           ONLY: INQUIRE_FID, mapR2vecD
-IMPLICIT NONE
-!*** LOCAL
-INTEGER(KIND=JPIM)              :: RIREC
-REAL(KIND=JPRD)                 :: P2VEC(NSEQMAX,1)
-REAL(KIND=JPRM)                 :: R1PTH(NPTHOUT,NPTHLEV)
-REAL(KIND=JPRD)                 :: P1PTH(NPTHOUT,NPTHLEV)
-CHARACTER(LEN=256)              :: CFILE
-!================================================
-CFILE=TRIM(CRESTSTO)
-WRITE(LOGNAM,*)'READ_REST: read restart binary: ', TRIM(CFILE)
-
-TMPNAM=INQUIRE_FID()
-
-! LRESTDBL selects on-disk Binary precision independently of internal kinds.
-IF( LRESTDBL )THEN
-  OPEN(TMPNAM,FILE=CFILE,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=8*NX*NY)
-ELSE
-  OPEN(TMPNAM,FILE=CFILE,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NX*NY)
-ENDIF
-
-RIREC=0
-! River and floodplain storage occupy records 1 and 2 in every mode.
-CALL READ_BIN_MAP(P2VEC,TMPNAM,RIREC)
- P2RIVSTO=P2VEC
-CALL READ_BIN_MAP(P2VEC,TMPNAM,RIREC)
- P2FLDSTO=P2VEC
-
-!*** 1. Read previous-step map fields for Normal Restart
-! They are required to continue the saved time-step state.
-IF ( .not. LSTOONLY )THEN
-  CALL READ_BIN_MAP(P2VEC,TMPNAM,RIREC)
-   D2RIVOUT_PRE=REAL(P2VEC,KIND=JPRB)
-   D2RIVOUT=D2RIVOUT_PRE
-  CALL READ_BIN_MAP(P2VEC,TMPNAM,RIREC)
-   D2FLDOUT_PRE=REAL(P2VEC,KIND=JPRB)
-   D2FLDOUT=D2FLDOUT_PRE
-  CALL READ_BIN_MAP(P2VEC,TMPNAM,RIREC)
-   D2RIVDPH_PRE=REAL(P2VEC,KIND=JPRB)
-  CALL READ_BIN_MAP(P2VEC,TMPNAM,RIREC)
-   D2FLDSTO_PRE=REAL(P2VEC,KIND=JPRB)
-ENDIF
-!*** 2. Read map state for enabled optional schemes
-! These records follow the previous-step fields when those are present.
-IF ( LGDWDLY ) THEN
-  CALL READ_BIN_MAP(P2VEC,TMPNAM,RIREC)
-   P2GDWSTO=P2VEC
-ENDIF
-IF ( LDAMOUT ) THEN
-  CALL READ_BIN_MAP(P2VEC,TMPNAM,RIREC)
-   P2DAMSTO=P2VEC
-ENDIF
-IF ( LLEVEE ) THEN
-  CALL READ_BIN_MAP(P2VEC,TMPNAM,RIREC)
-   P2LEVSTO=P2VEC
-ENDIF
-CLOSE(TMPNAM)
-
-!*** 3. Read bifurcation flow from its separate companion file
-! Binary writes this file when LPTHOUT is enabled, but Storage-only
-! initialization does not restore previous-step bifurcation flow.
-IF( LPTHOUT )THEN
-  IF( .not. LSTOONLY )THEN
-    CFILE=TRIM(CRESTSTO)//'.pth'
-    WRITE(LOGNAM,*)'READ_REST: read restart binary: ', TRIM(CFILE)
-
-    IF( LRESTDBL )THEN
-      OPEN(TMPNAM,FILE=CFILE,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=8*NPTHOUT*NPTHLEV)
-      READ(TMPNAM,REC=1) P1PTH
-      CLOSE(TMPNAM)
-      D1PTHFLW_PRE(:,:)=REAL(P1PTH(:,:),KIND=JPRB)
-    ELSE
-      OPEN(TMPNAM,FILE=CFILE,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NPTHOUT*NPTHLEV)
-      READ(TMPNAM,REC=1) R1PTH
-      CLOSE(TMPNAM)
-      D1PTHFLW_PRE(:,:)=R1PTH(:,:)
-    ENDIF
-  ELSE
-    D1PTHFLW_PRE(:,:)=0._JPRB
-  ENDIF
-ENDIF
-
-END SUBROUTINE READ_REST_BIN
-
-SUBROUTINE READ_BIN_MAP(P2VAR,TNAM,IREC)
-! Read one map-grid record, convert its file precision, and vectorize it.
-USE CMF_UTILS_MOD,      ONLY: mapP2vecP
-USE YOS_CMF_INPUT,      ONLY: NX, NY
-USE YOS_CMF_MAP,        ONLY: NSEQMAX
-IMPLICIT NONE
-REAL(KIND=JPRD)            :: P2VAR(NSEQMAX,1)
-INTEGER(KIND=JPIM)         :: TNAM, IREC
-!* local
-REAL(KIND=JPRM)            :: R2TEMP(NX,NY)
-REAL(KIND=JPRD)            :: P2TEMP(NX,NY)
-!=================
-IREC=IREC+1
-
-! The Binary file precision follows LRESTDBL; P2VAR remains JPRD internally.
-IF( LRESTDBL )THEN
-  READ(TNAM,REC=IREC) P2TEMP
-ELSE
-  READ(TNAM,REC=IREC) R2TEMP
-  P2TEMP=R2TEMP
-ENDIF
-CALL mapP2vecP(P2TEMP,P2VAR)
-
-!=================
-END SUBROUTINE READ_BIN_MAP
-!======
-!==========================================================
-SUBROUTINE READ_REST_CDF
-! Read Float64 Restart variables by name; optional variables follow enabled schemes.
-#ifdef UseCDF_CMF
-USE NETCDF
-USE YOS_CMF_INPUT,    ONLY: NX, NY
-USE YOS_CMF_MAP,      ONLY: NPTHOUT, NPTHLEV, PTH_UPST, PTH_DOWN
-USE CMF_UTILS_MOD,    ONLY: NCERROR, mapP2vecP, mapP2vecD
-IMPLICIT NONE
-! local variables
-INTEGER(KIND=JPIM)    ::  NCID,VARID
-INTEGER(KIND=JPIM)    ::  IPTH
-CHARACTER(LEN=256)    ::  CFILE
-REAL(KIND=JPRD)       ::  P2TEMP(NX,NY), P1PTH(NPTHOUT,NPTHLEV)  !! NetCDF restart is in Double Precision
-!================================================
-CFILE=TRIM(CRESTSTO)
-WRITE(LOGNAM,*)'READ_REST: read restart netcdf: ', TRIM(CFILE)
-
-CALL NCERROR( NF90_OPEN(CFILE,NF90_NOWRITE,NCID), 'OPENING '//CFILE)
-
-CALL NCERROR( NF90_INQ_VARID(NCID,'rivsto',VARID))
-CALL NCERROR( NF90_GET_VAR(NCID,VARID,P2TEMP,(/1,1,1/),(/NX,NY,1/) ) )
-CALL mapP2vecP(P2TEMP,P2RIVSTO)
-
-CALL NCERROR( NF90_INQ_VARID(NCID,'fldsto',VARID))
-CALL NCERROR( NF90_GET_VAR(NCID,VARID,P2TEMP,(/1,1,1/),(/NX,NY,1/) ) )
-CALL mapP2vecP(P2TEMP,P2FLDSTO)
-
-
-! Normal Restarts restore previous-step state needed to continue the run;
-! storage-only files omit these variables and retain their initialized values.
-IF( .NOT. LSTOONLY )THEN
-  CALL NCERROR( NF90_INQ_VARID(NCID,'rivout_pre',VARID))
-  CALL NCERROR( NF90_GET_VAR(NCID,VARID,P2TEMP,(/1,1,1/),(/NX,NY,1/) ) )
-  CALL mapP2vecD(P2TEMP,D2RIVOUT_PRE)
+!*** 3. Restore previous-step hydraulic state for Normal Restart
+! Storage-only is used when updated storage is available without previous-step flows.
+IF (.NOT. LSTOONLY) THEN
+  CALL RESTART_UTIL_READ('rivout_pre',D2RIVOUT_PRE,REST_UNIT,REST_RECORD,NCID)
   D2RIVOUT=D2RIVOUT_PRE
-
-  CALL NCERROR( NF90_INQ_VARID(NCID,'fldout_pre',VARID))
-  CALL NCERROR( NF90_GET_VAR(NCID,VARID,P2TEMP,(/1,1,1/),(/NX,NY,1/) ) )
-  CALL mapP2vecD(P2TEMP,D2FLDOUT_PRE)
+  CALL RESTART_UTIL_READ('fldout_pre',D2FLDOUT_PRE,REST_UNIT,REST_RECORD,NCID)
   D2FLDOUT=D2FLDOUT_PRE
-
-  CALL NCERROR( NF90_INQ_VARID(NCID,'rivdph_pre',VARID))
-  CALL NCERROR( NF90_GET_VAR(NCID,VARID,P2TEMP,(/1,1,1/),(/NX,NY,1/) ) )
-  CALL mapP2vecD(P2TEMP,D2RIVDPH_PRE)
-
-  CALL NCERROR( NF90_INQ_VARID(NCID,'fldsto_pre',VARID))
-  CALL NCERROR( NF90_GET_VAR(NCID,VARID,P2TEMP,(/1,1,1/),(/NX,NY,1/) ) )
-  CALL mapP2vecD(P2TEMP,D2FLDSTO_PRE)
+  CALL RESTART_UTIL_READ('rivdph_pre',D2RIVDPH_PRE,REST_UNIT,REST_RECORD,NCID)
+  CALL RESTART_UTIL_READ('fldsto_pre',D2FLDSTO_PRE,REST_UNIT,REST_RECORD,NCID)
 ENDIF
 
-! Optional map state: gdwsto requires LGDWDLY, damsto LDAMOUT, and levsto LLEVEE.
-IF ( LGDWDLY ) THEN
-  CALL NCERROR( NF90_INQ_VARID(NCID,'gdwsto',VARID))
-  CALL NCERROR( NF90_GET_VAR(NCID,VARID,P2TEMP,(/1,1,1/),(/NX,NY,1/) ) )
-  CALL mapP2vecP(P2TEMP,P2GDWSTO)
-ENDIF
+!*** 4. Restore optional scheme states and bifurcation flow
+IF (LGDWDLY) CALL RESTART_UTIL_READ('gdwsto',P2GDWSTO,REST_UNIT,REST_RECORD,NCID)
+IF (LDAMOUT) CALL RESTART_UTIL_READ('damsto',P2DAMSTO,REST_UNIT,REST_RECORD,NCID)
+IF (LLEVEE) CALL RESTART_UTIL_READ('levsto',P2LEVSTO,REST_UNIT,REST_RECORD,NCID)
+IF (LPTHOUT) CALL RESTART_UTIL_READ_PTH(NCID)
+CALL RESTART_UTIL_CLOSE_READ(REST_UNIT,NCID)
 
-IF ( LDAMOUT ) THEN
-  CALL NCERROR( NF90_INQ_VARID(NCID,'damsto',VARID))
-  CALL NCERROR( NF90_GET_VAR(NCID,VARID,P2TEMP,(/1,1,1/),(/NX,NY,1/) ) )
-  CALL mapP2vecP(P2TEMP,P2DAMSTO)
-ENDIF
-
-IF ( LLEVEE ) THEN
-  CALL NCERROR( NF90_INQ_VARID(NCID,'levsto',VARID))
-  CALL NCERROR( NF90_GET_VAR(NCID,VARID,P2TEMP,(/1,1,1/),(/NX,NY,1/) ) )
-  CALL mapP2vecP(P2TEMP,P2LEVSTO)
-ENDIF
-
-! NetCDF storage-only Restarts omit bifurcation flow; unlike Binary output,
-! no separate bifurcation companion file is written for this format.
-IF ( LPTHOUT .AND. .NOT. LSTOONLY ) THEN
-  CALL NCERROR( NF90_INQ_VARID(NCID,'pthflw_pre',VARID))
-  CALL NCERROR( NF90_GET_VAR(NCID,VARID,P1PTH,(/1,1,1/),(/NPTHOUT,NPTHLEV,1/) ) )
-  DO IPTH=1,NPTHOUT
-    IF (PTH_UPST(IPTH)>0 .AND. PTH_DOWN(IPTH)>0 ) THEN
-      D1PTHFLW_PRE(IPTH,:)=REAL(P1PTH(IPTH,:),KIND=JPRB)
-    ELSE
-      D1PTHFLW_PRE(IPTH,:)=0._JPRB
-    ENDIF
-  END DO
-ENDIF
-
-CALL NCERROR( NF90_CLOSE(NCID) )
-
-#endif
-END SUBROUTINE READ_REST_CDF
-!==========================================================
+!*** 5. Seed previous floodplain storage for Storage-only initialization
+! This mode starts from supplied storage and does not reproduce a saved full step state.
+IF (LSTOONLY) D2FLDSTO_PRE(:,:)=REAL(P2FLDSTO(:,:),KIND=JPRB)
 
 END SUBROUTINE CMF_RESTART_INIT
 !####################################################################
 
 
 
-
-
 !####################################################################
 SUBROUTINE CMF_RESTART_WRITE
-! Write Restart data after the current step when its configured time is due.
-! Internal subroutines:
-!+ WRTE_REST_BIN : Write ordered Binary Restart records and companion data
-!+ WRTE_BIN_MAP  : Convert one river-vector field and write a Binary record
-!+ WRTE_REST_CDF : Define and write NetCDF Restart variables
-! -- called CMF_from DRV_ADVANCE
-USE YOS_CMF_INPUT,      ONLY: TMPNAM, NX, NY
-USE YOS_CMF_TIME,       ONLY: KSTEP,  NSTEPS, JYYYYMMDD, JHHMM, JDD, JHOUR, JMIN
-USE YOS_CMF_MAP,        ONLY: NPTHOUT,     NPTHLEV
-USE YOS_CMF_PROG,       ONLY: P2RIVSTO,    P2FLDSTO,    D2RIVOUT_PRE,D2FLDOUT_PRE, &
-                            & D1PTHFLW_PRE,D2RIVDPH_PRE,D2FLDSTO_PRE,P2GDWSTO, &
-                            & P2DAMSTO,    P2LEVSTO
-USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
+! Write model state after the current step when its configured Restart time is due.
+! Called from CMF_DRV_ADVANCE and the synchronized HeatLink driver.
+USE YOS_CMF_TIME,   ONLY: KSTEP, NSTEPS, JYYYYMMDD, JHHMM, JDD, JHOUR, JMIN
+USE YOS_CMF_PROG,   ONLY: P2RIVSTO, P2FLDSTO, D2RIVOUT_PRE, D2FLDOUT_PRE
+USE YOS_CMF_PROG,   ONLY: D2RIVDPH_PRE, D2FLDSTO_PRE, P2GDWSTO
+USE YOS_CMF_PROG,   ONLY: P2DAMSTO, P2LEVSTO
 IMPLICIT NONE
-!* local variable
-INTEGER(KIND=JPIM)         :: IREST
+INTEGER(KIND=JPIM) :: IREST, REST_UNIT, REST_RECORD, NCID
+CHARACTER(LEN=256) :: CFILE, CDATE
 !================================================
-IREST=0
-
 !*** 1. Check whether this step is a configured Restart time
-IF ( IFRQ_RST>=0 .and. KSTEP==NSTEPS )THEN         !! end of run
-  IREST=1
+IREST=0
+IF (IFRQ_RST>=0 .AND. KSTEP==NSTEPS) IREST=1
+IF (IFRQ_RST>=1 .AND. IFRQ_RST<=24) THEN
+  IF (MOD(JHOUR,IFRQ_RST)==0 .AND. JMIN==0) IREST=1
+ENDIF
+IF (IFRQ_RST==30) THEN
+  IF (JDD==1 .AND. JHOUR==0 .AND. JMIN==0) IREST=1
+ENDIF
+IF (IREST/=1) RETURN
+
+WRITE(LOGNAM,*) ""
+WRITE(LOGNAM,*) "!---------------------!"
+WRITE(LOGNAM,*) 'CMF::RESTART_WRITE: write time: ', JYYYYMMDD, JHHMM
+
+!*** 2. Open the selected Restart representation
+CALL RESTART_UTIL_OPEN_WRITE(CFILE,CDATE,REST_UNIT,REST_RECORD,NCID)
+
+!*** 3. Save river and floodplain storage in every Restart mode
+CALL RESTART_UTIL_WRITE('rivsto',P2RIVSTO,REST_UNIT,REST_RECORD,NCID)
+CALL RESTART_UTIL_WRITE('fldsto',P2FLDSTO,REST_UNIT,REST_RECORD,NCID)
+
+!*** 4. Save previous-step fields for Normal Restart
+IF (.NOT. LSTOONLY) THEN
+  CALL RESTART_UTIL_WRITE('rivout_pre',D2RIVOUT_PRE,REST_UNIT,REST_RECORD,NCID)
+  CALL RESTART_UTIL_WRITE('fldout_pre',D2FLDOUT_PRE,REST_UNIT,REST_RECORD,NCID)
+  CALL RESTART_UTIL_WRITE('rivdph_pre',D2RIVDPH_PRE,REST_UNIT,REST_RECORD,NCID)
+  CALL RESTART_UTIL_WRITE('fldsto_pre',D2FLDSTO_PRE,REST_UNIT,REST_RECORD,NCID)
 ENDIF
 
-IF ( IFRQ_RST>=1 .and. IFRQ_RST<=24 )THEN
-  IF ( MOD(JHOUR,IFRQ_RST)==0 .and. JMIN==0 )THEN  !! at selected hour
-    IREST=1
-  ENDIF
-ENDIF
-
-IF ( IFRQ_RST==30 )THEN
-  IF ( JDD==1 .and. JHOUR==0 .and. JMIN==0 )THEN  !! at start of month
-    IREST=1
-  ENDIF
-ENDIF
-
-
-IF( IREST==1 )THEN
-  WRITE(LOGNAM,*) ""
-  WRITE(LOGNAM,*) "!---------------------!"
-  WRITE(LOGNAM,*) 'CMF::RESTART_WRITE: write time: ' , JYYYYMMDD, JHHMM
-
-
-  IF( LRESTCDF )THEN
-    CALL WRTE_REST_CDF  !! netCDF restart write
-  ELSE
-    CALL WRTE_REST_BIN
-  ENDIF
-END IF 
-
-CONTAINS
-SUBROUTINE WRTE_REST_BIN
-! Write headerless direct-access records in the order expected by the reader.
-! LRESTDBL controls each map record's file precision, not internal array kinds.
-USE YOS_CMF_TIME,       ONLY: JYYYYMMDD, JHOUR
-USE YOS_CMF_MAP,        ONLY: REGIONTHIS, NSEQMAX
-#ifdef UseMPI_CMF
-USE CMF_CTRL_MPI_MOD,   ONLY: CMF_MPI_AllReduce_R1PTH, CMF_MPI_AllReduce_P1PTH
-#endif
-IMPLICIT NONE
-! local variable 
-INTEGER(KIND=JPIM)         :: RIREC
-CHARACTER(LEN=256)         :: CFILE,CDATE
-REAL(KIND=JPRD)            :: P2TMP(NSEQMAX,1)        !! use Real*8 for code simplicity
-REAL(KIND=JPRD)            :: P1PTH(NPTHOUT,NPTHLEV) 
-REAL(KIND=JPRM)            :: R1PTH(NPTHOUT,NPTHLEV) 
-!================================================
-!*** 1. Build the dated Restart filename
-WRITE(CDATE,'(I8.8,I2.2)') JYYYYMMDD,JHOUR
-CFILE=TRIM(CRESTDIR)//TRIM(CVNREST)//TRIM(CDATE)//TRIM(CSUFBIN)
-WRITE(LOGNAM,*) 'WRTE_REST_BIN: restart file:',CFILE
-
-!*** 2. Write the main map-grid Restart records
-TMPNAM=INQUIRE_FID()
-
-IF( LRESTDBL )THEN
-  IF ( REGIONTHIS==1 ) OPEN(TMPNAM,FILE=CFILE,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=8*NX*NY)
-ELSE
-  IF ( REGIONTHIS==1 ) OPEN(TMPNAM,FILE=CFILE,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NX*NY)
-ENDIF
-
-RIREC=0
-! River and floodplain storage occupy records 1 and 2 in every mode.
-P2TMP=P2RIVSTO
-CALL WRTE_BIN_MAP(P2TMP,TMPNAM,RIREC)
-P2TMP=P2FLDSTO
-CALL WRTE_BIN_MAP(P2TMP,TMPNAM,RIREC)
-! Normal Restart preserves previous-step state; Storage-only keeps the
-! available storage fields and any enabled optional-scheme storage.
-IF ( .not. LSTOONLY )THEN
-  P2TMP=D2RIVOUT_PRE
-  CALL WRTE_BIN_MAP(P2TMP,TMPNAM,RIREC)
-  P2TMP=D2FLDOUT_PRE
-  CALL WRTE_BIN_MAP(P2TMP,TMPNAM,RIREC)
-  P2TMP=D2RIVDPH_PRE
-  CALL WRTE_BIN_MAP(P2TMP,TMPNAM,RIREC)
-  P2TMP=D2FLDSTO_PRE
-  CALL WRTE_BIN_MAP(P2TMP,TMPNAM,RIREC)
-ENDIF
-
-! Optional-scheme records follow the previous-step fields when enabled.
-IF ( LGDWDLY ) THEN
-  P2TMP=P2GDWSTO
-  CALL WRTE_BIN_MAP(P2TMP,TMPNAM,RIREC)
-ENDIF
-IF ( LDAMOUT ) THEN
-  P2TMP=P2DAMSTO
-  CALL WRTE_BIN_MAP(P2TMP,TMPNAM,RIREC)
-ENDIF
-IF ( LLEVEE ) THEN
-  P2TMP=P2LEVSTO
-  CALL WRTE_BIN_MAP(P2TMP,TMPNAM,RIREC)
-ENDIF
-
-CLOSE(TMPNAM)
-
-!*** 3. Write the bifurcation companion file when enabled
-IF( LPTHOUT )THEN
-
-  CFILE=TRIM(CRESTDIR)//TRIM(CVNREST)//TRIM(CDATE)//TRIM(CSUFBIN)//'.pth'
-  WRITE(LOGNAM,*) 'WRTE_REST: WRITE RESTART BIN:',CFILE
-
-  !! The companion is written whenever LPTHOUT is enabled, including Storage-only.
-  !! The Storage-only reader skips it because previous-step bifurcation flow is
-  !! not part of that initialization mode.
-  !! Double Precision Restart
-  IF( LRESTDBL )THEN
-    P1PTH(:,:)=D1PTHFLW_PRE(:,:)
-#ifdef UseMPI_CMF
-    CALL CMF_MPI_AllReduce_P1PTH(P1PTH)
-#endif
-    IF ( REGIONTHIS==1 )THEN
-      OPEN(TMPNAM,FILE=CFILE,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=8*NPTHOUT*NPTHLEV)
-      WRITE(TMPNAM,REC=1) P1PTH
-      CLOSE(TMPNAM)
-    ENDIF
-
-  !! Float32 Binary companion
-  ELSE
-    R1PTH(:,:)=REAL(D1PTHFLW_PRE(:,:),KIND=JPRM)
-#ifdef UseMPI_CMF
-    CALL CMF_MPI_AllReduce_R1PTH(R1PTH)
-#endif
-    IF ( REGIONTHIS==1 )THEN
-      OPEN(TMPNAM,FILE=CFILE,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NPTHOUT*NPTHLEV)
-      WRITE(TMPNAM,REC=1) R1PTH
-      CLOSE(TMPNAM)
-    ENDIF
-  ENDIF
-ENDIF
-
-END SUBROUTINE WRTE_REST_BIN
-!=================
-SUBROUTINE WRTE_BIN_MAP(P2VAR,TNAM,IREC)
-! Convert one river-vector field to a map record at the selected file precision.
-USE CMF_UTILS_MOD,      ONLY: vecP2mapP,  vecP2mapR
-USE YOS_CMF_MAP,        ONLY: REGIONTHIS, NSEQMAX
-#ifdef UseMPI_CMF
-USE CMF_CTRL_MPI_MOD,   ONLY: CMF_MPI_AllReduce_R2MAP, CMF_MPI_AllReduce_P2MAP
-#endif
-IMPLICIT NONE
-REAL(KIND=JPRD)            :: P2VAR(NSEQMAX,1)  !! use Real*8 for code simplicity
-INTEGER(KIND=JPIM)         :: TNAM,IREC
-!* local variables
-REAL(KIND=JPRM)            :: R2TEMP(NX,NY)
-REAL(KIND=JPRD)            :: P2TEMP(NX,NY)
-!=================
-IREC=IREC+1
-
-!! LRESTDBL controls the Binary representation, not internal vector precision.
-IF( LRESTDBL )THEN
-  CALL vecP2mapP(P2VAR,P2TEMP)  
-#ifdef UseMPI_CMF
-  CALL CMF_MPI_AllReduce_P2MAP(P2TEMP)
-#endif
-
-  IF ( REGIONTHIS==1 ) WRITE(TNAM,REC=IREC) P2TEMP
-
-!! Float32 Binary map record
-ELSE
-  CALL vecP2mapR(P2VAR,R2TEMP)  
-#ifdef UseMPI_CMF
-    CALL CMF_MPI_AllReduce_R2MAP(R2TEMP)
-#endif
-  IF ( REGIONTHIS==1 ) WRITE(TNAM,REC=IREC) R2TEMP
-ENDIF
-!=================
-END SUBROUTINE WRTE_BIN_MAP
-SUBROUTINE WRTE_REST_CDF
-! Define and write NetCDF Restart state variables using Float64 storage.
-#ifdef UseCDF_CMF
-USE NETCDF
-USE YOS_CMF_INPUT,      ONLY: DMIS
-USE YOS_CMF_TIME,       ONLY: KMINNEXT, KMINSTART, ISYYYY,ISMM,ISDD, ISHOUR, ISMIN
-USE YOS_CMF_TIME,       ONLY: JYYYYMMDD,JHOUR
-USE YOS_CMF_MAP,        ONLY: D1LON,    D1LAT,     REGIONTHIS, NSEQMAX
-USE CMF_UTILS_MOD,      ONLY: NCERROR,  vecP2mapP
-#ifdef UseMPI_CMF
-USE CMF_CTRL_MPI_MOD,   ONLY: CMF_MPI_AllReduce_P2MAP, CMF_MPI_AllReduce_P1PTH
-#endif
-IMPLICIT NONE
-!* local variables
-CHARACTER(LEN=256)         :: CFILE, CDATE, CTIME, CVAR
-INTEGER(KIND=JPIM)         :: NCID,  VARID, LATID, LONID, TIMEID, JF, &
-                              NPTHOUTID,    NPTHLEVID,    STATUS, IOUT
-REAL(KIND=JPRB)            :: XTIME ! seconds since start of the run ! 
-REAL(KIND=JPRD)            :: P2VEC(NSEQMAX,1), P2TEMP(NX,NY), P1PTH(NPTHOUT,NPTHLEV)
-!================================================
-!*** 1. Set the dated filename and time coordinate
-XTIME=REAL( (KMINNEXT-KMINSTART),JPRB) *60._JPRB
-WRITE(CTIME,'(A14,I4.4,A1,I2.2,A1,I2.2,A1,I2.2,A1,I2.2)') 'seconds since ',ISYYYY,'-',ISMM,'-',ISDD,' ',ISHOUR,":",ISMIN
-
-WRITE(CDATE,'(I8.8,I2.2)') JYYYYMMDD,JHOUR
-CFILE=TRIM(CRESTDIR)//TRIM(CVNREST)//TRIM(CDATE)//TRIM(CSUFCDF)
-WRITE(LOGNAM,*) 'WRTE_REST:create RESTART NETCDF:',CFILE
-
-!============================
-!*** 2. Define the NetCDF Restart file
-!! NetCDF Restart variables use Float64 regardless of LRESTDBL.
-IF( REGIONTHIS==1 )THEN   !! write restart only on master node
-
-  CALL NCERROR( NF90_CREATE(CFILE,NF90_NETCDF4,NCID),'CREATING FILE:'//TRIM(CFILE) )
-  
-  !! dimensions 
-  CALL NCERROR( NF90_DEF_DIM(NCID, 'time', NF90_UNLIMITED, TIMEID) )
-  CALL NCERROR( NF90_DEF_DIM(NCID, 'lat', NY, LATID) )
-  CALL NCERROR( NF90_DEF_DIM(NCID, 'lon', NX, LONID) )
-  
-  IF ( LPTHOUT ) THEN
-    CALL NCERROR( NF90_DEF_DIM(NCID, 'NPTHOUT', NPTHOUT, NPTHOUTID) )
-    CALL NCERROR( NF90_DEF_DIM(NCID, 'NPTHLEV', NPTHLEV, NPTHLEVID) )
-  ENDIF 
-  
-  !! Define spatial and optional bifurcation dimensions.
-  CALL NCERROR( NF90_DEF_VAR(NCID, 'lat', NF90_FLOAT, (/LATID/), VARID) )
-  CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name','latitude') )
-  CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units','degrees_north') )
-  
-  CALL NCERROR( NF90_DEF_VAR(NCID, 'lon', NF90_FLOAT, (/LONID/), VARID) )
-  CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name','longitude') )
-  CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units','degrees_east') )
-  
-  CALL NCERROR( NF90_DEF_VAR(NCID, 'time', NF90_DOUBLE, (/TIMEID/), VARID) ) 
-  CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name','time') )
-  CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',CTIME) )
-  
-  !! Define coordinate variables.
-  CALL NCERROR( NF90_DEF_VAR(NCID, 'rivsto', NF90_DOUBLE, (/LONID,LATID,TIMEID/), &
-                             VARID,DEFLATE_LEVEL=6), 'Creating Variable')
-  CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"river storage" ) )
-  CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m3") )
-  CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',REAL(DMIS,KIND=JPRD)), &
-                'Setting rivsto _FillValue')
-  
-   
-  CALL NCERROR( NF90_DEF_VAR(NCID, 'fldsto', NF90_DOUBLE, (/LONID,LATID,TIMEID/), &
-                             VARID,DEFLATE_LEVEL=6), 'Creating Variable')  
-  CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"flood plain storage" ) )
-  CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m3") )
-  CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',REAL(DMIS,KIND=JPRD)) )
-  
-  IF ( .not. LSTOONLY )THEN           !! default restart with previous t-step outflw
-    CALL NCERROR( NF90_DEF_VAR(NCID, 'rivout_pre', NF90_DOUBLE, (/LONID,LATID,TIMEID/),&
-                               VARID,DEFLATE_LEVEL=6), 'Creating Variable')  
-    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"river outflow prev" ) )
-    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m3/s") )
-    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',REAL(DMIS,KIND=JPRD)) )
-    
-    CALL NCERROR( NF90_DEF_VAR(NCID, 'fldout_pre', NF90_DOUBLE, (/LONID,LATID,TIMEID/), &
-                               VARID,DEFLATE_LEVEL=6), 'Creating Variable')  
-    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"floodplain outflow prev" ) )
-    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m3/s") )
-    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',REAL(DMIS,KIND=JPRD)) )
-    
-    CALL NCERROR( NF90_DEF_VAR(NCID, 'rivdph_pre', NF90_DOUBLE, (/LONID,LATID,TIMEID/), &
-                               VARID,DEFLATE_LEVEL=6), 'Creating Variable')  
-    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"river depth prev" ) )
-    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m") )
-    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',REAL(DMIS,KIND=JPRD)) )
-    
-    CALL NCERROR( NF90_DEF_VAR(NCID, 'fldsto_pre', NF90_DOUBLE, (/LONID,LATID,TIMEID/), &
-                               VARID,DEFLATE_LEVEL=6), 'Creating Variable')  
-    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"floodplain storage prev" ) )
-    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m3") )
-    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',REAL(DMIS,KIND=JPRD)) )
-  
-    !! Previous-step bifurcation flow is part of a normal Restart only.
-    IF ( LPTHOUT ) THEN
-      CALL NCERROR( NF90_DEF_VAR(NCID, 'pthflw_pre', NF90_DOUBLE, (/NPTHOUTID,NPTHLEVID,TIMEID/),&
-                                 VARID,DEFLATE_LEVEL=6) ) 
-      CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"bifurcation outflow pre" ) )
-      CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m3/s") )
-    ENDIF
-  ENDIF
-  
-  IF ( LGDWDLY ) THEN
-    CALL NCERROR( NF90_DEF_VAR(NCID, 'gdwsto', NF90_DOUBLE, (/LONID,LATID,TIMEID/), &
-                             VARID,DEFLATE_LEVEL=6), 'Creating Variable gdwsto')  
-    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"ground water storage" ) )
-    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m3") )
-    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',REAL(DMIS,KIND=JPRD)) )
-  ENDIF
-  
-  IF ( LDAMOUT ) THEN
-    CALL NCERROR( NF90_DEF_VAR(NCID, 'damsto', NF90_DOUBLE, (/LONID,LATID,TIMEID/), &
-                             VARID,DEFLATE_LEVEL=6), 'Creating Variable damsto')
-    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"dam reservoir storage" ) )
-    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m3") )
-    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',REAL(DMIS,KIND=JPRD)) )
-  ENDIF
-  
-  IF ( LLEVEE ) THEN
-    CALL NCERROR( NF90_DEF_VAR(NCID, 'levsto', NF90_DOUBLE, (/LONID,LATID,TIMEID/), &
-                             VARID,DEFLATE_LEVEL=6), 'Creating Variable levsto')  
-    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'long_name',"storage exceeds levee protection" ) )
-    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, 'units',"m3") )
-    CALL NCERROR( NF90_PUT_ATT(NCID, VARID, '_FillValue',REAL(DMIS,KIND=JPRD)) )
-  ENDIF
-
-  CALL NCERROR( NF90_ENDDEF(NCID) )
-  !============================
-  !*** 3. Write coordinates and Restart data
-  
-  !! Write the timestamp and geographic coordinates.
-  CALL NCERROR( NF90_INQ_VARID(NCID,'time',VARID))
-  CALL NCERROR( NF90_PUT_VAR(NCID,VARID,XTIME) )
-  
-  CALL NCERROR ( NF90_INQ_VARID(NCID,'lon',VARID),'getting id' )
-  CALL NCERROR( NF90_PUT_VAR(NCID,VARID,D1LON))
-  
-  CALL NCERROR ( NF90_INQ_VARID(NCID,'lat',VARID),'getting id' )
-  CALL NCERROR( NF90_PUT_VAR(NCID,VARID,D1LAT))
-
-ENDIF  !! regionthis=1: definition
-
-!! Gather and write enabled Restart variables; MPI reductions assemble
-!! distributed map fields before the master rank writes the NetCDF data.
-DO JF=1,9
-  IOUT=0
-  SELECT CASE(JF)
-    CASE (1)
-      CVAR='rivsto'
-      CALL vecP2mapP(P2RIVSTO,P2TEMP)
-      IOUT=1
-    CASE (2)
-      CVAR='fldsto'
-      CALL vecP2mapP(P2FLDSTO,P2TEMP)
-      IOUT=1
-    CASE (3)
-      CVAR='rivout_pre'
-      IF( .not. LSTOONLY ) THEN
-        P2VEC(:,:)=D2RIVOUT_PRE(:,:)
-        CALL vecP2mapP(P2VEC,P2TEMP)
-        IOUT=1
-      ENDIF
-    CASE (4)
-      CVAR='fldout_pre'
-      IF( .not. LSTOONLY ) THEN
-        P2VEC(:,:)=D2FLDOUT_PRE(:,:)
-        CALL vecP2mapP(P2VEC,P2TEMP)
-        IOUT=1
-      ENDIF
-   CASE (5)
-      CVAR='rivdph_pre'
-      IF( .not. LSTOONLY ) THEN
-        P2VEC(:,:)=D2RIVDPH_PRE(:,:)
-        CALL vecP2mapP(P2VEC,P2TEMP)
-        IOUT=1
-      ENDIF
-    CASE (6)
-      CVAR='fldsto_pre'
-      IF( .not. LSTOONLY ) THEN
-        P2VEC(:,:)=D2FLDSTO_PRE(:,:)
-        CALL vecP2mapP(P2VEC,P2TEMP)
-        IOUT=1
-      ENDIF
-    CASE (7)
-      CVAR='gdwsto'
-      IF( LGDWDLY ) THEN
-        CALL vecP2mapP(P2GDWSTO,P2TEMP)
-        IOUT=1
-      ENDIF
-    CASE (8)  ! Reservoir storage, when enabled.
-      CVAR='damsto'
-      IF( LDAMOUT ) THEN
-        CALL vecP2mapP(P2DAMSTO,P2TEMP)  !! P2DAMSTO only allocated for LDAMOUT
-        IOUT=1
-      ENDIF
-    CASE (9)  ! Levee storage, when enabled.
-      CVAR='levsto'
-      IF( LLEVEE ) THEN
-        CALL vecP2mapP(P2LEVSTO,P2TEMP)  !! P2LEVSTO is allocated only for LLEVEE.
-        IOUT=1
-      ENDIF
-  END SELECT
-
-#ifdef UseMPI_CMF
-  CALL CMF_MPI_AllReduce_P2MAP(P2TEMP)
-#endif
-
-  IF( IOUT==1 )THEN
-    IF( REGIONTHIS==1 )THEN
-      STATUS = NF90_INQ_VARID(NCID,TRIM(CVAR),VARID)  !! check VARID is defined above, write restart only when STATUS=0
-      IF ( STATUS .EQ. 0 ) THEN
-        CALL NCERROR( NF90_PUT_VAR(NCID,VARID,P2TEMP,(/1,1,1/),(/NX,NY,1/)) )
-      ENDIF
-    ENDIF
-  ENDIF
-ENDDO
-
-IF ( LPTHOUT ) THEN
-  IF ( .not. LSTOONLY )THEN
-    P1PTH(:,:)=D1PTHFLW_PRE(:,:)  !! convert Float32 to Float64 (for Single Precison Use)
-#ifdef UseMPI_CMF
-    CALL CMF_MPI_AllReduce_P1PTH(P1PTH)
-#endif
-    IF( REGIONTHIS==1 )THEN
-      CALL NCERROR( NF90_INQ_VARID(NCID,'pthflw_pre',VARID))
-      CALL NCERROR( NF90_PUT_VAR(NCID,VARID,P1PTH,(/1,1,1/),(/NPTHOUT,NPTHLEV,1/)) )
-    ENDIF
-  ENDIF
-ENDIF
-
-IF( REGIONTHIS==1 )THEN
-  CALL NCERROR( NF90_SYNC(NCID) )
-  CALL NCERROR( NF90_CLOSE(NCID) )
-ENDIF
-
-WRITE(LOGNAM,*) 'WRTE_REST: WRITE RESTART NETCDF:',CFILE
-
-#endif
-END SUBROUTINE WRTE_REST_CDF
-!==========================================================
+!*** 5. Save optional scheme states and bifurcation flow
+IF (LGDWDLY) CALL RESTART_UTIL_WRITE('gdwsto',P2GDWSTO,REST_UNIT,REST_RECORD,NCID)
+IF (LDAMOUT) CALL RESTART_UTIL_WRITE('damsto',P2DAMSTO,REST_UNIT,REST_RECORD,NCID)
+IF (LLEVEE) CALL RESTART_UTIL_WRITE('levsto',P2LEVSTO,REST_UNIT,REST_RECORD,NCID)
+IF (LPTHOUT) CALL RESTART_UTIL_WRITE_PTH(CDATE,NCID)
+CALL RESTART_UTIL_CLOSE_WRITE(REST_UNIT,NCID,CFILE)
 
 END SUBROUTINE CMF_RESTART_WRITE
 !####################################################################
+
+
 
 !####################################################################
 LOGICAL FUNCTION restart_is_write_time()
 ! Report whether the configured Restart time is due for coupled helpers.
 ! MAIN uses this query to synchronize HeatLink Restart writes after its update.
-USE YOS_CMF_TIME,       ONLY: KSTEP, NSTEPS, JDD, JHOUR, JMIN
+USE YOS_CMF_TIME, ONLY: KSTEP, NSTEPS, JDD, JHOUR, JMIN
 IMPLICIT NONE
 !================================================
 restart_is_write_time=.FALSE.
-
-IF ( IFRQ_RST>=0 .and. KSTEP==NSTEPS )THEN         !! end of run
-  restart_is_write_time=.TRUE.
+IF (IFRQ_RST>=0 .AND. KSTEP==NSTEPS) restart_is_write_time=.TRUE.
+IF (IFRQ_RST>=1 .AND. IFRQ_RST<=24) THEN
+  IF (MOD(JHOUR,IFRQ_RST)==0 .AND. JMIN==0) restart_is_write_time=.TRUE.
 ENDIF
-
-IF ( IFRQ_RST>=1 .and. IFRQ_RST<=24 )THEN
-  IF ( MOD(JHOUR,IFRQ_RST)==0 .and. JMIN==0 )THEN  !! at selected hour
-    restart_is_write_time=.TRUE.
-  ENDIF
+IF (IFRQ_RST==30) THEN
+  IF (JDD==1 .AND. JHOUR==0 .AND. JMIN==0) restart_is_write_time=.TRUE.
 ENDIF
-
-IF ( IFRQ_RST==30 )THEN
-  IF ( JDD==1 .and. JHOUR==0 .and. JMIN==0 )THEN  !! at start of month
-    restart_is_write_time=.TRUE.
-  ENDIF
-ENDIF
-
 END FUNCTION restart_is_write_time
 !####################################################################
 
+
+
+
+!####################################################################
+! Private Restart implementation utilities
+! -- RESTART_UTIL_OPEN_READ / CLOSE_READ : Open and close the selected input
+! -- RESTART_UTIL_READ : Read one named map state through the kind-specific generic
+! -- RESTART_UTIL_READ_PTH : Read bifurcation companion state and validate identity
+! -- RESTART_UTIL_OPEN_WRITE / CLOSE_WRITE : Create and finalize the selected output
+! -- RESTART_UTIL_WRITE : Write one named map state through the kind-specific generic
+! -- RESTART_UTIL_WRITE_PTH : Write bifurcation companion state
+!####################################################################
+SUBROUTINE RESTART_UTIL_OPEN_READ(CFILE,REST_UNIT,REST_RECORD,NCID)
+! Open the selected representation and validate configured bifurcation path identity.
+USE YOS_CMF_INPUT, ONLY: TMPNAM, NX, NY
+USE CMF_UTILS_MOD, ONLY: INQUIRE_FID
+IMPLICIT NONE
+CHARACTER(LEN=*),INTENT(IN) :: CFILE
+INTEGER(KIND=JPIM),INTENT(OUT) :: REST_UNIT, REST_RECORD, NCID
+!================================================
+REST_RECORD=0
+REST_UNIT=0
+NCID=0
+IF (LRESTCDF) THEN
+#ifdef UseCDF_CMF
+  CALL RESTART_UTIL_OPEN_READ_CDF(CFILE,NCID)
+#endif
+ELSE
+  REST_UNIT=INQUIRE_FID()
+  TMPNAM=REST_UNIT
+  IF (LRESTDBL) THEN
+    OPEN(REST_UNIT,FILE=CFILE,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=8*NX*NY)
+  ELSE
+    OPEN(REST_UNIT,FILE=CFILE,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NX*NY)
+  ENDIF
+ENDIF
+END SUBROUTINE RESTART_UTIL_OPEN_READ
+!####################################################################
+SUBROUTINE RESTART_UTIL_CLOSE_READ(REST_UNIT,NCID)
+! Close the selected Restart input after all model states have been restored.
+IMPLICIT NONE
+INTEGER(KIND=JPIM),INTENT(IN) :: REST_UNIT, NCID
+!================================================
+IF (LRESTCDF) THEN
+#ifdef UseCDF_CMF
+  CALL RESTART_UTIL_CLOSE_CDF(NCID)
+#endif
+ELSE
+  CLOSE(REST_UNIT)
+ENDIF
+END SUBROUTINE RESTART_UTIL_CLOSE_READ
+!####################################################################
+SUBROUTINE RESTART_UTIL_READ_R4(NAME,ARRAY,REST_UNIT,REST_RECORD,NCID)
+! Preserve single-precision model state while sharing the double-precision reader.
+USE YOS_CMF_MAP, ONLY: NSEQMAX
+IMPLICIT NONE
+CHARACTER(LEN=*),INTENT(IN) :: NAME
+REAL(KIND=JPRM),INTENT(OUT) :: ARRAY(NSEQMAX,1)
+INTEGER(KIND=JPIM),INTENT(IN) :: REST_UNIT, NCID
+INTEGER(KIND=JPIM),INTENT(INOUT) :: REST_RECORD
+REAL(KIND=JPRD) :: WORK(NSEQMAX,1)
+!================================================
+CALL RESTART_UTIL_READ_R8(NAME,WORK,REST_UNIT,REST_RECORD,NCID)
+ARRAY=REAL(WORK,KIND=JPRM)
+END SUBROUTINE RESTART_UTIL_READ_R4
+!####################################################################
+SUBROUTINE RESTART_UTIL_READ_R8(NAME,ARRAY,REST_UNIT,REST_RECORD,NCID)
+! Read one named map state from Binary records or a NetCDF variable.
+USE YOS_CMF_MAP, ONLY: NSEQMAX
+IMPLICIT NONE
+CHARACTER(LEN=*),INTENT(IN) :: NAME
+REAL(KIND=JPRD),INTENT(OUT) :: ARRAY(NSEQMAX,1)
+INTEGER(KIND=JPIM),INTENT(IN) :: REST_UNIT, NCID
+INTEGER(KIND=JPIM),INTENT(INOUT) :: REST_RECORD
+!================================================
+IF (LRESTCDF) THEN
+#ifdef UseCDF_CMF
+  CALL RESTART_UTIL_READ_MAP_CDF(NAME,ARRAY,NCID)
+#endif
+ELSE
+  CALL RESTART_UTIL_READ_MAP(ARRAY,REST_UNIT,REST_RECORD)
+ENDIF
+END SUBROUTINE RESTART_UTIL_READ_R8
+!####################################################################
+SUBROUTINE RESTART_UTIL_READ_MAP(ARRAY,REST_UNIT,REST_RECORD)
+! Read one Binary map-grid record and vectorize it at internal double precision.
+USE YOS_CMF_INPUT, ONLY: NX, NY
+USE YOS_CMF_MAP,   ONLY: NSEQMAX
+USE CMF_UTILS_MOD, ONLY: mapP2vecP
+IMPLICIT NONE
+REAL(KIND=JPRD),INTENT(OUT) :: ARRAY(NSEQMAX,1)
+INTEGER(KIND=JPIM),INTENT(IN) :: REST_UNIT
+INTEGER(KIND=JPIM),INTENT(INOUT) :: REST_RECORD
+REAL(KIND=JPRM) :: R2TEMP(NX,NY)
+REAL(KIND=JPRD) :: P2TEMP(NX,NY)
+!================================================
+REST_RECORD=REST_RECORD+1
+IF (LRESTDBL) THEN
+  READ(REST_UNIT,REC=REST_RECORD) P2TEMP
+ELSE
+  READ(REST_UNIT,REC=REST_RECORD) R2TEMP
+  P2TEMP=R2TEMP
+ENDIF
+CALL mapP2vecP(P2TEMP,ARRAY)
+END SUBROUTINE RESTART_UTIL_READ_MAP
+!####################################################################
+SUBROUTINE RESTART_UTIL_READ_PTH(NCID)
+! Restore previous-step bifurcation flow in Normal Restart mode.
+USE YOS_CMF_INPUT, ONLY: TMPNAM
+USE YOS_CMF_MAP,   ONLY: NPTHOUT, NPTHLEV
+USE YOS_CMF_PROG,  ONLY: D1PTHFLW_PRE
+USE CMF_UTILS_MOD, ONLY: INQUIRE_FID
+IMPLICIT NONE
+INTEGER(KIND=JPIM),INTENT(IN) :: NCID
+INTEGER(KIND=JPIM) :: PATH_UNIT
+REAL(KIND=JPRM) :: R1PTH(NPTHOUT,NPTHLEV)
+REAL(KIND=JPRD) :: P1PTH(NPTHOUT,NPTHLEV)
+!================================================
+IF (.NOT. LPTHOUT) RETURN
+IF (LRESTCDF) THEN
+  IF (.NOT. LSTOONLY) THEN
+#ifdef UseCDF_CMF
+    CALL RESTART_UTIL_READ_PTH_CDF(NCID)
+#endif
+  ENDIF
+ELSEIF (.NOT. LSTOONLY) THEN
+  PATH_UNIT=INQUIRE_FID()
+  TMPNAM=PATH_UNIT
+  IF (LRESTDBL) THEN
+    OPEN(PATH_UNIT,FILE=TRIM(CRESTSTO)//'.pth',FORM='UNFORMATTED',ACCESS='DIRECT', &
+         RECL=8*NPTHOUT*NPTHLEV)
+    READ(PATH_UNIT,REC=1) P1PTH
+    CLOSE(PATH_UNIT)
+    D1PTHFLW_PRE=REAL(P1PTH,KIND=JPRB)
+  ELSE
+    OPEN(PATH_UNIT,FILE=TRIM(CRESTSTO)//'.pth',FORM='UNFORMATTED',ACCESS='DIRECT', &
+         RECL=4*NPTHOUT*NPTHLEV)
+    READ(PATH_UNIT,REC=1) R1PTH
+    CLOSE(PATH_UNIT)
+    D1PTHFLW_PRE=R1PTH
+  ENDIF
+ENDIF
+END SUBROUTINE RESTART_UTIL_READ_PTH
+!####################################################################
+SUBROUTINE RESTART_UTIL_OPEN_WRITE(CFILE,CDATE,REST_UNIT,REST_RECORD,NCID)
+! Create a dated Binary or NetCDF Restart container and define its schema.
+USE YOS_CMF_INPUT, ONLY: TMPNAM, NX, NY
+USE YOS_CMF_TIME,  ONLY: JYYYYMMDD, JHOUR
+USE YOS_CMF_MAP,   ONLY: REGIONTHIS
+USE CMF_UTILS_MOD, ONLY: INQUIRE_FID
+IMPLICIT NONE
+CHARACTER(LEN=*),INTENT(OUT) :: CFILE, CDATE
+INTEGER(KIND=JPIM),INTENT(OUT) :: REST_UNIT, REST_RECORD, NCID
+!================================================
+WRITE(CDATE,'(I8.8,I2.2)') JYYYYMMDD,JHOUR
+IF (LRESTCDF) THEN
+  CFILE=TRIM(CRESTDIR)//TRIM(CVNREST)//TRIM(CDATE)//TRIM(CSUFCDF)
+  WRITE(LOGNAM,*) 'CMF::RESTART_WRITE: creating NetCDF Restart: ',TRIM(CFILE)
+  NCID=0
+#ifdef UseCDF_CMF
+  CALL RESTART_UTIL_DEFINE_CDF(CFILE,NCID)
+#endif
+  REST_UNIT=0
+ELSE
+  CFILE=TRIM(CRESTDIR)//TRIM(CVNREST)//TRIM(CDATE)//TRIM(CSUFBIN)
+  WRITE(LOGNAM,*) 'CMF::RESTART_WRITE: Binary Restart file: ',TRIM(CFILE)
+  REST_UNIT=INQUIRE_FID()
+  TMPNAM=REST_UNIT
+  IF (REGIONTHIS==1) THEN
+    IF (LRESTDBL) THEN
+      OPEN(REST_UNIT,FILE=CFILE,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=8*NX*NY)
+    ELSE
+      OPEN(REST_UNIT,FILE=CFILE,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NX*NY)
+    ENDIF
+  ENDIF
+  NCID=0
+ENDIF
+REST_RECORD=0
+END SUBROUTINE RESTART_UTIL_OPEN_WRITE
+!####################################################################
+SUBROUTINE RESTART_UTIL_WRITE_R4(NAME,ARRAY,REST_UNIT,REST_RECORD,NCID)
+! Preserve single-precision model state while sharing the double-precision writer.
+USE YOS_CMF_MAP, ONLY: NSEQMAX
+IMPLICIT NONE
+CHARACTER(LEN=*),INTENT(IN) :: NAME
+REAL(KIND=JPRM),INTENT(IN) :: ARRAY(NSEQMAX,1)
+INTEGER(KIND=JPIM),INTENT(IN) :: REST_UNIT, NCID
+INTEGER(KIND=JPIM),INTENT(INOUT) :: REST_RECORD
+REAL(KIND=JPRD) :: WORK(NSEQMAX,1)
+!================================================
+WORK=REAL(ARRAY,KIND=JPRD)
+CALL RESTART_UTIL_WRITE_R8(NAME,WORK,REST_UNIT,REST_RECORD,NCID)
+END SUBROUTINE RESTART_UTIL_WRITE_R4
+!####################################################################
+SUBROUTINE RESTART_UTIL_WRITE_R8(NAME,ARRAY,REST_UNIT,REST_RECORD,NCID)
+! Write one named map state in the selected file representation.
+USE YOS_CMF_MAP,   ONLY: NSEQMAX
+IMPLICIT NONE
+CHARACTER(LEN=*),INTENT(IN) :: NAME
+REAL(KIND=JPRD),INTENT(IN) :: ARRAY(NSEQMAX,1)
+INTEGER(KIND=JPIM),INTENT(IN) :: REST_UNIT, NCID
+INTEGER(KIND=JPIM),INTENT(INOUT) :: REST_RECORD
+!================================================
+IF (LRESTCDF) THEN
+#ifdef UseCDF_CMF
+  CALL RESTART_UTIL_WRITE_MAP_CDF(NAME,ARRAY,NCID)
+#endif
+ELSE
+  CALL RESTART_UTIL_WRITE_MAP(ARRAY,REST_UNIT,REST_RECORD)
+ENDIF
+END SUBROUTINE RESTART_UTIL_WRITE_R8
+!####################################################################
+SUBROUTINE RESTART_UTIL_WRITE_MAP(ARRAY,REST_UNIT,REST_RECORD)
+! Convert one vector field to a Binary map record at LRESTDBL precision.
+USE YOS_CMF_INPUT, ONLY: NX, NY
+USE YOS_CMF_MAP,   ONLY: REGIONTHIS, NSEQMAX
+USE CMF_UTILS_MOD, ONLY: vecP2mapP, vecP2mapR
+#ifdef UseMPI_CMF
+USE CMF_CTRL_MPI_MOD, ONLY: CMF_MPI_AllReduce_R2MAP, CMF_MPI_AllReduce_P2MAP
+#endif
+IMPLICIT NONE
+REAL(KIND=JPRD),INTENT(IN) :: ARRAY(NSEQMAX,1)
+INTEGER(KIND=JPIM),INTENT(IN) :: REST_UNIT
+INTEGER(KIND=JPIM),INTENT(INOUT) :: REST_RECORD
+REAL(KIND=JPRM) :: R2TEMP(NX,NY)
+REAL(KIND=JPRD) :: P2TEMP(NX,NY)
+!================================================
+REST_RECORD=REST_RECORD+1
+IF (LRESTDBL) THEN
+  CALL vecP2mapP(ARRAY,P2TEMP)
+#ifdef UseMPI_CMF
+  CALL CMF_MPI_AllReduce_P2MAP(P2TEMP)
+#endif
+  IF (REGIONTHIS==1) WRITE(REST_UNIT,REC=REST_RECORD) P2TEMP
+ELSE
+  CALL vecP2mapR(ARRAY,R2TEMP)
+#ifdef UseMPI_CMF
+  CALL CMF_MPI_AllReduce_R2MAP(R2TEMP)
+#endif
+  IF (REGIONTHIS==1) WRITE(REST_UNIT,REC=REST_RECORD) R2TEMP
+ENDIF
+END SUBROUTINE RESTART_UTIL_WRITE_MAP
+!####################################################################
+SUBROUTINE RESTART_UTIL_WRITE_PTH(CDATE,NCID)
+! Write bifurcation flow using its established Binary companion or NetCDF variable.
+USE YOS_CMF_INPUT, ONLY: TMPNAM
+USE YOS_CMF_MAP,   ONLY: REGIONTHIS, NPTHOUT, NPTHLEV
+USE YOS_CMF_PROG,  ONLY: D1PTHFLW_PRE
+USE CMF_UTILS_MOD, ONLY: INQUIRE_FID
+#ifdef UseMPI_CMF
+USE CMF_CTRL_MPI_MOD, ONLY: CMF_MPI_AllReduce_R1PTH, CMF_MPI_AllReduce_P1PTH
+#endif
+IMPLICIT NONE
+CHARACTER(LEN=*),INTENT(IN) :: CDATE
+INTEGER(KIND=JPIM),INTENT(IN) :: NCID
+INTEGER(KIND=JPIM) :: PATH_UNIT
+CHARACTER(LEN=256) :: CFILE
+REAL(KIND=JPRM) :: R1PTH(NPTHOUT,NPTHLEV)
+REAL(KIND=JPRD) :: P1PTH(NPTHOUT,NPTHLEV)
+!================================================
+IF (LRESTCDF) THEN
+#ifdef UseCDF_CMF
+  CALL RESTART_UTIL_WRITE_PTH_CDF(NCID)
+#endif
+  RETURN
+ENDIF
+CFILE=TRIM(CRESTDIR)//TRIM(CVNREST)//TRIM(CDATE)//TRIM(CSUFBIN)//'.pth'
+WRITE(LOGNAM,*) 'RESTART_UTIL_WRITE_PTH: Binary bifurcation companion: ',TRIM(CFILE)
+IF (LRESTDBL) THEN
+  P1PTH=D1PTHFLW_PRE
+#ifdef UseMPI_CMF
+  CALL CMF_MPI_AllReduce_P1PTH(P1PTH)
+#endif
+  IF (REGIONTHIS==1) THEN
+    PATH_UNIT=INQUIRE_FID()
+    TMPNAM=PATH_UNIT
+    OPEN(PATH_UNIT,FILE=CFILE,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=8*NPTHOUT*NPTHLEV)
+    WRITE(PATH_UNIT,REC=1) P1PTH
+    CLOSE(PATH_UNIT)
+  ENDIF
+ELSE
+  R1PTH=REAL(D1PTHFLW_PRE,KIND=JPRM)
+#ifdef UseMPI_CMF
+  CALL CMF_MPI_AllReduce_R1PTH(R1PTH)
+#endif
+  IF (REGIONTHIS==1) THEN
+    PATH_UNIT=INQUIRE_FID()
+    TMPNAM=PATH_UNIT
+    OPEN(PATH_UNIT,FILE=CFILE,FORM='UNFORMATTED',ACCESS='DIRECT',RECL=4*NPTHOUT*NPTHLEV)
+    WRITE(PATH_UNIT,REC=1) R1PTH
+    CLOSE(PATH_UNIT)
+  ENDIF
+ENDIF
+END SUBROUTINE RESTART_UTIL_WRITE_PTH
+!####################################################################
+SUBROUTINE RESTART_UTIL_CLOSE_WRITE(REST_UNIT,NCID,CFILE)
+! Sync and close the selected Restart output representation.
+#ifdef UseCDF_CMF
+USE NETCDF
+USE YOS_CMF_MAP, ONLY: REGIONTHIS
+USE CMF_UTILS_MOD, ONLY: NCERROR
+#endif
+IMPLICIT NONE
+INTEGER(KIND=JPIM),INTENT(IN) :: REST_UNIT, NCID
+CHARACTER(LEN=*),INTENT(IN) :: CFILE
+!================================================
+IF (LRESTCDF) THEN
+#ifdef UseCDF_CMF
+  IF (REGIONTHIS==1) THEN
+    CALL NCERROR(NF90_SYNC(NCID))
+    CALL NCERROR(NF90_CLOSE(NCID))
+  ENDIF
+#endif
+ELSE
+  CLOSE(REST_UNIT)
+ENDIF
+WRITE(LOGNAM,*) 'CMF::RESTART_WRITE: completed Restart: ',TRIM(CFILE)
+END SUBROUTINE RESTART_UTIL_CLOSE_WRITE
+!####################################################################
+#ifdef UseCDF_CMF
+SUBROUTINE RESTART_UTIL_OPEN_READ_CDF(CFILE,NCID)
+! Open NetCDF input and validate path identity when bifurcation is active.
+#ifdef UseCDF_CMF
+USE NETCDF
+USE YOS_CMF_INPUT, ONLY: NX, NY
+USE YOS_CMF_MAP, ONLY: NPTHOUT, NPTHLEV, PTH_ID, PTH_IX, PTH_IY, PTH_JX, PTH_JY
+USE CMF_UTILS_MOD, ONLY: NCERROR
+#endif
+IMPLICIT NONE
+CHARACTER(LEN=*),INTENT(IN) :: CFILE
+INTEGER(KIND=JPIM),INTENT(OUT) :: NCID
+#ifdef UseCDF_CMF
+INTEGER(KIND=JPIM) :: STATUS, PATHID, LAYERID, PATHLEN, LAYERLEN, NFOUND, I, IPTH
+INTEGER(KIND=JPIM) :: VARID(5), ID_DATA(NPTHOUT), XTYPE, NDIMS, DIMIDS(NF90_MAX_VAR_DIMS)
+INTEGER(KIND=JPIM),ALLOCATABLE :: MAP_DATA(:,:)
+CHARACTER(LEN=8),PARAMETER :: PATH_NAMES(5)=[CHARACTER(LEN=8) :: 'pth_id','ix','iy','jx','jy']
+#endif
+!================================================
+#ifdef UseCDF_CMF
+WRITE(LOGNAM,*) 'RESTART_UTIL_OPEN_READ_CDF: NetCDF Restart file: ',TRIM(CFILE)
+CALL NCERROR(NF90_OPEN(CFILE,NF90_NOWRITE,NCID),'OPENING '//TRIM(CFILE))
+IF (.NOT. LPTHOUT) RETURN
+
+! Prevent same-sized but differently ordered path tables from remapping saved flows.
+CALL NCERROR(NF90_INQ_DIMID(NCID,'NPTHOUT',PATHID),'finding pathway count dimension')
+CALL NCERROR(NF90_INQ_DIMID(NCID,'NPTHLEV',LAYERID),'finding pathway layer dimension')
+CALL NCERROR(NF90_INQUIRE_DIMENSION(NCID,PATHID,LEN=PATHLEN),'reading pathway count dimension')
+CALL NCERROR(NF90_INQUIRE_DIMENSION(NCID,LAYERID,LEN=LAYERLEN),'reading pathway layer dimension')
+IF (PATHLEN/=NPTHOUT .OR. LAYERLEN/=NPTHLEV) THEN
+  WRITE(LOGNAM,*) 'ERROR [RESTART_UTIL_OPEN_READ_CDF]: bifurcation dimensions differ: restart=', &
+                  PATHLEN,LAYERLEN,' current map=',NPTHOUT,NPTHLEV
+  STOP 9
+ENDIF
+NFOUND=0
+DO I=1,SIZE(PATH_NAMES)
+  STATUS=NF90_INQ_VARID(NCID,TRIM(PATH_NAMES(I)),VARID(I))
+  IF (STATUS==NF90_NOERR) NFOUND=NFOUND+1
+ENDDO
+IF (NFOUND==0) THEN
+  WRITE(LOGNAM,*) 'WARNING [RESTART_UTIL_OPEN_READ_CDF]: legacy Restart has no bifurcation path IDs; '// &
+                  'path correspondence is unverified.'
+  RETURN
+ELSEIF (NFOUND/=SIZE(PATH_NAMES)) THEN
+  WRITE(LOGNAM,*) 'ERROR [RESTART_UTIL_OPEN_READ_CDF]: partial bifurcation path identity metadata.'
+  STOP 9
+ENDIF
+ALLOCATE(MAP_DATA(NPTHOUT,5))
+DO I=1,SIZE(PATH_NAMES)
+  CALL NCERROR(NF90_INQUIRE_VARIABLE(NCID,VARID(I),XTYPE=XTYPE,NDIMS=NDIMS,DIMIDS=DIMIDS), &
+               'inspecting '//TRIM(PATH_NAMES(I)))
+  IF (XTYPE/=NF90_INT .OR. NDIMS/=1 .OR. DIMIDS(1)/=PATHID) THEN
+    WRITE(LOGNAM,*) 'ERROR [RESTART_UTIL_OPEN_READ_CDF]: ',TRIM(PATH_NAMES(I)), &
+                    ' must be an int32 variable on the NPTHOUT dimension.'
+    STOP 9
+  ENDIF
+  CALL NCERROR(NF90_GET_VAR(NCID,VARID(I),ID_DATA),'reading '//TRIM(PATH_NAMES(I)))
+  MAP_DATA(:,I)=ID_DATA
+ENDDO
+DO IPTH=1,NPTHOUT
+  IF (MAP_DATA(IPTH,1)/=PTH_ID(IPTH) .OR. MAP_DATA(IPTH,2)/=PTH_IX(IPTH) .OR. &
+      MAP_DATA(IPTH,3)/=PTH_IY(IPTH) .OR. MAP_DATA(IPTH,4)/=PTH_JX(IPTH) .OR. &
+      MAP_DATA(IPTH,5)/=PTH_JY(IPTH)) THEN
+    WRITE(LOGNAM,*) 'ERROR [RESTART_UTIL_OPEN_READ_CDF]: path identity differs at row ',IPTH, &
+      ' restart (id,ix,iy,jx,jy)=',MAP_DATA(IPTH,:), &
+      ' current (id,ix,iy,jx,jy)=',PTH_ID(IPTH),PTH_IX(IPTH),PTH_IY(IPTH),PTH_JX(IPTH),PTH_JY(IPTH)
+    STOP 9
+  ENDIF
+ENDDO
+DEALLOCATE(MAP_DATA)
+#endif
+END SUBROUTINE RESTART_UTIL_OPEN_READ_CDF
+!####################################################################
+SUBROUTINE RESTART_UTIL_CLOSE_CDF(NCID)
+! Close an opened NetCDF Restart file.
+#ifdef UseCDF_CMF
+USE NETCDF
+USE CMF_UTILS_MOD, ONLY: NCERROR
+#endif
+IMPLICIT NONE
+INTEGER(KIND=JPIM),INTENT(IN) :: NCID
+!================================================
+#ifdef UseCDF_CMF
+CALL NCERROR(NF90_CLOSE(NCID))
+#endif
+END SUBROUTINE RESTART_UTIL_CLOSE_CDF
+!####################################################################
+SUBROUTINE RESTART_UTIL_READ_MAP_CDF(NAME,ARRAY,NCID)
+! Read a named Float64 NetCDF map state and convert it to the river vector.
+USE YOS_CMF_MAP, ONLY: NSEQMAX
+#ifdef UseCDF_CMF
+USE NETCDF
+USE YOS_CMF_INPUT, ONLY: NX, NY
+USE CMF_UTILS_MOD, ONLY: NCERROR, mapP2vecP
+#endif
+IMPLICIT NONE
+CHARACTER(LEN=*),INTENT(IN) :: NAME
+INTEGER(KIND=JPIM),INTENT(IN) :: NCID
+REAL(KIND=JPRD),INTENT(OUT) :: ARRAY(NSEQMAX,1)
+#ifdef UseCDF_CMF
+
+INTEGER(KIND=JPIM) :: VARID
+REAL(KIND=JPRD) :: P2TEMP(NX,NY)
+!================================================
+CALL NCERROR(NF90_INQ_VARID(NCID,TRIM(NAME),VARID))
+CALL NCERROR(NF90_GET_VAR(NCID,VARID,P2TEMP,(/1,1,1/),(/NX,NY,1/)))
+CALL mapP2vecP(P2TEMP,ARRAY)
+#endif
+END SUBROUTINE RESTART_UTIL_READ_MAP_CDF
+!####################################################################
+SUBROUTINE RESTART_UTIL_READ_PTH_CDF(NCID)
+! Read Normal Restart bifurcation flow and retain the configured path validity mask.
+#ifdef UseCDF_CMF
+USE NETCDF
+USE YOS_CMF_MAP, ONLY: NPTHOUT, NPTHLEV, PTH_UPST, PTH_DOWN
+USE YOS_CMF_PROG, ONLY: D1PTHFLW_PRE
+USE CMF_UTILS_MOD, ONLY: NCERROR
+#endif
+IMPLICIT NONE
+INTEGER(KIND=JPIM),INTENT(IN) :: NCID
+#ifdef UseCDF_CMF
+INTEGER(KIND=JPIM) :: VARID, IPTH
+REAL(KIND=JPRD) :: P1PTH(NPTHOUT,NPTHLEV)
+!================================================
+CALL NCERROR(NF90_INQ_VARID(NCID,'pthflw_pre',VARID))
+CALL NCERROR(NF90_GET_VAR(NCID,VARID,P1PTH,(/1,1,1/),(/NPTHOUT,NPTHLEV,1/)))
+DO IPTH=1,NPTHOUT
+  IF (PTH_UPST(IPTH)>0 .AND. PTH_DOWN(IPTH)>0) THEN
+    D1PTHFLW_PRE(IPTH,:)=REAL(P1PTH(IPTH,:),KIND=JPRB)
+  ELSE
+    D1PTHFLW_PRE(IPTH,:)=0._JPRB
+  ENDIF
+ENDDO
+#endif
+END SUBROUTINE RESTART_UTIL_READ_PTH_CDF
+!####################################################################
+SUBROUTINE RESTART_UTIL_DEFINE_CDF(CFILE,NCID)
+! Define the existing NetCDF Restart schema, including optional path identity.
+#ifdef UseCDF_CMF
+USE NETCDF
+USE YOS_CMF_INPUT, ONLY: DMIS, NX, NY
+USE YOS_CMF_TIME, ONLY: KMINNEXT, KMINSTART, ISYYYY, ISMM, ISDD, ISHOUR, ISMIN
+USE YOS_CMF_TIME, ONLY: JYYYYMMDD, JHOUR
+USE YOS_CMF_MAP, ONLY: D1LON, D1LAT, REGIONTHIS, NPTHOUT, NPTHLEV
+USE YOS_CMF_MAP, ONLY: PTH_ID, PTH_IX, PTH_IY, PTH_JX, PTH_JY
+USE CMF_UTILS_MOD, ONLY: NCERROR
+#endif
+IMPLICIT NONE
+CHARACTER(LEN=*),INTENT(IN) :: CFILE
+INTEGER(KIND=JPIM),INTENT(OUT) :: NCID
+#ifdef UseCDF_CMF
+CHARACTER(LEN=256) :: CDATE, CTIME
+INTEGER(KIND=JPIM) :: VARID, LATID, LONID, TIMEID, NPTHOUTID, NPTHLEVID, I
+INTEGER(KIND=JPIM),ALLOCATABLE :: PATH_DATA(:,:)
+CHARACTER(LEN=8),PARAMETER :: PATH_NAMES(5)=[CHARACTER(LEN=8) :: 'pth_id','ix','iy','jx','jy']
+REAL(KIND=JPRB) :: XTIME
+!================================================
+NCID=0
+IF (REGIONTHIS/=1) RETURN
+XTIME=REAL((KMINNEXT-KMINSTART),KIND=JPRB)*60._JPRB
+WRITE(CTIME,'(A14,I4.4,A1,I2.2,A1,I2.2,A1,I2.2,A1,I2.2)') &
+  'seconds since ',ISYYYY,'-',ISMM,'-',ISDD,' ',ISHOUR,':',ISMIN
+WRITE(CDATE,'(I8.8,I2.2)') JYYYYMMDD,JHOUR
+CALL NCERROR(NF90_CREATE(CFILE,NF90_NETCDF4,NCID),'CREATING FILE:'//TRIM(CFILE))
+CALL NCERROR(NF90_DEF_DIM(NCID,'time',NF90_UNLIMITED,TIMEID))
+CALL NCERROR(NF90_DEF_DIM(NCID,'lat',NY,LATID))
+CALL NCERROR(NF90_DEF_DIM(NCID,'lon',NX,LONID))
+IF (LPTHOUT) THEN
+  CALL NCERROR(NF90_DEF_DIM(NCID,'NPTHOUT',NPTHOUT,NPTHOUTID))
+  CALL NCERROR(NF90_DEF_DIM(NCID,'NPTHLEV',NPTHLEV,NPTHLEVID))
+  DO I=1,SIZE(PATH_NAMES)
+    CALL NCERROR(NF90_DEF_VAR(NCID,TRIM(PATH_NAMES(I)),NF90_INT,(/NPTHOUTID/),VARID))
+    CALL NCERROR(NF90_PUT_ATT(NCID,VARID,'long_name',TRIM(PATH_NAMES(I))//' bifurcation-path map index'))
+    CALL NCERROR(NF90_PUT_ATT(NCID,VARID,'units','1'))
+    CALL NCERROR(NF90_PUT_ATT(NCID,VARID,'description', &
+      'Configuration-specific path table identity; indices are one-based map grid coordinates.'))
+  ENDDO
+ENDIF
+CALL NCERROR(NF90_DEF_VAR(NCID,'lat',NF90_FLOAT,(/LATID/),VARID))
+CALL NCERROR(NF90_PUT_ATT(NCID,VARID,'long_name','latitude'))
+CALL NCERROR(NF90_PUT_ATT(NCID,VARID,'units','degrees_north'))
+CALL NCERROR(NF90_DEF_VAR(NCID,'lon',NF90_FLOAT,(/LONID/),VARID))
+CALL NCERROR(NF90_PUT_ATT(NCID,VARID,'long_name','longitude'))
+CALL NCERROR(NF90_PUT_ATT(NCID,VARID,'units','degrees_east'))
+CALL NCERROR(NF90_DEF_VAR(NCID,'time',NF90_DOUBLE,(/TIMEID/),VARID))
+CALL NCERROR(NF90_PUT_ATT(NCID,VARID,'long_name','time'))
+CALL NCERROR(NF90_PUT_ATT(NCID,VARID,'units',TRIM(CTIME)))
+
+CALL RESTART_UTIL_DEFINE_MAP_VARIABLE(NCID,'rivsto','river storage','m3',LATID,LONID,TIMEID,DMIS)
+CALL RESTART_UTIL_DEFINE_MAP_VARIABLE(NCID,'fldsto','flood plain storage','m3',LATID,LONID,TIMEID,DMIS)
+IF (.NOT. LSTOONLY) THEN
+  CALL RESTART_UTIL_DEFINE_MAP_VARIABLE(NCID,'rivout_pre','river outflow prev','m3/s',LATID,LONID,TIMEID,DMIS)
+  CALL RESTART_UTIL_DEFINE_MAP_VARIABLE(NCID,'fldout_pre','floodplain outflow prev','m3/s',LATID,LONID,TIMEID,DMIS)
+  CALL RESTART_UTIL_DEFINE_MAP_VARIABLE(NCID,'rivdph_pre','river depth prev','m',LATID,LONID,TIMEID,DMIS)
+  CALL RESTART_UTIL_DEFINE_MAP_VARIABLE(NCID,'fldsto_pre','floodplain storage prev','m3',LATID,LONID,TIMEID,DMIS)
+  IF (LPTHOUT) THEN
+    CALL NCERROR(NF90_DEF_VAR(NCID,'pthflw_pre',NF90_DOUBLE,(/NPTHOUTID,NPTHLEVID,TIMEID/), &
+                              VARID,SHUFFLE=.TRUE.,DEFLATE_LEVEL=3))
+    CALL NCERROR(NF90_PUT_ATT(NCID,VARID,'long_name','bifurcation outflow pre'))
+    CALL NCERROR(NF90_PUT_ATT(NCID,VARID,'units','m3/s'))
+  ENDIF
+ENDIF
+IF (LGDWDLY) CALL RESTART_UTIL_DEFINE_MAP_VARIABLE(NCID,'gdwsto','ground water storage','m3', &
+                                                    LATID,LONID,TIMEID,DMIS)
+IF (LDAMOUT) CALL RESTART_UTIL_DEFINE_MAP_VARIABLE(NCID,'damsto','dam reservoir storage','m3', &
+                                                    LATID,LONID,TIMEID,DMIS)
+IF (LLEVEE) CALL RESTART_UTIL_DEFINE_MAP_VARIABLE(NCID,'levsto','storage exceeds levee protection','m3', &
+                                                    LATID,LONID,TIMEID,DMIS)
+CALL NCERROR(NF90_ENDDEF(NCID))
+CALL NCERROR(NF90_INQ_VARID(NCID,'time',VARID))
+CALL NCERROR(NF90_PUT_VAR(NCID,VARID,XTIME))
+CALL NCERROR(NF90_INQ_VARID(NCID,'lon',VARID),'getting id')
+CALL NCERROR(NF90_PUT_VAR(NCID,VARID,D1LON))
+CALL NCERROR(NF90_INQ_VARID(NCID,'lat',VARID),'getting id')
+CALL NCERROR(NF90_PUT_VAR(NCID,VARID,D1LAT))
+IF (LPTHOUT) THEN
+  ALLOCATE(PATH_DATA(NPTHOUT,5))
+  PATH_DATA(:,1)=PTH_ID
+  PATH_DATA(:,2)=PTH_IX
+  PATH_DATA(:,3)=PTH_IY
+  PATH_DATA(:,4)=PTH_JX
+  PATH_DATA(:,5)=PTH_JY
+  DO I=1,SIZE(PATH_NAMES)
+    CALL NCERROR(NF90_INQ_VARID(NCID,TRIM(PATH_NAMES(I)),VARID))
+    CALL NCERROR(NF90_PUT_VAR(NCID,VARID,PATH_DATA(:,I)))
+  ENDDO
+  DEALLOCATE(PATH_DATA)
+ENDIF
+#endif
+END SUBROUTINE RESTART_UTIL_DEFINE_CDF
+!####################################################################
+SUBROUTINE RESTART_UTIL_DEFINE_MAP_VARIABLE(NCID,NAME,LONG_NAME,UNITS,LATID,LONID,TIMEID,DMIS)
+! Define one compressed Float64 map variable with the established Restart metadata.
+#ifdef UseCDF_CMF
+USE NETCDF
+USE CMF_UTILS_MOD, ONLY: NCERROR
+#endif
+IMPLICIT NONE
+INTEGER(KIND=JPIM),INTENT(IN) :: NCID,LATID,LONID,TIMEID
+CHARACTER(LEN=*),INTENT(IN) :: NAME,LONG_NAME,UNITS
+REAL(KIND=JPRB),INTENT(IN) :: DMIS
+#ifdef UseCDF_CMF
+INTEGER(KIND=JPIM) :: VARID
+!================================================
+CALL NCERROR(NF90_DEF_VAR(NCID,TRIM(NAME),NF90_DOUBLE,(/LONID,LATID,TIMEID/), &
+                          VARID,SHUFFLE=.TRUE.,DEFLATE_LEVEL=3),'Creating Variable '//TRIM(NAME))
+CALL NCERROR(NF90_PUT_ATT(NCID,VARID,'long_name',TRIM(LONG_NAME)))
+CALL NCERROR(NF90_PUT_ATT(NCID,VARID,'units',TRIM(UNITS)))
+CALL NCERROR(NF90_PUT_ATT(NCID,VARID,'_FillValue',REAL(DMIS,KIND=JPRD)))
+#endif
+END SUBROUTINE RESTART_UTIL_DEFINE_MAP_VARIABLE
+!####################################################################
+SUBROUTINE RESTART_UTIL_WRITE_MAP_CDF(NAME,ARRAY,NCID)
+! Gather a named vector field and write its Float64 NetCDF map variable.
+USE YOS_CMF_MAP, ONLY: NSEQMAX
+#ifdef UseCDF_CMF
+USE NETCDF
+USE YOS_CMF_INPUT, ONLY: NX, NY
+USE YOS_CMF_MAP, ONLY: REGIONTHIS
+USE CMF_UTILS_MOD, ONLY: NCERROR, vecP2mapP
+#ifdef UseMPI_CMF
+USE CMF_CTRL_MPI_MOD, ONLY: CMF_MPI_AllReduce_P2MAP
+#endif
+#endif
+IMPLICIT NONE
+CHARACTER(LEN=*),INTENT(IN) :: NAME
+INTEGER(KIND=JPIM),INTENT(IN) :: NCID
+REAL(KIND=JPRD),INTENT(IN) :: ARRAY(NSEQMAX,1)
+#ifdef UseCDF_CMF
+
+INTEGER(KIND=JPIM) :: VARID, STATUS
+REAL(KIND=JPRD) :: P2TEMP(NX,NY)
+!================================================
+CALL vecP2mapP(ARRAY,P2TEMP)
+#ifdef UseMPI_CMF
+CALL CMF_MPI_AllReduce_P2MAP(P2TEMP)
+#endif
+IF (REGIONTHIS==1) THEN
+  STATUS=NF90_INQ_VARID(NCID,TRIM(NAME),VARID)
+  IF (STATUS==NF90_NOERR) CALL NCERROR(NF90_PUT_VAR(NCID,VARID,P2TEMP,(/1,1,1/),(/NX,NY,1/)))
+ENDIF
+#endif
+END SUBROUTINE RESTART_UTIL_WRITE_MAP_CDF
+!####################################################################
+SUBROUTINE RESTART_UTIL_WRITE_PTH_CDF(NCID)
+! Gather and write Normal Restart bifurcation flow to its Float64 NetCDF variable.
+#ifdef UseCDF_CMF
+USE NETCDF
+USE YOS_CMF_MAP, ONLY: REGIONTHIS, NPTHOUT, NPTHLEV
+USE YOS_CMF_PROG, ONLY: D1PTHFLW_PRE
+USE CMF_UTILS_MOD, ONLY: NCERROR
+#ifdef UseMPI_CMF
+USE CMF_CTRL_MPI_MOD, ONLY: CMF_MPI_AllReduce_P1PTH
+#endif
+#endif
+IMPLICIT NONE
+INTEGER(KIND=JPIM),INTENT(IN) :: NCID
+#ifdef UseCDF_CMF
+INTEGER(KIND=JPIM) :: VARID
+REAL(KIND=JPRD) :: P1PTH(NPTHOUT,NPTHLEV)
+!================================================
+IF (LSTOONLY) RETURN
+P1PTH=D1PTHFLW_PRE
+#ifdef UseMPI_CMF
+CALL CMF_MPI_AllReduce_P1PTH(P1PTH)
+#endif
+IF (REGIONTHIS==1) THEN
+  CALL NCERROR(NF90_INQ_VARID(NCID,'pthflw_pre',VARID))
+  CALL NCERROR(NF90_PUT_VAR(NCID,VARID,P1PTH,(/1,1,1/),(/NPTHOUT,NPTHLEV,1/)))
+ENDIF
+#endif
+END SUBROUTINE RESTART_UTIL_WRITE_PTH_CDF
+!####################################################################
+#endif
 END MODULE CMF_CTRL_RESTART_MOD

@@ -4,6 +4,8 @@ This directory is the v5 development copy of the complete legacy [`gosh/`](../go
 
 ## Build the v5 stand-alone model
 
+Before building, create the ignored v5 `config/Mkinclude` as described in the [build guide](../config/README.md). The v4 `adm/Mkinclude` is not used by these v5 scripts.
+
 From any working directory, run:
 
 ```sh
@@ -14,7 +16,7 @@ The wrapper resolves the repository location from its own file path and runs `ma
 
 ## Mekong default simulation
 
-[`mek01-default_run.sh`](mek01-default_run.sh) runs one non-MPI simulation from 2000-01-01 00:00 to 2000-02-10 00:00 (40 days; end time exclusive) with adaptive timestep and bifurcation enabled, zero initial storage, and reservoir operation disabled. It uses the daily 1-degree ELSE_GPCC sample with `DROFUNIT=86400000`, the Mekong `rivwth_merit.bin`, and the sample map's `bifprm.txt`. Edit the start/end date settings or `RUNDIR` near the top to change the period or experiment directory.
+[`mek01-default_run.sh`](mek01-default_run.sh) runs one non-MPI simulation from 2000-01-01 00:00 to 2000-02-10 00:00 (40 days; end time exclusive) with adaptive timestep and bifurcation enabled, zero initial storage, and reservoir operation disabled. It uses the daily 1-degree ELSE_GPCC sample with `DROFUNIT=86400000`, the Mekong `rivwth_merit.bin`, and the sample map's authoritative `bifprm.csv`. The one-day CSV and legacy-TXT smoke runs both read 382 paths and 5 layers; their outputs and saved bifurcation flow matched for this sample. Edit the start/end date settings or `RUNDIR` near the top to change the period or experiment directory.
 
 The map-specific runoff matrix was generated with [`map/mekong_15min/script_params/mek03-generate_inpmat-mek1deg.sh`](../map/mekong_15min/script_params/mek03-generate_inpmat-mek1deg.sh). The generated `inpdim_test-mek_1deg.txt` and `inpmat_test-mek_1deg.bin` are retained with the Mekong sample. Run this script from `gosh_sample/` so its `cd ..` base-directory setting resolves to the repository root:
 
@@ -25,11 +27,15 @@ cd gosh_sample
 
 The script copies `src_main/MAIN_cmf` into `RUNDIR`, changes to that directory, and writes the namelist. For binary output it creates planned output CTLs before the model starts and Restart CTLs after a successful run. The Restart CTL generator reads the generated Binary Restart and writes a Float32 visualization copy when the source Restart is Float64; the original Restart remains unchanged. `COUTDIR="./"` therefore places daily outputs, CTLs, logs, and the final Restart under `out/mek01-default_run/`. The default uses four OpenMP threads. A rerun automatically replaces this sample's known generated files while leaving unrelated files in `RUNDIR` untouched. The latest 40-day run read 40 daily runoff files across January and February (2000-01-01 through 2000-02-09) and wrote 40 records for each gridded daily output, ending at 2000-02-10 00:00. It records model start/end timestamps, elapsed wall-clock seconds, and exit status in `run_time.log`. All checked output values were finite. This is an operational smoke test, not scientific validation or a v4 numerical comparison. Details and limits are in the [workflow plan](../docs/model_source_workflow_plan.md).
 
+The maintained simulation scripts write `CMF_BASE` in `&NOUTPUT` as the resolved repository/package root. `COUTVAR_TABLE` may be left blank to use `${CMF_BASE}/variable_table/output_variables.csv`, or set to a custom registry path. Direct Namelist users can omit both settings for backward compatibility: when `CMF_BASE` is left at `.`, the model derives the repository root from a `CDIMINFO` path under `map/`, or from the executable's standard `src_main/` or `out/bin/` location. If the resolved registry is unavailable, initialization reports the attempted path and stops. All standard output variables use registry metadata; aliases inherit from their canonical rows.
+
 ## Mekong two-year NetCDF map tests
 
-[`mek02-longterm_netcdf.sh`](mek02-longterm_netcdf.sh) and [`legacy02-longterm_netcdf.sh`](legacy02-longterm_netcdf.sh) run the same 2000–2001 Mekong case with yearly NetCDF runoff, NetCDF model output, a Binary input matrix, and NetCDF annual Restarts. Both carry the 2000 year-end `.nc` Restart into 2001. The map interface is the test variable: `mek02` reads individual NetCDF map files with `LMAPCDF=.FALSE.`, while `legacy02` reads the consolidated `rivclim.nc` and `rivpar.nc` containers with `LMAPCDF=.TRUE.`. Those containers were generated from the selected `nextxy_noedge` and `rivwth_merit` products. Each script writes to a separate directory: `out/mek02-longterm_mapnc/` and `out/legacy02-longterm_netcdf/`.
+[`mek02-longterm_netcdf.sh`](mek02-longterm_netcdf.sh) and [`legacy02-longterm_netcdf.sh`](legacy02-longterm_netcdf.sh) run the same 2000–2001 Mekong case with yearly NetCDF runoff (`CROFFREQ="YEAR"`), NetCDF model output, a Binary input matrix, and NetCDF annual Restarts. The forcing reader selects `runoffYYYY.nc` from the model calendar and switches files at January 1; both scripts still split the simulation by year to demonstrate the Restart handoff. They carry the 2000 year-end `.nc` Restart into 2001. `mek02` reads the map-specific `${MAPDIR}/netcdf/bifprm.nc` table with the NetCDF-enabled model and individual NetCDF map files with `LMAPCDF=.FALSE.`; `legacy02` reads the consolidated `rivclim.nc` and `rivpar.nc` containers with `LMAPCDF=.TRUE.` and retains its existing bifurcation table configuration. Those containers were generated from the selected `nextxy_noedge` and `rivwth_merit` products. Each script writes to a separate directory: `out/mek02-longterm_mapnc/` and `out/legacy02-longterm_netcdf/`.
 
 Build the NetCDF-enabled executable with `./gosh_sample/compile_netcdf.sh` from any directory, then run either sample from `gosh_sample/`:
+
+These annual samples use `IFRQ_INP=24` and `DROFUNIT=86400000` for daily mm/day values; file grouping is selected separately by `CROFFREQ="YEAR"`. The [runoff input guide](../inp/README.md#supported-input-formats-and-simulation-settings) documents the required `CROFFREQ` setting, four grouping modes, SEQ start-time rules, and CF-time checks.
 
 ```sh
 ./gosh_sample/compile_netcdf.sh
@@ -38,7 +44,7 @@ cd gosh_sample
 ./legacy02-longterm_netcdf.sh
 ```
 
-The `legacy02` script uses `LMAPCDF=.TRUE.` with `CRIVCLINC` and `CRIVPARNC`; its `&NMAP` does not specify individual-map filenames. The generated `rivclim.nc` contains `lon`, `lat`, `nextx`, `nexty`, `ctmare`, `elevtn`, `nxtdst`, `rivlen`, and 10-layer `fldhgt`, while `rivpar.nc` contains `rivwth`, `rivhgt`, and `rivman`. These containers were generated from the selected `nextxy_noedge` and `rivwth_merit` inputs. The sample leaves `gdwdly`, `elevslope`, `mask_slope`, and `meansl` disabled, so their optional map data are not required. Both scripts otherwise use the same simulation years, runoff, physical settings, outputs, and restart handoff.
+The maintained `mek01` example selects `bifprm.csv`; `mek02` selects its equivalent NetCDF-4 representation, `netcdf/bifprm.nc`. `.txt` remains supported for older input decks. The `legacy02` script uses `LMAPCDF=.TRUE.` with `CRIVCLINC` and `CRIVPARNC`; its `&NMAP` does not specify individual-map filenames. The generated `rivclim.nc` contains `lon`, `lat`, `nextx`, `nexty`, `ctmare`, `elevtn`, `nxtdst`, `rivlen`, and 10-layer `fldhgt`, while `rivpar.nc` contains `rivwth`, `rivhgt`, and `rivman`. These containers were generated from the selected `nextxy_noedge` and `rivwth_merit` inputs. The sample leaves `gdwdly`, `elevslope`, `mask_slope`, and `meansl` disabled, so their optional map data are not required. Both scripts otherwise use the same simulation years, runoff, physical settings, outputs, and restart handoff.
 
 `mek02` replaces its known generated sample files in its own `out/mek02-longterm_mapnc/` directory. `legacy02` follows the same simple rerun behavior as `mek02`: it removes only the sample-generated outputs in its dedicated run directory before starting a fresh sequence. Each retains year-specific Namelists, runtime and model logs, console output, NetCDF outputs, and NetCDF Restarts in its respective output directory. The scripts do not keep completion markers or resume an earlier partial run.
 

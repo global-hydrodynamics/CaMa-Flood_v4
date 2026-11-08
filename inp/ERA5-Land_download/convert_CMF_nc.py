@@ -363,7 +363,8 @@ def save_output(ds: xr.Dataset, path: Path, varname: str, fill_value: float, ove
         varname: {
             "dtype": "float32",
             "zlib": True,
-            "complevel": 4,
+            "complevel": 3,
+            "shuffle": True,
             "_FillValue": fill,
         }
     }

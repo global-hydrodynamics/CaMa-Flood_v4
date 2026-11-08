@@ -28,18 +28,24 @@ This repository provides source code, build configurations, execution scripts, a
 
 [`variable_table/README.md`](variable_table/README.md) describes the shared variable tables. The three CSVs document map products, model outputs, and Restart state; their distinct schemas remain separate. Future tools should resolve them from `${CMF_BASE}/variable_table/`.
 
-Build settings are in [adm/Mkinclude](adm/Mkinclude), with compiler-specific examples in [adm/](adm/). The [compilation script](gosh/compile.sh) and [sample experiments](gosh/) provide execution entry points. Configure paths, libraries, and options for your environment before building or running; the presence of a configuration example does not establish that it has been tested on your system.
+The canonical v5 tutorial collection is under [`tutorial/`](tutorial/). Start with [Tutorial01](tutorial/tutorial01-get_started/manual_tutorial01-get_started.md) for a tested development-branch build and Mekong run; it is not a substitute for the official downloadable distribution package.
 
-### Python utilities
+The legacy v4 source and scripts use [adm/Mkinclude](adm/Mkinclude) and the `adm/` templates. The v5 development tree uses a separate, ignored `config/Mkinclude`; its GNU Fortran default enables OpenMP, NetCDF, and single precision. See the [v5 build guide](config/README.md) and [model source guide](src_main/README.md). The legacy [v4 compilation script](gosh/compile.sh) and experiments remain under `gosh/`.
 
-Use Python 3.10 or newer on macOS or Linux. The repository setup creates an isolated `.venv/` and installs the shared dependencies for supported Python utilities; it does not change system Python or an existing Conda environment. Some specialist workflows have separate requirements, noted in their component guides.
+### Development environment setup
+
+From the repository root, run the interactive setup scripts:
 
 ```bash
-bash s00-python_setup.sh
-source .venv/bin/activate
+./s01-setup_fortran.sh
+./s02-python_setup.sh
 ```
 
-The optional ERA5-Land downloader also requires CDS account credentials and dataset terms acceptance. The legacy N-year flood-depth scripts and the GTSM preprocessing notebook use additional dependencies not included in the shared environment. Windows is not supported by this shell setup script.
+The Fortran script checks GNU Fortran, OpenMP, and a working NetCDF-Fortran installation, then can write a recommended machine-specific `./Mkinclude`. Review it before manually copying it to `config/Mkinclude`; it never changes the active v5 configuration or legacy `adm/Mkinclude`. The Python script creates the isolated repository `.venv/` and installs `requirements.txt` there, not into system Python. Both scripts ask before creating or replacing files and only diagnose when no terminal is attached.
+
+`mek01` uses Binary input data; the standard v5 build still enables NetCDF. `mek02` uses NetCDF runoff and map inputs. MPI is optional and remains disabled in the recommended configuration. Python 3.10 or newer is needed for Python utilities; specialist workflows may have additional dependencies documented in their component guides.
+
+The optional ERA5-Land downloader also requires CDS account credentials and dataset terms acceptance. The legacy N-year flood-depth scripts and the GTSM preprocessing notebook use additional dependencies not included in the shared environment. Windows users should use WSL2 with Ubuntu for these shell workflows.
 
 ## Repository Structure
 
@@ -48,6 +54,10 @@ The optional ERA5-Land downloader also requires CDS account credentials and data
 | [src/](src/) | Fortran numerical model, drivers, shared state, I/O, and optional extensions. |
 | [gosh/](gosh/) | Compilation and execution scripts, example experiments, and namelist templates. |
 | [adm/](adm/) | Compiler, library, precision, parallelization, and build configuration. |
+| [config/](config/) | Separate v5 compiler and library configuration templates. |
+| [src_main/](src_main/) | v5 model-source tree. |
+| [gosh_sample/](gosh_sample/) | v5 sample build and simulation workflows. |
+| [tutorial/](tutorial/) | v5 tutorial specifications, executable examples, and learner-facing manuals. |
 | [map/](map/) | River-map preprocessing, regionalization, river parameters, input mapping, and gauge/reservoir allocation. |
 | [inp/](inp/) | Runoff forcing download and preparation tools. |
 | [etc/](etc/) | Optional-scheme workflows, parameter preparation, downscaling, validation, and analysis. |
@@ -68,8 +78,8 @@ The existing manuals remain the detailed scientific and workflow references. The
 | --- | --- |
 | Model formulation, basic setup, standard input/output, and execution | [Main manual, v4.20 (Word)](doc/Manual_CaMa-Flood_v420.docx); [user guideline](doc/CaMa-Flood_Guideline.md) |
 | River parameters and runoff input matrices | [Map-parameter tools](map/src/src_param/README.md) |
-| Native-grid runoff remapping | [Composed remapping tools, assumptions, and validation](map/src/src_param/native_inpmat/README.md) |
-| Runoff forcing preparation | [ERA5-Land download and conversion](inp/download_ERA5-Land/ReadMe.md) |
+| Runoff-to-map input matrix | [v5 Input Matrix generation workflow](map/tools/script_params/s03-generate_inpmat.sh) |
+| Runoff forcing preparation | [ERA5-Land download and conversion](inp/ERA5-Land_download/README.md) |
 | Reservoir operation | [Reservoir manual, v4.20 (Word)](doc/Manual_ReservoirOperation_v420.docx); [parameter-preparation workflow](map/src/src_dam/ReadMe.md) |
 | Levee parameters | [Levee guide](doc/levee.md); [Word manual](doc/LeveeParameter.docx) |
 | Upstream inflow | [Upstream inflow manual (Word)](doc/Mannual_UpstreamInflowScheme.docx) |

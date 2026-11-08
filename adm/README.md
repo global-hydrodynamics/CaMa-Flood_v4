@@ -1,6 +1,8 @@
 # Build configuration (`adm/`)
 
-`adm/` contains the Make include files that select a compiler and configure build-time features for CaMa-Flood. The source Makefiles include `adm/Mkinclude`; the selected file supplies compiler commands, flags, library paths, and preprocessor definitions. You normally configure these settings here, then build with the existing Makefiles and scripts.
+`adm/` contains the legacy v4 Make include files. Legacy Makefiles under `src/`, `map/src/`, `util/`, `etc/`, and `gosh/` continue to include `adm/Mkinclude` for compiler commands, flags, libraries, and preprocessor definitions. The v5 model and map tools use the separate [`config/`](../config/README.md) configuration; the root `s01-setup_fortran.sh` now prepares only that v5 configuration.
+
+The setup script does not generate or replace the legacy active include. Select and review a v4-specific template manually when configuring legacy builds. Python tools can be prepared separately with [`s02-python_setup.sh`](../s02-python_setup.sh).
 
 ## Quick start: five settings to check
 

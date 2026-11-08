@@ -276,6 +276,7 @@ if [ ${LINPCDF} = ".FALSE." ]; then
 cat >> ${NMLIST} << EOF
 &NFORCE
 LINPCDF  = ${LINPCDF}                  ! true for netCDF runoff
+CROFFREQ = "DAY"                   ! One Binary file per calendar day.
 LINTERP  = ${LINTERP}                  ! true for runoff interpolation using input matrix
 CINPMAT  = "${CINPMAT}"                ! input matrix file name
 DROFUNIT = ${DROFUNIT}                 ! runoff unit conversion
@@ -289,15 +290,12 @@ elif [ ${LINPCDF} = ".TRUE." ]; then
 cat >> ${NMLIST} << EOF
 &NFORCE
 LINPCDF  = ${LINPCDF}                  ! true for netCDF runoff
+CROFFREQ = "YEAR"                  ! One NetCDF file per calendar year.
 LINTERP  = ${LINTERP}                  ! true for runoff interpolation using input matrix
 CINPMAT  = "${CINPMAT}"                ! input matrix file name
 DROFUNIT = ${DROFUNIT}                 ! runoff unit conversion
 CROFCDF  = "${CROFCDF}"                ! * netCDF input runoff file name
 CVNROF   = "${CVNROF}"                 ! * netCDF input runoff variable name
-SYEARIN  = ${SYEARIN}                  ! * netCDF input start year
-SMONIN   = ${SMONIN}                   ! * netCDF input start year
-SDAYIN   = ${SDAYIN}                   ! * netCDF input start year
-SHOURIN  = ${SHOURIN}                  ! * netCDF input start year
 /
 EOF
 

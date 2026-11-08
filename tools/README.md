@@ -6,6 +6,8 @@ This directory contains standalone tools for inspecting and describing model out
 
 `generate_restart_ctl.py` creates one GrADS descriptor for each existing main Binary Restart in a run directory. It reads the active `input_cmf.nam`, the map's `params.txt`, and [`variable_table/restart_variables.csv`](../variable_table/restart_variables.csv). The registry documents the field names, units, internal kinds, order, and optional conditions.
 
+`generate_output_ctl.py` resolves blank descriptive fields in output-alias rows through their `alias_of` canonical row. The requested alias name remains the CTL variable and output filename name.
+
 Run it from the repository root:
 
 ```sh

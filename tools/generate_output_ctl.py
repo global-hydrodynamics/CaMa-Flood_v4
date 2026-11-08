@@ -232,6 +232,20 @@ def read_registry(path: Path) -> dict[str, dict[str, str]]:
     if missing:
         raise CtlError("Registry is missing required columns: " + ", ".join(missing))
     registry = {row["name"].strip(): row for row in rows if row.get("name", "").strip()}
+    inherited_fields = (
+        "long_name", "description", "units", "internal_variable", "internal_dtype",
+        "binary_dtype", "netcdf_dtype", "dimensions", "temporal_type", "missing_value",
+    )
+    for name, row in registry.items():
+        canonical_name = row.get("alias_of", "").strip()
+        if not canonical_name:
+            continue
+        canonical = registry.get(canonical_name)
+        if canonical is None:
+            raise CtlError(f"Output alias {name!r} refers to missing canonical name {canonical_name!r}.")
+        for field in inherited_fields:
+            if not row.get(field, "").strip():
+                row[field] = canonical.get(field, "")
     return registry
 
 

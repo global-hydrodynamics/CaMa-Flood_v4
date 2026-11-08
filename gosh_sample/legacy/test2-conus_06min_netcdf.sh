@@ -129,10 +129,6 @@ CROFPRE="e2o_ecmwf_wrr2_glob15_day_Runoff_"    # runoff prefix/suffix
 
 CROFCDF=""       # see (3) set each year       # netCDF runoff file
 CVNROF="Runoff"                                # netCDF runoff    variable name
-#SYEARIN=""      # see (3) set each year       #   netCDF runoff file, start date
-#SMONIN=""       # see (3) set each year
-#SDAYIN=""       # see (3) set each year
-#SHOURIN=""      # see (3) set each year
 
 
 #============================
@@ -211,10 +207,6 @@ do
   COUTTAG=${CSYEAR}                  # output file tag
 
   CROFCDF="${CROFDIR}/${CROFPRE}${CSYEAR}.nc"  # input netCDF runoff file
-  SYEARIN=$IYR
-  SMONIN=1
-  SDAYIN=1
-  SHOURIN=0
 
 #================================================
 # (4) Create NAMELIST for simulation year
@@ -288,15 +280,12 @@ EOF
 cat >> ${NMLIST} << EOF
 &NFORCE
 LINPCDF  = ${LINPCDF}                  ! true for netCDF runoff
+CROFFREQ = "YEAR"                  ! One NetCDF file per calendar year.
 LINTERP  = ${LINTERP}                  ! true for runoff interpolation using input matrix
 CINPMAT  = "${CINPMAT}"                ! input matrix file name
 DROFUNIT = ${DROFUNIT}                 ! runoff unit conversion
 CROFCDF  = "${CROFCDF}"                ! * netCDF input runoff file name
 CVNROF   = "${CVNROF}"                 ! * netCDF input runoff variable name
-SYEARIN  = ${SYEARIN}                  ! * netCDF input start year
-SMONIN   = ${SMONIN}                   ! * netCDF input start year
-SDAYIN   = ${SDAYIN}                   ! * netCDF input start year
-SHOURIN  = ${SHOURIN}                  ! * netCDF input start year
 /
 EOF
 

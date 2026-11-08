@@ -89,6 +89,15 @@ Record non-blocking questions in the relevant technical document under **Open Qu
 
 At completion of a substantial task or development stage, run the brief **Knowledge-gap review** in [`docs/ai_development_workflow.md`](docs/ai_development_workflow.md). Record material questions before resolving them, including source references and why the answer matters. At handoff, list unresolved scientific or architectural questions; unrelated work need not wait for non-blocking answers. Link resolved questions to their discovery trigger, evidence, interpretation, and formalization. Record a completed review with no material new gaps; never invent questions or findings.
 
+## Scientific Design Rationale Review
+
+Optional AI workflows for documenting scientific and algorithmic design intent:
+
+- [`docs/ai_workflows/scientific_why_discovery.md`](docs/ai_workflows/scientific_why_discovery.md) identifies undocumented Why questions in source code.
+- [`docs/ai_workflows/scientific_why_documentation.md`](docs/ai_workflows/scientific_why_documentation.md) verifies rationales through maintainer interaction and documents them.
+
+These detailed workflows are optional and must be invoked explicitly; do not run them automatically during ordinary development, refactoring, or formatting. They do not replace the brief milestone Knowledge-gap review required above. When invoked, read and follow the corresponding workflow document.
+
 ## 5. Technical boundaries for CaMa-Flood
 
 Preserve the existing architecture unless the approved task justifies changing it:
@@ -120,6 +129,8 @@ Separate logically distinct operations with a blank line, even when a block cont
 
 For user-editable settings, use one introductory comment per related group and concise, aligned inline comments for each assignment. Include units, allowed values, and coordinate/index conventions where relevant. Keep related settings together and leave blank lines between different groups; use preceding full-line comments only when the explanation is too long for an inline note. Prefer simple literal example assignments over undocumented environment-variable defaults. Retain and document an environment override only when it is an intentional interface. Clearly separate user settings from internal paths and runtime variables.
 
+Repository setup scripts should diagnose and explain before changing local files. Legacy v4 Makefiles continue to use `adm/Mkinclude`; v5 Makefiles use the ignored machine-specific `config/Mkinclude` and must not silently fall back to v4 settings. Do not modify either active configuration automatically. The Fortran setup helper may write an ignored root-level `Mkinclude` only after an interactive confirmation; for v5, the user activates it by copying it manually to `config/Mkinclude`. The Python setup helper installs packages only into the repository-local `.venv/`, asks before creating or updating that environment, and runs diagnostics without modifying files when no terminal is attached.
+
 Explain non-obvious shell syntax with short practical comments, including command substitution, `${VAR:-default}`, `${VAR##*/}`, `set --`, `trap`, and `CDPATH= cd ...` when they appear. Prefer explicit POSIX shell expressions over clever compact forms, without sacrificing correctness, portability, safe cleanup, or intentional interfaces.
 
 Within `script_analysis/`, use `a00-link_codes.sh` to create a relative `code` symlink to the shared `map/tools/code/` directory; it must not copy or compile executables, overwrite real files/directories, or delete old local files. Treat `a01`–`aXX` as command-line examples: show the working directory and print the exact, safely quoted command immediately before invoking the shared executable through `./code/analysis_*` where the program's working directory allows. Keep `OUT_DIR="out_analysis"` as the default for generated example outputs, create it when needed, and ensure both the script-local default and map-root alternative output directories are ignored by Git. Respect program-specific working-directory requirements and explain any necessary path exception in the example and its README.
@@ -138,7 +149,13 @@ Name shared Fortran module source files in `map/tools/code/` with the `mod_` pre
 
 ## Fortran coding conventions
 
-For changes to Fortran source files under `src_main/`, follow the conventions in [`src_main/FORTRAN_STYLE.md`](src_main/FORTRAN_STYLE.md). The directory-specific instructions in [`src_main/AGENTS.md`](src_main/AGENTS.md) also apply. Preserve established numerical behavior, module organization, variable naming, and local formatting conventions. Do not reformat unrelated code.
+For implementation, feature development, or refactoring under `src_main/`, read [`src_main/FORTRAN_DESIGN.md`](src_main/FORTRAN_DESIGN.md) and apply its project-wide design conventions. Follow [`src_main/FORTRAN_STYLE.md`](src_main/FORTRAN_STYLE.md) for local formatting while writing or changing code, and follow [`src_main/AGENTS.md`](src_main/AGENTS.md).
+
+For a dedicated final formatting pass, read [`src_main/FORTRAN_STYLE.md`](src_main/FORTRAN_STYLE.md) and focus on the target file. Do not repeat a project-wide design review unless a concrete issue requires it. Preserve scientific behavior, interfaces, data contracts, and runtime behavior; report semantic ambiguities or suspected design defects separately.
+
+## Tutorial development plan
+
+The proposed v5 tutorial workflow and its current decisions are documented in [`docs/tutorial_development_plan.md`](docs/tutorial_development_plan.md). Treat Tutorial 02 as an illustrative outline until its experiment specification is checked against source code and data in a separately scoped task.
 
 ## Source Code Readability for `map/tools/`
 
@@ -152,7 +169,7 @@ Preserve scientific behavior and data contracts during readability work, includi
 
 Fortran declarations are a human-readable inventory of a program's data structures. Prioritize human understanding over compactness: group declarations by scientific or computational purpose, keep closely related values together (for example, `nx, ny` or `ix, iy`), and use separate declarations for variables with different meanings even when this adds lines. Use short comments and blank lines between groups. Add concise inline notes for variable roles, physical units, and important classifications when established by code or maintainer decisions; do not guess at unknown meaning. Align declarations reasonably. Use concise comments for major calculations and assumptions, not trivial operations. Long programs should use numbered headings such as `[1]`, `[2]`, and `[3]` with visible separators (`! ================================================`) to mark major stages. Keep scientific expressions and decision rules visible, and avoid helper abstractions that hide them.
 
-For `map/tools/code/`, preserve the local style of the file being edited, including capitalization, indentation, declaration placement, and established type spellings such as `REAL*8`. These are readability recommendations, not a mandate to reformat existing programs. In long programs, retain the map-tools `! ================================================` separators and `[1]`, `[2]` process headings; do not mechanically convert them to the `src_main` `!*** N.` form. Do not apply `src_main/`-specific `CMF_*` procedure names, `CMF::` logs, `LOGNAM` conventions, or model-state organization to map tools. Maintain the map-tool executable families (`region_*`, `param_*`, `analysis_*`, `allocate_*`) and the `mod_*` prefix for shared module source files in this directory, as described in the shared module naming section above. The detailed `src_main/` conventions remain in [`src_main/FORTRAN_STYLE.md`](src_main/FORTRAN_STYLE.md) and do not govern `map/tools/`.
+For `map/tools/code/`, preserve the local style of the file being edited, including capitalization, indentation, declaration placement, and established type spellings such as `REAL*8`. These are readability recommendations, not a mandate to reformat existing programs. In long programs, retain the map-tools `! ================================================` separators and `[1]`, `[2]` process headings; do not mechanically convert them to the `src_main` `!*** N.` form. Do not apply `src_main/`-specific `CMF_*` procedure names, `CMF::` logs, `LOGNAM` conventions, or model-state organization to map tools. Maintain the map-tool executable families (`region_*`, `param_*`, `analysis_*`, `allocate_*`) and the `mod_*` prefix for shared module source files in this directory, as described in the shared module naming section above. The `src_main/` design and style conventions in [`src_main/FORTRAN_DESIGN.md`](src_main/FORTRAN_DESIGN.md) and [`src_main/FORTRAN_STYLE.md`](src_main/FORTRAN_STYLE.md) do not govern `map/tools/`.
 
 ### Python Source Readability
 
@@ -167,7 +184,7 @@ Do not impose Fortran declaration alignment, Fortran section separators, or mode
 
 ## Cross-project research logging for the v5 case study
 
-Research logging is a long-term activity across the v4-to-v5 transition, not a feature owned by one project or branch. Preserve the common [`research/`](research/README.md) history across projects and branch transitions; no dedicated research Issue is required. Record significant discussions, approvals, instructions, implementations, knowledge discoveries, human interventions, failures, and validations, distinguishing each stage. The study's approved v5 dimensions are knowledge accessibility, reproducibility, extensibility, and governance; see [`research/study_protocol.md`](research/study_protocol.md). Do not log routine commands or every AI turn, invent unavailable history/metrics, commit raw private transcripts, or claim scientific correctness from execution alone. Have the maintainer review AI-generated discussion summaries, and run `python3 research/validate_records.py` after changing the record tables.
+Research logging is a long-term activity across the v4-to-v5 transition, not a feature owned by one project or branch. Preserve the common [`research/`](research/README.md) history across projects and branch transitions; no dedicated research Issue is required. Record significant discussions, approvals, instructions, implementations, knowledge discoveries, human interventions, failures, and validations, distinguishing each stage. The study's approved v5 dimensions are knowledge accessibility, reproducibility, extensibility, and governance; see [`research/study_protocol.md`](research/study_protocol.md). Do not log routine commands or every AI turn, invent unavailable history/metrics, commit raw private transcripts, or claim scientific correctness from execution alone. Have the maintainer review AI-generated discussion summaries. Preview globally unused record IDs with `python3 research/validate_records.py --next-ids`, update the canonical index when a required detail record is added, preserve narrative text when repairing old records, and run `python3 research/validate_records.py` after changes. The validator is read-only and reports all structural errors together. Missing historical validation reports may be documented in `research/legacy_validation_refs.csv` only as evidence-linked inference; never present them as recovered validation results or redirect them to an unsupported candidate.
 
 ## CaMa-Flood v5 test design principles
 

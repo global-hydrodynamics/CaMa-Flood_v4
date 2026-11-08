@@ -52,6 +52,7 @@ def configure_api(lib: ctypes.CDLL) -> None:
     lib.nc_create.argtypes = [charp, ci, ctypes.POINTER(ci)]
     lib.nc_def_dim.argtypes = [ci, charp, sz, ctypes.POINTER(ci)]
     lib.nc_def_var.argtypes = [ci, charp, ci, ci, ctypes.POINTER(ci), ctypes.POINTER(ci)]
+    lib.nc_def_var_deflate.argtypes = [ci, ci, ci, ci, ci]
     lib.nc_inq_varid.argtypes = [ci, charp, ctypes.POINTER(ci)]
     lib.nc_put_att_text.argtypes = [ci, ci, charp, sz, charp]
     lib.nc_put_att_float.argtypes = [ci, ci, charp, ci, sz, ctypes.POINTER(ctypes.c_float)]
@@ -265,6 +266,8 @@ def convert(args: argparse.Namespace) -> None:
                 raise ValueError(f"{name}: unsupported registered dimensions {dimensions!r}")
             varid = ci()
             check(lib, lib.nc_def_var(ncid.value, name.encode(), nc_type, rank, dimids, ctypes.byref(varid)), f"define {name}")
+            check(lib, lib.nc_def_var_deflate(ncid.value, varid.value, 1, 1, 3),
+                  f"set lossless compression for {name}")
             put_text(lib, ncid.value, varid.value, "long_name", row.get("long_name", name))
             units = row.get("units", "")
             if units:

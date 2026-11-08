@@ -273,6 +273,7 @@ EOF
 #*** 4. forcing
 cat >> ${NMLIST} << EOF
 &NFORCE
+CROFFREQ = "DAY"                   ! One Binary file per calendar day.
 LINPCDF  = ${LINPCDF}                  ! true for netCDF runoff
 LINTERP  = ${LINTERP}                  ! true for runoff interpolation using input matrix
 CINPMAT  = "${CINPMAT}"                ! input matrix file name

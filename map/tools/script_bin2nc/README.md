@@ -106,3 +106,5 @@ The default settings point to the maintainer's v400 data package. Edit `MAP_ROOT
 The workflow supports registered `float32` or `int32` rasters with dimensions `NX,NY` or `NX,NY,NLFP`, including multi-variable direct-access files such as `nextxy.bin` and layered files such as `fldhgt.bin`. Data type, record order, dimensions, missing values, and variable metadata come from the registry and `params.txt`; the Binary inputs are not modified.
 
 Python uses only the standard library. Conversion also requires the NetCDF C shared library to be installed and discoverable, typically through `nc-config`. This workflow validates conversion and stored values; compatibility with model execution is a separate validation step.
+
+The base-map and consolidated-map NetCDF writers use lossless NetCDF-4 deflate level 3 with shuffle. The high-resolution converter is configurable and defaults to level 3. Existing outputs are not recompressed automatically.

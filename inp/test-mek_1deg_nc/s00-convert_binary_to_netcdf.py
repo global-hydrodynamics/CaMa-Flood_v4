@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Convert the tracked Mekong daily float32 runoff sample to yearly NetCDF files.
 
-The conversion uses ncgen/ncdump from the NetCDF command-line utilities. The
-runoff values are copied as float32; coordinates and CF time bounds are added.
+The conversion uses ncgen, nccopy, and ncdump from the NetCDF command-line
+utilities. Output is NetCDF-4 with lossless zlib level 3 and shuffle; runoff
+values remain float32 and coordinates and CF time bounds are preserved.
 """
 from __future__ import annotations
 
@@ -141,8 +142,9 @@ def verify_netcdf(path: Path, expected: bytes, expected_records: int) -> None:
 
 def convert_year(year: int, source_dir: Path, output_dir: Path, overwrite: bool) -> Path:
     ncgen = shutil.which("ncgen")
-    if not ncgen:
-        raise RuntimeError("ncgen is required; install the NetCDF command-line utilities")
+    nccopy = shutil.which("nccopy")
+    if not ncgen or not nccopy:
+        raise RuntimeError("ncgen and nccopy are required; install the NetCDF command-line utilities")
     output_path = output_dir / f"runoff{year}.nc"
     if output_path.exists() and not overwrite:
         raise FileExistsError(f"refusing to overwrite existing file (use --overwrite): {output_path}")
@@ -154,10 +156,12 @@ def convert_year(year: int, source_dir: Path, output_dir: Path, overwrite: bool)
         temp_dir = Path(temp_name)
         cdl_path = temp_dir / f"runoff{year}.cdl"
         temp_nc = temp_dir / f"runoff{year}.nc"
+        compressed_nc = temp_dir / f"runoff{year}.compressed.nc"
         cdl_path.write_text(cdl_text, encoding="ascii")
-        subprocess.run([ncgen, "-o", str(temp_nc), str(cdl_path)], check=True)
-        verify_netcdf(temp_nc, b"".join(raw_records), len(raw_records))
-        temp_nc.replace(output_path)
+        subprocess.run([ncgen, "-k", "netCDF-4", "-o", str(temp_nc), str(cdl_path)], check=True)
+        subprocess.run([nccopy, "-d", "3", "-s", str(temp_nc), str(compressed_nc)], check=True)
+        verify_netcdf(compressed_nc, b"".join(raw_records), len(raw_records))
+        compressed_nc.replace(output_path)
     return output_path
 
 

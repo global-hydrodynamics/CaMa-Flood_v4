@@ -12,7 +12,11 @@
 # See the License for the specific language governing permissions and limitations under the License.
 #==========================================================
 
-include   ../../adm/Mkinclude
+CONFIG_FILE := $(abspath ../../config/Mkinclude)
+ifeq ($(wildcard $(CONFIG_FILE)),)
+$(error CaMa-Flood v5 configuration missing: $(CONFIG_FILE). Review config/Mkinclude_gfortran or run ./s01-setup_fortran.sh, then copy ./Mkinclude to config/Mkinclude)
+endif
+include $(CONFIG_FILE)
 #VPATH = ../
 vpath %F90 ../
 

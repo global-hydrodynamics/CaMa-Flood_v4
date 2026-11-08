@@ -1,9 +1,10 @@
 ! MPI-specific basin aggregation for the v5 map-preparation workflow.
-! Reads the ordinary bifprm.txt without changing it. Pathway order is explicit:
+! Reads the finalized bifprm.csv without changing it. Pathway order is explicit:
 ! parsed ibsn, then jbsn, then elevation, with the original text line as the
 ! deterministic final tie-breaker (matching the legacy sort's whole-line fallback).
 program param_mpi_set_basin
   use map_color_mod, only: color_map
+  use bifprm_csv_mod, only: bifprm_path, read_bifprm_csv
   implicit none
 
   ! One parsed bifurcation row; LINE preserves a deterministic final sort key.
@@ -39,9 +40,6 @@ program param_mpi_set_basin
   real                     :: gsize  !! map grid size [deg]
   real                     :: west, east, south, north  !! map bounds [deg]
   real                     :: rate  !! basin-merge threshold fraction
-  real                     :: len  !! pathway length [m]
-  real                     :: dph  !! bifurcation depth [m]
-  real                     :: lat, lon  !! longitude/latitude [deg]
 
   ! Basin rasters and merge bookkeeping.
   integer, allocatable     :: basin(:,:)  !! basin identifier
@@ -54,8 +52,8 @@ program param_mpi_set_basin
   integer, allocatable     :: bpoint_mpi(:,:)  !! MPI diagnostic map of pathway endpoint classes
 
   ! Bifurcation widths and parsed pathway rows.
-  real, allocatable        :: widths(:)  !! bifurcation widths [m]
   type(pathway), allocatable :: paths(:)  !! parsed bifurcation pathway records
+  type(bifprm_path), allocatable :: csv_paths(:)  !! paths loaded by named CSV columns
   character(len=256)       :: arg  !! command-line argument
   character(len=256)       :: diagnostic_arg  !! optional check_map argument
   logical                  :: check_map  !! whether to write the optional diagnostic raster
@@ -115,28 +113,23 @@ program param_mpi_set_basin
     basin_original=basin
   end if
 
-  open(newunit=u,file='../bifprm.txt',status='old',action='read',iostat=ios)
-  if (ios /= 0) call die('cannot open ../bifprm.txt')
-  read(u,*,iostat=ios) npth,nlev
-  if (ios /= 0 .or. npth<0 .or. nlev<1) call die('invalid bifprm.txt header')
-  allocate(paths(npth),widths(nlev))
+  call read_bifprm_csv('../bifprm.csv',csv_paths,npth,nlev)
+  allocate(paths(npth))
   do i=1,npth
-    read(u,'(A)',iostat=ios) paths(i)%line
-    if (ios /= 0) call die('unexpected end of ../bifprm.txt')
-    read(paths(i)%line,*,iostat=ios) paths(i)%ix,paths(i)%iy,paths(i)%jx,paths(i)%jy, &
-      len,paths(i)%elv,dph,(widths(k),k=1,nlev),lat,lon,paths(i)%ibsn,paths(i)%jbsn
-    if (ios /= 0) call die('cannot parse bifprm.txt pathway; expected basin IDs at end of each row')
-    paths(i)%w1=widths(1)
+    paths(i)%ix=csv_paths(i)%ix; paths(i)%iy=csv_paths(i)%iy
+    paths(i)%jx=csv_paths(i)%jx; paths(i)%jy=csv_paths(i)%jy
+    paths(i)%ibsn=csv_paths(i)%ibsn; paths(i)%jbsn=csv_paths(i)%jbsn
+    paths(i)%elv=csv_paths(i)%elevtn
+    paths(i)%w1=csv_paths(i)%widths(1)
+    paths(i)%line=csv_paths(i)%sort_line
     if (min(paths(i)%ix,paths(i)%iy,paths(i)%jx,paths(i)%jy)<1 .or. &
         paths(i)%ix>nx .or. paths(i)%jx>nx .or. paths(i)%iy>ny .or. paths(i)%jy>ny) &
-      call die('bifprm.txt contains an endpoint outside params.txt dimensions')
+      call die('bifprm.csv contains an endpoint outside params.txt dimensions')
   end do
-  close(u)
 
   ! [3] Sort pathways before the order-sensitive basin aggregation.
-  ! The legacy shell sort's intended keys depend on BIFLAYER text columns.
-  ! Sort these parsed fields instead, and retain its deterministic full-line
-  ! fallback for equal keys. Sorting matters because the merge is order-sensitive.
+  ! The CSV reader reconstructs the legacy row only for the deterministic
+  ! tie-breaker, so added IDs and coordinates do not affect MPI path order.
   call quicksort(1,npth)
 
   ! ================================================

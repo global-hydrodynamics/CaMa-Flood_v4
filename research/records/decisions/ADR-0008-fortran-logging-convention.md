@@ -1,4 +1,4 @@
-# ADR-0004: Standardize Fortran log hierarchy and diagnostic context
+# ADR-0008: Standardize Fortran log hierarchy and diagnostic context
 
 - Status: accepted and applied to `CMF_CTRL_MAPS_MOD`
 - Date: 2026-11-03
@@ -17,7 +17,7 @@ The shared map readers accept an optional caller-context string so existing exte
 
 ## Consequences and scope
 
-- The common recommendation is documented in `src_main/FORTRAN_STYLE.md`.
+- The common logging-design recommendation is documented in `src_main/FORTRAN_DESIGN.md`.
 - It is applied only to `src_main/cmf_ctrl_maps_mod.F90` in this task.
 - Existing useful paths, variables, counts, and processing stages remain logged; no loop-level messages or routine OPEN/CLOSE messages were added.
 - Exact diagnostic strings changed. Repository scripts/tests were searched; no exact-string consumer was found. Legacy `src/` and `gosh/` were not changed.

@@ -1,4 +1,4 @@
-# ADR-0003: Name module-level shared utilities with a module-specific prefix
+# ADR-0007: Name module-level shared utilities with a module-specific prefix
 
 - Status: accepted and implemented
 - Date: 2026-11-03
@@ -30,7 +30,7 @@ The four utilities remain at module scope for common Map input/error handling an
 ## Evidence
 
 - Maintainer instruction and approved naming scope: `EV-0298`.
-- Implementation in `src_main/cmf_ctrl_maps_mod.F90` and common guidance in `src_main/FORTRAN_STYLE.md`: `EV-0299`.
+- Implementation in `src_main/cmf_ctrl_maps_mod.F90` and common guidance in `src_main/FORTRAN_DESIGN.md`: `EV-0299`.
 - Isolated Binary-only and NetCDF-enabled build validation: `EV-0300`; `VR-0095`.
 
 ## Supersedes / superseded by

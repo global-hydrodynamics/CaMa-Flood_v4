@@ -158,6 +158,9 @@ class OutputFormatTests(unittest.TestCase):
             with xr.open_dataset(target) as written:
                 self.assertEqual(written["runoff"].dtype, np.dtype("float32"))
                 self.assertEqual(written["runoff"].attrs["units"], "mm")
+                self.assertTrue(written["runoff"].encoding["zlib"])
+                self.assertEqual(written["runoff"].encoding["complevel"], 3)
+                self.assertTrue(written["runoff"].encoding["shuffle"])
 
     def test_binary_timestep_aggregation_and_ctl_record_count(self):
         data = accumulated_field(

@@ -2,6 +2,8 @@
 
 The `inp/` directory contains tools for preparing runoff forcing used by CaMa-Flood. Runoff supplies water per unit land area over time; CaMa-Flood converts it to a flow rate for routing through the river network. The GitHub repository includes an ERA5-Land download and conversion workflow with small Japan examples. Distribution packages also include sample forcing for selected `gosh/` runs. Obtain or prepare additional forcing when the chosen experiment requires data beyond those supplied with the package.
 
+For format and compression settings used by NetCDF files generated with v5 tools, see the shared [NetCDF output conventions](../docs/netcdf_output_conventions.md). External NetCDF forcing inputs are not required to use those output settings.
+
 ## Using Your Own Runoff Dataset
 
 1. Prepare runoff files in a supported [Binary or NetCDF layout](#supported-input-formats-and-simulation-settings).
@@ -22,7 +24,7 @@ The `inp/` directory contains tools for preparing runoff forcing used by CaMa-Fl
 | `ELSE_GPCC/` | External long-term global 1-degree daily ELSE_GPCC runoff associated with Kim et al. (2009). The `Roff/` data are not tracked by Git and are not included in the source repository or distribution package; only `Roff.ctl` metadata is tracked. The files are binary float32 runoff in `mm/day`, global 360 × 180, with N-to-S row order and `undef=-999`. The tracked CTL time count conflicts with observed source filenames; see the registry notes. [Kim et al. (2009)](https://doi.org/10.1029/2009GL039006). |
 | `test-glb_1deg/` | Reproducible global 1-degree, daily two-year test extraction (2000–2001) from `ELSE_GPCC/Roff/`. Scripts and metadata are tracked; generated `Roff/` binaries are Git-ignored pending redistribution review. See the [sample README](test-glb_1deg/README.md). |
 | `test-mek_1deg/` | Complete 1-degree Mekong runoff sample, including 11,323 daily binary files, CTL, extraction scripts, and documentation; tracked in GitHub and included in the distribution package. See the [sample README](test-mek_1deg/README.md). |
-| `test-mek_1deg_nc/` | Derived 2000–2001 Mekong annual NetCDF sample (`runoff2000.nc`, `runoff2001.nc`), converted from the same daily source files as `test-mek_1deg/`. See the [dataset README](test-mek_1deg_nc/README.md) and registry entry. |
+| `test-mek_1deg_nc/` | Derived 2000–2005 Mekong annual NetCDF sample, converted from the same daily source files as `test-mek_1deg/`. See the [dataset README](test-mek_1deg_nc/README.md) and registry entry. |
 
 ## Runoff Dataset Registry
 
@@ -40,7 +42,7 @@ The table below summarizes the sample locations and review state. The CSV is the
 | `test-glb_1deg/` | Regenerable global 360 × 180 daily plain-binary sample (`Roff____YYYYMMDD.one`) for 2000-01-01 through 2001-12-31, extracted byte-for-byte from ELSE_GPCC. | `mm/day`, `IFRQ_INP=24`, `DROFUNIT=86400000`; scripts and metadata are tracked, generated data are ignored. See the sample README. |
 | `test_1deg/` | Legacy package sample on the same global 1-degree grid and dates. The maintainer identifies it as a two-year extraction from ELSE_GPCC. | The `.ctl` declares runoff in `mm/day`. `gosh/test1-glb_15min.sh` uses `IFRQ_INP=24` and `DROFUNIT=86400000`. |
 | `test-mek_1deg/` | Mekong 20 × 30 global-grid subset (90–110°E, 5–35°N); 11,323 daily files for 1980-01-01 through 2010-12-31, generated from `ELSE_GPCC/Roff/`. | Source values remain float32 `mm/day`, `NtoS`, `undef=-999`; use the local README for extraction and model settings. The complete sample is tracked in Git and included in the distribution package. |
-| `test-mek_1deg_nc/` | Derived NetCDF version of the Mekong 1-degree sample, split into annual files for 2000 (366 days) and 2001 (365 days). Each file contains `runoff(time, latitude, longitude)` on the same 20 × 30 grid, with CF daily time bounds. | Float32 `mm day-1`, longitude centers 90.5–109.5°E, descending latitude centers 34.5–5.5°N, missing value `-999`. The converter verifies exact float32 round-trip against the corresponding source binary files. GitHub sample tracking is intended; inclusion in a future v5 downloadable package remains to be decided because the v5 packaging workflow is not established. |
+| `test-mek_1deg_nc/` | Derived NetCDF version of the Mekong 1-degree sample, split into annual files for 2000–2005 (366 days in 2000 and 2004; 365 days in other listed years). Each file contains `runoff(time, latitude, longitude)` on the same 20 × 30 grid, with CF daily time bounds. | Float32 `mm day-1`, longitude centers 90.5–109.5°E, descending latitude centers 34.5–5.5°N, missing value `-999`. The initial 2000–2001 conversion was checked for exact float32 round-trip; the current expanded file set is Git-tracked, but its additional years were not numerically revalidated in this documentation task. Inclusion in a future v5 downloadable package remains to be decided because the v5 packaging workflow is not established. |
 | `test-E2O_15min_nc/` | NetCDF files for 2000 and 2001; `Runoff(time, lat, lon)` on a 0.25-degree grid (1440 × 600; edges 180°W–180°E, 60°S–90°N), daily time coordinate. | The sample NetCDF metadata declares `units="mm day-1"`. `gosh/test2-conus_06min_netcdf.sh` uses `IFRQ_INP=24` and `DROFUNIT=86400000`. |
 | `test_jpn_1hr/` | Original/source reference: daily binary files (`runoff_YYYYMMDD.bin`) plus `runoff.ctl`; Japan 1/60-degree grid (1500 × 1320), 1-hour records for 2007-09-03 through 2007-09-09. Locally available through an ignored symlink; large binaries are not tracked. | Maintainer-confirmed provenance: 1-arcmin simulations using the Today’s Japan system, provided by Yoshimura Laboratory. The maintainer identifies the original CTL `mm/day` label as erroneous and assesses the values as `mm/hour`, consistent with `gosh/test3-jpn_fcast.sh` (`IFRQ_INP=1`, `DROFUNIT=3600000`); this interpretation is not independently verified. |
 | `test-jpn_6min_1hr/` | Compact derived sample: seven daily binary files, 250 × 220 at 0.1° (6 arcmin), 24 hourly records per day for 2007-09-03 through 2007-09-09. Produced by 6 × 6 area-weighted aggregation from `test_jpn_1hr/`. | Maintainer confirms redistribution permission. Values and hourly ordering are retained without unit conversion. The new CTL uses `mm/hour` per the maintainer’s assessment that the original `mm/day` label was erroneous; this interpretation is not independently verified. See the local README for reproduction and validation. |
@@ -125,44 +127,88 @@ The repository includes ERA5-Land-specific tools to retrieve runoff from CDS and
 
 ## Supported Input Formats and Simulation Settings
 
-The core reader supports plain binary and NetCDF runoff. The examples use particular file layouts; they are conventions, not requirements for every dataset. In either format, the values must describe a numeric runoff field on the grid used to build the input matrix. The model uses `IFRQ_INP` to set `DTIN = IFRQ_INP × 3600` seconds. Match this interval to the forcing records and the simulation schedule; the examples use 1-hour and 24-hour records. The current `IFRQ_INP` setting is an integer number of hours (the examples use 1 and 24 hours). For NetCDF single-file mode with automatic CF-time resolution (`SYEARIN<=0`), the reader checks the CF time-axis interval against this setting.
+CaMa-Flood reads runoff from plain Binary or NetCDF. File format, file grouping, record interval, and runoff units are separate settings:
 
-**Plain binary.** The reader opens one file for each simulation date using `CROFDIR/CROFPRE + YYYYMMDD + CROFSUF` (directory, prefix, date, then suffix). Each file is headerless direct-access data: every record is one `NXIN × NYIN` field of 4-byte floating-point values, with longitude/x varying fastest. Store latitude rows consistently with the `OLAT` used to generate the matching input matrix. A daily product normally has one record per file; a subdaily product can store multiple records in that date's file, as in [`gosh/test3-jpn_fcast.sh`](../gosh/test3-jpn_fcast.sh). The record selected is based on the simulation hour and `IFRQ_INP`. The core reader does not read a CTL file, discover dimensions, or infer coordinates, units, record count, or the meaning of missing values from it. `LINPEND=.FALSE.` reads native byte order; set it `.TRUE.` when the file byte order differs from the executable's native order.
+- `LINPCDF` selects Binary (`.FALSE.`) or NetCDF (`.TRUE.`).
+- `CROFFREQ` is required and selects how records are grouped into files. `DAY`, `MON`, and `YEAR` are the standard, recommended modes; `SEQ` is an advanced option for a continuous file.
+- `IFRQ_INP` sets the interval between forcing records in hours; the model derives `DTIN = IFRQ_INP × 3600` seconds.
+- `DROFUNIT` converts stored runoff values to a depth rate in `m/s`. It does not select a file or interval.
 
-**NetCDF.** Build the executable with NetCDF support (`UseCDF_CMF`) and set `LINPCDF=.TRUE.`. The reader expects a numeric three-dimensional runoff variable with Fortran-interface shape `(NXIN, NYIN, time)`. The supplied examples use the conventional NetCDF header ordering `(time, latitude, longitude)`, with longitude/x varying fastest within each 2-D field; this is an example layout, not a promise that arbitrary dimension orders will work. `CVNROF` selects the runoff variable. CaMa-Flood does not use the variable's `units` attribute to convert runoff or compare its coordinate arrays with the matrix, so the grid shape, orientation, and coordinates must be checked by the user.
+### File grouping and names
 
-NetCDF can be read as daily files (`LINPDAY=.TRUE.`), named with the same date pattern as binary; the model selects the within-day record by `IFRQ_INP`. Or it can read one `CROFCDF` containing the simulation's full time series (`LINPDAY=.FALSE.`). In this mode `CVNTIME` names the time dimension; when `SYEARIN<=0`, a same-named CF coordinate variable is also required. With `SYEARIN<=0`, the current reader requires CF time `units` expressed in seconds, minutes, hours, or days `since` a reference date; it accepts `standard`, `gregorian`, `proleptic_gregorian`, `365_day`, or `noleap` calendars. Records must be strictly increasing and evenly spaced, and the calendar must agree with the run's leap-year setting. Optional time bounds must be contiguous and agree with the record spacing. Set `SYEARIN`, `SMONIN`, `SDAYIN`, and `SHOURIN` to use an explicit first-record time instead of CF time resolution. A yearly or monthly file pattern is not automatically expanded in single-file mode: the run script must set `CROFCDF` to the file being read for that run.
+| `CROFFREQ` | Records in each file begin at | Date inserted between `CROFPRE` and `CROFSUF` | Example |
+| --- | --- | --- | --- |
+| `DAY` | 00:00 of the calendar day | `YYYYMMDD` | `runoff_20000101.bin` |
+| `MON` | 00:00 on the first day of the month | `YYYYMM` | `runoff_200001.nc` |
+| `YEAR` | 00:00 on January 1 | `YYYY` | `runoff_2000.nc` |
+| `SEQ` | The explicitly configured or CF-resolved start time | none | `runoff.bin` or `CROFCDF` |
 
-The relevant runtime namelist settings are:
+`CROFFREQ` must be present in every v5 `NFORCE` group. `LINPDAY` was removed from v5; an old Namelist containing it is rejected with the Fortran Namelist error. Binary `SEQ` uses the fixed file `CROFDIR/CROFPRE+CROFSUF` and requires all four of `SYEARIN`, `SMONIN`, `SDAYIN`, and `SHOURIN` to identify its first record. NetCDF `SEQ` uses `CROFCDF` and keeps its CF-time or explicit-start behavior.
 
-| Setting | Namelist group | Role |
+For `DAY`, `MON`, and `YEAR`, the filename identifies the calendar period and the first record is at 00:00 on that period's first day. Record indices use the model calendar and `DTIN`; a simulation starting partway through a period selects the matching record. `IFRQ_INP` must divide 24 hours exactly, and requested times must align with `DTIN`. Do not set `SYEARIN`, `SMONIN`, `SDAYIN`, or `SHOURIN` with these modes; arbitrary first-record offsets are not supported. The resolver uses normalized model time (`KMIN` converted by `MIN2DATE`) for filenames.
+
+This v5 interface intentionally has one file-grouping setting: `CROFFREQ`. It is required, and the supported values are `DAY`, `MON`, `YEAR`, and `SEQ`.
+
+### Plain Binary requirements
+
+Each Binary record is headerless direct-access data containing one `NXIN × NYIN` field of 4-byte floating-point values. Longitude/x varies fastest. Latitude row order must match the `OLAT` used to generate the Input Matrix. `LINPEND=.FALSE.` reads native byte order; set it `.TRUE.` when the file uses the opposite byte order. The reader does not use CTL metadata to infer dimensions, coordinates, units, record count, or missing values.
+
+For Binary `DAY`, `MON`, and `YEAR`, the date-tagged filename follows the table above and records are indexed from the model calendar. These modes always begin at 00:00 on the first day of the named period; explicit start-date fields are rejected. For `SEQ`, each record represents one `DTIN` interval in the fixed file, and all four `SYEARIN`, `SMONIN`, `SDAYIN`, and `SHOURIN` values define its first record. Binary has no calendar metadata, so the user must make its record dates consistent with `LLEAPYR`: Gregorian leap days when `.TRUE.`, or 365-day years when `.FALSE.`. The reader reuses each active file and closes it when changing periods or when forcing is finalized. With `LROSPLIT`, total and subsurface runoff remain separate Binary files with matching grouping and record indices, using `CROF*` and `CSUB*` settings respectively.
+
+### NetCDF requirements and time validation
+
+Build with NetCDF support (`UseCDF_CMF`) and set `LINPCDF=.TRUE.`. The selected numeric runoff variable must be three-dimensional with Fortran-interface shape `(NXIN, NYIN, time)`. Supplied examples use NetCDF dimension order `(time, latitude, longitude)`, with x/longitude varying fastest in each field; arbitrary dimension orders are not guaranteed. `CVNROF` selects runoff, and `CVNSUB` selects the optional subsurface variable when `LROSPLIT` is enabled. The model does not use runoff `units`, coordinate values, or `_FillValue` to convert/check the field against the Input Matrix.
+
+For `DAY`, `MON`, and `YEAR`, the reader selects the date-tagged file and caches it until a period switch. Every opened grouped NetCDF file must provide `CVNTIME` as both the time dimension and a same-named one-dimensional CF coordinate variable; its first record or CF interval lower bound must begin at the file period boundary. The resolver checks the requested timestamp, time interval, calendar, increasing and evenly spaced records, coverage, supported units, and optional contiguous time bounds. Supported CF units are seconds, minutes, hours, or days `since` a reference date; supported calendars are `standard`, `gregorian`, `proleptic_gregorian`, `365_day`, and `noleap`, and must agree with `LLEAPYR`. Explicit start-date fields are not accepted with these standard grouped modes.
+
+For NetCDF `SEQ`, set `CROFCDF` to the file containing the series. When `SYEARIN<=0`, omit `SMONIN`, `SDAYIN`, and `SHOURIN`; `CVNTIME` names the dimension and coordinate variable used to resolve the simulation start from CF metadata. When `SYEARIN>0`, provide all four date fields to specify the first-record time, and the existing elapsed-time record indexing is used. NetCDF `SEQ` keeps one file open for the run. NetCDF grouped files are opened and validated when first needed, cached while active, then closed on a file switch or at finalization.
+
+`LWEVAP` behavior is not extended by this refactor. `CMF_FORCING_PUT` expects a third input-buffer field when it is enabled, while the current runoff reader only loads runoff and optional subsurface runoff; do not assume these runoff formats supply evaporation through this path. Verify the relevant coupled setup before enabling it.
+
+### Runtime settings and examples
+
+| Setting | Group | Role |
 | --- | --- | --- |
-| `CDIMINFO` | `NDIMTIME` | Path to the matching `inpdim_<ROFFTAG>.txt`; supplies map/input dimensions and map bounds expected by the matrix. |
-| `IFRQ_INP` | `NDIMTIME` | Runoff record/update interval in hours. Match the forcing records, not the number of files. |
-| `LINPCDF` | `NFORCE` | `.FALSE.` selects binary; `.TRUE.` selects NetCDF and requires a NetCDF-enabled executable. |
-| `LINPDAY` | `NFORCE` | For binary the model forces daily-file mode. For NetCDF, `.TRUE.` selects date-named daily files; `.FALSE.` selects one `CROFCDF` time series. |
-| `DROFUNIT` | `NFORCE` | Divisor converting each stored runoff value to `m/s`; determine it from value units and temporal meaning. |
-| `CROFDIR`, `CROFPRE`, `CROFSUF` | `NFORCE` | Directory, prefix, and suffix for binary or daily-file NetCDF names. The date `YYYYMMDD` is inserted between prefix and suffix. |
-| `CROFCDF` | `NFORCE` | Path to the single NetCDF file used when `LINPDAY=.FALSE.`. The run script chooses the file; the model does not infer a filename sequence. |
-| `CVNROF` | `NFORCE` | Runoff variable name in NetCDF. |
-| `CVNTIME` | `NFORCE` | NetCDF time dimension name; in automatic CF-time mode, use the same name as the coordinate variable. |
-| `SYEARIN`, `SMONIN`, `SDAYIN`, `SHOURIN` | `NFORCE` | Explicit timestamp of the first record in single-file NetCDF mode. Use `SYEARIN<=0` to resolve the start from CF time metadata. |
-| `LINPEND` | `NFORCE` | Binary byte-order conversion switch; leave false for native byte order. |
-| `LINTERP`, `CINPMAT` | `NFORCE` | Enable input-matrix mapping and select the generated map-root `inpmat_<ROFFTAG>.bin`. |
+| `CDIMINFO` | `NDIMTIME` | Path to `inpdim_<ROFFTAG>.txt`, the map and input-grid dimensions/bounds for the matrix. |
+| `IFRQ_INP` | `NDIMTIME` | Runoff record interval in hours; independent of file grouping and units. |
+| `LINPCDF` | `NFORCE` | `.FALSE.` selects Binary; `.TRUE.` selects NetCDF and requires a NetCDF-enabled executable. |
+| `CROFFREQ` | `NFORCE` | Required: `DAY`, `MON`, `YEAR`, or advanced `SEQ`. |
+| `DROFUNIT` | `NFORCE` | Divisor converting stored runoff to `m/s`; derive it from units and temporal meaning. |
+| `CROFDIR`, `CROFPRE`, `CROFSUF` | `NFORCE` | Directory, prefix, and suffix for date-grouped Binary/NetCDF files; the grouping tag is inserted between prefix and suffix. Binary `SEQ` uses the same components without a tag. |
+| `CROFCDF` | `NFORCE` | Single NetCDF file used by `SEQ`. |
+| `CVNROF`, `CVNSUB` | `NFORCE` | NetCDF variable names for runoff and optional subsurface runoff. |
+| `CVNTIME` | `NFORCE` | NetCDF time dimension name; auto-CF mode also requires a same-named coordinate variable. |
+| `SYEARIN`, `SMONIN`, `SDAYIN`, `SHOURIN` | `NFORCE` | Use only with `SEQ`. All four are required for Binary `SEQ`; NetCDF `SEQ` uses CF time when `SYEARIN<=0`, or all four for an explicit first-record time. |
+| `LINPEND` | `NFORCE` | Binary byte-order conversion; false means native order. |
+| `LINTERP`, `CINPMAT` | `NFORCE` | Enable Input Matrix mapping and select `inpmat_<ROFFTAG>.bin`. |
 
-The examples below show the relevant namelist values (paths and tags must be replaced for the chosen dataset). `ROFFTAG` is a preprocessing-script setting used in the generated matrix filenames; it is not a model namelist parameter.
-
-Daily or subdaily binary files, following [`gosh/test1-glb_15min.sh`](../gosh/test1-glb_15min.sh) and [`gosh/test3-jpn_fcast.sh`](../gosh/test3-jpn_fcast.sh):
+`ROFFTAG` is a preprocessing-script setting used in matrix filenames; it is not a model Namelist parameter. For example, the recommended annual NetCDF configuration is:
 
 ```text
 &NDIMTIME
   CDIMINFO = "/data/map/inpdim_my-runoff.txt"
   IFRQ_INP = 24
 /
+&NFORCE
+  LINPCDF  = .TRUE.
+  CROFFREQ = "YEAR"
+  DROFUNIT = 86400000       ! mm per 24-hour record -> m/s
+  CROFDIR  = "/data/my-runoff"
+  CROFPRE  = "runoff"
+  CROFSUF  = ".nc"
+  CVNROF   = "runoff"
+  CVNTIME  = "time"
+  LINTERP  = .TRUE.
+  CINPMAT  = "/data/map/inpmat_my-runoff.bin"
+/
+```
 
+The legacy daily Binary convention remains valid:
+
+```text
 &NFORCE
   LINPCDF  = .FALSE.
-  LINPDAY  = .TRUE.
+  CROFFREQ = "DAY"
   LINPEND  = .FALSE.
   DROFUNIT = 86400000       ! mm per 24-hour record -> m/s
   CROFDIR  = "/data/my-runoff"
@@ -173,32 +219,11 @@ Daily or subdaily binary files, following [`gosh/test1-glb_15min.sh`](../gosh/te
 /
 ```
 
-Single-file NetCDF with a CF time coordinate, following [`gosh/test2-conus_06min_netcdf.sh`](../gosh/test2-conus_06min_netcdf.sh) and the direct-input settings in [`gosh/dev_ERA5_hour.sh`](../gosh/dev_ERA5_hour.sh):
+Use one explicit `CROFFREQ` in every v5 configuration. For `SEQ`, users are responsible for preparing complete files whose first-record time and record alignment match the simulation. For every mode, compare requested dates and sample records with the source data, and check plausible runoff/discharge ranges.
 
-```text
-&NDIMTIME
-  CDIMINFO = "/data/map/inpdim_my-runoff.txt"
-  IFRQ_INP = 24
-/
+The model converts NaN values to its internal `RMIS` sentinel (default `1.0e20`) and clamps negative runoff to zero. It does not generally interpret a CTL `undef` or NetCDF `_FillValue` as missing data. Convert missing source values explicitly to configured `RMIS` or to zero when zero runoff is intended; do not leave positive fill values such as `1.0e20` unless that value matches `RMIS`.
 
-&NFORCE
-  LINPCDF  = .TRUE.
-  LINPDAY  = .FALSE.
-  DROFUNIT = 86400000       ! mm per 24-hour record -> m/s
-  CROFCDF  = "/data/my-runoff/runoff_2000.nc"
-  CVNROF   = "runoff"
-  CVNTIME  = "time"
-  SYEARIN  = 0              ! resolve the first record from CF time metadata
-  LINTERP  = .TRUE.
-  CINPMAT  = "/data/map/inpmat_my-runoff.bin"
-/
-```
-
-For NetCDF organized as one file per date, set `LINPDAY=.TRUE.`, and configure `CROFDIR`, `CROFPRE`, `CROFSUF`, and `CVNROF`. The reader selects within-day records by index and does not use `CVNTIME` to validate each file's timestamp values. Check the file dates, record count, and temporal order yourself against `IFRQ_INP`. For any format, a short run should confirm the first and last records, the selected dates, and plausible runoff/discharge ranges.
-
-The model converts NaN values to its internal `RMIS` sentinel (default `1.0e20`) and clamps negative runoff to zero. It does not generally interpret a file's CTL `undef` or NetCDF `_FillValue` metadata as missing data. Before running, convert source missing values explicitly to the configured `RMIS` value or to zero if zero runoff is the intended treatment; do not leave positive fill values such as `1.0e20` in the field unless that value matches `RMIS`. Confirm this behavior in the selected run configuration and source files.
-
-The temporal label and accumulation/reset interpretation must be checked against the dataset documentation; CaMa-Flood uses the configured runoff dates and does not assign an independent calendar meaning to the values. For unit conversion and the role of `DROFUNIT`, see [Runoff forcing and units](#runoff-forcing-and-units).
+The temporal label and accumulation/reset interpretation must be checked against the dataset documentation. File grouping does not establish whether values are instantaneous rates or accumulated depths. For unit conversion, see [Runoff forcing and units](#runoff-forcing-and-units).
 
 ## Troubleshooting
 

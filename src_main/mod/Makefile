@@ -1,5 +1,9 @@
 TOP := $(abspath ../..)
-include $(TOP)/adm/Mkinclude
+CONFIG_FILE := $(TOP)/config/Mkinclude
+ifeq ($(wildcard $(CONFIG_FILE)),)
+$(error CaMa-Flood v5 configuration missing: $(CONFIG_FILE). Review config/Mkinclude_gfortran or run ./s01-setup_fortran.sh, then copy ./Mkinclude to config/Mkinclude)
+endif
+include $(CONFIG_FILE)
 
 LIBNAME = libmod.a
 

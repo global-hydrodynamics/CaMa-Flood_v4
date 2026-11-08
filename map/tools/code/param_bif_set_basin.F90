@@ -1,7 +1,7 @@
 ! Shared v5 map-tool copy of map/src/src_param/set_bif_basin.F90.
 ! Scientific calculations are preserved; v5 diagnostic layout is described below.
 ! Generate bifbsn.bin by merging basin IDs connected through the pathways
-! registered in bifprm.txt. STEP 1 handles river-channel bifurcations with a
+! registered in bifprm.csv. STEP 1 handles river-channel bifurcations with a
 ! positive first-layer width; STEP 2 includes the remaining registered
 ! floodplain/overland pathways. STEP 2 does not evaluate instantaneous water
 ! levels or whether a pathway is active, so the result represents potential
@@ -17,6 +17,7 @@
 ! Run with CWD=<map>/script_params; input/output paths below are relative to it.
       program param_bif_set_basin
       use map_color_mod, only: color_map
+      use bifprm_csv_mod, only: bifprm_path, read_bifprm_csv
       implicit none
 ! ================================================
 ! Basin-connectivity arrays and merge settings.
@@ -41,19 +42,14 @@
 ! Bifurcation pathways and channel widths.
       integer                  :: ipth  !! bifurcation-path index
       integer                  :: npth  !! bifurcation-path count
-      integer                  :: ilev  !! bifurcation-layer index
       integer                  :: nlev  !! layer count
+      type(bifprm_path), allocatable :: paths(:)  !! finalized CSV paths in source order
 
       integer, allocatable      :: bnew(:)  !! basin merge destination ID
       integer, allocatable      :: bmod(:)  !! modification tag
       integer, allocatable      :: bnum(:)  !! grid-cell count per basin
       integer, allocatable      :: bnumori(:)  !! original grid-cell count per basin
 
-      real                     :: len  !! pathway length [m]
-      real                     :: elv  !! pathway elevation [m]
-      real                     :: dph  !! bifurcation depth [m]
-      real, allocatable         :: wth(:)  !! bifurcation width [m]
-      real                     :: lat, lon  !! longitude/latitude [deg]
 
 ! Visualization colors for the merged basin map; not an MPI partition map.
       integer, allocatable      :: color(:,:)  !! basin display-color map
@@ -178,34 +174,28 @@
         maxgrid=max(maxgrid,bnum(ibsn))
       end do
 
-! bifprm.txt header provides the number of retained paths and width layers.
+! The named CSV reader resolves path and width fields by their headers.
 ! bnew maps each basin scheduled for merging to its selected destination ID.
-      fbifori='../bifprm.txt'
-      open(12,file=fbifori,form='formatted')
-      read(12,*) npth, nlev
-      close(12)
+      fbifori='../bifprm.csv'
+      call read_bifprm_csv(fbifori,paths,npth,nlev)
 
-      allocate( wth(nlev) )
 print *, '******************'
 !=================================================================
 ! ================================================
 ! [2] Merge channel bifurcations, then potential floodplain connections
 ! ================================================
 ! STEP 1: merge basins connected by river-channel bifurcations identified by
-! positive first-layer width (wth(1)>0). Repeat until those path endpoints
+! positive first-layer width. Repeat until those path endpoints
 ! have a common basin ID.
  500 continue
 
 print *, 'STEP-1: merge basins with inter-basin channels'
 
-      fbifori='../bifprm.txt'
-      open(12,file=fbifori,form='formatted')
-      read(12,*) npth, nlev
-
 print *, '-- analyse inter-basin channels'
       do ipth=1, npth
-        read(12,*) ix,iy,jx,jy, len, elv, dph, (wth(ilev),ilev=1,nlev), lat, lon
-        if( wth(1)<=0 ) cycle                      !! not a river-channel bifurcation
+        ix=paths(ipth)%ix; iy=paths(ipth)%iy
+        jx=paths(ipth)%jx; jy=paths(ipth)%jy
+        if( paths(ipth)%widths(1)<=0 ) cycle       !! not a river-channel bifurcation
 
         if( basin(ix,iy)/=basin(jx,jy) )then
           if( basin(ix,iy)<basin(jx,jy) )then
@@ -224,8 +214,6 @@ print *, '-- analyse inter-basin channels'
 
         endif
       end do
-      close(12)
-
 print *, '-- decide basin IDs to be updated'
 ! Resolve merge chains to their final representative ID, then update basin
 ! counts and apply the mapping. The representative is chosen by numeric basin
@@ -259,20 +247,16 @@ print *, '-- update basin number'
 
 print *, 'check all bifurcation merged or not' !! repeated paths may require another merge pass
 
-      open(12,file=fbifori,form='formatted')
-      read(12,*) npth, nlev
-
       again=0
       do ipth=1, npth
-        read(12,*) ix,iy,jx,jy, len, elv, dph, (wth(ilev),ilev=1,nlev), lat, lon
-        if( wth(1)<=0 ) cycle
+        ix=paths(ipth)%ix; iy=paths(ipth)%iy
+        jx=paths(ipth)%jx; jy=paths(ipth)%jy
+        if( paths(ipth)%widths(1)<=0 ) cycle
 
         if( basin(ix,iy)/=basin(jx,jy) )then
           again=again+1
         endif
       end do
-      close(12)
-
       if( again>0 )then
         print *, '-- repeat'
         goto 500
@@ -301,22 +285,20 @@ print *, '*****************'
 print *, 'STEP-2: merge basins with all bifurcation pathways'
 
 
-! STEP 2: consider every pathway registered in bifprm.txt, including the
+! STEP 2: consider every pathway registered in bifprm.csv, including the
 ! floodplain/overland pathways not merged in STEP 1. This is potential
 ! connectivity: no instantaneous water level or active-connection test is made.
-! The loop index decreases, but each sequential formatted READ still consumes
-! the next record in the original file order. Repeat until all path endpoints
+! The legacy countdown loop consumed sequential records from the top of the
+! file. Index upward here to preserve that actual row-processing order.
+! Repeat until all path endpoints
 ! have a common basin ID. As in STEP 1, the smaller numeric basin ID represents
 ! each merged group; basin area and hydrological dominance are not considered.
 1000 continue
 
-      fbifori='../bifprm.txt'
-      open(12,file=fbifori,form='formatted')
-      read(12,*) npth, nlev
-
 print *, '-- analyse inter-basin channels (overland)'
-      do ipth=npth, 1, -1
-        read(12,*) ix,iy,jx,jy, len, elv, dph, (wth(ilev),ilev=1,nlev), lat, lon
+      do ipth=1, npth
+        ix=paths(ipth)%ix; iy=paths(ipth)%iy
+        jx=paths(ipth)%jx; jy=paths(ipth)%jy
 
         if( basin(ix,iy)/=basin(jx,jy) )then
           if( basin(ix,iy)<basin(jx,jy) )then
@@ -334,8 +316,6 @@ print *, '-- analyse inter-basin channels (overland)'
           endif
         endif
       end do
-      close(12)
-
 ! --------
 print *, '-- decide basin IDs to be updated'
       do ibsn=nbsn, 1, -1
@@ -377,18 +357,14 @@ print *, '-- update basin number'
 
 print *, 'check all bifurcation pathways merged or not' !! repeated paths may require another merge pass
 
-      open(12,file=fbifori,form='formatted')
-      read(12,*) npth, nlev
-
       again=0
       do ipth=1, npth
-        read(12,*) ix,iy,jx,jy, len, elv, dph, (wth(ilev),ilev=1,nlev), lat, lon
+        ix=paths(ipth)%ix; iy=paths(ipth)%iy
+        jx=paths(ipth)%jx; jy=paths(ipth)%jy
         if( basin(ix,iy)/=basin(jx,jy) )then
           again=again+1
         endif
       end do
-      close(12)
-
       if( again>0 )then
         print *, '-- repeat'
         goto 1000
@@ -425,15 +401,14 @@ print *, 'Mark inter-basin connectivity endpoints (bpoint array)'
 ! merged. This describes the resulting basin map, not an MPI region map. At a
 ! shared cell, the highest code is retained.
       bpoint(:,:)=-9999
-      open(12,file=fbifori,form='formatted')
-      read(12,*) npth, nlev
       again=0
       do ipth=1, npth
-        read(12,*) ix,iy,jx,jy, len, elv, dph, (wth(ilev),ilev=1,nlev), lat, lon
+        ix=paths(ipth)%ix; iy=paths(ipth)%iy
+        jx=paths(ipth)%jx; jy=paths(ipth)%jy
         if( bsnori(ix,iy)/=bsnori(jx,jy) )then
           if( basin(ix,iy)==basin(jx,jy) )then
             mark=2                                 !! 2= overland inter-basin connection
-            if( wth(1)>0 ) mark=3                  !! 3= river channel inter-basin connection
+            if( paths(ipth)%widths(1)>0 ) mark=3   !! 3= river channel inter-basin connection
             bpoint(ix,iy)=max(mark,bpoint(ix,iy))
             bpoint(jx,jy)=max(mark,bpoint(jx,jy))
           else
@@ -443,8 +418,6 @@ print *, 'Mark inter-basin connectivity endpoints (bpoint array)'
           endif
         endif
       end do
-      close(12)
-
 print *, 'Mark basins that expand or are absorbed'
       bnum=0
       do iy=1, ny

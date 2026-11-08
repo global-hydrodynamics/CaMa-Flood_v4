@@ -22,7 +22,7 @@ Run the shell scripts from this directory. The Japan wrappers retain their exist
 | `make_CMF_runoff_info.py` | Reads converted NetCDF metadata or binary CTL metadata | Converted output and its settings | Human-readable grid, interval, and namelist summary; it does not generate an Input Matrix |
 | `tests/test_era5land_tools.py` | Offline compatibility tests using small synthetic fields | Python test dependencies only | No persistent data; all output fixtures use temporary directories |
 
-The root [`requirements.txt`](../../requirements.txt) lists the project Python dependencies, including pandas, xarray, and NetCDF4 for conversion. Run [`s00-python_setup.sh`](../../s00-python_setup.sh) from the repository root to create `.venv`, install those requirements, and verify the conversion imports. Downloading additionally requires `cdsapi` and CDS credentials. A direct pip installation is also possible:
+The root [`requirements.txt`](../../requirements.txt) lists the project Python dependencies, including pandas, xarray, and NetCDF4 for conversion. Run [`s02-python_setup.sh`](../../s02-python_setup.sh) from the repository root to create `.venv`, install those requirements, and verify the conversion imports. Downloading additionally requires `cdsapi` and CDS credentials. A direct pip installation is also possible:
 
 ```bash
 python3 -m pip install numpy pandas xarray netCDF4 'cdsapi>=0.7.7'
@@ -94,7 +94,7 @@ For this 24-hour sample, a NetCDF-enabled run can use settings equivalent to:
 
 ```text
 LINPCDF  = .TRUE.
-LINPDAY  = .FALSE.
+CROFFREQ = "SEQ"
 CVNTIME  = "valid_time"
 CVNROF   = "ro"
 CROFCDF  = "/path/to/ERA5-Land_runoff_20000101-02.nc"
@@ -105,7 +105,7 @@ DROFUNIT = 86400             ! conditional: m per 24-hour record -> m/s
 
 For the input-matrix generator, the cell-edge settings that place centers on the observed NetCDF coordinates are `GRSIZEIN=0.1`, `WESTIN=-180.05`, `EASTIN=179.95`, `NORTHIN=90.05`, `SOUTHIN=-90.05`, and `OLAT="NtoS"`; these yield 3600×1801 cells whose centers run from longitude -180 to 179.9 and latitude 90 to -90. Generate the matrix for the selected map's available high-resolution catchment data. Also configure `LINTERP=.TRUE.` and use this matching CaMa-Flood input matrix. The model reader uses the names and time metadata; it does not convert runoff units based on the NetCDF `units` attribute. `DROFUNIT=86400` is dimensionally appropriate only if each value is the depth accumulated over its 24-hour record.
 
-The global downloader writes monthly files, while `LINPDAY=.FALSE.` opens one NetCDF file for the simulation period. A run spanning multiple monthly downloads therefore needs either a single file containing all required time records (for example, a time-axis concatenation that preserves values and metadata) or a run setup that opens each monthly file in turn. The two-day sample establishes file structure and reader compatibility by inspection; no model run was performed.
+The global downloader writes monthly files. Use `CROFFREQ="MON"` to select and switch among those monthly files; each file must contain valid CF time metadata. The two-day sample is one NetCDF file and uses `CROFFREQ="SEQ"` with its `valid_time` coordinate. Its structure was inspected, but no model run was performed.
 
 ERA5-Land runoff values are accumulations, and the physical interval associated with the first timestamp and period boundaries remains under review in [KG-0019](../../research/records/knowledge_gaps/KG-0019.md). The sample confirms format and metadata only, not scientific correctness or temporal attribution. The registry records this direct-NetCDF sample as requiring maintainer review.
 
@@ -116,6 +116,8 @@ Both converters assume the selected source variable contains ERA5-Land runoff ac
 For each UTC-date group, the NetCDF converter's default `--first-step keep` retains the first accumulated value; `zero` and `missing` are alternatives. When a difference is negative, both converters substitute the current accumulated value; both then clip negative values to zero by default. The binary converter hardcodes the same first-record and negative-value behavior. These statements describe current implementation only; they do not establish the scientifically correct attribution at a daily boundary.
 
 ### NetCDF output
+`convert_CMF_nc.py` writes NetCDF-4 with lossless deflate level 3 and shuffle; the runoff variable remains Float32. Downloaded source NetCDF files are external inputs and need not use this compression. See the shared [v5 NetCDF output conventions](../../docs/netcdf_output_conventions.md).
+
 
 Edit `s02-convert_CMF_nc.sh` to match the downloader's source directory, file grouping, timestep, and dates. Choose `MERGE_UNIT="monthly"` or `"yearly"`. The script creates `runoff_YYYYMM.nc` or `runoff_YYYY.nc` and a `runoff_info_CaMaFlood.txt` summary. The output variable defaults to `runoff`, is stored as float32 with fill value `1.0e20`, is ordered north-to-south by default, and has `units="mm"` plus a `time_step_hours` attribute. It also retains the source timestamps as the output time coordinate.
 

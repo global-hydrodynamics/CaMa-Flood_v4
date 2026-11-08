@@ -31,7 +31,6 @@ REQUIRED_COLUMNS = {
     "record_interval_hours",
     "units",
     "DROFUNIT",
-    "LINPDAY",
     "period",
     "data_source",
     "source_url",
@@ -112,8 +111,6 @@ def validate():
                 record_interval, number(row, "IFRQ_INP"), abs_tol=1e-9
             ):
                 raise ValueError(f"{dataset_id}: IFRQ_INP does not match the record interval")
-        if row["LINPDAY"] and row["LINPDAY"] not in {".TRUE.", ".FALSE."}:
-            raise ValueError(f"{dataset_id}: LINPDAY must be .TRUE., .FALSE., or blank")
 
     return len(rows)
 

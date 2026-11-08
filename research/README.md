@@ -9,6 +9,10 @@
 
 `development_tasks.csv` and `validation_runs.csv` are the structured task/validation tables. Discussions, knowledge gaps, interventions, and decisions have stable IDs and concise Markdown records; their shared chronology is in `events.csv`. Companion tables link to event IDs instead of repeating event dates and actors. Use the templates under [`templates/`](templates/) and the field definitions in [`study_protocol.md`](study_protocol.md).
 
+### Acknowledging missing historical validation records
+
+`legacy_validation_refs.csv` is a traceability ledger for historical `VR-####` IDs that are still referenced but whose original validation record cannot be recovered. Its `likely_scope` and `likely_outcome` fields are explicitly labeled inference from the linked event/task summaries; they are not restored test reports and must not be cited as detailed validation evidence. `candidate_validation_id` stays blank unless an existing validation record is genuinely supported as the same work. The validator accepts only IDs listed in this ledger as acknowledged legacy references, and prints a note that their original records remain missing. This keeps routine validation from failing while preserving that historical uncertainty.
+
 ## Continuity across projects and branches
 
 Keep this one `research/` directory and its record history across successive development projects, branches, and merges. Do not start a new log when a feature branch changes or a project ends. Link events to whichever project, issue, PR, commit, or discussion supplies the evidence. No dedicated research Issue is required. Initially the maintainer is the primary recorder; use ordinary Git review and merge practices, without a separate locking or coordination system. Before adding records on a later branch, ensure it includes the latest merged research history so IDs and chronology continue rather than fork.
@@ -21,13 +25,14 @@ For a substantial task, record its objective, approved scope, owner, branch, sta
 
 ## Recording workflow
 
-1. Assign the next unused stable ID. Never recycle an ID.
+1. Preview candidate IDs with `python3 research/validate_records.py --next-ids`; these are suggestions, not reservations. Check the current worktree and never recycle an ID. ADR IDs are shared across both decision-record directories.
 2. Add the event and reference IDs to `events.csv`. Use a timestamp with timezone when available; use `YYYY-MM-DD` with `timestamp_precision=date` when time is not known.
 3. Add the task or validation row where relevant and create a detailed Markdown record from its template when context, alternatives, or evidence need explanation.
 4. Separate proposals, maintainer approval, instructions, implementation, and validation. Mark evidence as contemporaneous, retrospective, or prospective.
 5. Link public evidence by URL, commit, or repository path. For a private source, store only an approved archive identifier and access classification; never commit raw transcripts, credentials, private paths, or restricted data. If the source cannot be accessed or identified, record that limitation.
 6. Have the human maintainer review AI-generated discussion summaries before treating them as research records. Do not include hidden reasoning or infer missing conversation content.
-7. Run `python3 research/validate_records.py` after editing record tables. Commit the record update with the work it documents or in a follow-up commit that points to the completed work.
+7. Keep structured indexes and detail files synchronized for discussions, knowledge gaps, and human interventions. Validation-run detail Markdown is optional; the CSV is the analysis index, and detailed reports may also stand alone as evidence.
+8. Run `python3 research/validate_records.py` after changing records. The read-only validator runs independent schema, local-record, reference, index/detail, and Markdown-link checks in one pass. It retains usable fields from malformed rows so recoverable errors are still reported. When a malformed table makes a dependent reference check unreliable, it reports that check as `SKIPPED` instead of producing cascading “unknown ID” errors; independent checks continue. Fix the reported structural errors and rerun the validator to complete the skipped checks. Historical validation IDs may be acknowledged in `legacy_validation_refs.csv` only when their likely scope is supported by linked records; the validator treats these as inference-only references, not recovered validation evidence. Other dangling references still fail validation. Commit the record update with the work it documents or in a follow-up commit that points to the completed work.
 
 ## Proactive knowledge-gap review
 
@@ -47,6 +52,7 @@ Public repository records should contain public metadata and reviewed summaries 
 
 - [`study_protocol.md`](study_protocol.md): confirmed v5 principles, primary evaluation dimensions, proposed task-based comparison, evidence categories, and limitations.
 - [`development_tasks.csv`](development_tasks.csv), [`validation_runs.csv`](validation_runs.csv): structured task and validation data.
+- [`legacy_validation_refs.csv`](legacy_validation_refs.csv): inference-only traceability for referenced historical validation IDs whose original reports are unavailable.
 - [`records/`](records/): detailed discussion, knowledge-gap, human-intervention, and decision records.
 - [`templates/`](templates/): reusable record formats.
 - [`baseline/`](baseline/): release and pre-documentation baselines, comparison procedure, and recorded audit environment.

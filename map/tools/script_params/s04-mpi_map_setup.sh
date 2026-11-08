@@ -2,7 +2,7 @@
 # Generate MPI region maps for CaMa-Flood.
 # Copy to <map>/script_params/, edit the settings below, and run from any CWD.
 #
-# Inputs:  params.txt, basin.bin, bifprm.txt, nextxy.bin
+# Inputs:  params.txt, basin.bin, bifprm.csv, nextxy.bin
 # Outputs: bifcol_mpi.bin; mpireg-N.bin for each MPI count; default connectivity report
 # Optional: ./s04-mpi_map_setup.sh check_map also writes check_bif_bsnmod_mpi.bin
 # Usage:   ./s04-mpi_map_setup.sh [check_map]
@@ -59,7 +59,7 @@ TEMP_BASIN="$MAP_DIR/bifbsn_mpi.tmp"
 # Both preprocessing programs read map inputs relative to script_params/.
 cd "$SCRIPT_DIR"
 
-# 1. Merge connected basins for MPI decomposition. bifprm.txt is read only.
+# 1. Merge connected basins for MPI decomposition. bifprm.csv is read only.
 STEP="Aggregate basins for MPI mode $MPIMODE"
 printf '\n==================================================\n[STEP 1/3] Aggregate basins for MPI decomposition (%s)\n==================================================\n\n' "$MPIMODE"
 if [ "${1:-}" = "check_map" ]; then

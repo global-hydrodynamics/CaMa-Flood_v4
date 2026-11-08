@@ -14,8 +14,8 @@ set -eu
 # CaMa-Flood base directory (contains src_main/, map/, and inp/).
 CMF_BASE=$(cd .. && pwd)
 
-# Simulation working directory; the model executable and outputs are placed here.
-RUNDIR="${CMF_BASE}/out/mek01-default_run"
+# Simulation working directory; wrappers may override it to isolate sample outputs.
+RUNDIR=${RUNDIR:-"${CMF_BASE}/out/mek01-default_run"}
 
 # -------------------------- User settings ------------------------------
 # Simulation interval. The end time is exclusive; this interval is 40 days.
@@ -44,7 +44,7 @@ NEXTXY="${MAPDIR}/nextxy_noedge.bin"
 RIVWTH="${MAPDIR}/rivwth_merit.bin"
 
 # CPU execution settings; this sample runs with OpenMP and without MPI.
-OMP_NUM_THREADS=4             # Number of OpenMP threads (non-MPI execution).
+OMP_NUM_THREADS=${OMP_NUM_THREADS:-4}  # Number of OpenMP threads (non-MPI execution).
 
 # Model features and initial conditions.
 LADPSTP=".TRUE."              # TRUE: use adaptive time stepping.
@@ -58,7 +58,7 @@ ROFFTAG="test-mek_1deg"       # Select inp/test-mek_1deg/runoff and its input ma
 IFRQ_INP=24                   # Runoff update interval [hours]; examples: 1, 2, 3, 6, 12, 24.
 DROFUNIT=86400000             # Input runoff units / DROFUNIT -> m/s; 86400000 converts mm/day.
 LINPCDF=".FALSE."             # TRUE: read NetCDF runoff; FALSE: read binary runoff.
-LINPDAY=".TRUE."              # TRUE: daily files; FALSE: one-period NetCDF file (binary forces TRUE).
+CROFFREQ="DAY"                 # Explicit daily grouping; records are indexed from 00:00 each date.
 LINTERP=".TRUE."              # TRUE: map runoff with input matrix; FALSE: use nearest-grid conversion.
 CROFPRE="Roff____"            # Daily filename prefix: Roff____YYYYMMDD.one.
 CROFSUF=".one"                # Daily filename suffix.
@@ -184,7 +184,7 @@ CFLDHGT = "${MAPDIR}/fldhgt.bin"    ! Floodplain elevation profile [m].
 CRIVWTH = "${RIVWTH}"               ! River channel width [m].
 CRIVHGT = "${MAPDIR}/rivhgt.bin"    ! River channel depth [m].
 CRIVMAN = "${MAPDIR}/rivman.bin"    ! River Manning roughness [s m-1/3].
-CPTHOUT = "${MAPDIR}/bifprm.txt"    ! Bifurcation channel parameters.
+CPTHOUT = "${MAPDIR}/bifprm.csv"    ! Bifurcation channel parameters.
 /
 &NRESTART
 CRESTDIR = "./"              ! Restart-output directory relative to the run directory.
@@ -194,7 +194,7 @@ IFRQ_RST = ${IFRQ_RST}       ! 0=end only; 1-24=hour interval; 30=monthly (nonze
 /
 &NFORCE
 LINPCDF  = ${LINPCDF}         ! TRUE: read NetCDF runoff; FALSE: read binary runoff.
-LINPDAY  = ${LINPDAY}         ! TRUE: daily files; FALSE: one-period NetCDF file (binary forces TRUE).
+CROFFREQ = "${CROFFREQ}"     ! Explicit grouping mode; DAY/MON/YEAR/SEQ.
 LINTERP  = ${LINTERP}         ! TRUE: map runoff with input matrix; FALSE: use nearest-grid conversion.
 CINPMAT  = "${INPMAT}"        ! Runoff-to-river input-mapping matrix.
 DROFUNIT = ${DROFUNIT}        ! Input runoff units / DROFUNIT -> m/s; 86400000 converts mm/day.
@@ -203,6 +203,8 @@ CROFPRE  = "${CROFPRE}"       ! Runoff filename prefix before the date.
 CROFSUF  = "${CROFSUF}"       ! Runoff filename suffix.
 /
 &NOUTPUT
+CMF_BASE = "${CMF_BASE}"       ! CaMa-Flood repository/package root.
+COUTVAR_TABLE = ""              ! Defaults to CMF_BASE/variable_table/output_variables.csv.
 COUTDIR  = "${COUTDIR}"       ! Output directory relative to the model run directory.
 CVARSOUT = "${CVARSOUT}"      ! Comma-separated list of output variables.
 COUTTAG  = "${START_YEAR}"    ! Tag appended to output filenames.

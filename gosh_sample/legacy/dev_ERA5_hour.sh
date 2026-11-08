@@ -122,7 +122,6 @@ IFRQ_INP="1"                                # input forcing frequency: [1,2,3,..
 DROFUNIT="3600"   # [m/hr->m/s]             # runoff unit conversion
 
 #----- for plain binary runoff forcing
-LINPDAY=".TRUE."                            # true for daily input file
 LINPCDF=".TRUE."                           # true for netCDF runoff
 LINTERP=".TRUE."                            # .TRUE. to interporlate with input matrix
 
@@ -134,10 +133,6 @@ CVNTIME='valid_time'
 CVNROF="ro"                                # netCDF runoff    variable name
 
 CROFCDF=""       # see in simulation       # netCDF runoff file
-#SYEARIN=""      # set in simulation       #   netCDF runoff file, start date
-#SMONIN=""       # set in simulation
-#SDAYIN=""       # set in simulation
-#SHOURIN=""      # set in simulation
 
 
 #============================
@@ -243,7 +238,7 @@ EOF
 #*** 4. forcing
 cat >> ${NMLIST} << EOF
 &NFORCE
-LINPDAY  = ${LINPDAY}                  ! true for daily input file
+CROFFREQ = "DAY"                   ! Date-tagged daily file grouping.
 LINPCDF  = ${LINPCDF}                  ! true for netCDF runoff
 LINTERP  = ${LINTERP}                  ! true for runoff interpolation using input matrix
 CINPMAT  = "${CINPMAT}"                ! input matrix file name

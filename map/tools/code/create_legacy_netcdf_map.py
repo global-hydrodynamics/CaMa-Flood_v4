@@ -53,6 +53,7 @@ def configure(lib: ctypes.CDLL) -> None:
     lib.nc_inq_varid.argtypes = [ci, cp, ctypes.POINTER(ci)]
     lib.nc_inq_var.argtypes = [ci, ci, cp, ctypes.POINTER(ci), ctypes.POINTER(ci), ctypes.POINTER(ci), ctypes.POINTER(ci)]
     lib.nc_def_var.argtypes = [ci, cp, ci, ci, ctypes.POINTER(ci), ctypes.POINTER(ci)]
+    lib.nc_def_var_deflate.argtypes = [ci, ci, ci, ci, ci]
     lib.nc_inq_natts.argtypes = [ci, ctypes.POINTER(ci)]
     lib.nc_inq_attname.argtypes = [ci, ci, ci, cp]
     lib.nc_inq_att.argtypes = [ci, ci, cp, ctypes.POINTER(ci), ctypes.POINTER(sz)]
@@ -192,6 +193,8 @@ def write_file(lib: ctypes.CDLL, path: Path, variables: list[dict], title: str) 
                 ),
                 f"define {variable['name']}",
             )
+            check(lib, lib.nc_def_var_deflate(ncid.value, varid.value, 1, 1, 3),
+                  f"set lossless compression for {variable['name']}")
             varids[variable["name"]] = varid.value
             for attr in variable["attrs"]:
                 put_attribute(lib, ncid.value, varid.value, attr)

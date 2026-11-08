@@ -1,4 +1,4 @@
-name: Map tools validation
+name: v5 source and map tools validation
 
 on:
   push:
@@ -10,6 +10,9 @@ on:
       - "variable_table/map_metadata_spec.md"
       - "map/README.md"
       - "map/mekong_15min/**"
+      - "config/**"
+      - "src_main/**"
+      - "s01-setup_fortran.sh"
       - ".github/workflows/map-sample-validation.yml"
   pull_request:
     paths:
@@ -20,17 +23,34 @@ on:
       - "variable_table/map_metadata_spec.md"
       - "map/README.md"
       - "map/mekong_15min/**"
+      - "config/**"
+      - "src_main/**"
+      - "s01-setup_fortran.sh"
       - ".github/workflows/map-sample-validation.yml"
   workflow_dispatch:
 
 jobs:
-  source-only:
+  v5-build-and-map-checks:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install GNU Fortran and NetCDF-Fortran
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends gfortran libnetcdff-dev
+      - name: Initialize ignored v5 build configuration
+        run: |
+          test ! -e config/Mkinclude
+          cp config/Mkinclude_gfortran config/Mkinclude
+          git check-ignore --quiet config/Mkinclude
+          test -z "$(git ls-files -- config/Mkinclude)"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.x"
+      - name: Build the v5 model
+        run: |
+          trap 'make -C src_main clean' EXIT
+          make -C src_main all
       - name: Check Python and shell syntax
         run: |
           python3 -B -c 'from pathlib import Path; [compile(p.read_text(), str(p), "exec") for p in [Path("map/tools/code/generate_ctl.py"), *Path("map/tools/tests").glob("*.py"), *Path("map/tests").glob("*.py")]]'
@@ -39,15 +59,11 @@ jobs:
         run: python3 -B -m unittest map.tools.tests.test_generate_ctl -v
       - name: Validate map variable metadata
         run: python3 -B map/tests/validate_map_variables.py
-      - name: Build regional Fortran tools when gfortran is available
+      - name: Build regional Fortran tools and run map checks
         run: |
-          if command -v gfortran >/dev/null 2>&1; then
-            trap 'make -C map/tools/code clean' EXIT
-            make -C map/tools/code region
-            python3 -B -m unittest map.tools.tests.test_region_cut_domain_optional_maps -v
-          else
-            echo "SKIP: gfortran is unavailable; regional Fortran compilation was not run."
-          fi
+          trap 'make -C map/tools/code clean' EXIT
+          make -C map/tools/code region
+          python3 -B -m unittest map.tools.tests.test_region_cut_domain_optional_maps -v
 
   committed-mekong:
     runs-on: ubuntu-latest
