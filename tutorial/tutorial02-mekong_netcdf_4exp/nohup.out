@@ -1,0 +1,124 @@
+
+[STEP] Configure and run 2000
+Start 2000: 2026年 11月 9日 月曜日 11時05分40秒 JST
+
+[STEP] Configure and run 2000
+Start 2000: 2026年 11月 9日 月曜日 11時05分45秒 JST
+
+[STEP] Configure and run 2000
+Start 2000: 2026年 11月 9日 月曜日 11時05分52秒 JST
+
+[STEP] Configure and run 2000
+Start 2000: 2026年 11月 9日 月曜日 11時05分56秒 JST
+End 2000: 2026年 11月 9日 月曜日 11時06分59秒 JST
+Elapsed: 74 seconds
+Exit status: 0
+[SUCCESS] mek_kine 2000 complete: /Users/yamadai/Documents/GitHub/CaMa-Flood_v4/tutorial/tutorial02-mekong_netcdf_4exp/out/mek_kine/o_outflw2000.nc
+
+[STEP] Configure and run 2001
+Start 2001: 2026年 11月 9日 月曜日 11時06分59秒 JST
+End 2000: 2026年 11月 9日 月曜日 11時07分31秒 JST
+Elapsed: 95 seconds
+Exit status: 0
+[SUCCESS] mek_nofld 2000 complete: /Users/yamadai/Documents/GitHub/CaMa-Flood_v4/tutorial/tutorial02-mekong_netcdf_4exp/out/mek_nofld/o_outflw2000.nc
+
+[STEP] Configure and run 2001
+Start 2001: 2026年 11月 9日 月曜日 11時07分31秒 JST
+End 2000: 2026年 11月 9日 月曜日 11時08分28秒 JST
+Elapsed: 156 seconds
+Exit status: 0
+[SUCCESS] mek_nobif 2000 complete: /Users/yamadai/Documents/GitHub/CaMa-Flood_v4/tutorial/tutorial02-mekong_netcdf_4exp/out/mek_nobif/o_outflw2000.nc
+
+[STEP] Configure and run 2001
+Start 2001: 2026年 11月 9日 月曜日 11時08分28秒 JST
+End 2000: 2026年 11月 9日 月曜日 11時08分31秒 JST
+Elapsed: 171 seconds
+Exit status: 0
+[SUCCESS] mek_default 2000 complete: /Users/yamadai/Documents/GitHub/CaMa-Flood_v4/tutorial/tutorial02-mekong_netcdf_4exp/out/mek_default/o_outflw2000.nc
+
+[STEP] Configure and run 2001
+Start 2001: 2026年 11月 9日 月曜日 11時08分31秒 JST
+End 2001: 2026年 11月 9日 月曜日 11時08分41秒 JST
+Elapsed: 102 seconds
+Exit status: 0
+[SUCCESS] mek_kine 2001 complete: /Users/yamadai/Documents/GitHub/CaMa-Flood_v4/tutorial/tutorial02-mekong_netcdf_4exp/out/mek_kine/o_outflw2001.nc
+
+[STEP] Configure and run 2002
+Start 2002: 2026年 11月 9日 月曜日 11時08分41秒 JST
+End 2001: 2026年 11月 9日 月曜日 11時09分06秒 JST
+Elapsed: 95 seconds
+Exit status: 0
+[SUCCESS] mek_nofld 2001 complete: /Users/yamadai/Documents/GitHub/CaMa-Flood_v4/tutorial/tutorial02-mekong_netcdf_4exp/out/mek_nofld/o_outflw2001.nc
+
+[STEP] Configure and run 2002
+Start 2002: 2026年 11月 9日 月曜日 11時09分06秒 JST
+End 2002: 2026年 11月 9日 月曜日 11時10分14秒 JST
+Elapsed: 93 seconds
+Exit status: 0
+[SUCCESS] mek_kine 2002 complete: /Users/yamadai/Documents/GitHub/CaMa-Flood_v4/tutorial/tutorial02-mekong_netcdf_4exp/out/mek_kine/o_outflw2002.nc
+
+[STEP] Configure and run 2003
+Start 2003: 2026年 11月 9日 月曜日 11時10分14秒 JST
+End 2002: 2026年 11月 9日 月曜日 11時10分38秒 JST
+Elapsed: 92 seconds
+Exit status: 0
+[SUCCESS] mek_nofld 2002 complete: /Users/yamadai/Documents/GitHub/CaMa-Flood_v4/tutorial/tutorial02-mekong_netcdf_4exp/out/mek_nofld/o_outflw2002.nc
+
+[STEP] Configure and run 2003
+Start 2003: 2026年 11月 9日 月曜日 11時10分38秒 JST
+End 2001: 2026年 11月 9日 月曜日 11時10分54秒 JST
+Elapsed: 146 seconds
+Exit status: 0
+[SUCCESS] mek_nobif 2001 complete: /Users/yamadai/Documents/GitHub/CaMa-Flood_v4/tutorial/tutorial02-mekong_netcdf_4exp/out/mek_nobif/o_outflw2001.nc
+
+[STEP] Configure and run 2002
+Start 2002: 2026年 11月 9日 月曜日 11時10分54秒 JST
+End 2001: 2026年 11月 9日 月曜日 11時11分45秒 JST
+Elapsed: 194 seconds
+Exit status: 0
+[SUCCESS] mek_default 2001 complete: /Users/yamadai/Documents/GitHub/CaMa-Flood_v4/tutorial/tutorial02-mekong_netcdf_4exp/out/mek_default/o_outflw2001.nc
+
+[STEP] Configure and run 2002
+Start 2002: 2026年 11月 9日 月曜日 11時11分45秒 JST
+End 2003: 2026年 11月 9日 月曜日 11時11分50秒 JST
+Elapsed: 96 seconds
+Exit status: 0
+[SUCCESS] mek_kine 2003 complete: /Users/yamadai/Documents/GitHub/CaMa-Flood_v4/tutorial/tutorial02-mekong_netcdf_4exp/out/mek_kine/o_outflw2003.nc
+
+[SUCCESS] mek_kine completed for 2000-2003.
+Results: /Users/yamadai/Documents/GitHub/CaMa-Flood_v4/tutorial/tutorial02-mekong_netcdf_4exp/out/mek_kine
+End 2003: 2026年 11月 9日 月曜日 11時12分05秒 JST
+Elapsed: 87 seconds
+Exit status: 0
+[SUCCESS] mek_nofld 2003 complete: /Users/yamadai/Documents/GitHub/CaMa-Flood_v4/tutorial/tutorial02-mekong_netcdf_4exp/out/mek_nofld/o_outflw2003.nc
+
+[SUCCESS] mek_nofld completed for 2000-2003.
+Results: /Users/yamadai/Documents/GitHub/CaMa-Flood_v4/tutorial/tutorial02-mekong_netcdf_4exp/out/mek_nofld
+End 2002: 2026年 11月 9日 月曜日 11時12分30秒 JST
+Elapsed: 96 seconds
+Exit status: 0
+[SUCCESS] mek_nobif 2002 complete: /Users/yamadai/Documents/GitHub/CaMa-Flood_v4/tutorial/tutorial02-mekong_netcdf_4exp/out/mek_nobif/o_outflw2002.nc
+
+[STEP] Configure and run 2003
+Start 2003: 2026年 11月 9日 月曜日 11時12分30秒 JST
+End 2002: 2026年 11月 9日 月曜日 11時13分00秒 JST
+Elapsed: 75 seconds
+Exit status: 0
+[SUCCESS] mek_default 2002 complete: /Users/yamadai/Documents/GitHub/CaMa-Flood_v4/tutorial/tutorial02-mekong_netcdf_4exp/out/mek_default/o_outflw2002.nc
+
+[STEP] Configure and run 2003
+Start 2003: 2026年 11月 9日 月曜日 11時13分00秒 JST
+End 2003: 2026年 11月 9日 月曜日 11時13分19秒 JST
+Elapsed: 49 seconds
+Exit status: 0
+[SUCCESS] mek_nobif 2003 complete: /Users/yamadai/Documents/GitHub/CaMa-Flood_v4/tutorial/tutorial02-mekong_netcdf_4exp/out/mek_nobif/o_outflw2003.nc
+
+[SUCCESS] mek_nobif completed for 2000-2003.
+Results: /Users/yamadai/Documents/GitHub/CaMa-Flood_v4/tutorial/tutorial02-mekong_netcdf_4exp/out/mek_nobif
+End 2003: 2026年 11月 9日 月曜日 11時13分52秒 JST
+Elapsed: 52 seconds
+Exit status: 0
+[SUCCESS] mek_default 2003 complete: /Users/yamadai/Documents/GitHub/CaMa-Flood_v4/tutorial/tutorial02-mekong_netcdf_4exp/out/mek_default/o_outflw2003.nc
+
+[SUCCESS] mek_default completed for 2000-2003.
+Results: /Users/yamadai/Documents/GitHub/CaMa-Flood_v4/tutorial/tutorial02-mekong_netcdf_4exp/out/mek_default

@@ -22,7 +22,8 @@ STATIONS = [
     ("My Thuan (Tien)", 64, 99),
     ("Can Tho (Hau/Bassac)", 64, 100),
 ]
-COLORS = {2000: "#1b9e77", 2001: "#d95f02", 2002: "#7570b3", 2003: "#e7298a"}
+# Saturated colors distinguish years; the thicker 2000 line marks the spin-up year.
+COLORS = {2000: "#1B6CA8", 2001: "#00A6A6", 2002: "#E69F00", 2003: "#C44536"}
 
 
 def read_daily_file(path):
@@ -55,12 +56,16 @@ for year in YEARS:
             month_day = date.replace(year=2001)
             day_x.append(month_day)
             discharge.append(value)
-        ax.plot(day_x, discharge, color=COLORS[year], linewidth=0.9,
-                label=str(year), alpha=0.9)
+        is_spinup = year == 2000
+        ax.plot(day_x, discharge, color=COLORS[year],
+                linewidth=2.3 if is_spinup else 0.9,
+                label="2000 (spin-up year)" if is_spinup else str(year),
+                alpha=1.0 if is_spinup else 0.78,
+                zorder=3 if is_spinup else 2)
         ax.axhline(0, color="black", linewidth=0.5)
         ax.grid(alpha=0.2)
         ax.set_ylabel(f"{name}\n(m³/s)")
-axes[0].legend(ncol=4, title="Model year")
+axes[0].legend(ncol=4, title="Model year", frameon=False)
 axes[-1].xaxis.set_major_locator(mdates.MonthLocator())
 axes[-1].xaxis.set_major_formatter(mdates.DateFormatter("%b"))
 axes[-1].set_xlim(datetime(2001, 1, 1), datetime(2002, 1, 1))

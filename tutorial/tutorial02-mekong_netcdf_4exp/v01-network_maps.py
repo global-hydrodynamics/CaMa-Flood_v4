@@ -9,6 +9,8 @@ from matplotlib.collections import LineCollection
 from matplotlib.colors import BoundaryNorm, LinearSegmentedColormap, ListedColormap, LogNorm
 from matplotlib.lines import Line2D
 from matplotlib.patches import FancyArrowPatch, Patch
+from matplotlib.path import Path as MplPath
+from matplotlib.patches import PathPatch
 from netCDF4 import Dataset
 import numpy as np
 
@@ -105,6 +107,68 @@ def read_catchment_mapping(geometry, river_cells):
     return catmx, catmy, valid
 
 
+def compute_headwater_guides(geometry, river_cells, destination_rows,
+                             destination_cols, catmx, catmy, catvalid,
+                             outlon, outlat):
+    """Return centroid-to-outlet segments for cells without incoming main links."""
+    nx, ny, _, _, _, _, _, _, _, hires_resolution, hires_west, _, _, hires_north = geometry
+    ncell = nx * ny
+    incoming_count = np.bincount(
+        destination_rows * nx + destination_cols, minlength=ncell
+    ).reshape(ny, nx)
+    headwater_ids = np.flatnonzero((river_cells & (incoming_count == 0)).ravel())
+
+    # catmxy stores the assigned coarse one-based x/y indices in two int16 records.
+    # Only pixels with an in-range assignment are included; missing and unassigned
+    # sentinels have already been excluded by read_catchment_mapping().
+    pixel_rows, pixel_cols = np.nonzero(catvalid)
+    labels = ((catmy[catvalid].astype(np.int64) - 1) * nx
+              + catmx[catvalid].astype(np.int64) - 1)
+    pixel_counts = np.bincount(labels, minlength=ncell)
+    longitude_sums = np.bincount(
+        labels, weights=hires_west + (pixel_cols + 0.5) * hires_resolution,
+        minlength=ncell)
+    latitude_sums = np.bincount(
+        labels, weights=hires_north - (pixel_rows + 0.5) * hires_resolution,
+        minlength=ncell)
+    centroid_lon = np.full(ncell, np.nan)
+    centroid_lat = np.full(ncell, np.nan)
+    np.divide(longitude_sums, pixel_counts, out=centroid_lon, where=pixel_counts > 0)
+    np.divide(latitude_sums, pixel_counts, out=centroid_lat, where=pixel_counts > 0)
+
+    valid_centroid = pixel_counts[headwater_ids] > 0
+    valid_outlet = (
+        np.isfinite(outlon.ravel()[headwater_ids]) &
+        np.isfinite(outlat.ravel()[headwater_ids]) &
+        (outlon.ravel()[headwater_ids] != -9999) &
+        (outlat.ravel()[headwater_ids] != -9999)
+    )
+    guide_ids = headwater_ids[valid_centroid & valid_outlet]
+    segments = np.stack((
+        np.column_stack((centroid_lon[guide_ids], centroid_lat[guide_ids])),
+        np.column_stack((outlon.ravel()[guide_ids], outlat.ravel()[guide_ids]))
+    ), axis=1)
+
+    if not np.all(np.isfinite(segments)):
+        raise ValueError("A headwater guide has a non-finite centroid or outlet")
+    expected_outlets = np.column_stack((outlon.ravel()[guide_ids], outlat.ravel()[guide_ids]))
+    if not np.array_equal(segments[:, 1, :], expected_outlets):
+        raise ValueError("A headwater guide does not terminate at its cell outlet")
+
+    headwater_rows, headwater_cols = np.unravel_index(headwater_ids, (ny, nx))
+    touches_map_edge = (
+        (headwater_rows == 0) | (headwater_rows == ny - 1) |
+        (headwater_cols == 0) | (headwater_cols == nx - 1)
+    )
+    stats = {
+        "detected": int(headwater_ids.size),
+        "valid_centroids": int(np.count_nonzero(valid_centroid)),
+        "plotted": int(guide_ids.size),
+        "map_edge_candidates": int(np.count_nonzero(touches_map_edge)),
+    }
+    return segments, stats
+
+
 def map_station_pixels(stations, geometry, catmx, catmy, valid):
     """Resolve each geographic point through the documented catmxy index rule."""
     (_, _, _, _, _, _, _, nxhi, nyhi, hires_resolution,
@@ -178,7 +242,9 @@ def geographic_aspect(ax, south, north):
 
 def add_station_markers(ax, stations, lon, lat, outlon, outlat,
                         connect_to="center", show_centers=True,
-                        show_outlets=True, labels=True):
+                        show_outlets=True, labels=True, show_connectors=True,
+                        station_color="#a00065", connector_color="#B8B8B8",
+                        outlet_facecolor="#ffcc55", outlet_edgecolor="#222222"):
     """Show station, grid-center, and outlet locations with selected connectors."""
     connector_segments = []
     for station in stations:
@@ -188,18 +254,19 @@ def add_station_markers(ax, stations, lon, lat, outlon, outlat,
         target = center if connect_to == "center" else outlet
         connector_segments.append((station["station"], target))
 
-    ax.add_collection(LineCollection(connector_segments, colors="#B8B8B8",
-                                     linewidths=0.65, alpha=0.85, zorder=6))
+    if show_connectors:
+        ax.add_collection(LineCollection(connector_segments, colors=connector_color,
+                                         linewidths=0.65, alpha=0.85, zorder=6))
     for station in stations:
         ix, iy = station["cell"]
-        ax.scatter(*station["station"], marker="x", color="#a00065", s=27,
+        ax.scatter(*station["station"], marker="x", color=station_color, s=27,
                    linewidths=1.2, zorder=9)
         if show_centers:
             ax.scatter(lon[ix - 1], lat[iy - 1], marker="o", facecolors="white",
                        edgecolors="#222222", s=28, linewidths=0.8, zorder=8)
         if show_outlets:
             ax.scatter(outlon[iy - 1, ix - 1], outlat[iy - 1, ix - 1], marker="s",
-                       facecolors="#ffcc55", edgecolors="#222222", s=25,
+                       facecolors=outlet_facecolor, edgecolors=outlet_edgecolor, s=25,
                        linewidths=0.7, zorder=8)
         if labels:
             ax.annotate(station["name"], station["station"],
@@ -323,7 +390,7 @@ def plot_grid_network(lon, lat, uparea, links, stations, outlon, outlat, geometr
 
 
 def plot_outlet_network(lon, lat, uparea, links, stations, outlon, outlat,
-                        bsncol, bif, geometry):
+                        bsncol, bif, geometry, headwater_guides, headwater_stats):
     """Panel (c): show outlet connectivity, basin colors, and bifurcations."""
     _, _, rows, cols, dest_rows, dest_cols, _, _, _ = links
     main_segments = np.stack(
@@ -351,6 +418,13 @@ def plot_outlet_network(lon, lat, uparea, links, stations, outlon, outlat,
     bif_delta = bif_segments[:, 1, :] - bif_segments[:, 0, :]
     channel = bif["width"][0, :] > 0
     overland = ~channel
+    channel_width = bif["width"][0, channel]
+    channel_width_groups = np.digitize(
+        np.log10(channel_width),
+        np.quantile(np.log10(channel_width), [0.25, 0.5, 0.75]))
+    channel_group_ids = np.full(channel.shape, -1, dtype=int)
+    channel_group_ids[channel] = channel_width_groups
+    bif_colors = ("#F4A582", "#D6604D", "#B2182B", "#67001F")
     source_error = max(
         float(np.max(np.abs(bif_segments[:, 0, 0] - bif_source_lon))),
         float(np.max(np.abs(bif_segments[:, 0, 1] - bif_source_lat)))
@@ -379,9 +453,14 @@ def plot_outlet_network(lon, lat, uparea, links, stations, outlon, outlat,
               alpha=0.42, zorder=1)
     ax.hlines(y_edges, west, east, colors="#777777", linewidth=0.32,
               alpha=0.42, zorder=1)
+    guide_collection = LineCollection(
+        headwater_guides, colors="#888888", linewidths=0.7,
+        linestyles="solid", alpha=0.65, zorder=1.5, clip_on=True)
+    ax.add_collection(guide_collection)
     area_groups = np.digitize(
         np.log10(source_area), np.quantile(np.log10(source_area), [0.25, 0.5, 0.75]))
-    main_widths = (0.0035, 0.0050, 0.0070, 0.0095)
+    # Quiver widths are inches; all four classes exceed the 0.7-pt headwater guides.
+    main_widths = (0.014, 0.018, 0.024, 0.032)
     main_colors = ("#7FA6D6", "#4F80BF", "#285A9B", "#103A70")
     main_arrows = []
     main_group_masks = []
@@ -392,15 +471,22 @@ def plot_outlet_network(lon, lat, uparea, links, stations, outlon, outlat,
             main_segments[group_mask, 0, 0], main_segments[group_mask, 0, 1],
             main_delta[group_mask, 0], main_delta[group_mask, 1],
             angles="xy", scale_units="xy", scale=1, pivot="tail", units="inches",
-            minlength=0.0, width=width, headwidth=7.5, headlength=6.5,
-            headaxislength=5.8, color=color, alpha=0.92, zorder=2))
-    channel_arrows = ax.quiver(
-        bif_segments[channel, 0, 0], bif_segments[channel, 0, 1],
-        bif_delta[channel, 0], bif_delta[channel, 1], angles="xy",
-        scale_units="xy", scale=1, pivot="tail", units="inches", minlength=0.0,
-        width=0.007,
-        headwidth=7.5, headlength=6.5, headaxislength=5.8,
-        color="#CF3030", alpha=0.96, zorder=4)
+            minlength=0.0, width=width, headwidth=3.5, headlength=4.0,
+            headaxislength=3.5, color=color, alpha=0.92, zorder=2))
+    channel_arrows = []
+    channel_group_masks = []
+    for group, color in enumerate(bif_colors):
+        group_mask = channel & (channel_group_ids == group)
+        if not np.any(group_mask):
+            continue
+        channel_group_masks.append(group_mask)
+        channel_arrows.append(ax.quiver(
+            bif_segments[group_mask, 0, 0], bif_segments[group_mask, 0, 1],
+            bif_delta[group_mask, 0], bif_delta[group_mask, 1], angles="xy",
+            scale_units="xy", scale=1, pivot="tail", units="inches", minlength=0.0,
+            width=0.007,
+            headwidth=7.5, headlength=6.5, headaxislength=5.8,
+            color=color, alpha=0.96, zorder=4))
     overland_arrows = ax.quiver(
         bif_segments[overland, 0, 0], bif_segments[overland, 0, 1],
         bif_delta[overland, 0], bif_delta[overland, 1], angles="xy",
@@ -408,18 +494,19 @@ def plot_outlet_network(lon, lat, uparea, links, stations, outlon, outlat,
         width=0.005,
         headwidth=7.5, headlength=6.5, headaxislength=5.8,
         color="#76B77B", alpha=0.72, zorder=3)
+    channel_arrow_count = sum(arrows.U.size for arrows in channel_arrows)
     if (sum(arrows.U.size for arrows in main_arrows) != len(main_segments) or
-            channel_arrows.U.size != int(channel.sum()) or
+            channel_arrow_count != int(channel.sum()) or
             overland_arrows.U.size != int(overland.sum())):
         raise RuntimeError("Panel (c) did not render every network connection")
     main_origin_error = max(max(
         float(np.max(np.abs(arrows.X - source_lon[group_mask]))),
         float(np.max(np.abs(arrows.Y - source_lat[group_mask])))
     ) for arrows, group_mask in zip(main_arrows, main_group_masks))
-    channel_origin_error = max(
-        float(np.max(np.abs(channel_arrows.X - bif_source_lon[channel]))),
-        float(np.max(np.abs(channel_arrows.Y - bif_source_lat[channel])))
-    )
+    channel_origin_error = max(max(
+        float(np.max(np.abs(arrows.X - bif_source_lon[group_mask]))),
+        float(np.max(np.abs(arrows.Y - bif_source_lat[group_mask]))))
+        for arrows, group_mask in zip(channel_arrows, channel_group_masks))
     overland_origin_error = max(
         float(np.max(np.abs(overland_arrows.X - bif_source_lon[overland]))),
         float(np.max(np.abs(overland_arrows.Y - bif_source_lat[overland])))
@@ -428,12 +515,12 @@ def plot_outlet_network(lon, lat, uparea, links, stations, outlon, outlat,
         float(np.max(np.abs(arrows.X + arrows.U - destination_lon[group_mask]))),
         float(np.max(np.abs(arrows.Y + arrows.V - destination_lat[group_mask])))
     ) for arrows, group_mask in zip(main_arrows, main_group_masks))
-    channel_destination_error = max(
-        float(np.max(np.abs(channel_arrows.X + channel_arrows.U -
-                            bif_destination_lon[channel]))),
-        float(np.max(np.abs(channel_arrows.Y + channel_arrows.V -
-                            bif_destination_lat[channel])))
-    )
+    channel_destination_error = max(max(
+        float(np.max(np.abs(arrows.X + arrows.U -
+                            bif_destination_lon[group_mask]))),
+        float(np.max(np.abs(arrows.Y + arrows.V -
+                            bif_destination_lat[group_mask]))))
+        for arrows, group_mask in zip(channel_arrows, channel_group_masks))
     overland_destination_error = max(
         float(np.max(np.abs(overland_arrows.X + overland_arrows.U -
                             bif_destination_lon[overland]))),
@@ -447,37 +534,42 @@ def plot_outlet_network(lon, lat, uparea, links, stations, outlon, outlat,
 
     add_station_markers(ax, stations, lon, lat, outlon, outlat,
                         connect_to="outlet", show_centers=False,
-                        show_outlets=True)
+                        show_outlets=True, show_connectors=False)
     handles = [
         Line2D([], [], color="#a00065", marker="x", linestyle="None",
                label="Station coordinate"),
         Line2D([], [], marker="s", markerfacecolor="#ffcc55", markeredgecolor="#222222",
                linestyle="None", label="Unit-catchment outlet"),
-        Line2D([], [], color="#B8B8B8", linewidth=0.7,
-               label="Station-to-outlet link"),
-        Line2D([], [], color=main_colors[0], linewidth=0.8,
-               label="Main channel (lower uparea)"),
-        Line2D([], [], color=main_colors[1], linewidth=1.2,
-               label="Main channel (moderate uparea)"),
-        Line2D([], [], color=main_colors[2], linewidth=1.8,
-               label="Main channel (higher uparea)"),
-        Line2D([], [], color=main_colors[3], linewidth=2.4,
-               label="Main channel (highest uparea)"),
-        Line2D([], [], color="#CF3030", linewidth=1.5, label="Channel bifurcation"),
+        Line2D([], [], color=main_colors[2], linewidth=1.7,
+               label="Main channel (uparea classes)"),
+        Line2D([], [], color=bif_colors[2], linewidth=0.7,
+               label="Channel bifurcation (path-width colors)"),
         Line2D([], [], color="#76B77B", linewidth=1.0, label="Overland bifurcation"),
+        Line2D([], [], color="#888888", linewidth=0.7,
+               alpha=0.65, label="Headwater catchment guide"),
         Patch(facecolor="#DDE6EF", edgecolor="none", label="Basin color class (bsncol.nc)"),
-        Line2D([], [], color="#777777", linewidth=0.5, label="15-minute grid boundary"),
+        Line2D([], [], marker="s", linestyle="None", markersize=7,
+               markerfacecolor="none", markeredgecolor="#777777",
+               markeredgewidth=0.6, label="15-minute grid boundary"),
     ]
     ax.legend(handles=handles, loc="lower left", fontsize=7, framealpha=0.94)
     format_geographic_axes(ax, PANEL_C_EXTENT, geometry)
     ax.set_title("(c) Geographic outlet network on the computational grid")
     save_figure(fig, "f01c-outlet_bifurcation.png")
     print(f"Panel (c): {len(main_segments)} main-channel arrows; "
-          f"{channel_arrows.U.size} channel and {overland_arrows.U.size} overland "
+          f"{channel_arrow_count} channel and {overland_arrows.U.size} overland "
           f"bifurcation arrows. Maximum endpoint-to-latlon outlet differences: "
           f"main {max(main_origin_error, main_destination_error):.2g}°, "
           f"channel {max(channel_origin_error, channel_destination_error):.2g}°, "
           f"overland {max(overland_origin_error, overland_destination_error):.2g}°.")
+    print(f"Panel (c) headwater guides: {headwater_stats['detected']} detected; "
+          f"{headwater_stats['valid_centroids']} valid centroids; "
+          f"{headwater_stats['plotted']} plotted; "
+          f"{headwater_stats['map_edge_candidates']} candidates touch the map edge.")
+    if headwater_stats["map_edge_candidates"]:
+        print("WARNING: map-edge cells with no incoming main-channel link are "
+              "connectivity-defined candidates; the regional products cannot "
+              "distinguish genuine headwaters from upstream links outside this map.")
 
 
 def boundary_segments(catmx, catmy, valid, x_edges, y_edges):
@@ -506,7 +598,8 @@ def segments_intersect_extent(segments, extent):
 
 
 def plot_delta_catchments(lon, lat, uparea, nextx, nexty, outlon, outlat,
-                          geometry, catmx, catmy, valid, stations, bif):
+                          geometry, catmx, catmy, valid, stations, bif,
+                          headwater_guides):
     """Panel (d): relate high-resolution catchments, outlets, and delta links."""
     (_, _, _, _, _, _, _, nxhi, nyhi, hires_resolution,
      hires_west, _, _, hires_north) = geometry
@@ -555,6 +648,12 @@ def plot_delta_catchments(lon, lat, uparea, nextx, nexty, outlon, outlat,
               alpha=0.42, zorder=2.5)
     ax.hlines(y_edges, xmin, xmax, colors="#777777", linewidth=0.42,
               alpha=0.42, zorder=2.5)
+
+    visible_headwater_guides = headwater_guides[
+        segments_intersect_extent(headwater_guides, DELTA_EXTENT)]
+    ax.add_collection(LineCollection(
+        visible_headwater_guides, colors="#888888", linewidths=0.7,
+        alpha=0.65, zorder=2.8))
 
     river = np.isfinite(uparea) & (uparea > 0)
     outlet_rows, outlet_cols = np.where(
@@ -623,7 +722,7 @@ def plot_delta_catchments(lon, lat, uparea, nextx, nexty, outlon, outlat,
     bif_width_groups = np.digitize(
         np.log10(delta_bif_width),
         np.quantile(np.log10(delta_bif_width), [0.25, 0.5, 0.75]))
-    bif_line_widths = (1.0, 1.5, 2.2, 3.0)
+    bif_line_widths = (0.45, 0.6, 0.8, 1.05)
     bif_colors = ("#F4A582", "#D6604D", "#B2182B", "#67001F")
     for group, (line_width, color) in enumerate(zip(bif_line_widths, bif_colors)):
         group_mask = bif_width_groups == group
@@ -633,42 +732,44 @@ def plot_delta_catchments(lon, lat, uparea, nextx, nexty, outlon, outlat,
         for segment in delta_bif_segments[group_mask]:
             add_directional_arrow(ax, segment, color, linewidth=line_width,
                                   start_fraction=0.57, end_fraction=0.74,
-                                  size=7.0, zorder=7)
+                                  size=5.5, zorder=7)
 
     visible_stations = [station for station in stations
                         if xmin <= station["station"][0] <= xmax and
                         ymin <= station["station"][1] <= ymax]
     add_station_markers(ax, visible_stations, lon, lat, outlon, outlat,
                         connect_to="outlet", show_centers=False,
-                        show_outlets=True)
+                        show_outlets=True, station_color="#7B2CBF",
+                        connector_color="#7B2CBF", outlet_facecolor="#E6D6F5",
+                        outlet_edgecolor="#7B2CBF")
 
+    catchment_boundary_handle = PathPatch(
+        MplPath([(0.0, 0.0), (0.0, 1.0), (0.38, 1.0), (0.38, 0.58),
+                 (0.68, 0.58), (0.68, 1.0), (1.0, 1.0), (1.0, 0.0),
+                 (0.0, 0.0)],
+                [MplPath.MOVETO] + [MplPath.LINETO] * 7 + [MplPath.CLOSEPOLY]),
+        facecolor="none", edgecolor="#202020", linewidth=0.8,
+        label="Unit-catchment boundary")
     ax.legend(handles=[
-        Line2D([], [], color="#a00065", marker="x", linestyle="None",
+        Line2D([], [], color="#7B2CBF", marker="x", linestyle="None",
                label="Station coordinate"),
-        Line2D([], [], marker="s", markerfacecolor="#ffcc55", markeredgecolor="#111111",
-               linestyle="None", label="Unit-catchment outlet"),
-        Line2D([], [], color="#B8B8B8", linewidth=0.7,
+        Line2D([], [], color="#7B2CBF", linewidth=0.8,
                label="Station-to-outlet link"),
-        Line2D([], [], color="#202020", linewidth=0.7, label="Unit-catchment boundary"),
+        Line2D([], [], marker="s", markerfacecolor="#E6D6F5",
+               markeredgecolor="#7B2CBF", linestyle="None",
+               label="Selected catchment outlet"),
+        catchment_boundary_handle,
         Patch(facecolor="#D9D9D9", edgecolor="none",
               label="Unassigned land pixel (catmxy = -999)"),
-        Line2D([], [], color=main_colors[0], linewidth=0.8,
-               label="Main channel (lower uparea)"),
-        Line2D([], [], color=main_colors[1], linewidth=1.2,
-               label="Main channel (moderate uparea)"),
-        Line2D([], [], color=main_colors[2], linewidth=1.8,
-               label="Main channel (higher uparea)"),
-        Line2D([], [], color=main_colors[3], linewidth=2.4,
-               label="Main channel (highest uparea)"),
-        Line2D([], [], color=bif_colors[0], linewidth=1.0,
-               label="Channel bifurcation (narrower)"),
-        Line2D([], [], color=bif_colors[1], linewidth=1.5,
-               label="Channel bifurcation (moderate)"),
-        Line2D([], [], color=bif_colors[2], linewidth=2.2,
-               label="Channel bifurcation (wider)"),
-        Line2D([], [], color=bif_colors[3], linewidth=3.0,
-               label="Channel bifurcation (widest)"),
-        Line2D([], [], color="#777777", linewidth=0.6, label="15-minute grid boundary"),
+        Line2D([], [], color=main_colors[2], linewidth=1.7,
+               label="Main channel (uparea classes)"),
+        Line2D([], [], color=bif_colors[2], linewidth=1.3,
+               label="Channel bifurcation (path-width colors)"),
+        Line2D([], [], color="#888888", linewidth=0.7, alpha=0.65,
+               label="Headwater catchment guide"),
+        Line2D([], [], marker="s", markerfacecolor="none",
+               markeredgecolor="#777777", linestyle="None", markersize=7,
+               label="15-minute grid boundary"),
     ], loc="upper center", bbox_to_anchor=(0.5, -0.22), ncol=3,
         fontsize=6.5, framealpha=0.94, columnspacing=1.15, handlelength=2.0)
     fig.subplots_adjust(bottom=0.28)
@@ -682,6 +783,7 @@ def plot_delta_catchments(lon, lat, uparea, nextx, nexty, outlon, outlat,
           f"{int(unassigned_land.sum())} unassigned land pixels, "
           f"{len(catchment_edges)} boundaries, {len(channel_indices)} channel "
           f"bifurcation segments (IDs {bif['pth_id'][channel_indices].tolist()}), "
+          f"{len(visible_headwater_guides)} visible headwater guides, "
           f"and {len(visible_segments)} visible nextxy links.")
 
 
@@ -695,6 +797,9 @@ def main():
     map_station_pixels(STATIONS, geometry, catmx, catmy, catvalid)
     invalid_bifurcations = validate_outlets_and_bifurcations(
         STATIONS, geometry, catmx, catmy, catvalid, outlon, outlat, bif)
+    headwater_guides, headwater_stats = compute_headwater_guides(
+        geometry, river, dest_rows, dest_cols, catmx, catmy, catvalid,
+        outlon, outlat)
 
     # Confirm that My Thuan's mapped cell and Can Tho use distinct nextxy reaches.
     my_thuan = next(station for station in STATIONS if station["name"] == "My Thuan")
@@ -755,9 +860,11 @@ def main():
     plot_outlet_network(lon, lat, uparea,
                         (river, mask, rows, cols, dest_rows, dest_cols,
                          segments, nonlocal_mask, invalid),
-                        STATIONS, outlon, outlat, bsncol, bif, geometry)
+                        STATIONS, outlon, outlat, bsncol, bif, geometry,
+                        headwater_guides, headwater_stats)
     plot_delta_catchments(lon, lat, uparea, nextx, nexty, outlon, outlat,
-                          geometry, catmx, catmy, catvalid, STATIONS, bif)
+                          geometry, catmx, catmy, catvalid, STATIONS, bif,
+                          headwater_guides)
 
 
 if __name__ == "__main__":
