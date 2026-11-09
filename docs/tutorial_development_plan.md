@@ -64,7 +64,7 @@ These are goals of the proposed framework, not demonstrated outcomes.
 
 ## Open design questions and next steps
 
-- Review the executed Tutorial 02 station interpretation, spin-up implications, and the observed Prek Kdam/Can Tho behavior before writing the beginner-facing README.
+- Review the executed Tutorial 02 station interpretation, spin-up implications, and observed Prek Kdam/Can Tho behavior before expanding the quick-start README into a full beginner-facing manual.
 - Define a maintainable way to capture representative terminal evidence and regenerate figures while keeping generated outputs out of Git.
 - Determine how the beginner distribution assembly will select Tutorial 02 files and verify that the three variant scripts are omitted from the package.
 

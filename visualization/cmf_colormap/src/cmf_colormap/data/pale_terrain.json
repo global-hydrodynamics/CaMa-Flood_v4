@@ -1,0 +1,17 @@
+{
+  "name": "pale_terrain",
+  "version": "1.0.0",
+  "type": "sequential",
+  "interpolation": "linear_srgb",
+  "description": "A subtle, low-saturation sequential colormap for topographic background fields where foreground features such as river networks should remain prominent.",
+  "control_colors": [
+    {"name": "Pale cyan", "hex": "#E8FAFA"},
+    {"name": "Pale mint", "hex": "#EEFBF6"},
+    {"name": "Pale yellow-green", "hex": "#F4F9E8"},
+    {"name": "Cream", "hex": "#FFFCE9"},
+    {"name": "Pale peach", "hex": "#FFF4E5"},
+    {"name": "Pale pink-beige", "hex": "#FCEBE5"},
+    {"name": "Light pink", "hex": "#F9DADB"},
+    {"name": "Pale rose", "hex": "#F6C9CE"}
+  ]
+}

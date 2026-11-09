@@ -40,7 +40,7 @@ fi
 
 # Dedicated experiment output directory; remove only this sample's known products.
 mkdir -p "$RUNDIR"
-rm -f "$RUNDIR"/o_outflw*.nc "$RUNDIR"/restart*.nc \
+rm -f "$RUNDIR"/o_outflw*.nc "$RUNDIR"/o_pthflw*.nc "$RUNDIR"/restart*.nc \
       "$RUNDIR"/input_cmf*.nam "$RUNDIR"/console_*.log \
       "$RUNDIR"/log_CaMa*.txt "$RUNDIR"/run_time_*.log \
       "$RUNDIR"/MAIN_cmf "$RUNDIR"/mapdata.txt
@@ -140,7 +140,7 @@ CROFSUF = ".nc"             ! Annual filename suffix.
 CMF_BASE = "$CMF_BASE"      ! CaMa-Flood repository root.
 COUTVAR_TABLE = ""           ! Use the output-variable registry under CMF_BASE.
 COUTDIR = "./"               ! Write model output in this annual run directory.
-CVARSOUT = "outflw"          ! Daily mean river/floodplain discharge [m3/s].
+CVARSOUT = "outflw,pthflw"   ! Daily means: grid discharge and bifurcation-path discharge [m3/s].
 COUTTAG = "$YEAR"            ! Annual tag in the output filename.
 LOUTVEC = .FALSE.             ! FALSE: write gridded XY output.
 LOUTCDF = .TRUE.              ! TRUE: write NetCDF output.
@@ -167,8 +167,8 @@ EOF
         exit "$RUN_STATUS"
     fi
     cp "$RUNDIR/log_CaMa.txt" "$RUNDIR/log_CaMa_${YEAR}.txt"
-    printf '[SUCCESS] %s %s complete: %s/o_outflw%s.nc\n' \
-        "$PROJ" "$YEAR" "$RUNDIR" "$YEAR"
+    printf '[SUCCESS] %s %s complete: %s/o_outflw%s.nc and %s/o_pthflw%s.nc\n' \
+        "$PROJ" "$YEAR" "$RUNDIR" "$YEAR" "$RUNDIR" "$YEAR"
     YEAR=$NEXT_YEAR
 done
 

@@ -1,0 +1,20 @@
+{
+  "name": "white_rainbow",
+  "version": "1.0.0",
+  "type": "sequential",
+  "interpolation": "linear_srgb",
+  "description": "A sequential multihue colormap for nonnegative error magnitudes, anomaly magnitudes, and severity indicators, with white representing zero.",
+  "control_colors": [
+    {"name": "White", "hex": "#FFFFFF"},
+    {"name": "Nearly white", "hex": "#EEFFFF"},
+    {"name": "Pale cyan", "hex": "#BEFFFF"},
+    {"name": "Cyan", "hex": "#69F5F8"},
+    {"name": "Aqua green", "hex": "#7AFCCB"},
+    {"name": "Yellow-green", "hex": "#D9F960"},
+    {"name": "Yellow", "hex": "#FFE300"},
+    {"name": "Orange", "hex": "#FFAA00"},
+    {"name": "Orange-red", "hex": "#FF6A00"},
+    {"name": "Red", "hex": "#F52E16"},
+    {"name": "Deep red", "hex": "#E60000"}
+  ]
+}

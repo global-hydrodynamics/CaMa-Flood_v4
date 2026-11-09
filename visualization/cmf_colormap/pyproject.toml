@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cmf-colormap"
+version = "1.0.0"
+description = "Overlay-aware scientific colormaps for river, basin, and floodplain visualization"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.9"
+dependencies = ["matplotlib>=3.7"]
+
+[project.optional-dependencies]
+test = ["numpy>=1.23"]
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+cmf_colormap = ["data/*.csv", "data/*.json"]
