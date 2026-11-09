@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 from netCDF4 import Dataset, num2date
 import numpy as np
+from cmf_colormap import get_cmap
 
 # User settings: annual maximum is calculated from daily mean outflw records.
 TUTORIAL_DIR = Path(__file__).resolve().parent
@@ -65,12 +66,13 @@ if not all_positive:
 vmin = 1.0
 vmax = float(np.max(all_positive))
 norm = LogNorm(vmin=vmin, vmax=vmax)
+cmap = get_cmap("shade_rainbow")  # Optional CMF palette example; data and norm are unchanged.
 fig, axes = plt.subplots(len(YEARS), len(EXPERIMENTS), figsize=(16, 11), sharex=True, sharey=True)
 for col, (experiment, label) in enumerate(EXPERIMENTS.items()):
     for row, year in enumerate(YEARS):
         ax = axes[row, col]
         mesh = ax.pcolormesh(lon, lat, maps[(experiment, year)], shading="nearest",
-                             cmap="viridis", norm=norm)
+                             cmap=cmap, norm=norm)
         ax.set_title(label if row == 0 else "")
         if col == 0:
             ax.set_ylabel(f"{year}\nLatitude (°N)")

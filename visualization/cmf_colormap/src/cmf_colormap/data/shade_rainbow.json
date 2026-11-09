@@ -1,0 +1,21 @@
+{
+  "name": "shade_rainbow",
+  "version": "1.0.0",
+  "type": "sequential",
+  "interpolation": "linear_srgb",
+  "description": "A sequential, multihue colormap designed to increase visual prominence from muted low values to vivid high values.",
+  "control_colors": [
+    {"name": "Gray", "hex": "#AAAAAA"},
+    {"name": "Lavender", "hex": "#C3ADC8"},
+    {"name": "Purple", "hex": "#B49DE3"},
+    {"name": "Blue", "hex": "#6096F4"},
+    {"name": "Cyan", "hex": "#00B7E7"},
+    {"name": "Turquoise", "hex": "#00D5BD"},
+    {"name": "Green", "hex": "#1BF607"},
+    {"name": "Yellow-green", "hex": "#D2F500"},
+    {"name": "Yellow", "hex": "#F6D800"},
+    {"name": "Orange", "hex": "#FF9914"},
+    {"name": "Red", "hex": "#F22F29"},
+    {"name": "Magenta", "hex": "#EB00ED"}
+  ]
+}

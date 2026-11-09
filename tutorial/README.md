@@ -35,3 +35,20 @@ AI agents can inspect code and data, implement and run workflows, collect eviden
 | `<tutorial>/design/` | Developer evidence, generation history, and other tutorial-specific records when applicable. |
 
 Start with [How to develop tutorials](how_to_develop_tutorials.md) to contribute. Tutorial01 is a beginner example; Tutorial02 demonstrates a more advanced scientific comparison. Keep their specific scientific and educational decisions in their own specifications.
+
+## Tutorial02 visualization setup
+
+The annual maximum discharge example uses the optional CMF Shade-Rainbow
+colormap. From the CaMa-Flood repository root, install the local package into
+the Python environment used to run the visualization scripts, then launch the
+Tutorial02 visualization bundle:
+
+```bash
+python -m pip install -e ./visualization/cmf_colormap
+bash tutorial/tutorial02-mekong_netcdf_4exp/v00-visualize_all.sh
+```
+
+The model output and scientific calculations are unchanged; only the selected
+figure's color map is provided by the shared package. See the [CMF Colormaps
+guide](../visualization/cmf_colormap/README.md) for installation details and
+palette limitations.
