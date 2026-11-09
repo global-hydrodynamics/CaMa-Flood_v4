@@ -1,0 +1,4 @@
+site,selection_status,target_lon,target_lat,ix_fortran_1based,iy_fortran_1based,cell_lon,cell_lat,distance_km_approx
+Vientiane,provisional nearest valid catchment cell,102.613,17.929,51,69,102.625,17.875,6.137388619274324
+Phnom Penh,provisional nearest valid catchment cell,104.932,11.562,60,94,104.875,11.625,9.36111428688495
+Can Tho,provisional nearest valid catchment cell,105.79775,10.058,64,100,105.875,10.125,11.27094053389722

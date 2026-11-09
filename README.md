@@ -41,7 +41,7 @@ From the repository root, run the interactive setup scripts:
 ./s02-python_setup.sh
 ```
 
-The Fortran script checks GNU Fortran, OpenMP, and a working NetCDF-Fortran installation, then can write a recommended machine-specific `./Mkinclude`. Review it before manually copying it to `config/Mkinclude`; it never changes the active v5 configuration or legacy `adm/Mkinclude`. The Python script creates or reuses the isolated repository `.venv/`, installs `requirements.txt`, and installs the included CMF Colormaps package from `visualization/cmf_colormap/` in editable mode. This makes `cmf_colormap` available to all tutorials using that environment; packages are not installed into system Python. Both scripts ask before creating or updating the environment and only diagnose when no terminal is attached. Activate the configured environment with `source .venv/bin/activate` before running Python tutorials.
+The Fortran script checks GNU Fortran, OpenMP, and a working NetCDF-Fortran installation, then can write a recommended machine-specific `./Mkinclude`. Review it before manually copying it to `config/Mkinclude`; it never changes the active v5 configuration or legacy `adm/Mkinclude`. The Python script creates or reuses the isolated repository `.venv/`, installs `requirements.txt`, and installs the included CMF Colormaps package from `visualization/cmf_colormap/` in editable mode. This makes `cmf_colormap` available to tutorials using that environment; packages are not installed into system Python. The repository-local `.venv` is the recommended Python setup, while researchers may keep an existing venv, Conda, or HPC-managed environment and configure it manually. The setup script does not modify external environments. Both setup scripts ask before creating or updating the environment and only diagnose when no terminal is attached. Activate the configured environment with `source .venv/bin/activate` before running Python tutorials. See the [Python environment guide](docs/python_environment.md) for both approaches and troubleshooting.
 
 `mek01` uses Binary input data; the standard v5 build still enables NetCDF. `mek02` uses NetCDF runoff and map inputs. MPI is optional and remains disabled in the recommended configuration. Python 3.10 or newer is needed for Python utilities; specialist workflows may have additional dependencies documented in their component guides.
 
@@ -95,6 +95,10 @@ Small tests are located under [src/common/test/](src/common/test/), [src/mod/tes
 ## Development and Contributions
 
 Read [AGENTS.md](AGENTS.md) for development rules, AI-agent behavior, branch management, and contribution procedures. Consult [docs/dev_status.md](docs/dev_status.md) for active-project coordination and the status-publication workflow defined in `AGENTS.md`.
+
+For a worked example of designing and refining scientific tutorials with
+conversational AI, repository-aware coding agents, and researcher review, see
+[Guide01](tutorial/guide01_how_to_develop_tutorial/README.md).
 
 ## Versions and Releases
 

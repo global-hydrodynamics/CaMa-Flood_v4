@@ -1,0 +1,2 @@
+selection_status,rule,site,target_lon,target_lat,ix_fortran_1based,iy_fortran_1based,cell_lon,cell_lat,distance_km_approx,time_coordinate_interval_end,represented_day,control_peak_sfcelv_m
+provisional; researcher review required,earliest interval-end timestamp attaining the maximum Control daily-snapshot sfcelv,Phnom Penh,104.932,11.562,60,94,104.875,11.625,9.36111428688495,2000-09-22T00:00:00,2000-09-21,12.497420310974121

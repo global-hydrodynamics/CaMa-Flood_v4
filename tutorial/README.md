@@ -12,7 +12,25 @@ A tutorial is more than a sample script. It combines a meaningful, repeatable mo
 
 Tutorial-specific specifications define **what to execute and what learners should learn**. Shared guides define **how people and AI agents develop, verify, review, and maintain tutorials**. Manuals are generated from those specifications and checked against actual repository behavior and execution evidence.
 
-### 3. AI-Assisted Generation and Continuous Improvement
+### 3. Design principle: Minimize modifications outside the tutorial directory
+
+Keep tutorial-specific generated files inside the tutorial directory by
+default. This includes modified input datasets, model outputs, analysis
+products, and figures. Avoid unnecessary changes to shared map datasets or
+files owned by other tutorials. Local ownership makes it easier to reproduce
+the workflow, understand which tutorial created a file, and clean up generated
+products.
+
+This is a recommended default, not an absolute restriction. An external change
+may be justified by technical, scientific, or educational needs—for example,
+a tutorial that teaches a shared-map levee scheme may need to add levee
+parameters to a map dataset. The tutorial design should then identify the
+affected files and directories, explain why the external change is needed,
+describe how tutorial-generated files are distinguished, explain how existing
+shared data and other tutorials are protected, and document how to reproduce
+and, where appropriate, reverse the change.
+
+### 4. AI-Assisted Generation and Continuous Improvement
 
 AI agents can inspect code and data, implement and run workflows, collect evidence, and draft manuals. The goal is reproducible, maintainable, and improvable scientific learning material, not just reduced writing effort. Agents may resolve minor implementation and instructional gaps from evidence. Researchers retain authority over scientific decisions, and important educational decisions need human review. Generated material must be checked against code, data, and runs; successful execution does not prove scientific validity. Learner feedback, expert review, and execution findings should improve the specifications and shared guides.
 
@@ -22,6 +40,16 @@ AI agents can inspect code and data, implement and run workflows, collect eviden
 | --- | --- | --- |
 | [Tutorial01 — Get Started](tutorial01-get_started/tutorial_design.md) | Navigate the v5 repository, locate GOSH inputs, build and run a short Mekong example, and find its outputs. | [Beginner manual](tutorial01-get_started/manual_tutorial01-get_started.md) |
 | [Tutorial02 — Mekong NetCDF four-experiment comparison](tutorial02-mekong_netcdf_4exp/tutorial_design.md) | Run annual NetCDF experiments and compare model configurations through hydrograph and spatial output analyses. | Manual not yet prepared. |
+
+## Contributor learning resource
+
+The numbered tutorials teach people how to use CaMa-Flood. [Guide01 —
+Developing Tutorials with Chat AI and Agent AI](guide01_how_to_develop_tutorial/README.md)
+is a contributor guide showing how to design, implement, validate, and document
+tutorials. Its `workflow_example/` contains a river-depth sensitivity example
+and learner manual used to demonstrate that development process. This worked
+example is not, by itself, a separately maintained or fully validated
+Tutorial03 package.
 
 ## Documentation Structure and Contributing
 

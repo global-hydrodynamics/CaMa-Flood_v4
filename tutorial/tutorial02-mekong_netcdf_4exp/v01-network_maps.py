@@ -10,7 +10,6 @@ from matplotlib.colors import BoundaryNorm, LinearSegmentedColormap, ListedColor
 from matplotlib.lines import Line2D
 from matplotlib.patches import FancyArrowPatch, Patch
 from matplotlib.path import Path as MplPath
-from matplotlib.patches import PathPatch
 from netCDF4 import Dataset
 import numpy as np
 
@@ -240,11 +239,20 @@ def geographic_aspect(ax, south, north):
     ax.set_aspect(1 / np.cos(mid_lat))
 
 
+STATION_COLOR = "#D81B60"
+STATION_LINK_STYLE = (0, (3, 2))
+OUTLET_FACE_COLOR = "#FCE4EC"
+
+
 def add_station_markers(ax, stations, lon, lat, outlon, outlat,
                         connect_to="center", show_centers=True,
                         show_outlets=True, labels=True, show_connectors=True,
                         station_color="#a00065", connector_color="#B8B8B8",
-                        outlet_facecolor="#ffcc55", outlet_edgecolor="#222222"):
+                        outlet_facecolor="#ffcc55", outlet_edgecolor="#222222",
+                        connector_linestyle="solid", connector_linewidth=0.65,
+                        connector_alpha=0.85, connector_zorder=6,
+                        station_linewidth=1.2, station_zorder=9,
+                        outlet_zorder=8):
     """Show station, grid-center, and outlet locations with selected connectors."""
     connector_segments = []
     for station in stations:
@@ -256,18 +264,21 @@ def add_station_markers(ax, stations, lon, lat, outlon, outlat,
 
     if show_connectors:
         ax.add_collection(LineCollection(connector_segments, colors=connector_color,
-                                         linewidths=0.65, alpha=0.85, zorder=6))
+                                         linewidths=connector_linewidth,
+                                         linestyles=connector_linestyle,
+                                         alpha=connector_alpha,
+                                         zorder=connector_zorder))
     for station in stations:
         ix, iy = station["cell"]
         ax.scatter(*station["station"], marker="x", color=station_color, s=27,
-                   linewidths=1.2, zorder=9)
+                   linewidths=station_linewidth, zorder=station_zorder)
         if show_centers:
             ax.scatter(lon[ix - 1], lat[iy - 1], marker="o", facecolors="white",
                        edgecolors="#222222", s=28, linewidths=0.8, zorder=8)
         if show_outlets:
             ax.scatter(outlon[iy - 1, ix - 1], outlat[iy - 1, ix - 1], marker="s",
                        facecolors=outlet_facecolor, edgecolors=outlet_edgecolor, s=25,
-                       linewidths=0.7, zorder=8)
+                       linewidths=0.7, zorder=outlet_zorder)
         if labels:
             ax.annotate(station["name"], station["station"],
                         xytext=LABEL_OFFSETS[station["name"]],
@@ -534,11 +545,21 @@ def plot_outlet_network(lon, lat, uparea, links, stations, outlon, outlat,
 
     add_station_markers(ax, stations, lon, lat, outlon, outlat,
                         connect_to="outlet", show_centers=False,
-                        show_outlets=True, show_connectors=False)
+                        show_outlets=True, station_color=STATION_COLOR,
+                        connector_color=STATION_COLOR,
+                        outlet_facecolor=OUTLET_FACE_COLOR,
+                        outlet_edgecolor=STATION_COLOR,
+                        connector_linestyle=STATION_LINK_STYLE,
+                        connector_linewidth=1.0, connector_alpha=0.8,
+                        connector_zorder=1.8, station_linewidth=1.9,
+                        station_zorder=9, outlet_zorder=9)
     handles = [
-        Line2D([], [], color="#a00065", marker="x", linestyle="None",
+        Line2D([], [], color=STATION_COLOR, marker="x", linestyle="None",
                label="Station coordinate"),
-        Line2D([], [], marker="s", markerfacecolor="#ffcc55", markeredgecolor="#222222",
+        Line2D([], [], color=STATION_COLOR, linewidth=1.0,
+               linestyle=STATION_LINK_STYLE, label="Station-to-outlet link"),
+        Line2D([], [], marker="s", markerfacecolor=OUTLET_FACE_COLOR,
+               markeredgecolor=STATION_COLOR,
                linestyle="None", label="Unit-catchment outlet"),
         Line2D([], [], color=main_colors[2], linewidth=1.7,
                label="Main channel (uparea classes)"),
@@ -739,26 +760,31 @@ def plot_delta_catchments(lon, lat, uparea, nextx, nexty, outlon, outlat,
                         ymin <= station["station"][1] <= ymax]
     add_station_markers(ax, visible_stations, lon, lat, outlon, outlat,
                         connect_to="outlet", show_centers=False,
-                        show_outlets=True, station_color="#7B2CBF",
-                        connector_color="#7B2CBF", outlet_facecolor="#E6D6F5",
-                        outlet_edgecolor="#7B2CBF")
+                        show_outlets=True, station_color=STATION_COLOR,
+                        connector_color=STATION_COLOR,
+                        outlet_facecolor=OUTLET_FACE_COLOR,
+                        outlet_edgecolor=STATION_COLOR,
+                        connector_linestyle=STATION_LINK_STYLE,
+                        connector_linewidth=1.0, connector_alpha=0.8,
+                        connector_zorder=2.9, station_linewidth=1.9,
+                        station_zorder=9, outlet_zorder=9)
 
-    catchment_boundary_handle = PathPatch(
-        MplPath([(0.0, 0.0), (0.0, 1.0), (0.38, 1.0), (0.38, 0.58),
-                 (0.68, 0.58), (0.68, 1.0), (1.0, 1.0), (1.0, 0.0),
-                 (0.0, 0.0)],
-                [MplPath.MOVETO] + [MplPath.LINETO] * 7 + [MplPath.CLOSEPOLY]),
-        facecolor="none", edgecolor="#202020", linewidth=0.8,
-        label="Unit-catchment boundary")
+    catchment_boundary_marker = MplPath(
+        [(-1.0, -1.0), (-1.0, 0.2), (-0.35, 0.2), (-0.35, 1.0),
+         (0.35, 1.0), (0.35, 0.2), (1.0, 0.2), (1.0, -1.0), (-1.0, -1.0)],
+        [MplPath.MOVETO] + [MplPath.LINETO] * 7 + [MplPath.CLOSEPOLY])
     ax.legend(handles=[
-        Line2D([], [], color="#7B2CBF", marker="x", linestyle="None",
+        Line2D([], [], color=STATION_COLOR, marker="x", linestyle="None",
                label="Station coordinate"),
-        Line2D([], [], color="#7B2CBF", linewidth=0.8,
+        Line2D([], [], color=STATION_COLOR, linewidth=1.0,
+               linestyle=STATION_LINK_STYLE,
                label="Station-to-outlet link"),
-        Line2D([], [], marker="s", markerfacecolor="#E6D6F5",
-               markeredgecolor="#7B2CBF", linestyle="None",
+        Line2D([], [], marker="s", markerfacecolor=OUTLET_FACE_COLOR,
+               markeredgecolor=STATION_COLOR, linestyle="None",
                label="Selected catchment outlet"),
-        catchment_boundary_handle,
+        Line2D([], [], marker=catchment_boundary_marker,
+               markerfacecolor="none", markeredgecolor="#202020",
+               markersize=9, linestyle="None", label="Unit-catchment boundary"),
         Patch(facecolor="#D9D9D9", edgecolor="none",
               label="Unassigned land pixel (catmxy = -999)"),
         Line2D([], [], color=main_colors[2], linewidth=1.7,
