@@ -23,9 +23,7 @@ python -m pip install -e .
 Matplotlib is the only runtime dependency. NumPy is used by the gallery example
 and is already a Matplotlib dependency.
 
-The package carries the CaMa-Flood repository's Apache License 2.0 text. Confirm
-that this is the intended standalone license before publishing the independent
-repository.
+The package is distributed under Apache License 2.0; see [`LICENSE`](LICENSE).
 
 ## Use
 
@@ -94,8 +92,13 @@ Regenerate both images after changing or adding a registry entry:
 python examples/plot_colormap_gallery.py
 ```
 
-Run the focused tests from this package directory with
-`python -m unittest discover -s tests` (or use `pytest tests`).
+Install the test dependency and run the focused tests from this package
+directory:
+
+```bash
+python -m pip install -e '.[test]'
+python -m unittest discover -s tests -v
+```
 
 The plotting program reads definitions from package data and writes preview PNGs
 beside itself. It does not maintain separate color definitions.
@@ -123,47 +126,45 @@ scientific classification.
 
 ## Development and subtree synchronization
 
-This directory is designed to be used either inside CaMa-Flood or as the root
-of the future `global-hydrodynamics/cmf_colormap` repository. The intended
-integration prefix is `visualization/cmf_colormap`; no submodule is needed by
-CaMa-Flood users.
+This directory is both the package location in CaMa-Flood and the root of the
+standalone [`global-hydrodynamics/cmf_colormap`](https://github.com/global-hydrodynamics/cmf_colormap)
+repository. CaMa-Flood integrates it with Git subtree at the prefix
+`visualization/cmf_colormap`; no submodule is needed by CaMa-Flood users. The
+standalone repository uses `master` as its default branch.
 
-### Initial subtree setup
+### Initial subtree import
 
-The standalone repository returned HTTP 404 when checked during initial
-implementation, so its existence and default branch must be confirmed before
-setup. Do not create it or push to it without maintainer authorization. The
-package currently has no committed path history in CaMa-Flood, so there is not
-yet a subtree history to export.
+The package was first developed and committed inside CaMa-Flood. For the first
+publication, export its path history, rejoin the split history to the existing
+CaMa-Flood branch, then push the exported commit to the empty standalone
+`master` branch. `--rejoin` is important here: the initial split by itself does
+not connect the standalone history to the CaMa-Flood branch for a later subtree
+pull. Rejoining adds a merge commit to the CaMa-Flood branch; it does not rewrite
+or replace existing commits.
 
-After the standalone repository exists and maintainers approve the import:
+From the CaMa-Flood repository:
 
-1. Commit the complete package directory on the approved CaMa-Flood development
-   branch. Git subtree split only includes committed history.
+1. Commit package changes on the approved CaMa-Flood development branch. Subtree
+   operations include committed content only.
 2. Add the standalone remote locally if it is not already configured:
 
    ```bash
-   git remote add cmf-colormap https://github.com/global-hydrodynamics/cmf_colormap.git
+   git remote add cmf-colormap git@github.com:global-hydrodynamics/cmf_colormap.git
    ```
 
-3. Export the package's path history without rewriting CaMa-Flood history, then
-   push it to a dedicated import branch and open a PR to the standalone repo's
-   `main`:
+3. Split and rejoin the subtree history, then publish that split to the
+   standalone default branch. This direct push is for the initial import into
+   an empty repository only; do not force-push.
 
    ```bash
-   git subtree split --rejoin --prefix=visualization/cmf_colormap -b cmf-colormap-export
-   git push cmf-colormap cmf-colormap-export:initial-subtree-import
+   git subtree split --rejoin --prefix=visualization/cmf_colormap
+   git subtree push --prefix=visualization/cmf_colormap cmf-colormap master
    ```
 
-4. Merge that PR without squash/rebase so the exported commit ancestry is
-   retained. Once it is on standalone `main`, synchronize the established
-   subtree with the routine pull command below.
-
-This path exports the existing package content rather than trying `git subtree
-add` over a directory that already exists. It does not amend, rebase, or replace
-CaMa-Flood commits. Review the resulting histories before the first import; if
-the standalone repository has any independent commits or starter files, stop
-and agree on a merge plan rather than overwriting either side.
+The independent repository must still be empty before the initial push. If it
+already has commits or files, stop and agree on a history integration plan.
+Never use `git subtree add` over the existing package directory, and do not
+squash, rebase, or force-push shared history.
 
 ### Routine synchronization
 
@@ -174,19 +175,25 @@ files. Do not independently edit both copies and reconcile them later.
 From CaMa-Flood, pull standalone changes:
 
 ```bash
-git subtree pull --prefix=visualization/cmf_colormap cmf-colormap main
+git subtree pull --prefix=visualization/cmf_colormap cmf-colormap master
 ```
 
-To send CaMa-Flood changes back, export to a dedicated branch and open a PR to
-standalone `main`:
+To send CaMa-Flood changes back, push the subtree split to standalone `master`:
 
 ```bash
-git subtree push --prefix=visualization/cmf_colormap cmf-colormap cmf-colormap-update
+git subtree push --prefix=visualization/cmf_colormap cmf-colormap master
 ```
 
-These are non-squashed subtree operations. Preserving commit ancestry lets the
-two repositories recognize shared package history and makes later two-way
-syncs easier to review. Do not squash the subtree commits or force-push either
-project's shared branch. If a pull reports conflicts, resolve the package files
-as an ordinary merge, run this package's tests, and commit the merge before
-continuing. Never synchronize while the package has uncommitted changes.
+These are non-squashed subtree operations. Synchronize before editing in the
+other repository, and do not independently edit both copies. Never synchronize
+with uncommitted package changes. If a pull reports conflicts, resolve them as
+an ordinary merge, run the package tests, and commit the merge before
+continuing. If a standalone change is based on history not yet present in the
+CaMa-Flood subtree, first inspect the histories; do not force-push or use
+automatic conflict resolution.
+
+### Standalone continuous integration
+
+The standalone repository runs the package unit tests on pushes and pull
+requests. The workflow installs the package and its test dependencies from
+`pyproject.toml`; it does not need CaMa-Flood model data or executables.
