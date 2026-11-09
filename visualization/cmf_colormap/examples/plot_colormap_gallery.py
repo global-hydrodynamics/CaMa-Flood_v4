@@ -29,9 +29,9 @@ def _gradient(cmap, count=1024):
 
 def plot_gallery():
     """Write a compact 0–1 gallery for all registered maps."""
-    names = list_colormaps()
     with (DATA_DIR / "colormaps.csv").open(encoding="utf-8", newline="") as stream:
         registry = {row["name"]: row for row in csv.DictReader(stream)}
+    names = sorted(list_colormaps(), key=lambda name: int(registry[name]["display_order"]))
     fig, axes = plt.subplots(len(names), 1, figsize=(9, max(2.0, 1.35 * len(names))), squeeze=False)
     for ax, name in zip(axes[:, 0], names):
         ax.imshow(_gradient(get_cmap(name)), aspect="auto", extent=(0, 1, 0, 1))
@@ -52,6 +52,13 @@ def plot_gallery():
     plt.close(fig)
     print(f"Wrote {path}")
     return names
+
+
+def presentation_order():
+    """Return registry names in the presentation order without changing API order."""
+    with (DATA_DIR / "colormaps.csv").open(encoding="utf-8", newline="") as stream:
+        records = list(csv.DictReader(stream))
+    return [record["name"] for record in sorted(records, key=lambda row: int(row["display_order"]))]
 
 
 def _hsv_diagnostics(position, controls):
@@ -258,7 +265,11 @@ def plot_diverge_rainbow_detail():
 
 if __name__ == "__main__":
     plot_gallery()
-    plot_shade_rainbow_detail()
-    plot_white_rainbow_detail()
-    plot_pale_terrain_detail()
-    plot_diverge_rainbow_detail()
+    detail_by_name = {
+        "shade_rainbow": plot_shade_rainbow_detail,
+        "white_rainbow": plot_white_rainbow_detail,
+        "diverge_rainbow": plot_diverge_rainbow_detail,
+        "pale_terrain": plot_pale_terrain_detail,
+    }
+    for colormap_name in presentation_order():
+        detail_by_name[colormap_name]()

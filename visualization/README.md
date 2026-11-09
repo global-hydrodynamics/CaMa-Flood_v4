@@ -2,10 +2,10 @@
 
 This directory contains reusable visualization components and examples. The
 [`cmf_colormap/`](cmf_colormap/README.md) package provides four registered
-scientific palettes: Shade-Rainbow for subdued-to-prominent sequential
-magnitudes, White-Rainbow for nonnegative error magnitudes, Pale-Terrain for
-subtle topographic backgrounds, and Diverge-Rainbow for signed errors and
-anomalies. The collection follows an overlay-aware design philosophy for
+scientific palettes. Shade-Rainbow, White-Rainbow, and Diverge-Rainbow are
+primarily foreground palettes for discharge, nonnegative errors, and signed
+errors or anomalies, respectively. Pale-Terrain is a subtle topographic
+background. The collection follows an overlay-aware design philosophy for
 layered maps of rivers, basins, floodplains, and related geospatial information.
 
 Install it from the CaMa-Flood repository root with:

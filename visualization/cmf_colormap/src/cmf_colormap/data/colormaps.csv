@@ -1,5 +1,5 @@
-name,display_name,type,definition,version,interpolation,description
-shade_rainbow,Shade-Rainbow,sequential,shade_rainbow.json,1.0.0,linear_srgb,"Sequential colormap transitioning from muted gray to vivid rainbow colors"
-white_rainbow,White-Rainbow,sequential,white_rainbow.json,1.0.0,linear_srgb,"Sequential colormap transitioning from white through cyan, yellow, orange, and red for nonnegative magnitudes"
-pale_terrain,Pale-Terrain,sequential,pale_terrain.json,1.0.0,linear_srgb,"Subtle low-saturation colormap for topographic backgrounds with prominent foreground features"
-diverge_rainbow,Diverge-Rainbow,diverging,diverge_rainbow.json,1.0.0,linear_srgb,"Diverging colormap with a pale mint-green center for signed errors and anomalies"
+name,display_name,type,definition,version,interpolation,display_order,description
+shade_rainbow,Shade-Rainbow,sequential,shade_rainbow.json,1.0.0,linear_srgb,1,"Sequential colormap transitioning from muted gray to vivid rainbow colors"
+white_rainbow,White-Rainbow,sequential,white_rainbow.json,1.0.0,linear_srgb,2,"Sequential colormap transitioning from white through cyan, yellow, orange, and red for nonnegative magnitudes"
+pale_terrain,Pale-Terrain,sequential,pale_terrain.json,1.0.0,linear_srgb,4,"Subtle low-saturation colormap for topographic backgrounds with prominent foreground features"
+diverge_rainbow,Diverge-Rainbow,diverging,diverge_rainbow.json,1.0.0,linear_srgb,3,"Diverging colormap with a pale mint-green center for signed errors and anomalies"

@@ -67,7 +67,8 @@ def _registry_by_name() -> dict[str, dict[str, str]]:
         raise RuntimeError(f"Could not read CMF colormap registry {path}: {exc}") from exc
 
     required = {
-        "name", "display_name", "type", "definition", "version", "interpolation", "description"
+        "name", "display_name", "type", "definition", "version", "interpolation",
+        "display_order", "description",
     }
     if not rows or not required.issubset(rows[0]):
         raise ValueError(f"{path} must contain the columns: {', '.join(sorted(required))}")
@@ -85,7 +86,11 @@ def _registry_by_name() -> dict[str, dict[str, str]]:
 
 
 def list_colormaps() -> list[str]:
-    """Return CMF colormap names in registry order."""
+    """Return CMF colormap names in stable CSV row order.
+
+    This API order is kept separate from the presentation order used by galleries
+    and documentation, which is defined by the registry's ``display_order``.
+    """
     return list(_registry_by_name())
 
 

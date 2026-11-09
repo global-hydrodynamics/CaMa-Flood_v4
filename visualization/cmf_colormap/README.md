@@ -1,10 +1,9 @@
 # CMF Colormaps
 
-CMF Colormaps is a small, reusable Python library for palettes developed for
-CaMa-Flood visualizations. It currently provides four independently
-selectable colormaps: the sequential **Shade-Rainbow**, **White-Rainbow**, and
-**Pale-Terrain**, plus the diverging **Diverge-Rainbow**. They serve different
-display purposes and are not universal replacements for other palettes.
+CMF Colormaps is a small, reusable Python library of palettes for scientific
+visualization of rivers, river basins, floodplains, and related geospatial
+information. Its four colormaps have different visual roles; they are not
+universal replacements for other palettes.
 
 ## Overlay-Aware Colormap Design
 
@@ -16,27 +15,59 @@ display purposes and are not universal replacements for other palettes.
 > prominence so that the intended scientific information remains readable
 > without unnecessarily obscuring other layers.
 
-This is a design philosophy, not a claim that every CMF colormap is optimal on
-all backgrounds, displays, or for all viewers. The palettes balance several
-considerations:
+This is a design philosophy, not a claim that every CMF colormap is optimal for
+all backgrounds, displays, or viewers. The palette designs consider visual
+hierarchy, compatibility with common map backgrounds, foreground layer
+visibility, reproducibility of color definitions, and the scientific meaning
+of visual prominence. These choices involve trade-offs with perceptual
+uniformity, color-vision accessibility, and quantitative comparability.
 
-1. **Visual hierarchy:** important scientific information should draw attention
-   while supporting information remains visually subordinate.
-2. **Background compatibility:** evaluate colors against common white, light
-   gray, dark gray, and shaded-terrain backgrounds.
-3. **Controlled prominence:** low, near-zero, or background values may be muted
-   while important magnitudes or anomalies are emphasized.
-4. **Layer compatibility:** account for overlaid rivers, coastlines, basin
-   boundaries, water bodies, and observation markers.
-5. **Reproducibility:** record and test control colors, interpolation methods,
-   and normalized positions explicitly.
-6. **Scientific interpretation:** visual prominence should suit the intended
-   interpretation, rather than act as a universal indicator of increasing
-   numerical magnitude.
+## General Colormap Gallery
 
-These choices involve trade-offs with perceptual uniformity, color-vision
-accessibility, and quantitative comparability. Choose a map and normalization
-for the particular data, background, audience, and scientific question.
+The gallery uses the canonical presentation order: Shade-Rainbow,
+White-Rainbow, Diverge-Rainbow, and Pale-Terrain. The first three are intended
+primarily for foreground scientific data; Pale-Terrain is intended primarily
+for background visualization.
+
+![CMF colormap gallery](examples/colormap_gallery.png)
+
+Presentation order is stored in the registry's `display_order` field. The
+public `list_colormaps()` API retains its original CSV row order for
+compatibility; that API order is separate from gallery and documentation
+presentation order.
+
+## Examples of Layered River Visualization
+
+These reproducible examples use synthetic data only. They do not represent
+observations or CaMa-Flood simulation results.
+
+### Shade-Rainbow and White-Rainbow on the same river network
+
+Both panels use the same connected synthetic drainage network and grayscale
+shaded-relief background. Shade-Rainbow uses logarithmic synthetic discharge
+that accumulates downstream, so larger channels become more prominent.
+White-Rainbow shows spatially varying nonnegative error magnitudes: near-zero
+errors remain visible as white or pale cyan lines, while larger errors become
+yellow, orange, and red. White represents zero or negligible error here; it
+does not mean missing data. Missing values should be masked separately.
+
+![Shade-Rainbow discharge and White-Rainbow error on matching synthetic river networks](examples/river_overlay_comparison.png)
+
+### Diverge-Rainbow signed errors
+
+Diverge-Rainbow maps negative and positive synthetic gauge errors around a pale
+mint-green zero value. The center remains distinct from the grayscale terrain
+and dark river linework.
+
+![Diverge-Rainbow signed errors and synthetic gauge overlay](examples/diverge_rainbow_detailed.png)
+
+### Pale-Terrain background
+
+Pale-Terrain provides subtle topographic context while the darker river network
+remains prominent. The terrain and channels in this detailed preview are
+synthetic.
+
+![Pale-Terrain with a synthetic foreground river network](examples/pale_terrain_detailed.png)
 
 ## Install
 
@@ -46,132 +77,111 @@ From a CaMa-Flood checkout:
 python -m pip install -e ./visualization/cmf_colormap
 ```
 
-The package can also be installed from a standalone clone of this directory:
+From a standalone clone of this repository directory:
 
 ```bash
 python -m pip install -e .
 ```
 
-Matplotlib is the only runtime dependency. NumPy is used by the gallery example
-and is already a Matplotlib dependency.
-
-The package is distributed under Apache License 2.0; see [`LICENSE`](LICENSE).
+Matplotlib is the only runtime dependency. NumPy, used for examples and tests,
+is already a Matplotlib dependency. The package is distributed under Apache
+License 2.0; see [`LICENSE`](LICENSE).
 
 ## Use
 
 ```python
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
-
 from cmf_colormap import get_cmap
 
-cmap = get_cmap("shade_rainbow")
-image = ax.pcolormesh(lon, lat, discharge, cmap=cmap,
-                      norm=LogNorm(vmin=5, vmax=1_000_000, clip=True))
+image = ax.pcolormesh(
+    longitude, latitude, discharge,
+    cmap=get_cmap("shade_rainbow"),
+    norm=LogNorm(vmin=5, vmax=1_000_000, clip=True),
+)
 fig.colorbar(image, ax=ax, label="Discharge (m³/s)")
 ```
 
-The package does not select a variable, unit, or normalization range. Choose a
-normalization appropriate to the plotted quantity: `Normalize` for a linear
-scale, `LogNorm` for positive values spanning orders of magnitude, or another
-Matplotlib norm where appropriate. The `LogNorm` range above is only an example.
+The package does not choose a variable, unit, or data range. Select a
+normalization that suits the plotted quantity. `LogNorm` and its range above
+are examples only.
 
-Available maps come from the package registry:
+Available names and optional Matplotlib registration:
 
 ```python
 from cmf_colormap import get_cmap, list_colormaps, register_colormaps
 
-print(list_colormaps())  # ['shade_rainbow', 'white_rainbow', 'pale_terrain', 'diverge_rainbow']
-cmap = get_cmap("shade_rainbow")
-
-# Optional global Matplotlib lookup as "cmf.<name>" for all four maps.
-register_colormaps()
+print(list_colormaps())  # Stable API order: shade, white, pale, diverge
+cmap = get_cmap("diverge_rainbow")
+register_colormaps()     # Optional global names: cmf.<name>
 ```
 
-Importing the package does not modify Matplotlib's global registry. Registration
-is explicit and safe to repeat. A pre-existing unrelated `cmf.<name>` entry is
-reported as a collision. Unknown names raise `ValueError` and list registered
-choices.
+Importing the package does not modify Matplotlib's global registry.
+Registration is explicit and safe to repeat. Unknown names raise `ValueError`
+and list the available choices.
 
-## Shade-Rainbow definition
+## Colormap roles and definitions
 
-The authoritative colors and metadata are in
+### Shade-Rainbow
+
+Shade-Rainbow is a sequential multihue map transitioning from muted gray through
+rainbow colors. It is designed primarily for foreground quantities such as
+river discharge over gray or terrain backgrounds: small values are subdued and
+larger values become visually prominent. Its authoritative colors are in
 [`src/cmf_colormap/data/shade_rainbow.json`](src/cmf_colormap/data/shade_rainbow.json).
-Twelve controls are evenly spaced on normalized `[0, 1]`; adjacent RGB channel
-values are interpolated piecewise-linearly in numerical sRGB values. There is no
-HSV, HSL, Lab, perceptual-space, or gamma-corrected light interpolation. The
-first and last control colors are the exact endpoints. HSV values in the detail
-preview are derived for diagnostics only; they do not define the palette.
+Use an appropriate normalization, often logarithmic for positive quantities
+spanning orders of magnitude.
 
-Matplotlib exposes finite lookup tables for colormap objects. This adapter uses
-131,072 entries to keep lookup sampling fine; the JSON interpolation rule remains
-the mathematical source of truth.
+### White-Rainbow
 
-Shade-Rainbow transitions from muted gray at low normalized values to vivid
-rainbow colors at high values. It is designed primarily for river discharge or
-other magnitudes over gray or terrain backgrounds, keeping small values subdued
-and making large values prominent. Select a suitable normalization, such as
-`LogNorm` for positive values spanning orders of magnitude.
-
-## White-Rainbow
-
-White-Rainbow is intended primarily for nonnegative error magnitudes, anomaly
-magnitudes, and severity indicators. Pure white represents zero; pale cyan marks
-small positive values, followed by yellow, orange, and deep red as normalized
-values increase. It is sequential, not diverging, and should not be applied to
-signed errors without first choosing an appropriate transformation, such as an
-absolute error or a separately defined signed-error display.
-
-The authoritative 11-color definition is in
+White-Rainbow is a sequential map for nonnegative error magnitudes, anomaly
+magnitudes, and severity indicators. It transitions from white through cyan,
+yellow, orange, and red. White denotes zero or negligible values, not missing
+data; mask missing values separately. It is not a diverging map and should not
+be used directly for signed errors. Its authoritative colors are in
 [`src/cmf_colormap/data/white_rainbow.json`](src/cmf_colormap/data/white_rainbow.json).
-Controls are evenly spaced from 0 to 1 and interpolated piecewise-linearly in
-numerical sRGB values, following the same convention as Shade-Rainbow.
-Normalization from physical values to `[0, 1]` remains the caller's choice.
+
+### Diverge-Rainbow
+
+Diverge-Rainbow is a diverging multihue map for signed errors, biases, and
+anomalies, including relative drainage-area errors and differences in river
+discharge or water level. Blue tones represent negative values, pale
+mint-green represents the center, and yellow-to-red tones represent positive
+values. The pale center remains visible against light map backgrounds where
+white could blend in. The branches are not perfectly symmetric in perceived
+brightness; this is a design trade-off, not a claim of perceptual uniformity.
+The authoritative definition is in
+[`src/cmf_colormap/data/diverge_rainbow.json`](src/cmf_colormap/data/diverge_rainbow.json).
+
+Use a diverging normalization to map scientific zero to the color midpoint,
+including when numeric limits are asymmetric:
 
 ```python
 import matplotlib.pyplot as plt
-from matplotlib.colors import Normalize
+from matplotlib.colors import TwoSlopeNorm
 from cmf_colormap import get_cmap
 
-plt.imshow(
-    error_magnitude,
-    cmap=get_cmap("white_rainbow"),
-    norm=Normalize(vmin=0, vmax=100),
-)
-plt.colorbar(label="Relative error (%)")
+norm = TwoSlopeNorm(vmin=-50, vcenter=0, vmax=100)
+plt.scatter(longitude, latitude, c=signed_error,
+            cmap=get_cmap("diverge_rainbow"), norm=norm)
+plt.colorbar(label="Signed error")
 ```
 
-The `0–100%` range is illustrative only, not part of the colormap definition.
+The `-50` to `100` range is illustrative only. Set limits for the variable and
+comparison being shown.
 
-## Pale-Terrain
+### Pale-Terrain
 
-Pale-Terrain is a subtle, low-saturation sequential colormap for topographic
-background fields, especially when dark river networks, water bodies, or other
-foreground features should remain prominent. It transitions from pale cyan
-through mint, cream, and peach to pale rose. It is not designed for strong
-perceptual separation of adjacent values and is not perceptually uniform.
-
-The authoritative eight-color definition is in
+Pale-Terrain is a low-saturation sequential map for background topographic
+fields. Its subtle colors provide terrain context without competing with
+foreground rivers, water bodies, or observation points. It is not intended to
+strongly distinguish adjacent values and is not perceptually uniform. The
+authoritative definition is in
 [`src/cmf_colormap/data/pale_terrain.json`](src/cmf_colormap/data/pale_terrain.json).
-The colors are equally spaced and piecewise-linearly interpolated in numerical
-sRGB. The colormap itself is generic: users choose the variable, normalization,
-physical range, or class boundaries. Terrain-slope thresholds are an example
-visualization configuration, not intrinsic properties of Pale-Terrain.
 
-Use the continuous map with any suitable Matplotlib normalization:
-
-```python
-import matplotlib.pyplot as plt
-from matplotlib.colors import Normalize
-from cmf_colormap import get_cmap
-
-plt.imshow(slope, cmap=get_cmap("pale_terrain"), norm=Normalize(vmin=0, vmax=50))
-plt.colorbar(label="Slope (cm/m)")
-```
-
-For an optional eight-class slope display, explicitly use the eight control
-colors with `ListedColormap`; this keeps class-to-color assignments independent
-of the continuous map's lookup-table sampling:
+The map is generic: users choose the variable, normalization, range, and any
+class boundaries. These example slope classes are visualization settings, not
+part of the colormap definition:
 
 ```python
 import numpy as np
@@ -182,181 +192,61 @@ class_cmap = ListedColormap([
     "#E8FAFA", "#EEFBF6", "#F4F9E8", "#FFFCE9",
     "#FFF4E5", "#FCEBE5", "#F9DADB", "#F6C9CE",
 ])
-boundaries = [0, 2, 5, 7, 10, 20, 30, 50, np.inf]
+boundaries = [0, 2, 5, 7, 10, 20, 30, 50, np.inf]  # Example slope (cm/m)
 class_norm = BoundaryNorm(boundaries, ncolors=class_cmap.N)
 plt.imshow(slope, cmap=class_cmap, norm=class_norm)
 plt.colorbar(label="Slope (cm/m)")
 ```
 
-These boundaries illustrate one slope application only; users may choose other
-classes, variables, and units.
+## Preview and tests
 
-## Diverge-Rainbow
-
-Diverge-Rainbow is a diverging multihue map for signed errors, biases, and
-anomalies, including relative drainage-area errors and differences in river
-discharge or water level. Blue tones represent negative values, pale
-mint-green represents the center, and yellow-to-red tones represent positive
-values. The pale center remains visible against light map backgrounds where a
-white zero color could blend in with the background. Its branches are not
-perfectly symmetric in perceived brightness; that is a deliberate design
-trade-off, not a claim of perceptual uniformity.
-
-The authoritative 13-color definition is in
-[`src/cmf_colormap/data/diverge_rainbow.json`](src/cmf_colormap/data/diverge_rainbow.json).
-Control points are equally spaced on `[0, 1]`, with the pale mint center at
-`0.5`; numerical sRGB channels are interpolated piecewise-linearly. The
-colormap contains no units or physical range. Use a diverging normalization to
-map the scientific zero to the color midpoint, including when the limits are
-asymmetric:
-
-```python
-import matplotlib.pyplot as plt
-from matplotlib.colors import TwoSlopeNorm
-from cmf_colormap import get_cmap
-
-cmap = get_cmap("diverge_rainbow")
-norm = TwoSlopeNorm(vmin=-50, vcenter=0, vmax=100)
-plt.scatter(longitude, latitude, c=signed_error, cmap=cmap, norm=norm)
-plt.colorbar(label="Signed error")
-```
-
-The `-50` to `100` range is an illustrative setting; choose limits and center
-for the variable and comparison being shown.
-
-## Previews
-
-The registry-driven gallery shows each available map on a normalized 0–1 axis.
-The registry-driven gallery shows all four colormaps on normalized axes and
-marks the Diverge-Rainbow midpoint. Detailed previews include control
-HEX/HSV/position diagnostics, bars over white/light gray/dark gray, HSV
-component strips, saturation and value curves, and illustrative applications.
-The discharge, error, slope, and signed-error ranges and the synthetic
-background examples are demonstrations only.
-
-![CMF colormap gallery](examples/colormap_gallery.png)
-
-![Shade-Rainbow detailed preview](examples/shade_rainbow_detailed.png)
-
-![White-Rainbow detailed preview](examples/white_rainbow_detailed.png)
-
-![Pale-Terrain detailed preview](examples/pale_terrain_detailed.png)
-
-![Diverge-Rainbow detailed preview](examples/diverge_rainbow_detailed.png)
-
-Regenerate the gallery and all detailed previews after changing or adding a
-registry entry:
+Detailed previews include control HEX/HSV diagnostics, background comparisons,
+HSV component strips, and illustrative application scales. Regenerate the
+registry gallery and detail images with:
 
 ```bash
 python examples/plot_colormap_gallery.py
+python examples/plot_river_overlay_examples.py
 ```
 
-Install the test dependency and run the focused tests from this package
-directory:
+The plotting scripts read color definitions from package data; they do not
+duplicate palette colors. Install test dependencies and run the focused tests
+from this directory:
 
 ```bash
 python -m pip install -e '.[test]'
 python -m unittest discover -s tests -v
 ```
 
-The plotting program reads definitions from package data and writes preview PNGs
-beside itself. It does not maintain separate color definitions.
-
-## Add a colormap
-
-1. Add a JSON definition under `src/cmf_colormap/data/` with a unique name,
-   version, type, interpolation rule, description, and named HEX controls.
-2. Add one row to `colormaps.csv`, pointing to that JSON file.
-3. Keep units and data normalization outside the definition.
-4. Add focused definition/API tests and regenerate the gallery.
-
-The implementation currently accepts `linear_srgb` definitions with at least
-two named HEX controls. Add other interpolation methods only with an explicit
-definition and matching tests.
-
 ## Limitations
 
-None of the colormaps is designed to be perceptually uniform: equal normalized
-steps need not appear equally different. Their multihue transitions may be
-difficult for some viewers with color-vision deficiencies, and changing hues
-can suggest boundaries that are not present in the data. White-Rainbow's white
-low end can blend into a white background; Pale-Terrain is intentionally subtle
-and may not distinguish nearby values strongly. Diverge-Rainbow is not exactly
-symmetric in perceived brightness. The overlay-aware approach is not a claim of
-universal superiority. Consider the data, background, audience, accessibility,
-and alternative palettes when choosing a map; do not interpret these colors as
-scientific classifications by themselves.
+None of the maps is designed to be perceptually uniform. Multihue transitions
+may be difficult for some viewers with color-vision deficiencies, and hue
+changes can suggest boundaries that are not present in the data. White-Rainbow
+can blend into a white background at its low end; Pale-Terrain is intentionally
+subtle; and Diverge-Rainbow is not perfectly symmetric in perceived brightness.
+Overlay-aware design is not a claim of universal superiority. Consider the
+data, background, audience, accessibility, and alternative palettes; do not
+interpret the colors as scientific classifications by themselves.
 
 ## Development and subtree synchronization
 
-This directory is both the package location in CaMa-Flood and the root of the
+This directory is both the package path in CaMa-Flood and the root of the
 standalone [`global-hydrodynamics/cmf_colormap`](https://github.com/global-hydrodynamics/cmf_colormap)
-repository. CaMa-Flood integrates it with Git subtree at the prefix
-`visualization/cmf_colormap`; no submodule is needed by CaMa-Flood users. The
-standalone repository uses `master` as its default branch.
+repository. CaMa-Flood integrates it with Git subtree at
+`visualization/cmf_colormap`; no submodule is required. The standalone default
+branch is checked from the remote before synchronization.
 
-### Initial subtree import
-
-The package was first developed and committed inside CaMa-Flood. For the first
-publication, export its path history, rejoin the split history to the existing
-CaMa-Flood branch, then push the exported commit to the empty standalone
-`master` branch. `--rejoin` is important here: the initial split by itself does
-not connect the standalone history to the CaMa-Flood branch for a later subtree
-pull. Rejoining adds a merge commit to the CaMa-Flood branch; it does not rewrite
-or replace existing commits.
-
-From the CaMa-Flood repository:
-
-1. Commit package changes on the approved CaMa-Flood development branch. Subtree
-   operations include committed content only.
-2. Add the standalone remote locally if it is not already configured:
-
-   ```bash
-   git remote add cmf-colormap git@github.com:global-hydrodynamics/cmf_colormap.git
-   ```
-
-3. Split and rejoin the subtree history, then publish that split to the
-   standalone default branch. This direct push is for the initial import into
-   an empty repository only; do not force-push.
-
-   ```bash
-   git subtree split --rejoin --prefix=visualization/cmf_colormap
-   git subtree push --prefix=visualization/cmf_colormap cmf-colormap master
-   ```
-
-The independent repository must still be empty before the initial push. If it
-already has commits or files, stop and agree on a history integration plan.
-Never use `git subtree add` over the existing package directory, and do not
-squash, rebase, or force-push shared history.
-
-### Routine synchronization
-
-Choose one repository for a change and synchronize before editing the other.
-Commit all package changes first; subtree operations do not include uncommitted
-files. Do not independently edit both copies and reconcile them later.
-
-From CaMa-Flood, pull standalone changes:
+Commit package changes before subtree operations. From CaMa-Flood, pull
+standalone changes using the verified default branch, or push the committed
+subtree to that branch:
 
 ```bash
 git subtree pull --prefix=visualization/cmf_colormap cmf-colormap master
-```
-
-To send CaMa-Flood changes back, push the subtree split to standalone `master`:
-
-```bash
 git subtree push --prefix=visualization/cmf_colormap cmf-colormap master
 ```
 
-These are non-squashed subtree operations. Synchronize before editing in the
-other repository, and do not independently edit both copies. Never synchronize
-with uncommitted package changes. If a pull reports conflicts, resolve them as
-an ordinary merge, run the package tests, and commit the merge before
-continuing. If a standalone change is based on history not yet present in the
-CaMa-Flood subtree, first inspect the histories; do not force-push or use
-automatic conflict resolution.
-
-### Standalone continuous integration
-
-The standalone repository runs the package unit tests on pushes and pull
-requests. The workflow installs the package and its test dependencies from
-`pyproject.toml`; it does not need CaMa-Flood model data or executables.
+These are non-squashed operations. Do not edit both copies independently,
+force-push, or resolve history conflicts automatically. If a pull reports
+conflicts, inspect the histories, resolve as a normal merge, run package tests,
+and commit before continuing.

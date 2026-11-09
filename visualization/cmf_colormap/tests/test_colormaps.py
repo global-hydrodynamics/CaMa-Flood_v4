@@ -54,6 +54,12 @@ class ColormapTests(unittest.TestCase):
             list_colormaps(),
             ["shade_rainbow", "white_rainbow", "pale_terrain", "diverge_rainbow"],
         )
+        display_order = [int(row["display_order"]) for row in self.registry]
+        self.assertEqual(sorted(display_order), [1, 2, 3, 4])
+        self.assertEqual(
+            [row["name"] for row in sorted(self.registry, key=lambda row: int(row["display_order"]))],
+            ["shade_rainbow", "white_rainbow", "diverge_rainbow", "pale_terrain"],
+        )
 
     def test_shade_rainbow_controls_are_exact_and_evenly_spaced(self):
         controls = self.definition["control_colors"]
@@ -232,7 +238,11 @@ class ColormapTests(unittest.TestCase):
             with mock.patch.object(gallery, "HERE", Path(directory)):
                 self.assertEqual(
                     gallery.plot_gallery(),
-                    ["shade_rainbow", "white_rainbow", "pale_terrain", "diverge_rainbow"],
+                    ["shade_rainbow", "white_rainbow", "diverge_rainbow", "pale_terrain"],
+                )
+                self.assertEqual(
+                    gallery.presentation_order(),
+                    ["shade_rainbow", "white_rainbow", "diverge_rainbow", "pale_terrain"],
                 )
             self.assertGreater((Path(directory) / "colormap_gallery.png").stat().st_size, 0)
 
@@ -265,6 +275,50 @@ class ColormapTests(unittest.TestCase):
             with mock.patch.object(gallery, "HERE", Path(directory)):
                 gallery.plot_diverge_rainbow_detail()
             self.assertGreater((Path(directory) / "diverge_rainbow_detailed.png").stat().st_size, 0)
+
+    def test_river_overlay_examples_are_connected_deterministic_linework(self):
+        script = Path(__file__).resolve().parents[1] / "examples" / "plot_river_overlay_examples.py"
+        spec = importlib.util.spec_from_file_location("cmf_colormap_river_examples", script)
+        examples = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(examples)
+        first = examples.build_synthetic_network()
+        second = examples.build_synthetic_network()
+        self.assertGreater(len(first), 80)
+        self.assertEqual(len(first), len(second))
+        for edge_a, edge_b in zip(first, second):
+            np.testing.assert_array_equal(edge_a["coordinates"], edge_b["coordinates"])
+            self.assertEqual(edge_a["flow"], edge_b["flow"])
+            self.assertEqual(edge_a["error"], edge_b["error"])
+        flows = np.asarray([edge["flow"] for edge in first])
+        errors = np.asarray([edge["error"] for edge in first])
+        self.assertEqual(flows.max(), 64)
+        starts = {tuple(edge["coordinates"][0]) for edge in first}
+        for edge in first[:-1]:  # The final edge is the network outlet.
+            self.assertIn(tuple(edge["coordinates"][-1]), starts)
+        self.assertLess(errors.min(), 10)
+        self.assertGreater(errors.max(), 50)
+        self.assertGreater(np.unique(errors).size, 10)
+
+        figure, discharge_lines, error_lines = examples.build_comparison_figure()
+        try:
+            discharge_segments = discharge_lines.get_segments()
+            error_segments = error_lines.get_segments()
+            self.assertEqual(len(discharge_segments), len(first))
+            self.assertEqual(len(error_segments), len(first))
+            np.testing.assert_array_equal(
+                figure.axes[0].images[0].get_array(),
+                figure.axes[1].images[0].get_array(),
+            )
+            for flow_segment, error_segment in zip(discharge_segments, error_segments):
+                np.testing.assert_array_equal(flow_segment, error_segment)
+            self.assertIsNone(discharge_lines.get_alpha())
+            self.assertIsNone(error_lines.get_alpha())
+            with tempfile.TemporaryDirectory() as directory:
+                output = Path(directory) / "river_overlay_comparison.png"
+                examples.plot_river_overlay_comparison(output)
+                self.assertGreater(output.stat().st_size, 0)
+        finally:
+            examples.plt.close(figure)
 
 
 if __name__ == "__main__":
