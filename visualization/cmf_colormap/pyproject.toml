@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "cmf-colormap"
 version = "1.0.0"
-description = "Reusable scientific colormaps developed for CaMa-Flood"
+description = "Overlay-aware scientific colormaps for river, basin, and floodplain visualization"
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.9"

@@ -1,0 +1,23 @@
+{
+  "name": "diverge_rainbow",
+  "version": "1.0.0",
+  "type": "diverging",
+  "interpolation": "linear_srgb",
+  "center_position": 0.5,
+  "description": "A diverging multihue colormap for signed errors, biases, and anomalies, with a pale mint-green center designed to remain visible over light map backgrounds.",
+  "control_colors": [
+    {"name": "Strong blue", "hex": "#1555F4"},
+    {"name": "Blue", "hex": "#257DF6"},
+    {"name": "Azure", "hex": "#15A6F4"},
+    {"name": "Cyan-blue", "hex": "#04C7ED"},
+    {"name": "Turquoise", "hex": "#25E6DF"},
+    {"name": "Pale turquoise", "hex": "#91F5DC"},
+    {"name": "Pale mint-green (zero)", "hex": "#D8FADB"},
+    {"name": "Pale yellow-green", "hex": "#EAFEAD"},
+    {"name": "Yellow-green", "hex": "#F7FB6E"},
+    {"name": "Yellow", "hex": "#FFF036"},
+    {"name": "Golden yellow", "hex": "#FFD227"},
+    {"name": "Orange", "hex": "#FF9020"},
+    {"name": "Red", "hex": "#F32C2E"}
+  ]
+}

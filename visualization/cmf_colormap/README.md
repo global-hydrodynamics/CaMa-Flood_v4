@@ -1,10 +1,42 @@
 # CMF Colormaps
 
 CMF Colormaps is a small, reusable Python library for palettes developed for
-CaMa-Flood visualizations. It currently provides three independently
-selectable sequential colormaps: **Shade-Rainbow**, **White-Rainbow**, and
-**Pale-Terrain**. They serve different display purposes and are not universal
-replacements for other palettes.
+CaMa-Flood visualizations. It currently provides four independently
+selectable colormaps: the sequential **Shade-Rainbow**, **White-Rainbow**, and
+**Pale-Terrain**, plus the diverging **Diverge-Rainbow**. They serve different
+display purposes and are not universal replacements for other palettes.
+
+## Overlay-Aware Colormap Design
+
+> CMF Colormaps are designed primarily for layered scientific visualization of
+> rivers, river basins, and floodplains. Rather than optimizing a colormap
+> solely for displaying a single scalar field, the design considers how colors
+> interact with background terrain, river networks, water bodies, observation
+> points, and other geospatial layers. Each colormap aims to control visual
+> prominence so that the intended scientific information remains readable
+> without unnecessarily obscuring other layers.
+
+This is a design philosophy, not a claim that every CMF colormap is optimal on
+all backgrounds, displays, or for all viewers. The palettes balance several
+considerations:
+
+1. **Visual hierarchy:** important scientific information should draw attention
+   while supporting information remains visually subordinate.
+2. **Background compatibility:** evaluate colors against common white, light
+   gray, dark gray, and shaded-terrain backgrounds.
+3. **Controlled prominence:** low, near-zero, or background values may be muted
+   while important magnitudes or anomalies are emphasized.
+4. **Layer compatibility:** account for overlaid rivers, coastlines, basin
+   boundaries, water bodies, and observation markers.
+5. **Reproducibility:** record and test control colors, interpolation methods,
+   and normalized positions explicitly.
+6. **Scientific interpretation:** visual prominence should suit the intended
+   interpretation, rather than act as a universal indicator of increasing
+   numerical magnitude.
+
+These choices involve trade-offs with perceptual uniformity, color-vision
+accessibility, and quantitative comparability. Choose a map and normalization
+for the particular data, background, audience, and scientific question.
 
 ## Install
 
@@ -49,11 +81,10 @@ Available maps come from the package registry:
 ```python
 from cmf_colormap import get_cmap, list_colormaps, register_colormaps
 
-print(list_colormaps())  # ['shade_rainbow', 'white_rainbow', 'pale_terrain']
+print(list_colormaps())  # ['shade_rainbow', 'white_rainbow', 'pale_terrain', 'diverge_rainbow']
 cmap = get_cmap("shade_rainbow")
 
-# Optional global Matplotlib lookup as "cmf.shade_rainbow" and
-# "cmf.white_rainbow" and "cmf.pale_terrain".
+# Optional global Matplotlib lookup as "cmf.<name>" for all four maps.
 register_colormaps()
 ```
 
@@ -76,11 +107,11 @@ Matplotlib exposes finite lookup tables for colormap objects. This adapter uses
 131,072 entries to keep lookup sampling fine; the JSON interpolation rule remains
 the mathematical source of truth.
 
-Shade-Rainbow transitions from muted gray at low normalized values to more
-visually prominent multihue colors at high values. It can be used for river
-discharge and other continuous quantities with wide ranges; select a suitable
-normalization, such as `LogNorm` for positive values spanning orders of
-magnitude.
+Shade-Rainbow transitions from muted gray at low normalized values to vivid
+rainbow colors at high values. It is designed primarily for river discharge or
+other magnitudes over gray or terrain backgrounds, keeping small values subdued
+and making large values prominent. Select a suitable normalization, such as
+`LogNorm` for positive values spanning orders of magnitude.
 
 ## White-Rainbow
 
@@ -160,14 +191,48 @@ plt.colorbar(label="Slope (cm/m)")
 These boundaries illustrate one slope application only; users may choose other
 classes, variables, and units.
 
+## Diverge-Rainbow
+
+Diverge-Rainbow is a diverging multihue map for signed errors, biases, and
+anomalies, including relative drainage-area errors and differences in river
+discharge or water level. Blue tones represent negative values, pale
+mint-green represents the center, and yellow-to-red tones represent positive
+values. The pale center remains visible against light map backgrounds where a
+white zero color could blend in with the background. Its branches are not
+perfectly symmetric in perceived brightness; that is a deliberate design
+trade-off, not a claim of perceptual uniformity.
+
+The authoritative 13-color definition is in
+[`src/cmf_colormap/data/diverge_rainbow.json`](src/cmf_colormap/data/diverge_rainbow.json).
+Control points are equally spaced on `[0, 1]`, with the pale mint center at
+`0.5`; numerical sRGB channels are interpolated piecewise-linearly. The
+colormap contains no units or physical range. Use a diverging normalization to
+map the scientific zero to the color midpoint, including when the limits are
+asymmetric:
+
+```python
+import matplotlib.pyplot as plt
+from matplotlib.colors import TwoSlopeNorm
+from cmf_colormap import get_cmap
+
+cmap = get_cmap("diverge_rainbow")
+norm = TwoSlopeNorm(vmin=-50, vcenter=0, vmax=100)
+plt.scatter(longitude, latitude, c=signed_error, cmap=cmap, norm=norm)
+plt.colorbar(label="Signed error")
+```
+
+The `-50` to `100` range is an illustrative setting; choose limits and center
+for the variable and comparison being shown.
+
 ## Previews
 
 The registry-driven gallery shows each available map on a normalized 0–1 axis.
-The detailed previews show control HEX/HSV diagnostics, bars over white/light
-gray/dark gray, HSV component strips, saturation and value curves, and an
-illustrative application. The `0–100%` White-Rainbow scale, logarithmic
-discharge Shade-Rainbow scale, and synthetic Pale-Terrain surface are examples
-only.
+The registry-driven gallery shows all four colormaps on normalized axes and
+marks the Diverge-Rainbow midpoint. Detailed previews include control
+HEX/HSV/position diagnostics, bars over white/light gray/dark gray, HSV
+component strips, saturation and value curves, and illustrative applications.
+The discharge, error, slope, and signed-error ranges and the synthetic
+background examples are demonstrations only.
 
 ![CMF colormap gallery](examples/colormap_gallery.png)
 
@@ -176,6 +241,8 @@ only.
 ![White-Rainbow detailed preview](examples/white_rainbow_detailed.png)
 
 ![Pale-Terrain detailed preview](examples/pale_terrain_detailed.png)
+
+![Diverge-Rainbow detailed preview](examples/diverge_rainbow_detailed.png)
 
 Regenerate the gallery and all detailed previews after changing or adding a
 registry entry:
@@ -213,10 +280,12 @@ None of the colormaps is designed to be perceptually uniform: equal normalized
 steps need not appear equally different. Their multihue transitions may be
 difficult for some viewers with color-vision deficiencies, and changing hues
 can suggest boundaries that are not present in the data. White-Rainbow's white
-low end can also blend into a white background. Pale-Terrain is intentionally
-subtle and may not distinguish nearby values strongly. Consider the data,
-background, audience, and alternative palettes when choosing a map; do not
-interpret these color sequences as scientific classifications.
+low end can blend into a white background; Pale-Terrain is intentionally subtle
+and may not distinguish nearby values strongly. Diverge-Rainbow is not exactly
+symmetric in perceived brightness. The overlay-aware approach is not a claim of
+universal superiority. Consider the data, background, audience, accessibility,
+and alternative palettes when choosing a map; do not interpret these colors as
+scientific classifications by themselves.
 
 ## Development and subtree synchronization
 

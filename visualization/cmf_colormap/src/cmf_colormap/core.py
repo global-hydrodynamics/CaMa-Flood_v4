@@ -36,6 +36,10 @@ def _read_definition(name: str) -> dict[str, Any]:
         raise ValueError(f"Registry version for {name!r} does not match {path}")
     if definition.get("type") != record["type"]:
         raise ValueError(f"Registry type for {name!r} does not match {path}")
+    if definition.get("type") == "diverging":
+        center = definition.get("center_position")
+        if not isinstance(center, (int, float)) or not 0.0 < center < 1.0:
+            raise ValueError(f"Diverging definition in {path} must have a center_position in (0, 1)")
     if definition.get("interpolation") != record["interpolation"]:
         raise ValueError(f"Registry interpolation for {name!r} does not match {path}")
     if definition.get("interpolation") != "linear_srgb":

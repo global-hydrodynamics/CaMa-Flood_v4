@@ -11,6 +11,7 @@ from unittest import mock
 
 import numpy as np
 from matplotlib import colormaps
+from matplotlib.colors import TwoSlopeNorm
 
 from cmf_colormap import get_cmap, list_colormaps, register_colormaps
 from cmf_colormap.core import _interpolate_rgb
@@ -32,6 +33,9 @@ class ColormapTests(unittest.TestCase):
         cls.pale_definition = json.loads(
             cls.data.joinpath("pale_terrain.json").read_text(encoding="utf-8")
         )
+        cls.diverge_definition = json.loads(
+            cls.data.joinpath("diverge_rainbow.json").read_text(encoding="utf-8")
+        )
 
     def test_registry_is_unique_and_matches_each_definition(self):
         names = [row["name"] for row in self.registry]
@@ -46,7 +50,10 @@ class ColormapTests(unittest.TestCase):
             self.assertEqual(row["version"], definition["version"])
             self.assertEqual(row["interpolation"], definition["interpolation"])
             self.assertTrue(row["display_name"])
-        self.assertEqual(list_colormaps(), ["shade_rainbow", "white_rainbow", "pale_terrain"])
+        self.assertEqual(
+            list_colormaps(),
+            ["shade_rainbow", "white_rainbow", "pale_terrain", "diverge_rainbow"],
+        )
 
     def test_shade_rainbow_controls_are_exact_and_evenly_spaced(self):
         controls = self.definition["control_colors"]
@@ -129,6 +136,49 @@ class ColormapTests(unittest.TestCase):
         final = tuple(int(controls[-1]["hex"][i:i + 2], 16) / 255 for i in (1, 3, 5))
         np.testing.assert_allclose(cmap(1.0)[:3], final, atol=1e-12)
 
+    def test_diverge_rainbow_definition_matches_approved_controls(self):
+        expected = [
+            "#1555F4", "#257DF6", "#15A6F4", "#04C7ED", "#25E6DF",
+            "#91F5DC", "#D8FADB", "#EAFEAD", "#F7FB6E", "#FFF036",
+            "#FFD227", "#FF9020", "#F32C2E",
+        ]
+        definition = self.diverge_definition
+        controls = definition["control_colors"]
+        self.assertEqual(definition["name"], "diverge_rainbow")
+        self.assertEqual(definition["version"], "1.0.0")
+        self.assertEqual(definition["type"], "diverging")
+        self.assertEqual(definition["interpolation"], "linear_srgb")
+        self.assertEqual(definition["center_position"], 0.5)
+        self.assertEqual([item["hex"] for item in controls], expected)
+        self.assertEqual(len(controls), 13)
+        positions = [index / (len(controls) - 1) for index in range(len(controls))]
+        np.testing.assert_allclose(np.diff(positions), np.full(12, 1 / 12), atol=1e-15)
+        self.assertEqual(controls[0]["hex"], "#1555F4")
+        self.assertEqual(controls[6]["hex"], "#D8FADB")
+        self.assertEqual(controls[-1]["hex"], "#F32C2E")
+        self.assertEqual(self.registry_by_name["diverge_rainbow"]["display_name"], "Diverge-Rainbow")
+        self.assertEqual(self.registry_by_name["diverge_rainbow"]["type"], "diverging")
+
+    def test_diverge_rainbow_interpolation_and_midpoint_normalization(self):
+        controls = self.diverge_definition["control_colors"]
+        center = tuple(int(controls[6]["hex"][i:i + 2], 16) / 255 for i in (1, 3, 5))
+        np.testing.assert_array_equal(_interpolate_rgb(controls, 0.5), center)
+        first = tuple(int(controls[0]["hex"][i:i + 2], 16) / 255 for i in (1, 3, 5))
+        second = tuple(int(controls[1]["hex"][i:i + 2], 16) / 255 for i in (1, 3, 5))
+        np.testing.assert_allclose(
+            _interpolate_rgb(controls, 1 / 24),
+            (np.asarray(first) + np.asarray(second)) / 2,
+            atol=1e-15,
+        )
+        cmap = get_cmap("diverge_rainbow")
+        np.testing.assert_allclose(cmap(0.5)[:3], center, atol=2e-5)
+        norm = TwoSlopeNorm(vmin=-50, vcenter=0, vmax=100)
+        self.assertEqual(norm(0), 0.5)
+
+    def test_diverge_rainbow_matplotlib_registration(self):
+        cmap = get_cmap("diverge_rainbow")
+        self.assertEqual(cmap.name, "diverge_rainbow")
+
     def test_interpolation_endpoints_and_intermediate_rgb(self):
         controls = self.definition["control_colors"]
         first = tuple(int(controls[0]["hex"][i:i + 2], 16) / 255 for i in (1, 3, 5))
@@ -161,7 +211,10 @@ class ColormapTests(unittest.TestCase):
             get_cmap("missing")
 
     def test_registration_is_explicit_and_repeatable(self):
-        names = ("cmf.shade_rainbow", "cmf.white_rainbow", "cmf.pale_terrain")
+        names = (
+            "cmf.shade_rainbow", "cmf.white_rainbow", "cmf.pale_terrain",
+            "cmf.diverge_rainbow",
+        )
         if any(name in colormaps for name in names):
             self.fail("Unexpected pre-existing CMF Matplotlib colormap")
         register_colormaps()
@@ -178,7 +231,8 @@ class ColormapTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             with mock.patch.object(gallery, "HERE", Path(directory)):
                 self.assertEqual(
-                    gallery.plot_gallery(), ["shade_rainbow", "white_rainbow", "pale_terrain"]
+                    gallery.plot_gallery(),
+                    ["shade_rainbow", "white_rainbow", "pale_terrain", "diverge_rainbow"],
                 )
             self.assertGreater((Path(directory) / "colormap_gallery.png").stat().st_size, 0)
 
@@ -201,6 +255,16 @@ class ColormapTests(unittest.TestCase):
             with mock.patch.object(gallery, "HERE", Path(directory)):
                 gallery.plot_pale_terrain_detail()
             self.assertGreater((Path(directory) / "pale_terrain_detailed.png").stat().st_size, 0)
+
+    def test_diverge_rainbow_detailed_preview_generates_signed_overlay(self):
+        script = Path(__file__).resolve().parents[1] / "examples" / "plot_colormap_gallery.py"
+        spec = importlib.util.spec_from_file_location("cmf_colormap_diverge_detail", script)
+        gallery = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(gallery)
+        with tempfile.TemporaryDirectory() as directory:
+            with mock.patch.object(gallery, "HERE", Path(directory)):
+                gallery.plot_diverge_rainbow_detail()
+            self.assertGreater((Path(directory) / "diverge_rainbow_detailed.png").stat().st_size, 0)
 
 
 if __name__ == "__main__":
