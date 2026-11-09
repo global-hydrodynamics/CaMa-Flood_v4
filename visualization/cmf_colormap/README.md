@@ -1,10 +1,10 @@
 # CMF Colormaps
 
 CMF Colormaps is a small, reusable Python library for palettes developed for
-CaMa-Flood visualizations. The initial map, **Shade-Rainbow**, is a sequential,
-multihue colormap designed to make low values visually muted and high values
-more prominent. It is intended as an additional option, not a universal
-replacement for existing palettes.
+CaMa-Flood visualizations. It currently provides three independently
+selectable sequential colormaps: **Shade-Rainbow**, **White-Rainbow**, and
+**Pale-Terrain**. They serve different display purposes and are not universal
+replacements for other palettes.
 
 ## Install
 
@@ -49,10 +49,11 @@ Available maps come from the package registry:
 ```python
 from cmf_colormap import get_cmap, list_colormaps, register_colormaps
 
-print(list_colormaps())  # ['shade_rainbow']
+print(list_colormaps())  # ['shade_rainbow', 'white_rainbow', 'pale_terrain']
 cmap = get_cmap("shade_rainbow")
 
-# Optional global Matplotlib lookup as "cmf.shade_rainbow".
+# Optional global Matplotlib lookup as "cmf.shade_rainbow" and
+# "cmf.white_rainbow" and "cmf.pale_terrain".
 register_colormaps()
 ```
 
@@ -75,18 +76,109 @@ Matplotlib exposes finite lookup tables for colormap objects. This adapter uses
 131,072 entries to keep lookup sampling fine; the JSON interpolation rule remains
 the mathematical source of truth.
 
+Shade-Rainbow transitions from muted gray at low normalized values to more
+visually prominent multihue colors at high values. It can be used for river
+discharge and other continuous quantities with wide ranges; select a suitable
+normalization, such as `LogNorm` for positive values spanning orders of
+magnitude.
+
+## White-Rainbow
+
+White-Rainbow is intended primarily for nonnegative error magnitudes, anomaly
+magnitudes, and severity indicators. Pure white represents zero; pale cyan marks
+small positive values, followed by yellow, orange, and deep red as normalized
+values increase. It is sequential, not diverging, and should not be applied to
+signed errors without first choosing an appropriate transformation, such as an
+absolute error or a separately defined signed-error display.
+
+The authoritative 11-color definition is in
+[`src/cmf_colormap/data/white_rainbow.json`](src/cmf_colormap/data/white_rainbow.json).
+Controls are evenly spaced from 0 to 1 and interpolated piecewise-linearly in
+numerical sRGB values, following the same convention as Shade-Rainbow.
+Normalization from physical values to `[0, 1]` remains the caller's choice.
+
+```python
+import matplotlib.pyplot as plt
+from matplotlib.colors import Normalize
+from cmf_colormap import get_cmap
+
+plt.imshow(
+    error_magnitude,
+    cmap=get_cmap("white_rainbow"),
+    norm=Normalize(vmin=0, vmax=100),
+)
+plt.colorbar(label="Relative error (%)")
+```
+
+The `0–100%` range is illustrative only, not part of the colormap definition.
+
+## Pale-Terrain
+
+Pale-Terrain is a subtle, low-saturation sequential colormap for topographic
+background fields, especially when dark river networks, water bodies, or other
+foreground features should remain prominent. It transitions from pale cyan
+through mint, cream, and peach to pale rose. It is not designed for strong
+perceptual separation of adjacent values and is not perceptually uniform.
+
+The authoritative eight-color definition is in
+[`src/cmf_colormap/data/pale_terrain.json`](src/cmf_colormap/data/pale_terrain.json).
+The colors are equally spaced and piecewise-linearly interpolated in numerical
+sRGB. The colormap itself is generic: users choose the variable, normalization,
+physical range, or class boundaries. Terrain-slope thresholds are an example
+visualization configuration, not intrinsic properties of Pale-Terrain.
+
+Use the continuous map with any suitable Matplotlib normalization:
+
+```python
+import matplotlib.pyplot as plt
+from matplotlib.colors import Normalize
+from cmf_colormap import get_cmap
+
+plt.imshow(slope, cmap=get_cmap("pale_terrain"), norm=Normalize(vmin=0, vmax=50))
+plt.colorbar(label="Slope (cm/m)")
+```
+
+For an optional eight-class slope display, explicitly use the eight control
+colors with `ListedColormap`; this keeps class-to-color assignments independent
+of the continuous map's lookup-table sampling:
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.colors import BoundaryNorm, ListedColormap
+
+class_cmap = ListedColormap([
+    "#E8FAFA", "#EEFBF6", "#F4F9E8", "#FFFCE9",
+    "#FFF4E5", "#FCEBE5", "#F9DADB", "#F6C9CE",
+])
+boundaries = [0, 2, 5, 7, 10, 20, 30, 50, np.inf]
+class_norm = BoundaryNorm(boundaries, ncolors=class_cmap.N)
+plt.imshow(slope, cmap=class_cmap, norm=class_norm)
+plt.colorbar(label="Slope (cm/m)")
+```
+
+These boundaries illustrate one slope application only; users may choose other
+classes, variables, and units.
+
 ## Previews
 
 The registry-driven gallery shows each available map on a normalized 0–1 axis.
-The detailed Shade-Rainbow image includes control HEX/HSV diagnostics,
-background comparisons, HSV component strips and curves, and an example
-log-discharge axis. Its discharge values are illustrative only.
+The detailed previews show control HEX/HSV diagnostics, bars over white/light
+gray/dark gray, HSV component strips, saturation and value curves, and an
+illustrative application. The `0–100%` White-Rainbow scale, logarithmic
+discharge Shade-Rainbow scale, and synthetic Pale-Terrain surface are examples
+only.
 
 ![CMF colormap gallery](examples/colormap_gallery.png)
 
 ![Shade-Rainbow detailed preview](examples/shade_rainbow_detailed.png)
 
-Regenerate both images after changing or adding a registry entry:
+![White-Rainbow detailed preview](examples/white_rainbow_detailed.png)
+
+![Pale-Terrain detailed preview](examples/pale_terrain_detailed.png)
+
+Regenerate the gallery and all detailed previews after changing or adding a
+registry entry:
 
 ```bash
 python examples/plot_colormap_gallery.py
@@ -117,12 +209,14 @@ definition and matching tests.
 
 ## Limitations
 
-Shade-Rainbow is not designed to be perceptually uniform: equal normalized
-steps need not appear equally different. Rainbow-like transitions can also be
-difficult for some color-vision deficiencies and may imply boundaries that are
-not present in the data. Consider the data, background, audience, and alternative
-palettes when choosing a map, and do not interpret the color sequence as a
-scientific classification.
+None of the colormaps is designed to be perceptually uniform: equal normalized
+steps need not appear equally different. Their multihue transitions may be
+difficult for some viewers with color-vision deficiencies, and changing hues
+can suggest boundaries that are not present in the data. White-Rainbow's white
+low end can also blend into a white background. Pale-Terrain is intentionally
+subtle and may not distinguish nearby values strongly. Consider the data,
+background, audience, and alternative palettes when choosing a map; do not
+interpret these color sequences as scientific classifications.
 
 ## Development and subtree synchronization
 

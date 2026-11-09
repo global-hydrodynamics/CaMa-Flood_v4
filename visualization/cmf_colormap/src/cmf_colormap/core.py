@@ -36,6 +36,8 @@ def _read_definition(name: str) -> dict[str, Any]:
         raise ValueError(f"Registry version for {name!r} does not match {path}")
     if definition.get("type") != record["type"]:
         raise ValueError(f"Registry type for {name!r} does not match {path}")
+    if definition.get("interpolation") != record["interpolation"]:
+        raise ValueError(f"Registry interpolation for {name!r} does not match {path}")
     if definition.get("interpolation") != "linear_srgb":
         raise ValueError(f"Unsupported interpolation in {path}: {definition.get('interpolation')!r}")
 
@@ -60,7 +62,9 @@ def _registry_by_name() -> dict[str, dict[str, str]]:
     except OSError as exc:
         raise RuntimeError(f"Could not read CMF colormap registry {path}: {exc}") from exc
 
-    required = {"name", "type", "definition", "version", "description"}
+    required = {
+        "name", "display_name", "type", "definition", "version", "interpolation", "description"
+    }
     if not rows or not required.issubset(rows[0]):
         raise ValueError(f"{path} must contain the columns: {', '.join(sorted(required))}")
     result: dict[str, dict[str, str]] = {}
