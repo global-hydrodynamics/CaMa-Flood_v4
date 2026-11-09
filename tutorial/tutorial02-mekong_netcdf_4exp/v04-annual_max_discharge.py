@@ -9,7 +9,16 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 from netCDF4 import Dataset, num2date
 import numpy as np
-from cmf_colormap import get_cmap
+try:
+    from cmf_colormap import get_cmap
+except ModuleNotFoundError as exc:
+    if exc.name != "cmf_colormap":
+        raise
+    raise SystemExit(
+        "CMF Colormaps is not available in this Python environment. From the "
+        "repository root, run './s02-python_setup.sh', activate it with "
+        "'source .venv/bin/activate', and rerun this script with that Python."
+    ) from exc
 
 # User settings: annual maximum is calculated from daily mean outflw records.
 TUTORIAL_DIR = Path(__file__).resolve().parent

@@ -41,7 +41,7 @@ From the repository root, run the interactive setup scripts:
 ./s02-python_setup.sh
 ```
 
-The Fortran script checks GNU Fortran, OpenMP, and a working NetCDF-Fortran installation, then can write a recommended machine-specific `./Mkinclude`. Review it before manually copying it to `config/Mkinclude`; it never changes the active v5 configuration or legacy `adm/Mkinclude`. The Python script creates the isolated repository `.venv/` and installs `requirements.txt` there, not into system Python. Both scripts ask before creating or replacing files and only diagnose when no terminal is attached.
+The Fortran script checks GNU Fortran, OpenMP, and a working NetCDF-Fortran installation, then can write a recommended machine-specific `./Mkinclude`. Review it before manually copying it to `config/Mkinclude`; it never changes the active v5 configuration or legacy `adm/Mkinclude`. The Python script creates or reuses the isolated repository `.venv/`, installs `requirements.txt`, and installs the included CMF Colormaps package from `visualization/cmf_colormap/` in editable mode. This makes `cmf_colormap` available to all tutorials using that environment; packages are not installed into system Python. Both scripts ask before creating or updating the environment and only diagnose when no terminal is attached. Activate the configured environment with `source .venv/bin/activate` before running Python tutorials.
 
 `mek01` uses Binary input data; the standard v5 build still enables NetCDF. `mek02` uses NetCDF runoff and map inputs. MPI is optional and remains disabled in the recommended configuration. Python 3.10 or newer is needed for Python utilities; specialist workflows may have additional dependencies documented in their component guides.
 

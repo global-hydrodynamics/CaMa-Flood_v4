@@ -5,6 +5,7 @@ set -eu
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 VENV_DIR="$SCRIPT_DIR/.venv"
 REQUIREMENTS="$SCRIPT_DIR/requirements.txt"
+CMF_COLORMAP_DIR="$SCRIPT_DIR/visualization/cmf_colormap"
 
 fail() {
     printf '[ERROR] %s\n' "$1" >&2
@@ -176,6 +177,9 @@ fi
 if [[ ! -f "$REQUIREMENTS" ]]; then
     fail "requirements.txt was not found beside this script."
 fi
+if [[ ! -f "$CMF_COLORMAP_DIR/pyproject.toml" ]]; then
+    fail "CMF Colormaps package was not found at $CMF_COLORMAP_DIR."
+fi
 
 if [[ "$VENV_STATE" == invalid:* ]]; then
     fail "$VENV_STATE. Move the existing environment aside manually before retrying."
@@ -227,26 +231,35 @@ case "$answer" in
 esac
 
 if [[ "$VENV_STATE" != "valid and reusable" ]]; then
-    printf '\n[STEP 1/2] Create the repository-local virtual environment.\n'
+    printf '\n[STEP 1/3] Create the repository-local virtual environment.\n'
     if ! "$SELECTED_PYTHON" -m venv "$VENV_DIR"; then
         fail "could not create .venv with $SELECTED_PYTHON. Confirm its venv/ensurepip support."
     fi
     VENV_PYTHON="$VENV_DIR/bin/python"
 else
-    printf '\n[STEP 1/2] Reuse the validated repository-local virtual environment.\n'
+    printf '\n[STEP 1/3] Reuse the validated repository-local virtual environment.\n'
 fi
 
 if ! "$VENV_PYTHON" -m pip --version >/dev/null 2>&1; then
     fail "pip is unavailable in .venv; recreate it with a Python that includes ensurepip."
 fi
 
-printf '\n[STEP 2/2] Install requirements into .venv.\n'
+printf '\n[STEP 2/3] Install requirements into .venv.\n'
 if ! "$VENV_PYTHON" -m pip install -r "$REQUIREMENTS"; then
     fail "dependency installation failed. Check network access and platform package prerequisites, then rerun."
 fi
 
-if ! "$VENV_PYTHON" -c 'import pandas, xarray, netCDF4' >/dev/null 2>&1; then
-    fail "required imports pandas, xarray, and netCDF4 are unavailable after installation."
+printf '\n[STEP 3/3] Install CMF Colormaps into .venv in editable mode.\n'
+if ! "$VENV_PYTHON" -m pip install -e "$CMF_COLORMAP_DIR"; then
+    fail "CMF Colormaps installation failed from $CMF_COLORMAP_DIR. Check the pip output and rerun."
+fi
+
+if ! "$VENV_PYTHON" -c 'import pandas, xarray, netCDF4, matplotlib' >/dev/null 2>&1; then
+    fail "required imports pandas, xarray, netCDF4, and matplotlib are unavailable after installation."
+fi
+
+if ! "$VENV_PYTHON" -c 'from cmf_colormap import get_cmap; cmap = get_cmap("shade_rainbow"); assert cmap.name == "shade_rainbow"' >/dev/null 2>&1; then
+    fail "CMF Colormaps was installed but its shade_rainbow import/registry check failed. Review the installation output and package files."
 fi
 
 printf '\n[SUCCESS] Python environment ready.\n\n'

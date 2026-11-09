@@ -218,7 +218,7 @@ The visualization workflow is numbered in execution order. Run
 The network script currently emits four related map panels, so all are retained
 under the `f01a`–`f01d` subfigure convention. The other steps use `f02`, `f03a`–`f03b`, and `f04` prefixes; the two `v03` figures are both retained.
 
-The future beginner-facing README should guide users to inspect the tutorial and input paths, review and run the Default configuration, check annual output and Restart files, copy Default to create the three variants, and edit `PROJ`, `LKINE`, `LFPLAIN`, `LPTHOUT`, and `LADPSTP` as specified in Section 2. It should then guide them through the visualization sequence in the table above: network maps, spin-up comparison, discharge comparison, and annual-maximum maps. Its map section should reproduce the Required Map Data table from Section 4.3 and explain which product controls each visible element. The current scripts and figure workflow have been executed; learner-facing commands, sample output, and troubleshooting text still need to be written separately.
+The Tutorial 02 README provides the Python setup and visualization quick start. This design document remains the detailed source for experiment settings, map inputs, and scientific interpretation. A full learner manual with step-by-step run instructions and learning checks remains future work.
 
 The implemented GitHub development contents are:
 
@@ -227,7 +227,7 @@ The implemented GitHub development contents are:
 - `v00-visualize_all.sh` and the `v01`–`v04` Python visualization scripts, including `v01-network_maps.py`,
 - verified hydrograph, annual-maximum, and four-panel spatial network reference figures.
 
-No Tutorial 02 `manual_design.md` or learner-facing README has been specified yet; their educational scope is a separate design task.
+A Tutorial 02 learner manual and `manual_design.md` have not yet been prepared; their educational scope is a separate design task.
 
 Generated model output, Restart files, and logs are excluded from Git. The experiment and visualization scripts and reference figures are included in this implementation phase. The beginner-facing tutorial README remains a separate later task; see Appendix B for package policy.
 
@@ -274,7 +274,7 @@ Generated model output, Restart files, and logs are excluded from Git. The exper
 
 ### B.1 GitHub and beginner package
 
-The GitHub tutorial contains the four experiment scripts, specification, visualization scripts, and verified reference figures, including the four-panel spatial network visualization. Generated output, Restart files, and logs remain untracked under the tutorial-local `out/` ignore rule. The beginner-facing README is still deferred.
+The GitHub tutorial contains the four experiment scripts, specification, visualization scripts, and verified reference figures, including the four-panel spatial network visualization. Generated output, Restart files, and logs remain untracked under the tutorial-local `out/` ignore rule. The full learner manual remains deferred; a README now provides the Python setup and visualization quick start.
 
 The beginner package includes only `mek_default.sh` among the experiment scripts, plus tutorial documentation, visualization tools, and verified reference figures. It excludes `mek_nobif.sh`, `mek_kine.sh`, and `mek_nofld.sh` so learners create the variants by copying and editing Default settings. This is a teaching choice, not a packaging limitation. No package assembly change is made by this specification.
 
