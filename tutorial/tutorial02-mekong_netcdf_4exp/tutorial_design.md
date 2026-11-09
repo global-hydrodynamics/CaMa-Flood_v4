@@ -155,31 +155,9 @@ The local-inertial routing computes signed flow in the direction of the map's do
 
 The Can Tho coordinate and Bassac River label are from the [MRC 2018 Lower Mekong Water Quality Monitoring Report](https://www.mrcmekong.org/publications/2018-lower-mekong-water-quality-monitoring-report/). The [MRC PMFM overview](https://pmfm.mrcmekong.org/?showtemplate=1) describes the Tonle Sap River's seasonal reverse-flow connection to the Mekong. These sources establish site context only; neither supplies observed discharge to this tutorial.
 
-### 4.3 Spin-up visualization and interpretation
+### 4.3 Four-panel spatial river-network visualization
 
-For the local-inertial reference only, the generated figure plots daily discharge for 2000–2003 at the six selected locations on a common January–December seasonal axis. At Vientiane and the other sites, the seasonal curves vary substantially between years; the 2000 curve also differs during parts of the rising/falling seasons. These runs do not isolate initial-condition adjustment from interannual runoff differences, so they do not establish how long a transient lasts or whether one year is sufficient.
-
-The 2000 input and model calendar include February 29. The seasonal overlay omits February 29 and maps the other dates to a common non-leap calendar; the source NetCDF retains all 366 daily records. Interannual runoff differs, so this visualization is descriptive and does not demonstrate spin-up sufficiency.
-
-### 4.4 Four-experiment hydrograph comparison
-
-The generated comparison uses daily `outflw` for 2001–2003 at all six selected model cells, with separate panels by site and year. The unmasked values are finite and the files share the same 120 × 80 coordinates. At Prek Kdam, negative daily means occur in Default (302 of 1,095 days) and No Bifurcation (312 days), while no negative values occur in Kinematic Wave or No Floodplain. This is a simulated result at the selected Tonle Sap cell, not validation against observed reverse-flow discharge.
-
-At My Thuan cell (64,99), Default discharge exceeds No Bifurcation on all 1,095 daily records in 2001–2003; the mean signed difference is +518 m³/s and the maximum absolute difference is 2,522 m³/s. At Can Tho cell (64,100), Default is lower on all 1,095 records; the mean signed difference is −5,171 m³/s and the maximum absolute difference is 21,504 m³/s. By year, maximum/mean absolute differences are 2,522/659, 2,512/583, and 2,004/312 m³/s at My Thuan, and 21,504/6,720, 20,243/5,710, and 12,792/3,083 m³/s at Can Tho (2001, 2002, 2003). The opposite signs at these two configured reaches are consistent with redistribution among branches, but they do not establish the real-world direction or magnitude of flow partition.
-
-Ubon's selected Mun tributary series remains distinct from the mainstream series; Vientiane and Stung Treng show seasonal mainstream hydrographs with large wet-season peaks. These are comparisons among configured simulations only, not accuracy evaluations.
-
-### 4.5 Spatial comparison of annual maximum discharge
-
-For each experiment, derive an annual-maximum map from its daily `outflw` NetCDF for 2001, 2002, and 2003. At each river grid cell, calculate the maximum of the daily mean discharge records belonging to that calendar year; retain `outflw` units of `m3/s`. This statistic compares spatial expression of the configurations and complements the selected-location hydrographs. It is not an instantaneous flood peak.
-
-The NetCDF time coordinate labels each daily mean at the end of its averaging interval; the current writer does not define a time-bounds variable. Annual files end at the exclusive January 1 boundary. Assign records to the year of the represented daily interval (or use the known annual file/record range), not naively to the timestamp's calendar date; the final interval-ending January 1 record belongs to the preceding calendar year.
-
-The generated figure uses a 3 × 4 layout with years as rows and experiments as columns, one shared logarithmic scale from 1 to the largest observed annual maximum (94,305 m³/s), and a common river-cell mask. The largest annual maximum occurs in No Floodplain in 2002. This configuration also has higher spatial 99th-percentile maxima than the other experiments in all three comparison years. The maps show broad shared river-network patterns and spatial differences concentrated along some reaches; they do not identify which configuration is more accurate. Optional signed difference maps remain secondary and were not generated.
-
-### 4.6 Four-panel spatial river-network visualization
-
-The four panels build from a grid attribute to the stored network topology and catchment geometry. Together they show how a regular computational grid represents river cells, downstream connectivity, geographically located unit-catchment outlets, additional bifurcation paths, and irregular high-resolution catchments. The supplied `v04-network_maps.py` script reconstructs the shown links from map products; it does not estimate river connections from geographic proximity.
+The four panels build from a grid attribute to the stored network topology and catchment geometry. Together they show how a regular computational grid represents river cells, downstream connectivity, geographically located unit-catchment outlets, additional bifurcation paths, and irregular high-resolution catchments. The supplied `v01-network_maps.py` script reconstructs the shown links from map products; it does not estimate river connections from geographic proximity.
 
 #### Required Map Data
 
@@ -203,15 +181,50 @@ The map products contain 6,566 cells with positive upstream area and 3,150 valid
 - (c) Distinguish a grid-cell center from its outlet, then identify a main-channel link and the two bifurcation classes.
 - (d) Explain how `catmxy` assigns multiple high-resolution pixels to one coarse unit catchment and how its outlet is located.
 
+### 4.4 Spin-up visualization and interpretation
+
+For the local-inertial reference only, the generated figure plots daily discharge for 2000–2003 at the six selected locations on a common January–December seasonal axis. At Vientiane and the other sites, the seasonal curves vary substantially between years; the 2000 curve also differs during parts of the rising/falling seasons. These runs do not isolate initial-condition adjustment from interannual runoff differences, so they do not establish how long a transient lasts or whether one year is sufficient.
+
+The 2000 input and model calendar include February 29. The seasonal overlay omits February 29 and maps the other dates to a common non-leap calendar; the source NetCDF retains all 366 daily records. Interannual runoff differs, so this visualization is descriptive and does not demonstrate spin-up sufficiency.
+
+### 4.5 Four-experiment hydrograph comparison
+
+The generated comparison uses daily `outflw` for 2001–2003 at all six selected model cells, with separate panels by site and year. The unmasked values are finite and the files share the same 120 × 80 coordinates. At Prek Kdam, negative daily means occur in Default (302 of 1,095 days) and No Bifurcation (312 days), while no negative values occur in Kinematic Wave or No Floodplain. This is a simulated result at the selected Tonle Sap cell, not validation against observed reverse-flow discharge.
+
+At My Thuan cell (64,99), Default discharge exceeds No Bifurcation on all 1,095 daily records in 2001–2003; the mean signed difference is +518 m³/s and the maximum absolute difference is 2,522 m³/s. At Can Tho cell (64,100), Default is lower on all 1,095 records; the mean signed difference is −5,171 m³/s and the maximum absolute difference is 21,504 m³/s. By year, maximum/mean absolute differences are 2,522/659, 2,512/583, and 2,004/312 m³/s at My Thuan, and 21,504/6,720, 20,243/5,710, and 12,792/3,083 m³/s at Can Tho (2001, 2002, 2003). The opposite signs at these two configured reaches are consistent with redistribution among branches, but they do not establish the real-world direction or magnitude of flow partition.
+
+Ubon's selected Mun tributary series remains distinct from the mainstream series; Vientiane and Stung Treng show seasonal mainstream hydrographs with large wet-season peaks. These are comparisons among configured simulations only, not accuracy evaluations.
+
+### 4.6 Spatial comparison of annual maximum discharge
+
+For each experiment, derive an annual-maximum map from its daily `outflw` NetCDF for 2001, 2002, and 2003. At each river grid cell, calculate the maximum of the daily mean discharge records belonging to that calendar year; retain `outflw` units of `m3/s`. This statistic compares spatial expression of the configurations and complements the selected-location hydrographs. It is not an instantaneous flood peak.
+
+The NetCDF time coordinate labels each daily mean at the end of its averaging interval; the current writer does not define a time-bounds variable. Annual files end at the exclusive January 1 boundary. Assign records to the year of the represented daily interval (or use the known annual file/record range), not naively to the timestamp's calendar date; the final interval-ending January 1 record belongs to the preceding calendar year.
+
+The generated figure uses a 3 × 4 layout with years as rows and experiments as columns, one shared logarithmic scale from 1 to the largest observed annual maximum (94,305 m³/s), and a common river-cell mask. The largest annual maximum occurs in No Floodplain in 2002. This configuration also has higher spatial 99th-percentile maxima than the other experiments in all three comparison years. The maps show broad shared river-network patterns and spatial differences concentrated along some reaches; they do not identify which configuration is more accurate. Optional signed difference maps remain secondary and were not generated.
+
 ## 5. Tutorial structure and deliverables
 
-The future beginner-facing README should guide users to inspect the tutorial and input paths, review and run the Default configuration, check annual output and Restart files, copy Default to create the three variants, and edit `PROJ`, `LKINE`, `LFPLAIN`, `LPTHOUT`, and `LADPSTP` as specified in Section 2. It should then guide them through the hydrograph, annual-maximum, and four-panel network-map comparisons. Its map section should reproduce the Required Map Data table from Section 4.6 and explain which product controls each visible element. The current scripts and figure workflow have been executed; learner-facing commands, sample output, and troubleshooting text still need to be written separately.
+The visualization workflow is numbered in execution order. Run
+`v00-visualize_all.sh` to generate the following figures:
+
+| Step | Script | Figure outputs |
+|---|---|---|
+| v01 Network | `v01-network_maps.py` | `figure/f01a-upstream_area.png`, `figure/f01b-grid_network.png`, `figure/f01c-outlet_bifurcation.png`, `figure/f01d-delta_catchments.png` |
+| v02 Spin-up | `v02-spinup_comparison.py` | `figure/f02-spinup_comparison.png` |
+| v03 Discharge | `v03-discharge_comparison.py` | `figure/f03a-station_locations.png`, `figure/f03b-discharge_comparison.png` |
+| v04 Annual maximum | `v04-annual_max_discharge.py` | `figure/f04-annual_max_discharge.png` |
+
+The network script currently emits four related map panels, so all are retained
+under the `f01a`–`f01d` subfigure convention. The other steps use `f02`, `f03a`–`f03b`, and `f04` prefixes; the two `v03` figures are both retained.
+
+The future beginner-facing README should guide users to inspect the tutorial and input paths, review and run the Default configuration, check annual output and Restart files, copy Default to create the three variants, and edit `PROJ`, `LKINE`, `LFPLAIN`, `LPTHOUT`, and `LADPSTP` as specified in Section 2. It should then guide them through the visualization sequence in the table above: network maps, spin-up comparison, discharge comparison, and annual-maximum maps. Its map section should reproduce the Required Map Data table from Section 4.3 and explain which product controls each visible element. The current scripts and figure workflow have been executed; learner-facing commands, sample output, and troubleshooting text still need to be written separately.
 
 The implemented GitHub development contents are:
 
 - `tutorial_design.md` with experiment design and execution evidence,
 - `mek_default.sh`, `mek_nobif.sh`, `mek_kine.sh`, and `mek_nofld.sh`,
-- `v00-visualize_all.sh` and the `v01`–`v04` Python visualization scripts, including `v04-network_maps.py`,
+- `v00-visualize_all.sh` and the `v01`–`v04` Python visualization scripts, including `v01-network_maps.py`,
 - verified hydrograph, annual-maximum, and four-panel spatial network reference figures.
 
 No Tutorial 02 `manual_design.md` or learner-facing README has been specified yet; their educational scope is a separate design task.
@@ -233,10 +246,10 @@ Generated model output, Restart files, and logs are excluded from Git. The exper
 | Runoff units and matrix | Runoff is converted by dividing by `DROFUNIT`; `CINPMAT` supplies the spatial weights. The annual NetCDF values are documented as daily `mm day-1`; use `86400000` and the existing Binary matrix. | `src_main/cmf_ctrl_forcing_mod.F90` (`FORCING_UTIL_ROFF_INTERP`); `inp/test-mek_1deg_nc/README.md`; `map/mekong_15min/inpdim_test-mek_1deg.txt` | Code- and data-verified |
 | Individual NetCDF map inputs | `LMAPCDF=.FALSE.` selects per-file extension-based readers. The nine map files loaded in every annual segment are NetCDF; the dimension descriptor and input matrix remain text/Binary support inputs. | `src_main/cmf_ctrl_maps_mod.F90`; four experiments' run logs; `map/mekong_15min/netcdf/` | Code-, data-, and runtime-verified |
 | Daily mean `outflw` | Registry metadata selects a mean; `CMF_OUTPUT_WRITE` writes `D2OUTFLW_oAVG`. NetCDF output uses float32, `time: mean`, and the `o_` + name + tag + `.nc` naming rule. Actual files have expected 366/365 records, `m3/s`, and interval-ending timestamps. | `variable_table/output_variables.csv`; `src_main/cmf_ctrl_output_mod.F90`; 16 annual output files | Code- and runtime-verified |
-| Annual maximum map statistic | The visualization assigns each end-stamped record to the represented daily interval and computes cellwise maxima for 2001–2003. Outputs share coordinates and a river-cell mask; the plotted common logarithmic range includes the observed maximum. | `v03-annual_max_discharge.py`; generated figure; all 12 comparison files | Implemented and output-verified |
+| Annual maximum map statistic | The visualization assigns each end-stamped record to the represented daily interval and computes cellwise maxima for 2001–2003. Outputs share coordinates and a river-cell mask; the plotted common logarithmic range includes the observed maximum. | `v04-annual_max_discharge.py`; generated figure; all 12 comparison files | Implemented and output-verified |
 | Selected sampling locations | Four GRDC records supply allocated one-based cells; My Thuan is resolved from GRDC 2369005's original coordinate through `catmxy`, and Can Tho uses the MRC WQ station coordinate. Their cells and primary downstream links differ; configured bifurcation paths connect the delta reaches. | Section 4.2; GRDC allocation files; map NetCDF/Binary; `bifprm.nc`; MRC 2018 WQ report | Geographic locations and model-grid/network mapping verified; scientific interpretation remains open |
-| Four-panel network visualization | Four panels use `uparea`, `nextxy`, `lonlat`, `bifprm`, and 1-minute `catmxy` to show grid attributes, connectivity, outlet positions, bifurcations, and catchment assignment. | `v04-network_maps.py`; products listed in Section 4.6; generated figures | Script and selected map relationships verified; whole-map outlet/catmxy mismatches remain unexplained |
-| Spin-up effect | The four years ran and the seasonal overlay was generated. Interannual runoff differs, preventing the plotted differences from isolating an initial-condition transient or establishing spin-up sufficiency. | `v01-spinup_comparison.py`; Default annual output | Runtime complete; scientific interpretation unresolved |
+| Four-panel network visualization | Four panels use `uparea`, `nextxy`, `lonlat`, `bifprm`, and 1-minute `catmxy` to show grid attributes, connectivity, outlet positions, bifurcations, and catchment assignment. | `v01-network_maps.py`; products listed in Section 4.3; generated figures | Script and selected map relationships verified; whole-map outlet/catmxy mismatches remain unexplained |
+| Spin-up effect | The four years ran and the seasonal overlay was generated. Interannual runoff differs, preventing the plotted differences from isolating an initial-condition transient or establishing spin-up sufficiency. | `v02-spinup_comparison.py`; Default annual output | Runtime complete; scientific interpretation unresolved |
 
 ### A.2 Decisions and unresolved prerequisites
 

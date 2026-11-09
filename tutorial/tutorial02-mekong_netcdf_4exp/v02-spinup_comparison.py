@@ -67,6 +67,6 @@ axes[-1].set_xlim(datetime(2001, 1, 1), datetime(2002, 1, 1))
 fig.suptitle("Daily mean discharge by calendar day (Default experiment)\n"
              "2000 Feb 29 omitted from overlay; interannual runoff also differs", y=1.005)
 fig.tight_layout()
-fig.savefig(FIGURE_DIR / "spinup_comparison.png", dpi=180, bbox_inches="tight")
+fig.savefig(FIGURE_DIR / "f02-spinup_comparison.png", dpi=180, bbox_inches="tight")
 plt.close(fig)
-print(f"Wrote {FIGURE_DIR / 'spinup_comparison.png'}")
+print(f"Wrote {FIGURE_DIR / 'f02-spinup_comparison.png'}")

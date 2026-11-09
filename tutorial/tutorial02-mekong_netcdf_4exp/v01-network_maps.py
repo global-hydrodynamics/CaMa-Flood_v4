@@ -278,7 +278,7 @@ def plot_uparea(lon, lat, uparea, stations, outlon, outlat, geometry):
     format_geographic_axes(ax, FULL_EXTENT, geometry)
     fig.colorbar(image, ax=ax, shrink=0.72, label="Upstream drainage area (km²)")
     ax.set_title("(a) Upstream drainage area on the 15-minute grid")
-    save_figure(fig, "station01_uparea.png")
+    save_figure(fig, "f01a-upstream_area.png")
 
 
 def plot_grid_network(lon, lat, uparea, links, stations, outlon, outlat, geometry):
@@ -319,7 +319,7 @@ def plot_grid_network(lon, lat, uparea, links, stations, outlon, outlat, geometr
     print(f"Panel (b): {len(segments)} valid downstream links and "
           f"{arrow_count} directed arrows rendered ({local_arrows.U.size} local, "
           f"{flexible_arrows.U.size} flexible).")
-    save_figure(fig, "station02_grid_network.png")
+    save_figure(fig, "f01b-grid_network.png")
 
 
 def plot_outlet_network(lon, lat, uparea, links, stations, outlon, outlat,
@@ -471,7 +471,7 @@ def plot_outlet_network(lon, lat, uparea, links, stations, outlon, outlat,
     ax.legend(handles=handles, loc="lower left", fontsize=7, framealpha=0.94)
     format_geographic_axes(ax, PANEL_C_EXTENT, geometry)
     ax.set_title("(c) Geographic outlet network on the computational grid")
-    save_figure(fig, "station03_outlet_bifurcation.png")
+    save_figure(fig, "f01c-outlet_bifurcation.png")
     print(f"Panel (c): {len(main_segments)} main-channel arrows; "
           f"{channel_arrows.U.size} channel and {overland_arrows.U.size} overland "
           f"bifurcation arrows. Maximum endpoint-to-latlon outlet differences: "
@@ -676,7 +676,7 @@ def plot_delta_catchments(lon, lat, uparea, nextx, nexty, outlon, outlat,
     fig.colorbar(mesh, ax=ax, shrink=0.8,
                  label="Mapped coarse-grid upstream drainage area (km²)")
     ax.set_title("(d) 1-minute catchments, outlets, and channel bifurcations")
-    save_figure(fig, "station04_delta_catchments.png")
+    save_figure(fig, "f01d-delta_catchments.png")
     distinct = len(set(zip(subx[subvalid].tolist(), suby[subvalid].tolist())))
     print(f"Panel (d): {int(subvalid.sum())} mapped pixels, {distinct} catchments, "
           f"{int(unassigned_land.sum())} unassigned land pixels, "

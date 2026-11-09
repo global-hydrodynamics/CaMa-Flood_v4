@@ -89,7 +89,7 @@ def save_station_map():
     ax.set_title("Tutorial 02 sampling cells (circles) and station references (red crosses)")
     ax.grid(alpha=0.2)
     fig.tight_layout()
-    fig.savefig(FIGURE_DIR / "station_locations.png", dpi=180)
+    fig.savefig(FIGURE_DIR / "f03a-station_locations.png", dpi=180)
     plt.close(fig)
 
 
@@ -135,7 +135,7 @@ for row, station in enumerate(STATIONS):
 fig.suptitle("Daily mean discharge at selected Mekong model cells (2001–2003)", y=1.002)
 fig.autofmt_xdate(rotation=25)
 fig.tight_layout()
-fig.savefig(FIGURE_DIR / "discharge_comparison.png", dpi=180, bbox_inches="tight")
+fig.savefig(FIGURE_DIR / "f03b-discharge_comparison.png", dpi=180, bbox_inches="tight")
 plt.close(fig)
-print(f"Wrote {FIGURE_DIR / 'station_locations.png'}")
-print(f"Wrote {FIGURE_DIR / 'discharge_comparison.png'}")
+print(f"Wrote {FIGURE_DIR / 'f03a-station_locations.png'}")
+print(f"Wrote {FIGURE_DIR / 'f03b-discharge_comparison.png'}")

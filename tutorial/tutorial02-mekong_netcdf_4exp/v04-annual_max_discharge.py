@@ -83,7 +83,7 @@ for col, (experiment, label) in enumerate(EXPERIMENTS.items()):
 fig.colorbar(mesh, ax=axes.ravel().tolist(), label="Annual maximum daily-mean discharge (m³/s)",
              shrink=0.82, pad=0.02)
 fig.suptitle("Mekong annual maximum daily-mean discharge (2001–2003)", y=0.99)
-fig.savefig(FIGURE_DIR / "annual_max_discharge.png", dpi=180, bbox_inches="tight")
+fig.savefig(FIGURE_DIR / "f04-annual_max_discharge.png", dpi=180, bbox_inches="tight")
 plt.close(fig)
 print(f"Shared logarithmic color range: {vmin:.3g}–{vmax:.3g} m3/s")
-print(f"Wrote {FIGURE_DIR / 'annual_max_discharge.png'}")
+print(f"Wrote {FIGURE_DIR / 'f04-annual_max_discharge.png'}")
