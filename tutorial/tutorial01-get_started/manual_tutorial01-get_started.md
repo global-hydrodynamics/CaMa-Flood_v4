@@ -4,32 +4,26 @@ This tutorial introduces how to obtain and navigate CaMa-Flood, find the files u
 
 ## 0. Obtain CaMa-Flood
 
-GitHub is the standard way to obtain the files for Tutorial01. The v5 development repository is available at the [CaMa-Flood GitHub page](https://github.com/global-hydrodynamics/CaMa-Flood_v4).
-
-As checked on 2026-11-08, `master` contains the v5 source and Mekong sample data, but not the Tutorial01 directory or the `s01-setup_fortran.sh` and `s02-python_setup.sh` scripts. It is therefore not ready to run this tutorial. Until those files are integrated, use the verified development branch:
-
-```bash
-git clone --branch feature/gosh-refactor --single-branch https://github.com/global-hydrodynamics/CaMa-Flood_v4.git
-```
-
-This creates a local directory named `CaMa-Flood_v4` by default. If you are unfamiliar with Git, open the repository on GitHub, select the `feature/gosh-refactor` branch, choose **Code → Download ZIP**, then extract the archive. Place the cloned or extracted directory in a suitable working location; no fixed machine-specific path is required.
-
-After Tutorial01 and its setup scripts are integrated into `master`, use this simpler command. It clones the default `master` branch and also creates `CaMa-Flood_v4/` locally. This is the intended standard workflow, but it is not yet a verified way to run Tutorial01:
+GitHub's default branch contains the files for Tutorial01. Clone the repository:
 
 ```bash
 git clone https://github.com/global-hydrodynamics/CaMa-Flood_v4.git
 ```
 
-The [official CaMa-Flood website](https://global-hydrodynamics.github.io/CaMa-Flood/) provides a separate downloadable distribution package; access requires Google Form registration. The supported v5 package for this tutorial is not ready yet. If you prefer the official package, wait for its release; an older package is not a substitute for this tutorial's v5 workflow.
+This creates a local directory named `CaMa-Flood_v4`. If you prefer not to use Git, open the repository on GitHub, choose **Code → Download ZIP**, then extract the archive. Place the checkout in a suitable working location; no fixed machine-specific path is required.
+
+The [official CaMa-Flood website](https://global-hydrodynamics.github.io/CaMa-Flood/) provides a separate downloadable distribution package; access requires registration. The supported v5 package for this tutorial is not ready yet. If you prefer that package, wait for its release; an older package is not a substitute for this v5 workflow.
+
+Tutorial01's learner starting state does not contain a compiled `src_main/MAIN_cmf` executable or generated run results. You will build the executable in Section 3 and run the experiment later in this tutorial.
 
 ### Learning Check
 
-- [ ] I can obtain the currently usable Tutorial01 branch from GitHub and locate its repository root.
-- [ ] I know that default `master` becomes the standard route after integration, and that the supported official v5 package is not ready yet.
+- [ ] I can obtain the tutorial files from GitHub's default branch and locate the repository root.
+- [ ] I know that I will build `MAIN_cmf` as part of this tutorial.
 
 ## 1. Find the repository root
 
-Open a terminal and change to the root of the `feature/gosh-refactor` checkout you cloned or extracted. Confirm that you are at its root directory:
+Open a terminal and change to the root of the repository you cloned or extracted. Confirm that you are at its root directory:
 
 ```bash
 pwd
@@ -41,7 +35,7 @@ ls -lF
 
 ### Expected output
 
-This abbreviated excerpt is from an actual repository-root `ls -lF` on the verified `feature/gosh-refactor` checkout. Sizes, dates, and owner names vary between computers. `...` marks omitted listing entries.
+This abbreviated excerpt is from an actual repository-root `ls -lF` on the verified GitHub checkout. Sizes, dates, and owner names vary between computers. `...` marks omitted listing entries.
 
 ```text
 drwxr-xr-x    7 yamadai  staff   224 Nov  8 10:36 config/

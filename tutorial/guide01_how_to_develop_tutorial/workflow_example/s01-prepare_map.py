@@ -15,6 +15,8 @@ import numpy as np
 SCRIPT_DIR = Path(__file__).resolve().parent
 SOURCE = SCRIPT_DIR.parents[2] / "map/mekong_15min/netcdf/rivhgt.nc"
 OUTPUT = SCRIPT_DIR / "map_modify/rivhgt_deep.nc"
+# Learner activity: change this to 3.0 before creating the Deep Channel map.
+RIVHGT_INCREMENT_M = 0.0
 
 
 def sha256(path: Path) -> str:
@@ -26,6 +28,10 @@ def sha256(path: Path) -> str:
 
 
 def build_map(source_path: Path, output_path: Path, force: bool = False) -> dict[str, object]:
+    if RIVHGT_INCREMENT_M != 3.0:
+        raise ValueError(
+            "Edit RIVHGT_INCREMENT_M to 3.0 before creating the approved +3 m map."
+        )
     if not source_path.is_file():
         raise FileNotFoundError(f"Shared source map not found: {source_path}")
     if output_path.exists() and not force:
@@ -51,7 +57,9 @@ def build_map(source_path: Path, output_path: Path, force: bool = False) -> dict
             raise ValueError("Source rivhgt contains no valid cells")
 
         modified = values.copy()
-        modified[valid] = (modified[valid] + np.float32(3.0)).astype(np.float32)
+        modified[valid] = (
+            modified[valid] + np.float32(RIVHGT_INCREMENT_M)
+        ).astype(np.float32)
         fd, tmp_name = tempfile.mkstemp(prefix=".rivhgt_deep.", suffix=".nc", dir=output_path.parent)
         os.close(fd)
         tmp_path = Path(tmp_name)
@@ -79,8 +87,9 @@ def build_map(source_path: Path, output_path: Path, force: bool = False) -> dict
                 if not np.array_equal(out_mask, ~valid):
                     raise ValueError("Output missing mask differs from source")
                 delta = raw_out[valid] - values[valid]
-                if not np.allclose(delta, np.float32(3.0), rtol=0.0, atol=1e-6):
-                    raise ValueError("Output does not contain the intended +3 m change")
+                expected_increment = np.float32(RIVHGT_INCREMENT_M)
+                if not np.allclose(delta, expected_increment, rtol=0.0, atol=1e-6):
+                    raise ValueError("Output does not contain the configured change")
                 for coord in ("lon", "lat"):
                     if coord in src.variables:
                         if not np.array_equal(check.variables[coord][:], src.variables[coord][:]):
@@ -112,7 +121,10 @@ def main() -> None:
     print(f"[SUCCESS] Shape={result['shape']}; valid={result['valid_cells']}; missing={result['missing_cells']}")
     print(f"[CHECK] Source SHA-256: {result['source_sha256']}")
     print(f"[CHECK] Output SHA-256: {result['output_sha256']}")
-    print("[CHECK] +3.0 m on valid cells; missing mask, grid, and dtype preserved.")
+    print(
+        f"[CHECK] +{RIVHGT_INCREMENT_M:.1f} m on valid cells; "
+        "missing mask, grid, and dtype preserved."
+    )
 
 
 if __name__ == "__main__":

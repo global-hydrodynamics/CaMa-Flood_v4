@@ -14,6 +14,7 @@ This guide is for researchers, students, and contributors developing tutorials w
 | `<tutorial>/design/manual_design.md` | Tutorial-specific | Audience, prior knowledge, educational sequence, useful examples, and section Learning Checks. |
 | `<tutorial>/manual_*.md` | Tutorial-specific | Learner-facing instructions for performing the experiment and checking the intended learning outcomes. |
 | `<tutorial>/design/manual_generation_log.md` | Tutorial-specific, when applicable | Developer-only evidence about the tested revision, environment, commands, results, and limitations. |
+| `tutorial_requirements.csv` | Shared | Evidence-based registry of required learner activities and design, manual, and package checks. |
 
 Keep experiment-specific scientific and educational decisions in each tutorial's specifications. Shared guides describe reusable procedures and quality expectations, not the details of an individual experiment. Generated manuals explain the workflow to learners; they are not independent scientific authorities.
 
@@ -63,6 +64,20 @@ Use this sequence as a practical guide. In real projects it is iterative: source
 8. Generate or update the learner manual from the specifications and verified evidence.
 9. Review scientific fidelity, instructional quality, Learning Checks, links, and generated artifacts. Distinguish operational execution evidence from scientific validation.
 10. Feed stable lessons into the appropriate specification or shared guide, then regenerate and recheck affected outputs.
+
+### Learner activities and distribution checks
+
+Every tutorial must make the learner do meaningful work that develops a reusable CaMa-Flood skill. For each required activity, specify the starting material, the essential artifact intentionally absent at the start, what the learner creates or changes, the transferable skill, and an observable completion criterion. Track one activity per row in [`tutorial_requirements.csv`](tutorial_requirements.csv); use `PASS`, `PARTIAL`, `FAIL`, or `NOT_REVIEWED` separately for Tutorial Design, Manual Design, and learner-package checks. Notes must say whether a requirement is explicit, only implied, or missing and point to evidence.
+
+Keep complete working solutions and developer reset/evidence materials under the tutorial's `design/` directory. `design/` stays in GitHub for maintainers but is excluded from the learner package. Put approved reference images in `sample_figure/`; reserve `figure/` for files learners generate and keep it free of pre-generated results in the package. Do not package completed modified datasets, alternative experiment scripts, or generated model outputs that would bypass the intended activity.
+
+Use three review gates:
+
+- **After Tutorial Design:** Is a meaningful learner action explicit, does it produce an essential artifact absent from the initial package, and does it teach a transferable skill?
+- **After Manual Design:** Does the design teach how to perform that action, identify the starting file and edits, and explain how to check the result?
+- **Before Distribution:** Does the actual package omit completed solutions while retaining enough starting materials and instructions? Can a learner complete the task and approximately reproduce the documented examples?
+
+Inspect the real package assembler before claiming package compliance. The legacy `doc/make_package.sh` builds a v4 distribution and is not a tutorial packager. If no suitable assembler exists, do not repurpose it or create a general package framework for one task; prepare a temporary allowlisted learner snapshot, inspect its contents, and report package validation as partial because the official distribution path remains unimplemented.
 
 For beginner tutorials that build the model, use `cd "${cmf_root}"`, `cd src_main`, and `make all`. This explicit target builds or updates `MAIN_cmf`; do not change Makefile behavior solely to simplify a tutorial command.
 

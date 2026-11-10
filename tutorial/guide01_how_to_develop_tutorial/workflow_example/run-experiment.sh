@@ -14,29 +14,15 @@ OMP_NUM_THREADS=4
 DT=600
 YEAR=2000
 
-if [ "$#" -lt 1 ]; then
-    echo "Usage: $0 control|deep_channel [--force]" >&2
-    exit 2
-fi
-CASE=$1
-shift
+# Control settings. Copy this file to create another independent experiment.
+PROJ="control"
+RIVHGT="$MAP_NC/rivhgt.nc"
+RUNDIR="$SCRIPT_DIR/out/$PROJ"
 FORCE=0
 if [ "$#" -gt 0 ]; then
     [ "$#" -eq 1 ] && [ "$1" = "--force" ] || { echo "Only --force is supported." >&2; exit 2; }
     FORCE=1
 fi
-case "$CASE" in
-  control)
-    PROJ=control
-    RIVHGT="$MAP_NC/rivhgt.nc"
-    ;;
-  deep_channel)
-    PROJ=deep_channel
-    RIVHGT="$SCRIPT_DIR/map_modify/rivhgt_deep.nc"
-    ;;
-  *) echo "Unknown experiment: $CASE" >&2; exit 2 ;;
-esac
-RUNDIR="$SCRIPT_DIR/out/$PROJ"
 
 for required in "$PYTHON" "$MODEL" "$INPMAT" "$INPDIM" "$RUNOFF_DIR/runoff2000.nc" \
                 "$MAP_NC/nextxy_noedge.nc" "$MAP_NC/ctmare.nc" "$MAP_NC/elevtn.nc" \
@@ -136,7 +122,7 @@ IFRQ_OUT = 24
 /
 EOF
 
-echo "[STEP] Running $CASE with CRIVHGT=$RIVHGT"
+echo "[STEP] Running $PROJ with CRIVHGT=$RIVHGT"
 START=$(date +%s)
 if (cd "$RUNDIR" && OMP_NUM_THREADS="$OMP_NUM_THREADS" ./MAIN_cmf > console_2000.log 2>&1); then
     STATUS=0
@@ -146,7 +132,7 @@ fi
 ELAPSED=$(($(date +%s) - START))
 printf 'Elapsed seconds: %s\nExit status: %s\n' "$ELAPSED" "$STATUS" > "$RUNDIR/run_time_2000.log"
 if [ "$STATUS" -ne 0 ]; then
-    echo "[ERROR] $CASE failed; inspect $RUNDIR/console_2000.log" >&2
+    echo "[ERROR] $PROJ failed; inspect $RUNDIR/console_2000.log" >&2
     tail -80 "$RUNDIR/console_2000.log" >&2 || true
     exit "$STATUS"
 fi
@@ -155,4 +141,4 @@ cp "$RUNDIR/log_CaMa.txt" "$RUNDIR/log_CaMa_2000.txt"
 for var in outflw rivdph sfcelv fldfrc; do
     [ -s "$RUNDIR/o_${var}2000.nc" ] || { echo "[ERROR] Missing model output: $RUNDIR/o_${var}2000.nc" >&2; exit 1; }
 done
-echo "[SUCCESS] $CASE completed in ${ELAPSED}s; outputs are under $RUNDIR"
+echo "[SUCCESS] $PROJ completed in ${ELAPSED}s; outputs are under $RUNDIR"

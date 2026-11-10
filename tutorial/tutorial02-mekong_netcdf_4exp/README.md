@@ -1,5 +1,15 @@
 # Tutorial 02 — Mekong four-experiment comparison
 
+The learner starting point intentionally provides only the working Default
+experiment. Copy and edit `mek_default.sh` to create independent No
+Bifurcation, Kinematic Wave, and No Floodplain scripts; give each a distinct
+`PROJ` so their outputs remain separate. The completed alternatives are
+developer references under `design/` in the GitHub development repository and
+are excluded from learner packages. The full learner manual is not yet
+available; see [`design/manual_design.md`](design/manual_design.md) for its
+planned activity sequence. The experiment's scientific settings and evidence
+are documented in [`tutorial_design.md`](tutorial_design.md).
+
 Tutorial 02 compares the four Mekong model configurations described in
 [`tutorial_design.md`](tutorial_design.md). Figure 4 uses the bundled
 `cmf_colormap` package for its annual-maximum discharge comparison. The repository
@@ -36,11 +46,19 @@ resolve to different interpreters. `--no-deps` does not install Matplotlib,
 NumPy, NetCDF4, or other missing dependencies. The setup script only modifies
 the repository `.venv`; it does not manage existing environments.
 
-The visualization workflow expects Tutorial 02 annual model outputs and map
-data to be available. If `s02-python_setup.sh` reports that no interactive
+The visualization workflow expects annual model outputs from all four
+experiments and the shared map data. Create the three alternative scripts and
+run them before generating comparisons. Approved expected-result figures are
+stored in `sample_figure/`; generated figures belong in `figure/`, which starts
+without generated images. If `s02-python_setup.sh` reports that no interactive
 terminal is available, rerun it from a terminal to approve setup. For detailed
 verification and troubleshooting, see the
 [Python environment guide](../../docs/python_environment.md).
+
+There is no dedicated tutorial package assembler yet. The legacy v4
+`doc/make_package.sh` is not used for tutorial distribution; `design/` and
+completed alternatives must be excluded by any future tutorial packaging
+workflow.
 
 ## Figure 4 — annual maximum discharge
 

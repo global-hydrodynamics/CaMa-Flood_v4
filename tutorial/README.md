@@ -34,6 +34,34 @@ and, where appropriate, reverse the change.
 
 AI agents can inspect code and data, implement and run workflows, collect evidence, and draft manuals. The goal is reproducible, maintainable, and improvable scientific learning material, not just reduced writing effort. Agents may resolve minor implementation and instructional gaps from evidence. Researchers retain authority over scientific decisions, and important educational decisions need human review. Generated material must be checked against code, data, and runs; successful execution does not prove scientific validity. Learner feedback, expert review, and execution findings should improve the specifications and shared guides.
 
+### 5. Learner-centered activities
+
+Every tutorial must state observable learning objectives and require at least
+one meaningful learner operation. Running a fully prepared workflow alone is
+not sufficient. The required operation must create or modify an essential
+tutorial artifact, teach a skill reusable in independent CaMa-Flood work, and
+have a clear completion check. The design specifications identify starting
+materials, intentionally absent artifacts, learner-created results, and how
+those results are used. The shared
+[`tutorial_requirements.csv`](tutorial_requirements.csv) records this audit,
+one required learner activity per row.
+
+### 6. Developer references and learner packages
+
+Keep complete runnable reference solutions and developer records in each
+tutorial's `design/` directory. Keep figures used as examples under
+`sample_figure/`; reserve `figure/` for learner-generated figures and leave it
+without generated images in a learner package. A learner package excludes
+`design/`, completed solutions, build products, modified inputs, model outputs,
+and other completed learner artifacts. It includes starting materials,
+required shared inputs, manuals, approved reference figures, and an empty
+generated-output location where appropriate. A GitHub checkout is a developer
+repository, not automatically a prepared learner package. There is currently
+no tutorial package assembler; the v4-oriented `doc/make_package.sh` is not a
+tutorial packager. Until a suitable tutorial package workflow exists, stage
+and inspect the intended learner files explicitly rather than treating a
+repository ZIP as the package.
+
 ## Available Tutorials
 
 | Tutorial | Learning objective | Manual |
@@ -58,9 +86,11 @@ Tutorial03 package.
 | This `README.md` | Framework principles, overview, and tutorial index. |
 | [`how_to_develop_tutorials.md`](how_to_develop_tutorials.md) | Human-facing development and review workflow. |
 | [`agent_tutorial_development.md`](agent_tutorial_development.md), [`agent_manual_authoring.md`](agent_manual_authoring.md) | Reusable AI instructions for executable tutorials and learner manuals. |
-| `<tutorial>/tutorial_design.md`, `<tutorial>/design/manual_design.md` | Tutorial-specific experiment and educational design. |
+| `<tutorial>/tutorial_design.md`, `<tutorial>/design/manual_design.md` | Tutorial-specific experiment and educational design, including required learner actions and completion criteria. |
 | `<tutorial>/manual_*.md` | Learner-facing guide to performing the experiment and checking its learning goals. |
-| `<tutorial>/design/` | Developer evidence, generation history, and other tutorial-specific records when applicable. |
+| [`tutorial_requirements.csv`](tutorial_requirements.csv) | Activity-level audit of design, manual-design, and learner-package requirements. |
+| `<tutorial>/design/` | Developer-only reference solutions, reset tools, evidence, and design history; excluded from learner packages. |
+| `<tutorial>/sample_figure/`, `<tutorial>/figure/` | Packaged reference figures and learner-generated figures, respectively. |
 
 Start with [How to develop tutorials](how_to_develop_tutorials.md) to contribute. Tutorial01 is a beginner example; Tutorial02 demonstrates a more advanced scientific comparison. Keep their specific scientific and educational decisions in their own specifications.
 

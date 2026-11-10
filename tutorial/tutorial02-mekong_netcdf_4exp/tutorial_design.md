@@ -1,6 +1,6 @@
 # Tutorial 02: Mekong Multi-Year NetCDF Simulation and Four-Experiment Comparison
 
-**Status:** Researcher-approved four-experiment design, implemented and run for 2000–2003, with output-based checks and reference figures. This is a model-behavior comparison, not an observational validation. Scientific interpretation of the selected 15-minute cells and spin-up adequacy remains for maintainer review; see Appendix A.
+**Status:** Researcher-approved four-experiment design, implemented and run for 2000–2003, with output-based checks and reference figures. The learner start includes the working Default script but intentionally omits the three completed alternatives; learners create them by copying and editing configurations. This is a model-behavior comparison, not an observational validation. Scientific interpretation of the selected 15-minute cells and spin-up adequacy remains for maintainer review; see Appendix A.
 
 ## 1. Purpose and learning outcomes
 
@@ -21,6 +21,14 @@ By the end, users should be able to:
 11. Explain that `nextxy` can connect non-adjacent grid cells and why rasterized network lines may appear spatially discontinuous.
 12. Distinguish computational grid-cell centers from unit-catchment outlet coordinates, and identify main-channel, channel-bifurcation, and overland-bifurcation connections.
 13. Explain how high-resolution `catmxy` pixels are assigned to coarse unit catchments and how each unit catchment is associated with its mapped outlet.
+
+## 1.1 Required learner activities
+
+The supplied learner starting point is the working `mek_default.sh`, visualization source scripts, shared map/runoff/input-matrix data, and approved reference images in `sample_figure/`. The distributed `figure/` directory contains no generated figures. The completed No Bifurcation, Kinematic Wave, and No Floodplain scripts, their model outputs, and generated figures are intentionally absent.
+
+Learners must copy and edit the Default configuration to create the other three experiment scripts, assign each a distinct `PROJ`, and change only the approved model switches shown in Section 2. They then run the four experiments and the supplied comparison workflow. The transferable skill is creating independent, reproducible CaMa-Flood configurations while preserving shared scientific settings. Completion is observable when the three new scripts use separate output directories, all four configurations have the required outputs, and the comparison figures are generated.
+
+The complete alternative scripts are retained as developer references in `design/reference_mek_*.sh`; this GitHub-only directory is excluded from the learner package. `design/manual_design.md` defines the intended future teaching sequence. A full learner manual does not yet exist, so distribution readiness and learner reproduction remain partial.
 
 The tutorial uses GRDC and MRC station metadata only to locate model grid cells. It does not use or compare observed discharge records.
 
@@ -216,18 +224,7 @@ The visualization workflow is numbered in execution order. Run
 The network script currently emits four related map panels, so all are retained
 under the `f01a`–`f01d` subfigure convention. The other steps use `f02`, `f03`, and `f04` prefixes. Figure 3 is the six-panel discharge comparison.
 
-The Tutorial 02 README provides the Python setup and visualization quick start. This design document remains the detailed source for experiment settings, map inputs, and scientific interpretation. A full learner manual with step-by-step run instructions and learning checks remains future work.
-
-The implemented GitHub development contents are:
-
-- `tutorial_design.md` with experiment design and execution evidence,
-- `mek_default.sh`, `mek_nobif.sh`, `mek_kine.sh`, and `mek_nofld.sh`,
-- `v00-visualize_all.sh` and the `v01`–`v04` Python visualization scripts, including `v01-network_maps.py`,
-- verified hydrograph, annual-maximum, and four-panel spatial network reference figures.
-
-A Tutorial 02 learner manual and `manual_design.md` have not yet been prepared; their educational scope is a separate design task.
-
-Generated model output, Restart files, and logs are excluded from Git. The experiment and visualization scripts and reference figures are included in this implementation phase. The beginner-facing tutorial README remains a separate later task; see Appendix B for package policy.
+The Tutorial 02 README provides the Python setup and visualization quick start. This design document remains the detailed source for experiment settings, map inputs, and scientific interpretation. A step-by-step learner manual with Learning Checks remains future work. The GitHub development contents retain completed solutions under `design/`; a future learner package must exclude that directory.
 
 ## Appendix A. Technical verification and open questions
 
@@ -272,9 +269,9 @@ Generated model output, Restart files, and logs are excluded from Git. The exper
 
 ### B.1 GitHub and beginner package
 
-The GitHub tutorial contains the four experiment scripts, specification, visualization scripts, and verified reference figures, including the four-panel spatial network visualization. Generated output, Restart files, and logs remain untracked under the tutorial-local `out/` ignore rule. The full learner manual remains deferred; a README now provides the Python setup and visualization quick start.
+The GitHub development checkout keeps complete alternatives under `design/`, along with reset and run evidence. The learner-facing starting files retain only `mek_default.sh`; `mek_nobif.sh`, `mek_kine.sh`, and `mek_nofld.sh` are ignored learner-created files. Approved reference images are in `sample_figure/`; generated figures belong in `figure/`. Model outputs and logs are ignored under `out/`.
 
-The beginner package includes only `mek_default.sh` among the experiment scripts, plus tutorial documentation, visualization tools, and verified reference figures. It excludes `mek_nobif.sh`, `mek_kine.sh`, and `mek_nofld.sh` so learners create the variants by copying and editing Default settings. This is a teaching choice, not a packaging limitation. No package assembly change is made by this specification.
+No tutorial package assembler currently exists. `doc/make_package.sh` packages the legacy v4 distribution and is not appropriate for these tutorials. The repository can therefore be reviewed through a temporary learner snapshot, but official package compliance remains partial until a suitable distribution process is established. The learner manual also remains a separate, uncompleted authoring task; the README supplies only environment and visualization setup.
 
 ### B.2 Optional Benchmark v2 use
 

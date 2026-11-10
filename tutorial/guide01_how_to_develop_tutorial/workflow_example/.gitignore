@@ -1,3 +1,8 @@
 .DS_Store
 __pycache__/
 *.py[cod]
+out/
+map_modify/rivhgt_deep.nc
+analysis/*.nc
+analysis/*.csv
+figure/*.png

@@ -1,1 +1,9 @@
 out/
+.DS_Store
+nohup.out
+__pycache__/
+*.py[cod]
+mek_nobif.sh
+mek_kine.sh
+mek_nofld.sh
+figure/*.png
