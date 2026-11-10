@@ -44,7 +44,7 @@ have a clear completion check. The design specifications identify starting
 materials, intentionally absent artifacts, learner-created results, and how
 those results are used. The shared
 [`tutorial_requirements.csv`](tutorial_requirements.csv) records this audit,
-one required learner activity per row.
+one tutorial per row.
 
 ### 6. Developer references and learner packages
 
@@ -73,11 +73,12 @@ repository ZIP as the package.
 
 The numbered tutorials teach people how to use CaMa-Flood. [Guide01 —
 Developing Tutorials with Chat AI and Agent AI](guide01_how_to_develop_tutorial/README.md)
-is a contributor guide showing how to design, implement, validate, and document
-tutorials. Its `workflow_example/` contains a river-depth sensitivity example
-and learner manual used to demonstrate that development process. This worked
-example is not, by itself, a separately maintained or fully validated
-Tutorial03 package.
+documents the contributor workflow and keeps its numbered development
+history. The actual river-depth sensitivity tutorial is
+[Guide01 Workflow Example](guide01_workflow_example/tutorial_design.md), at
+the same directory level as Tutorial01 and Tutorial02. It demonstrates the
+development process but is not, by itself, a separately maintained or fully
+validated Tutorial03 package.
 
 ## Documentation Structure and Contributing
 
@@ -88,7 +89,21 @@ Tutorial03 package.
 | [`agent_tutorial_development.md`](agent_tutorial_development.md), [`agent_manual_authoring.md`](agent_manual_authoring.md) | Reusable AI instructions for executable tutorials and learner manuals. |
 | `<tutorial>/tutorial_design.md`, `<tutorial>/design/manual_design.md` | Tutorial-specific experiment and educational design, including required learner actions and completion criteria. |
 | `<tutorial>/manual_*.md` | Learner-facing guide to performing the experiment and checking its learning goals. |
-| [`tutorial_requirements.csv`](tutorial_requirements.csv) | Activity-level audit of design, manual-design, and learner-package requirements. |
+| [`tutorial_requirements.csv`](tutorial_requirements.csv) | One-row-per-tutorial summary and design review of learner objectives, required operations, provided materials, intentionally absent artifacts, learner results, and compliance checks. It is a review aid, not a replacement for the individual specifications. |
+
+The registry columns group as follows:
+
+| Column group | Meaning |
+| --- | --- |
+| `tutorial_id`, `tutorial_directory`, `tutorial_title`, `development_status` | Identify the tutorial and summarize its current maturity. |
+| `learning_objective`, `required_learner_action`, `provided_starting_material`, `intentionally_missing_artifact`, `learner_generated_artifact`, `transferable_skill`, `expected_result` | Describe the intended educational design: what learners do, what is present or absent, what they create, and what they should be able to reuse and observe. |
+| `R1_learning_objective` through `R8_learner_reproduction` | Assess each shared educational requirement using evidence from the current files and workflow. |
+| `tutorial_design_check`, `manual_design_check`, `package_check`, `remaining_issues` | Summarize whether each specification explains the required work and whether the available learner materials support it; list gaps explicitly. |
+
+Compliance values are `PASS`, `PARTIAL`, `FAIL`, or `NOT_REVIEWED`. Use `NOT_REVIEWED` when the relevant evidence has not been inspected; do not mark a package check `PASS` because a package is only planned. The educational-design fields record intended outcomes, while compliance cells record the evidence-supported current state.
+
+Review the registry when a tutorial is proposed, when Tutorial Design or Manual Design is completed or revised, when implementation or learner-package contents change, and before a tutorial is marked ready to distribute. The registry is a lightweight design review tool, not a replacement for each tutorial's specification and not an automated updater target.
+| [`tutorial_requirements.csv`](tutorial_requirements.csv) | One-row-per-tutorial audit of educational design and specification/package requirements. |
 | `<tutorial>/design/` | Developer-only reference solutions, reset tools, evidence, and design history; excluded from learner packages. |
 | `<tutorial>/sample_figure/`, `<tutorial>/figure/` | Packaged reference figures and learner-generated figures, respectively. |
 

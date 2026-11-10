@@ -1,13 +1,15 @@
 # Workflow Example — River-Depth Sensitivity and Flood-Inundation Analysis
 
-**Status:** Repository-informed design only. No Tutorial03 scripts, model runs,
-analysis products, or figures have been created or executed.
+**Status:** The complete reference workflow, simulations, analyses, and figures
+were implemented and run earlier; their history remains in Guide01. The
+learner start now requires editing the map preparation setting and creating a
+separate GOSH configuration. This intentionally incomplete learner workflow
+has not yet been followed through from a fresh package.
 
 This document refines the Chat AI draft in
-[Step 03's first design draft](../03draft_first_tutorial_design.md)
-using the current repository implementation and sample files. The design is a
-development specification for the Guide01 workflow example, not a learner
-manual and not a claim that the experiment has been scientifically validated.
+[Step 03's first design draft](../guide01_how_to_develop_tutorial/03draft_first_tutorial_design.md)
+using the current implementation and sample files. It defines this tutorial
+and does not claim that the experiment has been scientifically validated.
 
 ## 1. Purpose and learning outcomes
 
@@ -32,6 +34,19 @@ The expected responses discussed in the initial design are hypotheses. The
 figures must show the measured model response, including results that differ
 from those expectations.
 
+## 1.1 Required learner activities
+
+Learners change `RIVHGT_INCREMENT_M` from `0.0` to the approved `3.0` in
+`s01-prepare_map.py`, then generate the tutorial-owned
+`map_modify/rivhgt_deep.nc`. They copy `run-experiment.sh` and edit `PROJ` and
+`RIVHGT` to create an independent Deep Channel configuration that uses the
+modified map. These activities teach learners to prepare a map-parameter
+variant without modifying shared inputs and to configure a separate GOSH
+experiment. Completion is observable from the map preparation checks, separate
+Control and Deep Channel output paths, and comparison products. Completed
+reference scripts, modified map data, and analysis evidence remain in
+`design/` and must be omitted from learner packages.
+
 ## 2. Researcher-approved experiment
 
 | Setting | Control | Deep Channel |
@@ -45,10 +60,10 @@ from those expectations.
 
 The only intended experiment change is the static channel-depth parameter.
 Treat the shared map as a read-only source. Generate the modified map parameter
-inside this workflow example at
-`tutorial/guide01_how_to_develop_tutorial/workflow_example/map_modify/rivhgt_deep.nc`.
-The proposed map-preparation script belongs to the workflow example, not the
-shared map-building tools. Control reads the original
+inside this tutorial at
+`tutorial/guide01_workflow_example/map_modify/rivhgt_deep.nc`.
+The learner map-preparation script belongs to this tutorial, not the shared
+map-building tools. Control reads the original
 `map/mekong_15min/netcdf/rivhgt.nc`; Deep Channel points `CRIVHGT` directly to
 the tutorial-local NetCDF file. Do not write the variant or a symlink into
 `map/mekong_15min/`. The existing individual-map NetCDF convention stores the
@@ -58,7 +73,7 @@ filename.
 The map reader uses the path supplied in `CRIVHGT` directly; it does not
 prepend the shared map directory. Tutorial run scripts execute the model from
 their run directory, so they should derive an absolute path to
-`workflow_example/map_modify/rivhgt_deep.nc` from the script location and place
+`map_modify/rivhgt_deep.nc` from the script location and place
 that path in the Deep Channel namelist. This avoids dependence on the caller's
 current working directory. The source map remains shared and read-only; the
 modified product is owned by this workflow example.
@@ -75,7 +90,7 @@ not by itself imply an increase in absolute `sfcelv`.
 The current `map/mekong_15min/params.txt` declares an 80 × 120 grid at 0.25°
 covering 90–110°E and 5–35°N. Cell centers are 90.125–109.875°E and
 5.125–34.875°N. The existing
-[`netcdf/rivhgt.nc`](../../../map/mekong_15min/netcdf/rivhgt.nc) has a Float32
+[`netcdf/rivhgt.nc`](../../map/mekong_15min/netcdf/rivhgt.nc) has a Float32
 `rivhgt(lat,lon)` variable in metres with `_FillValue` and `missing_value`
 `-9999`; its coordinates and missing mask match the corresponding map fields.
 The inspected sample has 6,566 nonmissing cells and 3,034 masked cells. The
@@ -89,19 +104,19 @@ For the modified product, preserve dimensions, coordinate arrays, variable
 name, units, and missing-value attributes, and add 3.0 m only where the source
 `rivhgt` is valid. Validate that the baseline file remains unchanged, that the
 valid-cell difference is exactly +3.0 m within Float32 representation, and
-that missing cells remain missing. The target path above is planned; the file
-does not exist yet.
+that missing cells remain missing. The learner package intentionally omits this generated file; the complete
+reference product is retained under `design/`.
 
-Relevant metadata are in [`map_variables.csv`](../../../variable_table/map_variables.csv),
+Relevant metadata are in [`map_variables.csv`](../../variable_table/map_variables.csv),
 and the model map reader is documented in
-[`src_main/README.md`](../../../src_main/README.md). The Mekong sample also has
+[`src_main/README.md`](../../src_main/README.md). The Mekong sample also has
 `prmwat.nc`, an optional post-processing map whose `prmwat` values are
 per-unit-catchment permanent-water area in m². It is not a simulation input.
 
 ## 3. Simulation configuration and outputs
 
-The current Tutorial02 runner is
-[`mek_default.sh`](../../tutorial02-mekong_netcdf_4exp/mek_default.sh). Its
+The reference Tutorial02 runner is
+[`mek_default.sh`](../tutorial02-mekong_netcdf_4exp/mek_default.sh). Its
 verified settings include `LKINE=.FALSE.` (Local Inertial routing),
 `LFPLAIN=.TRUE.`, `LPTHOUT=.TRUE.`, `LFLDOUT=.TRUE.`, `LSLPMIX=.FALSE.`,
 `LADPSTP=.TRUE.`, `DT=600` s, 4 OpenMP threads, and Gregorian leap-year
@@ -138,7 +153,9 @@ The model calls output after the interval diagnostics are finalized in
 mean. Use `variable_table/output_variables.csv` as the metadata source. Check
 that each output has a complete, aligned 2000 time axis (including leap day),
 consistent map coordinates and fill values, and the expected variable and
-units. No Tutorial03 simulation has been run to verify record count or values.
+units. The earlier Guide01 execution record documents the reference run; a fresh
+learner-created run has not been performed after making the starting files
+intentionally incomplete.
 
 **Downscaling input clarification:** Do not add daily `flddph` to the model
 output list. For the approved Tutorial02 Default configuration with
@@ -151,40 +168,34 @@ derive this field from each selected `rivdph` NetCDF time slice and the static
 `rivhgt` map. This saves a redundant daily output field. The clipping at zero
 is required to match the model's below-bank behavior.
 
-## 4. Proposed script and data organization
+## 4. Current learner and developer file organization
 
-Follow the current Guide01 convention: workflow scripts live directly under
-`workflow_example/`. Treat `map/mekong_15min/` as a shared read-only input for
-this example, and keep the tutorial-specific modified map with the workflow.
-Keep source scripts and compact explanatory records in Git. Large simulation
-outputs and derived grids should be ignored unless a small, reviewed reference
-product is later approved for distribution.
+The tutorial lives at `tutorial/guide01_workflow_example/`, beside Tutorial01
+and Tutorial02. The GitHub source retains completed solutions and developer
+records in `design/`; the learner package excludes that directory. The starter
+preparation script and Control GOSH are present, while the modified map and
+learner-created Deep Channel GOSH are absent. Generated outputs are ignored.
 
 ```text
-tutorial/guide01_how_to_develop_tutorial/
-└── workflow_example/
-    ├── tutorial_design.md                 this reviewed specification
-    ├── design/                             prompt and development records
-    ├── s01-prepare_map.sh                  proposed; writes map_modify/rivhgt_deep.nc
-    ├── s02-run_control.sh                  proposed
-    ├── s03-run_deep_channel.sh             proposed
-    ├── map_modify/                         generated tutorial-owned map inputs
-    │   └── rivhgt_deep.nc                  proposed; not yet generated
-    ├── a01-analyze_outputs.py              proposed reusable diagnostics
-    ├── v01-plot_sensitivity.py              proposed figures from analysis products
-    ├── out/control/ and out/deep_channel/   generated model NetCDF and logs
-    ├── analysis/                            generated compact derived data
-    └── figure/                              generated figures
+tutorial/guide01_workflow_example/
+├── tutorial_design.md
+├── design/                         developer references and reset
+├── manual_workflow_example.md      learner instructions
+├── s01-prepare_map.py              starter; learner changes increment to 3.0
+├── run-experiment.sh               working Control GOSH template
+├── s02-run_control.sh
+├── map_modify/                     initially no modified map
+├── out/                            generated model outputs
+├── analysis/                       generated diagnostics
+├── figure/                         generated learner figures
+└── sample_figure/                  approved expected-result figures
 ```
 
-The script names above are proposals, not established repository entry points.
-The implementation should use the repository's existing Python setup and GOSH
-execution conventions rather than introducing a new framework. Keep each
-stage repeatable. Map preparation reads the shared source without modifying
-it, writes only to the tutorial's `map_modify/`, and validates the source
-unchanged as well as the generated map's dimensions, coordinates, metadata,
-valid-cell difference, and missing mask. Do not create files or symlinks in
-the shared map directory.
+`design/` includes the complete map-preparation and experiment scripts,
+reference map, tests, and prior analysis products. `sample_figure/` is included
+in the learner file set; `figure/` contains no pre-generated PNGs. There is no
+tutorial package assembler yet, so only a temporary staged file-set review can
+be performed at this time.
 
 ## 5. Analysis plan
 
@@ -231,7 +242,7 @@ aggregate catchment area as a pixel mask or double-counting standing water.
 ### Existing implementation and required adaptation
 
 The repository's existing implementation is
-[`etc/downscale_flddph/`](../../../etc/downscale_flddph/), especially
+[`etc/downscale_flddph/`](../../etc/downscale_flddph/), especially
 `src/downscale_flddph_trib.F90` and `s01-downscale_flddph.sh`. Its active
 tributary-aware algorithm reads a daily coarse `flddphYYYY.bin` record, map
 `nextxy.bin` and `uparea.bin`, and 1-minute `catmxy`, `flddif`, `rivwth`, and
@@ -343,21 +354,13 @@ from daily `rivdph` and static `rivhgt` under the selected Default physics.
 Whether `prmwat` is used beyond separate context visualization remains a
 scientific choice; no quantitative subtraction is specified here.
 
-## 10. Later implementation sequence
+## 10. Current implementation status and remaining work
 
-1. Review and resolve blocking/open design choices; record them in the
-   development notes.
-2. Implement map preparation under `workflow_example/`; read the shared
-   `map/mekong_15min/netcdf/rivhgt.nc` as an unchanged source, write the +3 m
-   variant to `workflow_example/map_modify/rivhgt_deep.nc`, and validate both
-   the source's unchanged state and the variant.
-3. Add matched Control and Deep Channel 2000 runners under
-   `workflow_example/`; run and validate the daily output time axes.
-4. Add analysis that selects the Control event date, calculates field
-   differences and regional inundated area, and saves compact reusable
-   products.
-5. Add the NetCDF input adapter for the existing one-minute downscaling
-   algorithm; validate it with synthetic data, then run both experiments on
-   the shared selected date.
-6. Generate figures from analysis products and write a separate beginner
-   manual only after commands and expected outputs have been verified.
+The complete reference implementation, map variant, analysis artifacts, and
+figures are retained in `design/` and `sample_figure/`. The learner-facing
+starter map script requires changing its increment setting, and the completed
+Deep Channel runner is not present at the tutorial root. No new simulations or
+scientific results were generated for the learner-package revision. The next
+work is to build a real tutorial package, follow the manual from a clean
+package, and record any usability gaps. Scientific interpretation questions
+in Sections 8–9 remain open and must not be settled by package preparation.

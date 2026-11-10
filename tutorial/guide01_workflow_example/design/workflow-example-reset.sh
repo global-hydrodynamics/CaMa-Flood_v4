@@ -16,9 +16,20 @@ case "$ANSWER" in
     *) printf 'Reset cancelled; files were not changed.\n'; exit 1 ;;
 esac
 
-# Remove only the tutorial-owned modified map and named model-run directories.
+# Remove the one tutorial-owned modified map.
 rm -f "$WORKFLOW_DIR/map_modify/rivhgt_deep.nc"
-rm -rf "$WORKFLOW_DIR/out/control" "$WORKFLOW_DIR/out/deep_channel"
+
+# Remove known model products but leave unmatched files for developer review.
+for PROJECT in control deep_channel; do
+    RUN_DIR="$WORKFLOW_DIR/out/$PROJECT"
+    rm -f "$RUN_DIR"/o_outflw2000.nc "$RUN_DIR"/o_rivdph2000.nc \
+          "$RUN_DIR"/o_sfcelv2000.nc "$RUN_DIR"/o_fldfrc2000.nc \
+          "$RUN_DIR"/restart2001010100.nc "$RUN_DIR"/input_cmf.nam \
+          "$RUN_DIR"/input_cmf_2000.nam "$RUN_DIR"/console_2000.log \
+          "$RUN_DIR"/log_CaMa.txt "$RUN_DIR"/log_CaMa_2000.txt \
+          "$RUN_DIR"/run_time_2000.log "$RUN_DIR"/MAIN_cmf \
+          "$RUN_DIR"/mapdata.txt
+done
 
 # Remove only the analysis products created by the current workflow.
 rm -f "$WORKFLOW_DIR/analysis/difference_at_event.nc" \

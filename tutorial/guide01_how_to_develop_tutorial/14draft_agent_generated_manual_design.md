@@ -3,7 +3,7 @@
 **Status:** Repository-informed design for a future learner manual. The
 workflow example has not been implemented or run.
 
-**Scientific authority:** [`../tutorial_design.md`](workflow_example/tutorial_design.md)
+**Scientific authority:** [Current Tutorial Design](../guide01_workflow_example/tutorial_design.md)
 defines the approved experiment and technical specification. This document
 defines how to teach that workflow. It must not override the scientific design
 or present proposed files and steps as already available.
@@ -47,7 +47,7 @@ After completing the tutorial, a learner should be able to:
 
 ## Relationship to the scientific design
 
-Use the current [`tutorial_design.md`](workflow_example/tutorial_design.md) for exact
+Use the current [`tutorial_design.md`](../guide01_workflow_example/tutorial_design.md) for exact
 experiment settings, map and runoff metadata, output definitions, and the
 planned analysis. Do not duplicate its implementation-level specifications
 in full. Link to it for technical details and keep this manual focused on the

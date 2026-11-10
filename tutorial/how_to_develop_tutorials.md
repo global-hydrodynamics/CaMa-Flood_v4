@@ -14,7 +14,7 @@ This guide is for researchers, students, and contributors developing tutorials w
 | `<tutorial>/design/manual_design.md` | Tutorial-specific | Audience, prior knowledge, educational sequence, useful examples, and section Learning Checks. |
 | `<tutorial>/manual_*.md` | Tutorial-specific | Learner-facing instructions for performing the experiment and checking the intended learning outcomes. |
 | `<tutorial>/design/manual_generation_log.md` | Tutorial-specific, when applicable | Developer-only evidence about the tested revision, environment, commands, results, and limitations. |
-| `tutorial_requirements.csv` | Shared | Evidence-based registry of required learner activities and design, manual, and package checks. |
+| `tutorial_requirements.csv` | Shared | Evidence-based, one-row-per-tutorial registry of learner activities and design, manual, and package checks. |
 
 Keep experiment-specific scientific and educational decisions in each tutorial's specifications. Shared guides describe reusable procedures and quality expectations, not the details of an individual experiment. Generated manuals explain the workflow to learners; they are not independent scientific authorities.
 
@@ -67,7 +67,7 @@ Use this sequence as a practical guide. In real projects it is iterative: source
 
 ### Learner activities and distribution checks
 
-Every tutorial must make the learner do meaningful work that develops a reusable CaMa-Flood skill. For each required activity, specify the starting material, the essential artifact intentionally absent at the start, what the learner creates or changes, the transferable skill, and an observable completion criterion. Track one activity per row in [`tutorial_requirements.csv`](tutorial_requirements.csv); use `PASS`, `PARTIAL`, `FAIL`, or `NOT_REVIEWED` separately for Tutorial Design, Manual Design, and learner-package checks. Notes must say whether a requirement is explicit, only implied, or missing and point to evidence.
+Every tutorial must make the learner do meaningful work that develops a reusable CaMa-Flood skill. For each required activity, specify the starting material, the essential artifact intentionally absent at the start, what the learner creates or changes, the transferable skill, and an observable completion criterion. Summarize all of a tutorial's activities in one row of [`tutorial_requirements.csv`](tutorial_requirements.csv). Its educational-design columns describe the intended learning objective, operation, materials, absent and generated artifacts, skill, and expected result; its R1–R8 columns assess the shared requirements; and its three document/package check columns summarize evidence and remaining issues. Use `PASS`, `PARTIAL`, `FAIL`, or `NOT_REVIEWED` for each compliance status. Notes must distinguish explicit design from gaps and cite the relevant files.
 
 Keep complete working solutions and developer reset/evidence materials under the tutorial's `design/` directory. `design/` stays in GitHub for maintainers but is excluded from the learner package. Put approved reference images in `sample_figure/`; reserve `figure/` for files learners generate and keep it free of pre-generated results in the package. Do not package completed modified datasets, alternative experiment scripts, or generated model outputs that would bypass the intended activity.
 
@@ -76,6 +76,8 @@ Use three review gates:
 - **After Tutorial Design:** Is a meaningful learner action explicit, does it produce an essential artifact absent from the initial package, and does it teach a transferable skill?
 - **After Manual Design:** Does the design teach how to perform that action, identify the starting file and edits, and explain how to check the result?
 - **Before Distribution:** Does the actual package omit completed solutions while retaining enough starting materials and instructions? Can a learner complete the task and approximately reproduce the documented examples?
+
+Review the registry when a tutorial is proposed, when its Tutorial Design or Manual Design is completed or revised, when its implementation or learner package changes, and before it is declared ready to distribute. The registry is a researcher-facing design review tool, not an automated validator or a replacement for the specifications.
 
 Inspect the real package assembler before claiming package compliance. The legacy `doc/make_package.sh` builds a v4 distribution and is not a tutorial packager. If no suitable assembler exists, do not repurpose it or create a general package framework for one task; prepare a temporary allowlisted learner snapshot, inspect its contents, and report package validation as partial because the official distribution path remains unimplemented.
 

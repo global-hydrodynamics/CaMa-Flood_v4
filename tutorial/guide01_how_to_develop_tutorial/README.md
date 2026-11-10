@@ -40,24 +40,26 @@ records. The shared
 [manual-authoring guidance](../agent_manual_authoring.md) provide reusable
 conventions for planning, checking, and documenting tutorials.
 
-### The worked example in `workflow_example/`
+### The example tutorial: `tutorial/guide01_workflow_example/`
 
-The example develops a Mekong river-channel-depth sensitivity workflow:
+The actual Mekong river-channel-depth sensitivity tutorial is a sibling of
+Tutorial01 and Tutorial02, not a subdirectory of this development guide:
 
-- [`workflow_example/tutorial_design.md`](workflow_example/tutorial_design.md)
-  defines the scientific experiment and technical requirements.
-- [`workflow_example/design/manual_draft.md`](workflow_example/design/manual_draft.md)
-  preserves the worked example's design-stage teaching plan. Its statements
-  about planned work reflect that stage; use the current scripts and learner
-  manual for the implemented workflow.
-- [`workflow_example/manual_workflow_example.md`](workflow_example/manual_workflow_example.md)
-  is the learner-facing manual for carrying out and interpreting that
-  experiment.
-- [`workflow_example/design/`](workflow_example/design/) holds the worked
-  example's unnumbered design material, including the Manual Design draft.
-  The numbered development records—including the human–Chat AI–Agent AI
-  history and implementation evidence—are kept directly under this Guide01
-  directory so the chronology of tutorial development stays together.
+- [`../guide01_workflow_example/tutorial_design.md`](../guide01_workflow_example/tutorial_design.md)
+  defines the scientific experiment, learner actions, and technical
+  requirements.
+- [`../guide01_workflow_example/design/manual_design.md`](../guide01_workflow_example/design/manual_design.md)
+  specifies the intended learner operations and completion evidence.
+- [`../guide01_workflow_example/manual_workflow_example.md`](../guide01_workflow_example/manual_workflow_example.md)
+  is the learner-facing experimental walkthrough.
+- `tutorial/guide01_workflow_example/` owns the executable scripts, design
+  references, data/analysis inputs, and `sample_figure/`. Its `design/`
+  directory contains completed developer references and is excluded from a
+  learner package.
+
+The numbered development records remain directly under this Guide01 directory.
+They document how the example was developed; they are not relocated or
+rewritten to imply that the current sibling layout existed earlier.
 
 The numbered files directly under this Guide01 directory are historical
 snapshots. Their descriptions of what had or had not been implemented are
@@ -69,14 +71,14 @@ should be read as an implementation report from that point in time.
 
 At a glance, the current layout is:
 
-- Guide01 root: this overview, all numbered human–AI development records, and
-  the small `tests/test_downscale_input.py` test.
-- `workflow_example/`: the current learner manual, scientific Tutorial
-  Design, preparation/run/analysis/downscaling/plotting scripts, and the
-  generated `analysis/`, `figure/`, and tutorial-local map products.
-- `workflow_example/design/`: unnumbered design material for the worked
-  example, including its manual-design draft. The numbered history and
-  implementation evidence remain at the Guide01 root.
+- Guide01 root: this overview and all numbered human–AI development records.
+- `../guide01_workflow_example/`: the actual example tutorial, including its
+  Tutorial Design, Manual Design, learner manual, starter scripts, and
+  `sample_figure/`.
+- `../guide01_workflow_example/design/`: developer-only complete references,
+  reset script, and evidence; excluded from learner packages. Generated
+  `out/`, map-modification, analysis, and `figure/` products are absent from a
+  clean learner start.
 
 ## Development phases and record navigation
 
@@ -107,8 +109,9 @@ record in full:
    learner's needs from scientific and implementation specifications.
 4. Compare implementation prompts with Codex's repository checks, scripts,
    test results, and execution records.
-5. Read the [learner manual](workflow_example/manual_workflow_example.md) and
-   inspect its six figures and generated analysis products.
+5. Read the [learner manual](../guide01_workflow_example/manual_workflow_example.md)
+   and inspect its six reference figures. The learner-generated analysis
+   products are absent until the workflow is performed.
 6. Follow the review records to see how human feedback is translated into
    specific changes and how unresolved items remain visible.
 7. Apply the same approach to another CaMa-Flood topic, making the scientific

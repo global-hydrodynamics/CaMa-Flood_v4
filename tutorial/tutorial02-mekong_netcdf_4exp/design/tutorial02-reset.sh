@@ -16,11 +16,16 @@ case "$ANSWER" in
     *) printf 'Reset cancelled; files were not changed.\n'; exit 1 ;;
 esac
 
-# Remove only this tutorial's known generated experiment directories.
+# Remove only known model products inside each tutorial experiment directory;
+# unmatched files and directories are left for the developer to inspect.
 for PROJECT in mek_default mek_nobif mek_kine mek_nofld; do
-    if [ -d "$TUTORIAL_DIR/out/$PROJECT" ]; then
-        rm -rf "$TUTORIAL_DIR/out/$PROJECT"
-    fi
+    RUN_DIR="$TUTORIAL_DIR/out/$PROJECT"
+    rm -f "$RUN_DIR"/o_outflw20??.nc "$RUN_DIR"/o_pthflw20??.nc \
+          "$RUN_DIR"/restart20????????.nc \
+          "$RUN_DIR"/input_cmf.nam "$RUN_DIR"/input_cmf_20????.nam \
+          "$RUN_DIR"/console_20????.log "$RUN_DIR"/log_CaMa.txt \
+          "$RUN_DIR"/log_CaMa_20????.txt "$RUN_DIR"/run_time_20????.log \
+          "$RUN_DIR"/MAIN_cmf "$RUN_DIR"/mapdata.txt
 done
 
 # Remove only the three learner-created alternative configurations.

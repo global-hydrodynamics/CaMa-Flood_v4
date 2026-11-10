@@ -9,7 +9,7 @@ not started.
 
 This is a concise development record, not a verbatim transcript. It records the
 requests, evidence checks, and clarifications that shaped
-[`workflow_example/tutorial_design.md`](workflow_example/tutorial_design.md).
+[`workflow_example/tutorial_design.md`](../guide01_workflow_example/tutorial_design.md).
 The earlier Chat AI draft and Codex prompt remain historical records and were
 not rewritten.
 
@@ -131,7 +131,7 @@ acceptance criteria.
 ## 5. Outcome and next step
 
 Codex created
-[`workflow_example/tutorial_design.md`](workflow_example/tutorial_design.md)
+[`workflow_example/tutorial_design.md`](../guide01_workflow_example/tutorial_design.md)
 as the repository-informed specification. The document separates verified
 repository behavior, proposed workflow details, and open researcher decisions.
 No simulation, downscaling run, analysis, or figure generation was performed;

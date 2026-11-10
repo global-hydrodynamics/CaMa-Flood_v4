@@ -256,10 +256,12 @@ cd tutorial/tutorial01-get_started
 
 The sample script keeps its generated run products in the tutorial's ignored
 `out/` directory. It is a short operational check, not a scientific
-validation. Guide01's worked river-depth example uses NetCDF inputs and
-outputs, Python analysis, and one-minute downscaling; after setup, follow its
-[learner manual](workflow_example/manual_workflow_example.md) for those
-additional steps. The repository root [README](../../README.md) distinguishes
+validation. The Guide01 worked river-depth tutorial is now a sibling of
+Tutorial01 and Tutorial02 at `tutorial/guide01_workflow_example/`. It uses
+NetCDF inputs and outputs, Python analysis, and one-minute downscaling; after
+setup, follow its
+[learner manual](../guide01_workflow_example/manual_workflow_example.md) for
+those additional steps. The repository root [README](../../README.md) distinguishes
 these development samples from the official data-rich distribution package.
 
 ### Readiness checklist

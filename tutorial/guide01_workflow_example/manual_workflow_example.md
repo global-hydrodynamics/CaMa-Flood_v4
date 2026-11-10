@@ -34,13 +34,14 @@ spin-up or Restart is used. The runoff, input matrix, map geometry, and other
 settings are matched. These choices make the pair a controlled sensitivity
 comparison, but the one-year cold start limits what can be concluded.
 
-The example is part of Guide01, a contributor workflow example on the
-development branch. It is not a separately validated production tutorial.
+The example is a tutorial beside Tutorial01 and Tutorial02. The numbered
+Guide01 directory explains how this example was developed. It is not a
+separately validated production tutorial.
 For Guide01's purpose and development workflow, see the
-[Guide01 overview](../README.md). For the scientific and technical design,
+[Guide01 overview](../guide01_how_to_develop_tutorial/README.md). For the scientific and technical design,
 see [the workflow design](tutorial_design.md). The implementation evidence
 and unresolved choices are recorded in
-[`../22implementation_record.md`](../22implementation_record.md).
+[`22implementation_record.md`](../guide01_how_to_develop_tutorial/22implementation_record.md).
 
 ## 2. Prepare the repository and inputs
 
@@ -64,39 +65,48 @@ git branch --show-current
 ```
 
 `cmf_root` is a shell variable, not a permanent setting; define it again in a
-new terminal. This example was implemented on `feature/gosh-refactor`. If you
-are using another checkout, first confirm that the Guide01 files and required
-sample datasets are present.
+new terminal. The design and manual are in the GitHub source repository. The future learner
+package excludes the developer-only `design/` directory; no dedicated tutorial
+package assembler is available yet, so this is not a claim that an official
+downloadable learner package has been built.
 
 ### Inspect the example files
 
 ```bash
 cd "${cmf_root}"
-cd tutorial/guide01_how_to_develop_tutorial/workflow_example
+cd tutorial/guide01_workflow_example
 pwd
 ls -lhF
 ```
 
-The scripts are kept directly in the example directory. The directories have
-separate roles: `map_modify/` holds the changed map parameter, `out/` holds
+The scripts are kept directly in the example directory. Developer references
+under `design/` are retained in the GitHub checkout but excluded from a future
+learner package. The directories have separate roles: `map_modify/` holds the changed map parameter, `out/` holds
 model runs and downscaling products, `analysis/` holds derived tables and
 NetCDF diagnostics, and `figure/` holds plots. `design/` contains development
 records for tutorial authors, rather than steps needed by a learner.
 
-An excerpt from the inspected checkout's `ls -lhF` output is:
+An excerpt from a temporary learner-file snapshot's `ls -lhF` output is:
 
 ```text
-drwxr-xr-x@ 8 yamadai  staff   256B Nov  9 16:41 analysis/
-drwxr-xr-x@ 8 yamadai  staff   256B Nov  9 16:51 figure/
-drwxr-xr-x@ 3 yamadai  staff    96B Nov  9 16:37 map_modify/
-drwxr-xr-x@ 6 yamadai  staff   192B Nov  9 16:45 out/
--rwxr-xr-x@ 1 yamadai  staff   5.2K Nov  9 16:53 a02-prepare_downscale_input.py*
--rwxr-xr-x@ 1 yamadai  staff   5.5K Nov  9 16:34 s01-prepare_map.py*
-[… other entries omitted …]
+-rw-r--r--  1 yamadai  wheel    12K Nov 10 05:28 a01-analyze_outputs.py
+-rwxr-xr-x  1 yamadai  wheel   5.2K Nov 10 05:28 a02-prepare_downscale_input.py*
+drwxr-xr-x  3 yamadai  wheel    96B Nov 10 08:52 analysis/
+drwxr-xr-x  3 yamadai  wheel    96B Nov 10 08:50 figure/
+-rw-r--r--  1 yamadai  wheel    24K Nov 10 13:21 manual_workflow_example.md
+drwxr-xr-x  3 yamadai  wheel    96B Nov 10 08:52 map_modify/
+-rwxr-xr-x  1 yamadai  wheel   4.0K Nov 10 08:48 run-experiment.sh*
+-rwxr-xr-x  1 yamadai  wheel   5.9K Nov 10 08:48 s01-prepare_map.py*
+... other entries omitted ...
+drwxr-xr-x  8 yamadai  wheel   256B Nov 10 08:44 sample_figure/
+-rw-r--r--  1 yamadai  wheel    20K Nov 10 13:36 tutorial_design.md
 ```
 
 The `*` marker indicates an executable in this `ls -F` listing. Sizes and
-timestamps can differ in another checkout or after rerunning the workflow.
+timestamps can differ. This learner snapshot excludes `design/`, pre-generated
+figures, the modified map, and model results. A direct GitHub checkout also
+contains developer-only `design/` materials because no official tutorial
+package assembler exists yet.
 
 The sample inputs used by the runner are repository-level files:
 
@@ -125,13 +135,13 @@ source .venv/bin/activate
 The setup script is interactive when it needs to create or update the
 environment; follow its displayed confirmation prompt. In a non-interactive
 terminal it diagnoses the environment without changing it. See the
-[Python environment guide](../../../docs/python_environment.md) and the
-repository [setup instructions](../../../README.md#development-environment-setup)
+[Python environment guide](../../docs/python_environment.md) and the
+repository [setup instructions](../../README.md#development-environment-setup)
 for the existing-environment and troubleshooting options.
 
 The run scripts expect the NetCDF-enabled executable at
 `out/bin/MAIN_cmf_netcdf`. If that file is missing, prepare the compiler
-configuration described in the [v5 build guide](../../../config/README.md),
+configuration described in the [v5 build guide](../../config/README.md),
 then build the separate NetCDF executable from the repository root:
 
 ```bash
@@ -155,25 +165,36 @@ absolute path, so activate or prepare that environment before running them.
 **Question:** How can the experiment change one map parameter without
 changing the shared map or its missing-cell pattern?
 
-The preparation script reads the shared `rivhgt.nc`, adds `3.0 m` to valid
-cells, and writes `map_modify/rivhgt_deep.nc`. It checks the data type, grid,
+The preparation script is a learner starting file. It starts with
+`RIVHGT_INCREMENT_M = 0.0` and stops until you edit the value. Set it to
+`3.0`; this is the approved experiment perturbation, not a value to estimate.
+The script then reads the shared `rivhgt.nc`, adds `3.0 m` to valid cells, and
+writes `map_modify/rivhgt_deep.nc` while preserving the source map. It checks the data type, grid,
 coordinates, missing mask, and increment, and checks that the shared source
 checksum remains unchanged. The Deep Channel runner later supplies the
 tutorial-local file directly through `CRIVHGT`; it does not copy the file into
 the shared map directory.
 
-Run from the repository root:
+From the repository root, open the script and make the required edit:
 
 ```bash
 cd "${cmf_root}"
-./.venv/bin/python tutorial/guide01_how_to_develop_tutorial/workflow_example/s01-prepare_map.py
+nano tutorial/guide01_workflow_example/s01-prepare_map.py
+```
+
+Change `RIVHGT_INCREMENT_M = 0.0` to `RIVHGT_INCREMENT_M = 3.0` and save.
+Then run the preparation script:
+
+```bash
+cd "${cmf_root}"
+./.venv/bin/python tutorial/guide01_workflow_example/s01-prepare_map.py
 ```
 
 If the generated file already exists, the script stops instead of replacing
 it. To deliberately regenerate this tutorial-owned product, add `--force`:
 
 ```bash
-./.venv/bin/python tutorial/guide01_how_to_develop_tutorial/workflow_example/s01-prepare_map.py --force
+./.venv/bin/python tutorial/guide01_workflow_example/s01-prepare_map.py --force
 ```
 
 The inspected run reported a 120 × 80 Float32 grid, 6,566 valid cells, 3,034
@@ -181,7 +202,7 @@ missing cells, and a `+3.0 m` change on valid cells. It also reported matching
 grid and missing mask. These are checks of the generated file, not proof that
 the modified parameter is scientifically preferable.
 
-![Control and Deep Channel river-depth maps and their difference](figure/f01-rivhgt_map_change.png)
+![Control and Deep Channel river-depth maps and their difference](sample_figure/f01-rivhgt_map_change.png)
 
 **Figure 1.** Shared `rivhgt`, the tutorial-local `+3 m` variant, and
 Deep Channel minus Control. The difference applies to valid map cells; the
@@ -197,26 +218,38 @@ unchanged missing-cell mask is not a physical zero-depth result.
 **Question:** Which conditions must be matched to interpret a paired run as a
 sensitivity comparison?
 
-The two small wrapper scripts select `control` or `deep_channel`; both call
-`run-experiment.sh`, which writes a case-specific namelist and launches the
+The provided `run-experiment.sh` is the Control configuration. To create the
+required second experiment, copy it and edit only its project name and river
+depth input path. The script writes a case-specific namelist and launches the
 model from that case's run directory. The model configuration uses the same
 2000 calendar-year period, runoff, input matrix, physics options, and daily
 NetCDF output. The only intended scientific input difference is `CRIVHGT`.
 
-From the repository root, run each case once:
+First copy the provided Control configuration and edit the copy:
 
 ```bash
 cd "${cmf_root}"
-sh tutorial/guide01_how_to_develop_tutorial/workflow_example/s02-run_control.sh
-sh tutorial/guide01_how_to_develop_tutorial/workflow_example/s03-run_deep_channel.sh
+cp tutorial/guide01_workflow_example/run-experiment.sh tutorial/guide01_workflow_example/run-deep-channel.sh
+nano tutorial/guide01_workflow_example/run-deep-channel.sh
 ```
 
-Each run is placed under `workflow_example/out/control/` or
-`workflow_example/out/deep_channel/`. A successful wrapper prints a
+In the copy, change `PROJ="control"` to `PROJ="deep_channel"`, and change
+`RIVHGT="$MAP_NC/rivhgt.nc"` to
+`RIVHGT="$SCRIPT_DIR/map_modify/rivhgt_deep.nc"`. Keep other experiment
+settings unchanged. Now run both configurations:
+
+```bash
+cd "${cmf_root}"
+sh tutorial/guide01_workflow_example/s02-run_control.sh
+sh tutorial/guide01_workflow_example/run-deep-channel.sh
+```
+
+Each run is placed under `guide01_workflow_example/out/control/` or
+`guide01_workflow_example/out/deep_channel/`. A successful script prints a
 `[SUCCESS]` message. It also checks that all four non-empty NetCDF outputs
 were created. If a run fails, inspect that case's `console_2000.log` and
 `log_CaMa_2000.txt` before retrying. The scripts refuse to overwrite existing
-case output by default. To rerun one case, pass `--force` to its wrapper; the
+case output by default. To rerun one case, pass `--force` to its script; the
 runner replaces only the known outputs in that case's directory.
 
 The expected output filenames are:
@@ -260,7 +293,7 @@ Check that both cases contain the four expected files:
 
 ```bash
 cd "${cmf_root}"
-cd tutorial/guide01_how_to_develop_tutorial/workflow_example
+cd tutorial/guide01_workflow_example
 pwd
 ls -lhF out/control
 ls -lhF out/deep_channel
@@ -288,7 +321,7 @@ Sizes and timestamps are an example from one inspected run; they can vary.
 from pathlib import Path
 import xarray as xr
 
-root = Path("tutorial/guide01_how_to_develop_tutorial/workflow_example/out")
+root = Path("tutorial/guide01_workflow_example/out")
 for case in ("control", "deep_channel"):
     for name in ("outflw", "rivdph", "sfcelv", "fldfrc"):
         path = root / case / f"o_{name}2000.nc"
@@ -304,7 +337,7 @@ Figure 2 shows the Control values for all four variables at the selected
 event. Compare the variables with their time meanings in the table: a daily
 mean discharge is not the same type of quantity as a water-level snapshot.
 
-![Control output fields at the selected event](figure/f02-model_fields.png)
+![Control output fields at the selected event](sample_figure/f02-model_fields.png)
 
 **Figure 2.** Control discharge (`outflw`, daily interval mean), channel-water
 depth (`rivdph`), water-surface elevation (`sfcelv`), and flooded fraction
@@ -343,8 +376,8 @@ and `analysis/provisional_timeseries.csv`:
 
 ```bash
 cd "${cmf_root}"
-./.venv/bin/python tutorial/guide01_how_to_develop_tutorial/workflow_example/a01-analyze_outputs.py --validate-only
-./.venv/bin/python tutorial/guide01_how_to_develop_tutorial/workflow_example/a01-analyze_outputs.py
+./.venv/bin/python tutorial/guide01_workflow_example/a01-analyze_outputs.py --validate-only
+./.venv/bin/python tutorial/guide01_workflow_example/a01-analyze_outputs.py
 ```
 
 The first command checks aligned grids and timestamps and reports selected
@@ -357,7 +390,7 @@ the checked selection was interval end 2000-09-22, representing September
 21. This is a reproducible selection rule, not a claim that it is the most
 important flood event.
 
-![Control and Deep Channel time series](figure/f03-river_timeseries.png)
+![Control and Deep Channel time series](sample_figure/f03-river_timeseries.png)
 
 **Figure 3.** Daily interval-mean discharge and daily snapshot river depth and
 water-surface elevation for the two cases at the three provisional cells.
@@ -397,7 +430,7 @@ for Control and 34,383 km² for Deep Channel in that selected region at the
 selected event. These are model sensitivity results for this setup and mask,
 not a general prediction that deeper channels reduce flooding.
 
-![Flooded fraction, cell contributions, and regional area](figure/f04-flood_fraction_and_cell_area.png)
+![Flooded fraction, cell contributions, and regional area](sample_figure/f04-flood_fraction_and_cell_area.png)
 
 **Figure 4.** Top panels show snapshot `fldfrc`; middle panels show each
 catchment's contribution `fldfrc × ctmare` in km²; the bottom panel sums
@@ -425,7 +458,7 @@ color means Deep Channel is larger than Control; a negative color means it is
 smaller. The inspected fields show spatially mixed responses, so avoid
 generalizing from a single sign or location.
 
-![Spatial difference fields](figure/f05-event_sensitivity.png)
+![Spatial difference fields](sample_figure/f05-event_sensitivity.png)
 
 **Figure 5.** Event-time Deep Channel minus Control for interval-mean
 discharge and snapshot river depth, water-surface elevation, and flooded
@@ -462,7 +495,7 @@ Run from the repository root. On a first run, omit `--force`:
 
 ```bash
 cd "${cmf_root}"
-sh tutorial/guide01_how_to_develop_tutorial/workflow_example/s04-downscale_event.sh
+sh tutorial/guide01_workflow_example/s04-downscale_event.sh
 ```
 
 This step needs the two model runs, generated event table, `.venv`, and
@@ -472,14 +505,14 @@ input and downscaled output under `out/downscaling/`. When outputs already
 exist and you intentionally want to replace them, use:
 
 ```bash
-sh tutorial/guide01_how_to_develop_tutorial/workflow_example/s04-downscale_event.sh --force
+sh tutorial/guide01_workflow_example/s04-downscale_event.sh --force
 ```
 
 To regenerate the six figures from the saved model, analysis, and downscaling
 products:
 
 ```bash
-./.venv/bin/python tutorial/guide01_how_to_develop_tutorial/workflow_example/v01-plot_results.py
+./.venv/bin/python tutorial/guide01_workflow_example/v01-plot_results.py
 ```
 
 The plotting script reads saved results; it does not rerun the model or
@@ -489,7 +522,7 @@ Control and 0 to 16.0039 m for Deep Channel. The downscaling is
 postprocessing based on high-resolution terrain and its assumptions; it is
 not independent validation.
 
-![One-minute postprocessed inundation depth](figure/f06-one_minute_inundation.png)
+![One-minute postprocessed inundation depth](sample_figure/f06-one_minute_inundation.png)
 
 **Figure 6.** Downscaled inundation depth in metres for the common event,
 shown over 102–108°E, 9–15°N. Both panels use the same display scale. Unassigned
@@ -535,23 +568,25 @@ analysis.
 
 ## Reproduce the complete workflow
 
-After the Python environment and executable are ready, the following commands
-reproduce the workflow in order from the repository root. The first run of
-each step should not need `--force` in a fresh example directory.
+After the Python environment and executable are ready, complete the two edits
+described in Sections 3 and 4, then run the workflow from the repository root.
+The first run of each step should not need `--force` in a fresh example
+directory.
 
 ```bash
 cd "${cmf_root}"
-./.venv/bin/python tutorial/guide01_how_to_develop_tutorial/workflow_example/s01-prepare_map.py
-sh tutorial/guide01_how_to_develop_tutorial/workflow_example/s02-run_control.sh
-sh tutorial/guide01_how_to_develop_tutorial/workflow_example/s03-run_deep_channel.sh
-./.venv/bin/python tutorial/guide01_how_to_develop_tutorial/workflow_example/a01-analyze_outputs.py --validate-only
-./.venv/bin/python tutorial/guide01_how_to_develop_tutorial/workflow_example/a01-analyze_outputs.py
-sh tutorial/guide01_how_to_develop_tutorial/workflow_example/s04-downscale_event.sh
-./.venv/bin/python tutorial/guide01_how_to_develop_tutorial/workflow_example/v01-plot_results.py
+./.venv/bin/python tutorial/guide01_workflow_example/s01-prepare_map.py
+cp tutorial/guide01_workflow_example/run-experiment.sh tutorial/guide01_workflow_example/run-deep-channel.sh
+sh tutorial/guide01_workflow_example/s02-run_control.sh
+sh tutorial/guide01_workflow_example/run-deep-channel.sh
+./.venv/bin/python tutorial/guide01_workflow_example/a01-analyze_outputs.py --validate-only
+./.venv/bin/python tutorial/guide01_workflow_example/a01-analyze_outputs.py
+sh tutorial/guide01_workflow_example/s04-downscale_event.sh
+./.venv/bin/python tutorial/guide01_workflow_example/v01-plot_results.py
 ```
 
 The model runs take substantially longer than the inspection and plotting
 steps. Existing outputs are protected from accidental replacement; use the
 individual `--force` options only when deliberately regenerating their
 products. For detailed evidence, exact selected cells, and unresolved
-research choices, consult [`../22implementation_record.md`](../22implementation_record.md).
+research choices, consult [`22implementation_record.md`](../guide01_how_to_develop_tutorial/22implementation_record.md).
