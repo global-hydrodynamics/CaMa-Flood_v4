@@ -1,7 +1,7 @@
 #!/bin/sh
-# Run yearly Mekong simulations with legacy consolidated NetCDF maps.
+# Run yearly Mekong simulations with individual NetCDF maps.
 # NetCDF runoff/output and annual Binary restarts connect the two runs.
-# Run from gosh_sample/: ./legacy02-longterm_netcdf.sh
+# Run from gosh_test/: ./mek02-longterm_netcdf.sh
 set -eu
 
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
@@ -16,11 +16,13 @@ END_YEAR=2001                    # Last simulation year; extend to continue the 
 ROFFTAG="test-mek_1deg_nc"     # Selects inp/test-mek_1deg_nc/ with one NetCDF file per year.
 INPMAT_TAG="test-mek_1deg"     # Selects the existing input matrix for the same 1-degree grid.
 
-# Legacy consolidated NetCDF map inputs.
-MAPDIR="${CMF_BASE}/map/mekong_15min"   # Mekong map root containing params.txt and bifprm.txt.
-MAP_NETCDF_DIR="${MAPDIR}/netcdf"       # Directory containing rivclim.nc and rivpar.nc.
-LEGACY_RIVCLIM="${MAP_NETCDF_DIR}/rivclim.nc" # River network and topography container.
-LEGACY_RIVPAR="${MAP_NETCDF_DIR}/rivpar.nc"   # River-channel parameter container.
+# Map input files; LMAPCDF=.FALSE. makes the reader select Binary or NetCDF from each extension.
+MAPDIR="${CMF_BASE}/map/mekong_15min"  # Mekong river-map root containing params.txt and bifprm.txt.
+MAP_NETCDF_DIR="${MAPDIR}/netcdf"      # Individual NetCDF map products.
+#NEXTXY="${MAP_NETCDF_DIR}/nextxy.nc"       # Includes river networks affected by regional edges.
+NEXTXY="${MAP_NETCDF_DIR}/nextxy_noedge.nc" # Excludes boundary-affected river networks (default).
+#RIVWTH="${MAP_NETCDF_DIR}/rivwth.nc"       # Empirical power-law channel width.
+RIVWTH="${MAP_NETCDF_DIR}/rivwth_merit.nc"  # MERIT Hydro-merged channel width (default).
 
 # Model execution and physical options; these retain the mek01 sample configuration.
 OMP_NUM_THREADS=4                # OpenMP threads for this non-MPI sample.
@@ -46,7 +48,7 @@ LOUTCDF=".TRUE."                # TRUE: write NetCDF model output; FALSE: write 
 IFRQ_RST=0                       # 0: write restart at end only; 1-24: hourly; 30: monthly (also at end).
 CVNREST="restart"               # Prefix for dated restart files.
 LRESTCDF=".TRUE."               # TRUE: NetCDF restart; FALSE: Binary restart.
-RUNDIR="${CMF_BASE}/out/legacy02-longterm_netcdf" # Dedicated legacy-map test output directory.
+RUNDIR="${CMF_BASE}/out/mek02-longterm_mapnc" # Dedicated individual-map test output directory.
 
 # ----------------------------------------------------------------------
 # User settings end here. Paths and annual model runs follow.
@@ -59,7 +61,7 @@ INPDIM="${MAPDIR}/inpdim_${INPMAT_TAG}.txt"
 INPMAT="${MAPDIR}/inpmat_${INPMAT_TAG}.bin"
 
 printf '\n==================================================\n'
-printf '[STEP 1/3] Prepare the legacy consolidated map test\n'
+printf '[STEP 1/3] Prepare the individual map test\n'
 printf '==================================================\n'
 printf 'CMF_BASE = %s\n' "$CMF_BASE"
 printf 'RUNDIR = %s\n' "$RUNDIR"
@@ -133,10 +135,17 @@ EDAY = 1                   ! Exclusive simulation end day.
 EHOUR = 0                  ! Exclusive simulation end hour.
 /
 &NMAP
-LMAPCDF = .TRUE.                      ! TRUE selects the legacy consolidated NetCDF map interface.
-CRIVCLINC = "${LEGACY_RIVCLIM}"      ! Consolidated connectivity and topography maps.
-CRIVPARNC = "${LEGACY_RIVPAR}"       ! Consolidated river-channel parameters.
-CPTHOUT = "${MAPDIR}/bifprm.txt"     ! Bifurcation channel parameters.
+LMAPCDF = .FALSE.                     ! FALSE uses individual .bin/.nc files; TRUE selects legacy consolidated NetCDF maps.
+CNEXTXY = "${NEXTXY}"                ! Downstream river connectivity (nextx/nexty).
+CGRAREA = "${MAP_NETCDF_DIR}/ctmare.nc" ! Unit-catchment area [m2].
+CELEVTN = "${MAP_NETCDF_DIR}/elevtn.nc" ! Channel-top elevation [m].
+CNXTDST = "${MAP_NETCDF_DIR}/nxtdst.nc" ! Distance to downstream unit catchment [m].
+CRIVLEN = "${MAP_NETCDF_DIR}/rivlen.nc" ! River-channel length within unit catchment [m].
+CFLDHGT = "${MAP_NETCDF_DIR}/fldhgt.nc" ! Floodplain elevation-profile thresholds [m].
+CRIVWTH = "${RIVWTH}"                 ! River-channel width [m], selected above.
+CRIVHGT = "${MAP_NETCDF_DIR}/rivhgt.nc" ! River-channel depth [m].
+CRIVMAN = "${MAP_NETCDF_DIR}/rivman.nc" ! River Manning roughness coefficient.
+CPTHOUT = "${MAP_NETCDF_DIR}/bifprm.nc" ! Bifurcation channel parameters.
 /
 &NRESTART
 CRESTSTO = "${CRESTSTO}"  ! Input restart path when LRESTART is true; NONE means no input restart.

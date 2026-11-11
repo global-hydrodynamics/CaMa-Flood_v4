@@ -37,6 +37,10 @@ practices that can evolve as the Gallery grows.
 - A user-facing script should generate one complete Figure. A Figure may
   contain multiple related panels; helper scripts and libraries may be used
   internally without being forced into the one-script/one-Figure interface.
+- In a visualization project, keep the user-facing Shell entry point at the
+  project root, editable input and display settings there, and Python or other
+  plotting implementation under `script/`. This makes the run configuration
+  easy to find while keeping plotting logic separate.
 - Save the default output as PNG under the owning project's `figure/`
   directory. Keep generated files with the visualization project or tutorial
   that owns them.

@@ -1,4 +1,6 @@
-# CaMa-Flood v5 sample workflows
+# CaMa-Flood v5 developer test workflows
+
+This directory contains developer-oriented model execution and operational verification scripts. Developers may rely on outputs from these workflows in their working environment, where they generally retain the results. General users should learn CaMa-Flood through [`tutorial/`](../tutorial/), whose manuals provide the learner-facing instructions. Tutorials and visualization examples should not assume outputs from this directory are available; visualization examples should normally use Git-tracked sample data or prepared inputs.
 
 This directory is the v5 development copy of the complete legacy [`gosh/`](../gosh/) workflow tree. The legacy `gosh/` directory remains unchanged. The copied `test*.sh`, option, development, and specialized examples are not yet migrated to v5 and may still contain legacy executable paths, package-only data paths, current-working-directory assumptions, and output cleanup behavior. Do not run them as v5 examples until they are individually reviewed and migrated.
 
@@ -9,7 +11,7 @@ Before building, create the ignored v5 `config/Mkinclude` as described in the [b
 From any working directory, run:
 
 ```sh
-./gosh_sample/compile.sh
+./gosh_test/compile.sh
 ```
 
 The wrapper resolves the repository location from its own file path and runs `make -C src_main all`. It does not build or clean legacy model or map-tool directories. The output executable is `src_main/MAIN_cmf`. To clean only this v5 build, run `make -C src_main clean` from the repository root.
@@ -18,10 +20,10 @@ The wrapper resolves the repository location from its own file path and runs `ma
 
 [`mek01-default_run.sh`](mek01-default_run.sh) runs one non-MPI simulation from 2000-01-01 00:00 to 2000-02-10 00:00 (40 days; end time exclusive) with adaptive timestep and bifurcation enabled, zero initial storage, and reservoir operation disabled. It uses the daily 1-degree ELSE_GPCC sample with `DROFUNIT=86400000`, the Mekong `rivwth_merit.bin`, and the sample map's authoritative `bifprm.csv`. The one-day CSV and legacy-TXT smoke runs both read 382 paths and 5 layers; their outputs and saved bifurcation flow matched for this sample. Edit the start/end date settings or `RUNDIR` near the top to change the period or experiment directory.
 
-The map-specific runoff matrix was generated with [`map/mekong_15min/script_params/mek03-generate_inpmat-mek1deg.sh`](../map/mekong_15min/script_params/mek03-generate_inpmat-mek1deg.sh). The generated `inpdim_test-mek_1deg.txt` and `inpmat_test-mek_1deg.bin` are retained with the Mekong sample. Run this script from `gosh_sample/` so its `cd ..` base-directory setting resolves to the repository root:
+The map-specific runoff matrix was generated with [`map/mekong_15min/script_params/mek03-generate_inpmat-mek1deg.sh`](../map/mekong_15min/script_params/mek03-generate_inpmat-mek1deg.sh). The generated `inpdim_test-mek_1deg.txt` and `inpmat_test-mek_1deg.bin` are retained with the Mekong sample. Run this script from `gosh_test/` so its `cd ..` base-directory setting resolves to the repository root:
 
 ```sh
-cd gosh_sample
+cd gosh_test
 ./mek01-default_run.sh
 ```
 
@@ -33,13 +35,13 @@ The maintained simulation scripts write `CMF_BASE` in `&NOUTPUT` as the resolved
 
 [`mek02-longterm_netcdf.sh`](mek02-longterm_netcdf.sh) and [`legacy02-longterm_netcdf.sh`](legacy02-longterm_netcdf.sh) run the same 2000–2001 Mekong case with yearly NetCDF runoff (`CROFFREQ="YEAR"`), NetCDF model output, a Binary input matrix, and NetCDF annual Restarts. The forcing reader selects `runoffYYYY.nc` from the model calendar and switches files at January 1; both scripts still split the simulation by year to demonstrate the Restart handoff. They carry the 2000 year-end `.nc` Restart into 2001. `mek02` reads the map-specific `${MAPDIR}/netcdf/bifprm.nc` table with the NetCDF-enabled model and individual NetCDF map files with `LMAPCDF=.FALSE.`; `legacy02` reads the consolidated `rivclim.nc` and `rivpar.nc` containers with `LMAPCDF=.TRUE.` and retains its existing bifurcation table configuration. Those containers were generated from the selected `nextxy_noedge` and `rivwth_merit` products. Each script writes to a separate directory: `out/mek02-longterm_mapnc/` and `out/legacy02-longterm_netcdf/`.
 
-Build the NetCDF-enabled executable with `./gosh_sample/compile_netcdf.sh` from any directory, then run either sample from `gosh_sample/`:
+Build the NetCDF-enabled executable with `./gosh_test/compile_netcdf.sh` from any directory, then run either sample from `gosh_test/`:
 
 These annual samples use `IFRQ_INP=24` and `DROFUNIT=86400000` for daily mm/day values; file grouping is selected separately by `CROFFREQ="YEAR"`. The [runoff input guide](../inp/README.md#supported-input-formats-and-simulation-settings) documents the required `CROFFREQ` setting, four grouping modes, SEQ start-time rules, and CF-time checks.
 
 ```sh
-./gosh_sample/compile_netcdf.sh
-cd gosh_sample
+./gosh_test/compile_netcdf.sh
+cd gosh_test
 ./mek02-longterm_netcdf.sh
 ./legacy02-longterm_netcdf.sh
 ```

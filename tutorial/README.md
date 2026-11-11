@@ -2,6 +2,8 @@
 
 Each tutorial is a reproducible model experiment paired with an educational manual. Its specifications define the scientific workflow and the intended learning; the manual guides learners through the executable materials and helps them check their progress. Operational success is not, by itself, scientific validation.
 
+This is the primary learning environment for general CaMa-Flood users. The repository's [`gosh_test/`](../gosh_test/) directory is for developers who need to run model examples and perform operational checks; tutorials should not depend on outputs created there.
+
 ## Core Principles
 
 ### 1. Executable Learning Materials

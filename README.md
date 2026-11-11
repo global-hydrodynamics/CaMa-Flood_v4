@@ -30,6 +30,8 @@ This repository provides source code, build configurations, execution scripts, a
 
 The canonical v5 tutorial collection is under [`tutorial/`](tutorial/). Start with [Tutorial01](tutorial/tutorial01-get_started/manual_tutorial01-get_started.md) for a tested development-branch build and Mekong run; it is not a substitute for the official downloadable distribution package.
 
+[`gosh_test/`](gosh_test/) contains developer-oriented model execution and operational verification workflows. General users should start with `tutorial/`; visualization projects should normally use Git-tracked sample data or prepared visualization inputs rather than depend on `gosh_test/` outputs.
+
 The legacy v4 source and scripts use [adm/Mkinclude](adm/Mkinclude) and the `adm/` templates. The v5 development tree uses a separate, ignored `config/Mkinclude`; its GNU Fortran default enables OpenMP, NetCDF, and single precision. See the [v5 build guide](config/README.md) and [model source guide](src_main/README.md). The legacy [v4 compilation script](gosh/compile.sh) and experiments remain under `gosh/`.
 
 ### Development environment setup
@@ -56,7 +58,7 @@ The optional ERA5-Land downloader also requires CDS account credentials and data
 | [adm/](adm/) | Compiler, library, precision, parallelization, and build configuration. |
 | [config/](config/) | Separate v5 compiler and library configuration templates. |
 | [src_main/](src_main/) | v5 model-source tree. |
-| [gosh_sample/](gosh_sample/) | v5 sample build and simulation workflows. |
+| [gosh_test/](gosh_test/) | Developer-oriented v5 build, simulation, and operational verification workflows. |
 | [tutorial/](tutorial/) | v5 tutorial specifications, executable examples, and learner-facing manuals. |
 | [map/](map/) | River-map preprocessing, regionalization, river parameters, input mapping, and gauge/reservoir allocation. |
 | [inp/](inp/) | Runoff forcing download and preparation tools. |

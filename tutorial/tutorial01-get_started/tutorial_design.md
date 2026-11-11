@@ -40,7 +40,7 @@ CaMa-Flood_v4/
 │   ├── inpdim_test-mek_1deg.txt     # Runoff-grid dimensions and mapping metadata
 │   └── inpmat_test-mek_1deg.bin     # Runoff-to-map input matrix
 ├── inp/test-mek_1deg/runoff/        # Bundled daily Binary runoff
-├── gosh_sample/                     # Maintained sample GOSH workflows
+├── gosh_test/                        # Developer GOSH workflows and operational checks
 └── tutorial/tutorial01-get_started/
     ├── tutorial_design.md
     ├── tutorial01-get_started.sh    # Standalone educational GOSH experiment
@@ -64,7 +64,7 @@ The repository also contains root setup scripts and shared tools; include them i
 - Runoff: `inp/test-mek_1deg/runoff/`, daily Binary `mm/day` files named `Roff____YYYYMMDD.one`; the sample grid is 20 × 30.
 - Runoff-to-map files: `map/mekong_15min/inpdim_test-mek_1deg.txt` and `inpmat_test-mek_1deg.bin`, generated for this map/runoff grid pairing.
 - Simulation: 2000-01-01 00:00 to 2000-02-10 00:00 exclusive (40 days), non-MPI, base timestep 3600 seconds, adaptive timestep and bifurcation enabled, reservoir operation disabled, one OpenMP thread.
-- Preserve the scientific and I/O settings of `gosh_sample/mek01-default_run.sh`. The tutorial's complete standalone script changes only repository-relative context, output isolation under `tutorial/tutorial01-get_started/out/${PROJ}/`, the project name, and OpenMP thread count to one. The maintained `gosh_sample/` script remains unchanged.
+- Preserve the scientific and I/O settings of `gosh_test/mek01-default_run.sh`. The tutorial's complete standalone script changes only repository-relative context, output isolation under `tutorial/tutorial01-get_started/out/${PROJ}/`, the project name, and OpenMP thread count to one. The maintained `gosh_test/` script remains unchanged.
 - Define `PROJ="tutorial01-get_started"` using the established experiment-name convention. Construct `RUNDIR` as the Tutorial01 script directory's `out/${PROJ}/`. Generated executable copy, Namelist, logs, model outputs, CTLs, and Restart files all belong there.
 - A rerun of the same project may replace only that project's known generated files. Changing `PROJ` creates a separate experiment directory and must preserve the previous project directory. Do not remove the shared `out/` parent or other project subdirectories.
 - Output variables: `outflw`, `storge`, `sfcelv`, `flddph`, and `fldfrc`; daily Binary output and standard end-of-run Binary Restart.
@@ -88,7 +88,7 @@ Map generation and visualization are not required.
 - Running `make all` from `src_main/` returns zero and leaves an executable `MAIN_cmf`, whether it is newly built or updated.
 - Section 0 identifies the default GitHub branch as the tutorial source and states that the supported official v5 distribution is not yet available.
 - The root-directory demonstration uses `ls -lF`, with observed output showing directory and executable markers and an explanation that suffixes are not part of filenames.
-- The standalone tutorial script defines the default `PROJ`, constructs its `RUNDIR` under `out/${PROJ}/`, does not call or source `gosh_sample/mek01-default_run.sh`, and runs from its documented directory.
+- The standalone tutorial script defines the default `PROJ`, constructs its `RUNDIR` under `out/${PROJ}/`, does not call or source `gosh_test/mek01-default_run.sh`, and runs from its documented directory.
 - Tutorial01 and the model return zero; `log_CaMa.txt` reaches normal calculation completion.
 - Five expected daily Binary output variables and their CTLs, Namelist, logs, executable copy, and end Restart products are created under only `tutorial/tutorial01-get_started/out/tutorial01-get_started/`.
 - Each daily output contains 40 records for the 40-day interval. The end time is exclusive; timestamp details follow the model's output convention.

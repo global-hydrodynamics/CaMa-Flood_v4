@@ -146,7 +146,7 @@ then build the separate NetCDF executable from the repository root:
 
 ```bash
 cd "${cmf_root}"
-bash gosh_sample/compile_netcdf.sh
+bash gosh_test/compile_netcdf.sh
 ```
 
 This build requires GNU Make, GNU Fortran, and NetCDF-Fortran tools including

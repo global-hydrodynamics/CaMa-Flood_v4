@@ -98,3 +98,5 @@ map/tools/**/__pycache__/
 map/tools/**/*.pyc
 # Verified local research backup; never commit this safety copy.
 /research_bak261106/
+# Regenerable working figures for this visualization project; approved gallery copies are tracked separately.
+/visualization/river_map/figure/*.png

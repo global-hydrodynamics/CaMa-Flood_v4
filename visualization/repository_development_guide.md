@@ -10,10 +10,13 @@ starting point even when no code is available.
 | Resource | Role |
 | --- | --- |
 | Visualization project | A descriptive directory grouping related plotting methods, such as river maps or hydrographs. Project names do not contain numeric IDs. |
-| Figure-generating script | The user-facing entry point that creates one complete Figure, possibly with several panels. It lives under the project's `script/` directory. |
-| Working Figure | The generated PNG output under that project's `figure/` directory. It can be regenerated and revised during development. Match its descriptive basename to the entry-point script, for example `script/f01-rivmap-uparea.sh` and `figure/f01-rivmap-uparea.png`. |
+| Figure project entry point | The user-facing Shell script at the project root. It exposes editable input and display settings and invokes the implementation. |
+| Figure implementation | Python or other plotting/data-processing code under the project's `script/` directory. Keep reusable plotting logic here rather than embedding it in the entry-point Shell script. |
+| Working Figure | The generated PNG output under that project's `figure/` directory. It can be regenerated and revised during development. Match its descriptive basename to the root entry point, for example `f01-rivmap-uparea.sh` and `figure/f01-rivmap-uparea.png`. |
 | Gallery image | An explicitly approved copy of a working Figure under `visualization/gallery/`. It is the image shown in the Gallery README and remains unchanged when a script is rerun. |
-| `visualization_catalog.csv` | A discovery index with one row per panel or visualization option. It records the purpose, variables, method, script, status, and publication reference. |
+| `visualization/README.md` | The visual Gallery: approved images, figure IDs and titles, one-sentence descriptions, and links to each script and the relevant project README section. |
+| Project `README.md` | User-facing documentation for the whole visualization project, with common execution instructions and a stable, descriptive section for each Figure. |
+| `visualization_catalog.csv` | A discovery index with one row per panel or visualization option. It records purpose, variables, data source and preparation, method, script, status, and publication reference. |
 | `figure_making_guideline.md` | Shared scientific-correctness, comparability, readability, and reproducibility principles. |
 | `cmf_colormap/` | An existing reusable palette package. It may support projects, but it is not itself a required plotting framework or a Gallery project. |
 
@@ -21,6 +24,48 @@ The catalog is intended for human and AI discovery, including searches by
 natural-language descriptions of a scientific need. It is a reference, not a
 runtime dependency: tutorials may adapt a method without importing project
 scripts directly.
+
+## Visualization documentation structure
+
+Maintain two levels of human-facing documentation. Keep
+`visualization/README.md` focused on browsing approved figures. Each entry
+shows the Figure ID and descriptive title, published Gallery image, one
+concise description, a link to the project's user-facing Shell script, and a
+link to the corresponding section of the project README. Do not put detailed
+technical explanations in the Gallery.
+
+Maintain one README per visualization project, not one document per Figure.
+The project README gives a short project overview and common execution
+instructions, followed by a stable, descriptive heading for every Figure. Each
+Figure section explains its scientific purpose and interpretation, required
+datasets/variables/units, important processing and display methods, settings
+and execution, and relevant limitations. Extend the existing project README
+when adding figures. Keep the Gallery and CSV catalog concise; link to the
+project README for full explanations.
+
+## Visualization Data Policy
+
+Prefer existing Git-tracked CaMa-Flood datasets when they are scientifically
+suitable. This makes examples easier to reproduce without additional downloads
+or model runs. If a visualization depends on expensive preprocessing,
+multi-step simulations, or large outputs, consider publishing a compact,
+precomputed reference dataset with the example. Describe its source,
+derivation, scope, and any access or redistribution limits.
+
+Global and high-resolution map products may be distributed separately from the
+GitHub repository. Use them when the science requires them, and state where
+they are available, which products are needed, and what preparation is
+required. Do not assume that a user has completed another tutorial or has its
+generated outputs. In particular, general-user visualization examples must not
+depend on `gosh_test/` outputs; that directory supports developer model tests
+and operational verification.
+
+For every visualization example, document its required input datasets, the
+variables it uses, whether each input is Git-tracked, separately distributed,
+external, or generated, and how users can obtain or prepare it. Record this
+information in `visualization_catalog.csv` using `data_source`,
+`required_data`, and `data_preparation`, and link detailed instructions from
+the project documentation when needed.
 
 ## Propose a visualization
 
@@ -47,15 +92,19 @@ Use this sequence as a guide; review may lead back to an earlier step.
 2. Define the scientific question, intended audience, variables, units,
    temporal meaning, spatial extent, and comparison being shown.
 3. Select an existing descriptive visualization project or create a new one
-   with `script/` and `figure/` subdirectories. Do not create an empty example
-   project just to reserve an ID.
+   with a project-root user entry point and `script/` and `figure/`
+   subdirectories. Do not create an empty example project just to reserve an ID.
 4. Assign the next available project and Figure IDs and decide whether the
    Figure needs panel IDs. IDs are catalog references and may be renumbered;
    descriptive directory and script names must stand on their own.
-5. Implement the Figure-generating script under `script/`. Give the script
-   and PNG output matching descriptive basenames. Keep scientific inputs
-   read-only, write working outputs to the owning project's `figure/`, and use
-   PNG by default. A shell entry point may invoke Python or shared libraries.
+5. Put the user-facing Shell entry point at the project root, with editable
+   input and display settings, and put Python/data/plotting implementation under
+   `script/`. Give the entry point and PNG output matching descriptive
+   basenames. Keep scientific inputs read-only, write working outputs to the
+   owning project's `figure/`, and use PNG by default. Follow the
+   [Visualization Data Policy](#visualization-data-policy) when choosing and
+   documenting inputs. The Shell entry point may invoke Python or shared
+   libraries; it should not duplicate complex plotting logic.
 6. Generate and inspect the Figure. Check scientific semantics, data masks,
    units, scales, readability, overlays, and the intended interpretation.
    Record important settings and transformations.
@@ -66,10 +115,11 @@ Use this sequence as a guide; review may lead back to an earlier step.
    source filename with its project ID. For example,
    `river_map/figure/f01-uparea.png` becomes
    `gallery/p01-f01-uparea.png`.
-9. Add or update the Gallery entry in `visualization/README.md` to reference
-   the approved copy, not the working output. For a multi-panel Figure, the
-   separate panel rows in the catalog point to that same Figure script and
-   Gallery image.
+9. Add a concise Gallery entry in `visualization/README.md` for the approved
+   copy, with its Figure ID/title, image, one-sentence description, script
+   link, and link to the relevant heading in the project's README. For a
+   multi-panel Figure, the separate panel rows in the catalog point to that
+   same Figure script and Gallery image.
 10. Consider whether the reviewed example teaches a visual practice that
     should be added to `figure_making_guideline.md`.
 11. Recheck paths, catalog rows, and links. Review the final diff and confirm
@@ -111,6 +161,9 @@ catalog columns are:
 | `script`, `gallery_image`, `documentation` | Paths relative to `visualization/`; use blank values when a proposal has no implementation or publication yet. |
 | `status` | `Proposed`, `Available`, or `Tested`, as defined below. |
 | `contributor` | Contributor or project owner, when known. |
+| `data_source` | Dataset provenance and availability, including whether it is tracked here, separately distributed, external, or generated. |
+| `required_data` | Required files or data products and the variables needed by the visualization. |
+| `data_preparation` | Where to obtain inputs and the steps needed to prepare them; link project instructions where appropriate. |
 
 Separate multiple variable names with semicolons. Keep values as valid CSV;
 quote fields that contain commas or line breaks. Catalog entries should

@@ -2,11 +2,11 @@
 
 **Status:** Recommended practices for discussion and gradual refinement. These are not finalized requirements. `mek01-default_run.sh` is a reference for settings and Namelist explanations; each workflow should also document its own execution and reproducibility design.
 
-The main goals are correct model execution, scientific validity, and reproducibility. Readability supports those goals, but formatting consistency alone is not a reason to change a working script. Follow the repository-wide rules in the root [`AGENTS.md`](../AGENTS.md); this draft records observations specific to `gosh_sample/`.
+The main goals are correct model execution, scientific validity, and reproducibility. Readability supports those goals, but formatting consistency alone is not a reason to change a working script. Follow the repository-wide rules in the root [`AGENTS.md`](../AGENTS.md); this draft records observations specific to `gosh_test/`.
 
 ## Applicability
 
-- Apply the readability principles below by default to new v5 scripts and scripts that are substantially revised under `gosh_sample/`.
+- Apply the readability principles below by default to new v5 scripts and scripts that are substantially revised under `gosh_test/`.
 - Do not impose them retroactively on historical `gosh/` scripts or untouched legacy examples.
 - Keep execution/scientific behavior separate from comment and layout improvements. Preserve settings, command order, filenames, and interfaces unless a task explicitly approves a behavior change.
 - Do not use “minimal diff” as a reason to leave important experiment settings or generated Namelists unexplained. Improve comments where they help users understand and safely change a run, without turning this draft into a rigid formatter specification.
@@ -59,4 +59,4 @@ When creating or substantially revising a v5 script, Codex should review the res
 
 HPC systems, coupled execution, schedulers, and local development can require different launch commands, path conventions, logging, or error handling. Adapt the script to its actual execution environment rather than forcing a single layout. Preserve scientific behavior and required workflow semantics over stylistic uniformity.
 
-As more `gosh_sample/` examples are completed, record useful lessons here. Review the recommendations against multiple working scripts before promoting them to a stable style guide; do not retrofit existing scripts solely to make them look alike.
+As more `gosh_test/` examples are completed, record useful lessons here. Review the recommendations against multiple working scripts before promoting them to a stable style guide; do not retrofit existing scripts solely to make them look alike.

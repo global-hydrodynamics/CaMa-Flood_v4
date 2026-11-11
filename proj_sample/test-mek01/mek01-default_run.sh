@@ -4,10 +4,10 @@
 # Output, executable, and namelist: out/mek01-default_run/.
 #
 # Execution requirement:
-#   Run this script from the gosh_sample/ directory.
+#   Run this script from the gosh_test/ directory.
 #
 # Example:
-#   cd gosh_sample
+#   cd gosh_test
 #   ./mek01-default_run.sh
 set -eu
 

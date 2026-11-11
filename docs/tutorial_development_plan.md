@@ -4,7 +4,7 @@
 
 This document tracks tutorial development status and next stages. The framework's canonical organization and contributor guidance are in [`tutorial/README.md`](../tutorial/README.md) and [`how_to_develop_tutorials.md`](../tutorial/how_to_develop_tutorials.md). Tutorial 01 has been implemented and operationally checked; its standalone educational GOSH and beginner manual are maintained under `tutorial/tutorial01-get_started/`. Tutorial 02 has a researcher-approved design, four implemented experiment scripts, completed 2000–2003 simulations, analysis scripts, and reference figures on `feature/gosh-refactor`.
 
-The framework is intended to become the primary beginner-oriented entry point for v5 experiments when its materials are implemented and validated. Existing `gosh_sample/` workflows remain available as implementation references; this plan does not remove or reorganize them.
+The framework is intended to become the primary beginner-oriented entry point for v5 experiments when its materials are implemented and validated. Existing `gosh_test/` workflows remain available as implementation references; this plan does not remove or reorganize them.
 
 ## Framework documents
 

@@ -35,11 +35,11 @@ ls -lF
 
 ### Expected output
 
-This abbreviated excerpt is from an actual repository-root `ls -lF` on the verified GitHub checkout. Sizes, dates, and owner names vary between computers. `...` marks omitted listing entries.
+This abbreviated excerpt is based on an actual repository-root `ls -lF` on the verified GitHub checkout. The directory was named `gosh_sample/` in that listing and is now named `gosh_test/`; sizes, dates, and owner names vary between computers. `...` marks omitted listing entries.
 
 ```text
 drwxr-xr-x    7 yamadai  staff   224 Nov  8 10:36 config/
-drwxr-xr-x   11 yamadai  staff   352 Nov  5 22:07 gosh_sample/
+drwxr-xr-x   11 yamadai  staff   352 Nov  5 22:07 gosh_test/
 drwxr-xr-x   11 yamadai  staff   352 Nov  4 21:46 inp/
 drwxr-xr-x   10 yamadai  staff   320 Nov  5 22:07 map/
 drwxr-xr-x  109 yamadai  staff  3488 Nov  8 10:36 src_main/
@@ -48,7 +48,7 @@ drwxr-xr-x    9 yamadai  staff   288 Nov  8 18:03 tutorial/
 -rwxr-xr-x    1 yamadai  staff  9199 Nov  5 22:42 s02-python_setup.sh*
 ```
 
-The `/` suffix distinguishes directories such as `src_main/` and `tutorial/`; the `*` suffix marks the executable setup scripts. The markers are not part of the names. The main directories are `src_main/` (v5 model source), `map/` (river maps and map tools), `inp/` (runoff datasets), `gosh_sample/` (maintained run examples), and `tutorial/` (beginner tutorials). The root setup scripts diagnose and prepare local development environments.
+The `/` suffix distinguishes directories such as `src_main/` and `tutorial/`; the `*` suffix marks the executable setup scripts. The markers are not part of the names. The main directories are `src_main/` (v5 model source), `map/` (river maps and map tools), `inp/` (runoff datasets), `gosh_test/` (maintained run examples), and `tutorial/` (beginner tutorials). The root setup scripts diagnose and prepare local development environments.
 
 ### Learning Check
 

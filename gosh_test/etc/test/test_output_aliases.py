@@ -12,7 +12,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-SAMPLE_SCRIPT = ROOT / "gosh_sample" / "mek01-default_run.sh"
+SAMPLE_SCRIPT = ROOT / "gosh_test" / "mek01-default_run.sh"
 REGISTRY = ROOT / "variable_table" / "output_variables.csv"
 BIN_EXECUTABLE = ROOT / "src_main" / "MAIN_cmf"
 NC_EXECUTABLE = ROOT / "out" / "bin" / "MAIN_cmf_netcdf"
@@ -95,7 +95,7 @@ def run_alias_case(run_dir: Path, *, netcdf: bool, split: bool, variables: str,
     test_script = run_dir.parent / f"{run_dir.name}.sh"
     test_script.write_text(script, encoding="utf-8")
     result = subprocess.run(
-        ["sh", str(test_script)], cwd=ROOT / "gosh_sample",
+        ["sh", str(test_script)], cwd=ROOT / "gosh_test",
         text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False,
     )
     for log_name in ("run.stdout.log", "log_CaMa.txt"):

@@ -195,7 +195,7 @@ separate NetCDF-enabled executable at `out/bin/MAIN_cmf_netcdf`. After
 preparing `config/Mkinclude`, build it with:
 
 ```bash
-bash gosh_sample/compile_netcdf.sh
+bash gosh_test/compile_netcdf.sh
 ```
 
 This requires GNU Make, GNU Fortran, and the NetCDF-Fortran `nf-config` tool.
