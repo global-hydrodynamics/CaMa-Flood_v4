@@ -12,8 +12,8 @@ starting point even when no code is available.
 | Visualization project | A descriptive directory grouping related plotting methods, such as river maps or hydrographs. Project names do not contain numeric IDs. |
 | Figure project entry point | The user-facing Shell script at the project root. It exposes editable input and display settings and invokes the implementation. |
 | Figure implementation | Python or other plotting/data-processing code under the project's `script/` directory. For the preferred multi-panel workflow, each panel has its own script and PNG; a shared utility assembles the complete Figure. |
-| Working Figure | Generated panel PNGs and the assembled Figure under that project's `figure/` directory. They can be regenerated and revised during development. Match descriptive basenames, for example `f02a-seasonal-map.py`, `figure/f02a-seasonal-map.png`, and `figure/f02-seasonal-summary.png`. |
-| Gallery image | An explicitly approved copy of a working Figure under `visualization/gallery/`. It is the image shown in the Gallery README and remains unchanged when a script is rerun. |
+| Project Figure (`<project>/figure/`) | Generated panel PNGs and assembled Figures. These reproducible project assets are always Git-tracked and may be updated during development. Match descriptive basenames, for example `f02a-seasonal-map.py`, `figure/f02a-seasonal-map.png`, and `figure/f02-seasonal-summary.png`. |
+| Published Gallery Figure (`visualization/gallery/`) | A separately selected copy of a Project Figure. Add, replace, or remove it only when the user explicitly authorizes Gallery publication. Routine generation, review, or `Tested` status is not authorization. |
 | `visualization/README.md` | The visual Gallery: approved images, figure IDs and titles, one-sentence descriptions, and links to each script and the relevant project README section. |
 | Project `README.md` | User-facing documentation for the whole visualization project, with common execution instructions and a stable, descriptive section for each Figure. |
 | `visualization_catalog.csv` | A discovery index with one row per panel or visualization option. It records purpose, variables, data source and preparation, method, script, status, and publication reference. |
@@ -45,10 +45,10 @@ when adding figures rather than creating individual Figure documents or a
 separate project-gallery section. Keep the top-level Gallery and CSV catalog
 concise; link to the project README for full explanations.
 
-A project README may embed its own working figures from that project's
+A project README should embed its own tracked figures from that project's
 `figure/` directory immediately after the corresponding Figure explanation.
-These project-local previews are distinct from the approved, published copies
-shown in the top-level Gallery.
+These project Figures are distinct from the user-authorized copies shown in
+the top-level Gallery.
 
 ## Visualization Data Policy
 
@@ -117,25 +117,23 @@ Use this sequence as a guide; review may lead back to an earlier step.
    Record important settings and transformations.
 7. Add or update one catalog row per panel or option. Leave unknown
    information blank rather than guessing. Use the status values below.
-8. When a Figure is approved for public display, explicitly copy it from the
-   project `figure/` directory to `visualization/gallery/`, prefixing the
-   source filename with its project ID. For example,
-   `river_map/figure/f01-uparea.png` becomes
-   `gallery/p01-f01-uparea.png`.
-9. Add a concise Gallery entry in `visualization/README.md` for the approved
-   copy, with its Figure ID/title, image, one-sentence description, script
-   link, and link to the relevant heading in the project's README. For a
-   multi-panel Figure, the separate panel rows in the catalog point to that
-   same Figure script and Gallery image.
+8. Keep every generated PNG under the project's `figure/` directory in Git,
+   including individual panels and assembled Figures. Update these files when
+   the scripts regenerate them; do not add broad ignore rules for project
+   figures.
+9. Treat Gallery publication as a separate operation. Only after the user
+   explicitly authorizes it, copy the selected project Figure to
+   `visualization/gallery/` with its project ID in the filename, add its entry
+   to `visualization/README.md`, and fill the corresponding catalog
+   `gallery_image` field. Never infer authorization from successful execution,
+   visual review, or catalog status. Normal Figure scripts must not create,
+   replace, or remove Gallery images.
 10. Consider whether the reviewed example teaches a visual practice that
     should be added to `figure_making_guideline.md`.
 11. Recheck paths, catalog rows, and links. Review the final diff and confirm
-    that only intended project files and approved Gallery images are included.
-
-Project owners may ignore generated working figures in Git where appropriate;
-the approved Gallery copy remains a tracked deliverable. Keep source scripts,
-documentation, and any intentionally shared materials under version control
-according to the project's needs.
+    project Figures are tracked and Gallery changes have explicit user
+    authorization. Continue to exclude unrelated caches and intermediate
+    computational data where appropriate.
 
 Do not build an automated publisher or ID manager for this initial framework.
 Gallery publication is a deliberate review and copy step. Updating a Gallery
@@ -208,7 +206,7 @@ catalog columns are:
 | `category`, `title` | Broad visualization type and human-readable panel or Figure title. |
 | `description`, `purpose` | What is shown and the scientific or practical reason for showing it. |
 | `variables`, `method` | Relevant CaMa-Flood variables and the plotting, normalization, overlay, or display method. |
-| `script`, `gallery_image`, `documentation` | Paths relative to `visualization/`; use blank values when a proposal has no implementation or publication yet. |
+| `script`, `gallery_image`, `documentation` | Paths relative to `visualization/`; `gallery_image` stays blank until explicit Gallery publication authorization. |
 | `status` | `Proposed`, `Available`, or `Tested`, as defined below. |
 | `contributor` | Contributor or project owner, when known. |
 | `data_source` | Dataset provenance and availability, including whether it is tracked here, separately distributed, external, or generated. |
@@ -227,7 +225,8 @@ agents do not need to know an ID before searching.
 | `Tested` | The script has been run successfully and the resulting Figure has been reviewed. |
 
 `Tested` and Gallery publication are separate states: a reviewed Figure may
-remain unpublished, and publication requires an explicit approval and copy.
+remain unpublished, and `Tested` is never publication approval. Gallery
+publication requires explicit user authorization and a separate copy.
 IDs may be renumbered as the repository evolves. When doing so, update catalog
 rows, project documentation, Gallery filenames and links, and any current
 references. Pair IDs with a natural-language description; do not use an ID as

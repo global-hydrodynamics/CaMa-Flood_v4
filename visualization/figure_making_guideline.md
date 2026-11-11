@@ -38,6 +38,21 @@ practices that can evolve as the Gallery grows.
   color normalization. Do not let panel arrangement, resizing, or cropping
   distort geographic or other scientifically meaningful aspect ratios.
 
+### Colorbar alignment
+
+- For a colorbar associated with a single map or plot, its length must match
+  the corresponding plotting axes.
+- For vertical colorbars, align the top and bottom with the plotting area.
+- For horizontal colorbars, align the left and right edges with the plotting
+  area.
+- Do not include titles, axis labels, or outer figure margins when determining
+  the colorbar length.
+- For multi-panel figures, a shared colorbar should span the intended group of
+  plotting axes, rather than the entire figure canvas.
+- Use layout methods that preserve this alignment when geographic aspect
+  ratios, figure sizes, or output-resolution settings change.
+- Verify the alignment in the saved output.
+
 ### Reproducibility and file ownership
 
 - A user-facing script should generate one complete Figure. A Figure may
@@ -48,8 +63,11 @@ practices that can evolve as the Gallery grows.
   plotting implementation under `script/`. This makes the run configuration
   easy to find while keeping plotting logic separate.
 - Save the default output as PNG under the owning project's `figure/`
-  directory. Keep generated files with the visualization project or tutorial
-  that owns them.
+  directory. Git-track all project-local figure PNGs, including individual
+  panels and assembled figures. Keep generated files with the visualization
+  project or tutorial that owns them. Gallery publication is separate and
+  requires explicit user authorization; normal figure generation must not
+  copy or update Gallery images.
 - Treat original model inputs as read-only in plotting workflows. Write
   transformed or derived datasets only when the project explicitly requires
   them, and document their provenance.
