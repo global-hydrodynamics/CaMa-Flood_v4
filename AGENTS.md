@@ -157,6 +157,10 @@ For a dedicated final formatting pass, read [`src_main/FORTRAN_STYLE.md`](src_ma
 
 The proposed v5 tutorial workflow and its current decisions are documented in [`docs/tutorial_development_plan.md`](docs/tutorial_development_plan.md). Treat Tutorial 02 as an illustrative outline until its experiment specification is checked against source code and data in a separately scoped task.
 
+## Shared visualization resources
+
+Before creating or substantially modifying a CaMa-Flood visualization, consult [`visualization/visualization_catalog.csv`](visualization/visualization_catalog.csv) for related methods and read [`visualization/figure_making_guideline.md`](visualization/figure_making_guideline.md) for shared scientific and visual conventions. Identify an adapted method by both its current catalog ID and a natural-language description; IDs may change. Follow [`visualization/repository_development_guide.md`](visualization/repository_development_guide.md) when adding or updating projects in `visualization/`. These resources also apply to tutorial and manual figures, but do not require tutorials to import scripts from the Gallery.
+
 ## Source Code Readability for `map/tools/`
 
 These recommendations support human-readable Fortran and Python tools under `map/tools/code/`. Organize code by scientific or computational meaning: keep related operations together, use a blank line when the purpose or data changes, and keep an operation with its error check. Use comments for major process transitions; do not add whitespace or comments mechanically around every statement.

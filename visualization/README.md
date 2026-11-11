@@ -1,19 +1,20 @@
-# CaMa-Flood visualization tools
+# CaMa-Flood Visualization Gallery
 
-This directory contains reusable visualization components and examples. The
-[`cmf_colormap/`](cmf_colormap/README.md) package provides four registered
-scientific palettes. Shade-Rainbow, White-Rainbow, and Diverge-Rainbow are
-primarily foreground palettes for discharge, nonnegative errors, and signed
-errors or anomalies, respectively. Pale-Terrain is a subtle topographic
-background. The collection follows an overlay-aware design philosophy for
-layered maps of rivers, basins, floodplains, and related geospatial information.
+Browse reviewed examples of figures for CaMa-Flood maps, simulations, and
+scientific analysis. Each Gallery image is a deliberately published copy of a
+working figure; rerunning a project script does not update the Gallery.
 
-Install it from the CaMa-Flood repository root with:
+[Visualization catalog](visualization_catalog.csv) ·
+[Figure-making guideline](figure_making_guideline.md) ·
+[Repository development guide](repository_development_guide.md)
 
-```bash
-python -m pip install -e ./visualization/cmf_colormap
-```
+## Gallery
 
-Tutorial02 demonstrates Shade-Rainbow in its annual maximum discharge figure.
-The package documentation describes the intended role and limitations of each
-palette. It is self-contained and can also be extracted for standalone use.
+There are no approved Gallery figures yet. The Gallery will grow as real
+visualization projects are developed and their figures are reviewed. Working
+figures belong in their project directories and are not displayed here until
+they are explicitly approved and copied into `gallery/`.
+
+For reusable scientific color maps, see the existing
+[CMF Colormaps package](cmf_colormap/README.md). Its examples demonstrate the
+palette library and are separate from the CaMa-Flood Visualization Gallery.
