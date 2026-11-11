@@ -57,7 +57,7 @@ def main() -> None:
             (station["cell_lon"], station["cell_lat"]),
             arrowstyle="-|>", mutation_scale=6.5,
             linewidth=0.9 + 2.1 * fraction,
-            color=cmap(norm(area)), shrinkA=2, shrinkB=2, zorder=7,
+            color=cmap(norm(area)), shrinkA=0, shrinkB=0, zorder=7,
         )
         ax.add_patch(arrow)
 

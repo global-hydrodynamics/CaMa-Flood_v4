@@ -43,7 +43,7 @@ def main() -> None:
             (station["station_lon"], station["station_lat"]),
             (station["cell_lon"], station["cell_lat"]),
             arrowstyle="-|>", mutation_scale=8, linewidth=1.25,
-            color="#4d4d4d", shrinkA=2, shrinkB=2, zorder=7,
+            color="#4d4d4d", shrinkA=0, shrinkB=0, zorder=7,
         )
         ax.add_patch(arrow)
     set_map_axes(ax, args)
