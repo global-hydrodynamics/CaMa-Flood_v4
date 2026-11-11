@@ -19,7 +19,10 @@ NORTH=35
 # User settings: map appearance and output.
 CMAP="YlGnBu"
 SCALE="log" # Choose: log or linear.
-DPI=180
+# --- Figure size (inches) ---
+MAX_WIDTH=0   # 0 leaves width unconstrained.
+MAX_HEIGHT=3  # 0 leaves height unconstrained.
+DPI=200
 OUTPUT_FILE="$SCRIPT_DIR/figure/f01-rivmap-uparea.png"
 PYTHON="python3" # Activate the repository .venv first, or set this to its Python.
 
@@ -34,4 +37,6 @@ mkdir -p "$(dirname "$OUTPUT_FILE")"
     --uparea "$UPAREA_FILE" \
     --params "$PARAMS_FILE" \
     --west "$WEST" --east "$EAST" --south "$SOUTH" --north "$NORTH" \
-    --cmap "$CMAP" --scale "$SCALE" --dpi "$DPI" --output "$OUTPUT_FILE"
+    --cmap "$CMAP" --scale "$SCALE" \
+    --max-width "$MAX_WIDTH" --max-height "$MAX_HEIGHT" \
+    --dpi "$DPI" --output "$OUTPUT_FILE"

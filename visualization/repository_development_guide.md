@@ -11,8 +11,8 @@ starting point even when no code is available.
 | --- | --- |
 | Visualization project | A descriptive directory grouping related plotting methods, such as river maps or hydrographs. Project names do not contain numeric IDs. |
 | Figure project entry point | The user-facing Shell script at the project root. It exposes editable input and display settings and invokes the implementation. |
-| Figure implementation | Python or other plotting/data-processing code under the project's `script/` directory. Keep reusable plotting logic here rather than embedding it in the entry-point Shell script. |
-| Working Figure | The generated PNG output under that project's `figure/` directory. It can be regenerated and revised during development. Match its descriptive basename to the root entry point, for example `f01-rivmap-uparea.sh` and `figure/f01-rivmap-uparea.png`. |
+| Figure implementation | Python or other plotting/data-processing code under the project's `script/` directory. For the preferred multi-panel workflow, each panel has its own script and PNG; a shared utility assembles the complete Figure. |
+| Working Figure | Generated panel PNGs and the assembled Figure under that project's `figure/` directory. They can be regenerated and revised during development. Match descriptive basenames, for example `f02a-seasonal-map.py`, `figure/f02a-seasonal-map.png`, and `figure/f02-seasonal-summary.png`. |
 | Gallery image | An explicitly approved copy of a working Figure under `visualization/gallery/`. It is the image shown in the Gallery README and remains unchanged when a script is rerun. |
 | `visualization/README.md` | The visual Gallery: approved images, figure IDs and titles, one-sentence descriptions, and links to each script and the relevant project README section. |
 | Project `README.md` | User-facing documentation for the whole visualization project, with common execution instructions and a stable, descriptive section for each Figure. |
@@ -39,9 +39,16 @@ The project README gives a short project overview and common execution
 instructions, followed by a stable, descriptive heading for every Figure. Each
 Figure section explains its scientific purpose and interpretation, required
 datasets/variables/units, important processing and display methods, settings
-and execution, and relevant limitations. Extend the existing project README
-when adding figures. Keep the Gallery and CSV catalog concise; link to the
-project README for full explanations.
+and execution, and relevant limitations; place that Figure's project-local
+image immediately after its explanation. Extend the existing project README
+when adding figures rather than creating individual Figure documents or a
+separate project-gallery section. Keep the top-level Gallery and CSV catalog
+concise; link to the project README for full explanations.
+
+A project README may embed its own working figures from that project's
+`figure/` directory immediately after the corresponding Figure explanation.
+These project-local previews are distinct from the approved, published copies
+shown in the top-level Gallery.
 
 ## Visualization Data Policy
 
@@ -134,6 +141,49 @@ Do not build an automated publisher or ID manager for this initial framework.
 Gallery publication is a deliberate review and copy step. Updating a Gallery
 image requires a deliberate replacement; rerunning a project script must
 never overwrite it automatically.
+
+## Multi-panel Figure workflow
+
+For a Figure made from independently understandable panels, prefer one
+user-facing Shell script for the complete Figure and one Python script per
+panel. Keep the Shell script at the project root and panel scripts under
+`script/`; save panel images and the assembled Figure under `figure/`.
+This is a preferred, provisional workflow, not a requirement for every Figure.
+
+```text
+visualization/<project>/
+├── f02-seasonal-summary.sh       # Settings, panel runs, assembly
+├── script/
+│   ├── f02a-seasonal-map.py       # Creates one panel independently
+│   └── f02b-seasonal-series.py   # Creates one panel independently
+└── figure/
+    ├── f02a-seasonal-map.png
+    ├── f02b-seasonal-series.png
+    └── f02-seasonal-summary.png  # Complete Figure for review/publication
+```
+
+The Shell entry point should define shared paths and user settings, run the
+panel scripts, and then call `visualization/script/combine_panels.py`. Keep
+the execution order clear and allow a maintainer to rerun an individual panel
+script without regenerating the others. The combiner arranges existing panel
+images in horizontal, vertical, or grid layouts and manages spacing, margins,
+and aspect ratio. It does not perform scientific processing or render plot
+content, axes, legends, or colorbars.
+
+Use the existing IDs consistently: a Figure such as `p01-f02` has panel IDs
+`p01-f02a` and `p01-f02b`, and corresponding panel image names such as
+`f02a-seasonal-map.png` and `f02b-seasonal-series.png`; the assembled image
+uses the Figure-level stem, for example `f02-seasonal-summary.png`. Keep one
+catalog row per panel. Each row describes that panel's purpose and variables,
+while rows for the same Figure share its user-facing Shell script and its
+assembled Gallery image. In the project README, explain the Figure and its
+panels together, then show the assembled project-local image immediately
+after that explanation; do not create a separate Markdown document per panel.
+
+An integrated plotting script remains appropriate when panels require tightly
+coordinated scientific axes, shared color scales or colorbars, or annotations
+that cannot be reliably composed from independent images. Choose the
+implementation that preserves scientific meaning and produces a clear Figure.
 
 ## IDs, catalog rows, and status
 
