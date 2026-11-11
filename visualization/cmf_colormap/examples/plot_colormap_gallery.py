@@ -12,6 +12,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize, TwoSlopeNorm
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 
 from cmf_colormap import get_cmap, list_colormaps
@@ -230,8 +231,13 @@ def plot_detailed_preview(name, example_kind):
         overlay.set(xlim=(0, 1), ylim=(0, 1), xlabel="Synthetic longitude", ylabel="Synthetic latitude")
         overlay.set_title("Illustrative gauge errors over a synthetic shaded-relief background", fontsize=9)
         overlay.legend(loc="lower left", fontsize=8)
-        figure.colorbar(points, ax=overlay, orientation="horizontal", pad=0.24,
-                        fraction=0.08, label="Synthetic signed error (%)")
+        colorbar_axes = make_axes_locatable(overlay).append_axes(
+            "bottom", size="8%", pad=0.42
+        )
+        figure.colorbar(
+            points, cax=colorbar_axes, orientation="horizontal",
+            label="Synthetic signed error (%)",
+        )
     else:
         raise ValueError(f"Unknown preview example kind: {example_kind}")
     ax.set_yticks([])
