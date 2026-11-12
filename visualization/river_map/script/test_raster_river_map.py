@@ -68,6 +68,20 @@ class RasterRiverMapTest(unittest.TestCase):
                             if variable == "basin":
                                 self.assertEqual(len(np.unique(image.get_array().compressed())), 414)
                                 self.assertIn("categorical", cax.get_ylabel())
+                                labels = [tick.get_text() for tick in cax.get_yticklabels()]
+                                self.assertEqual(labels, [str(n) for n in
+                                    [*range(1, 21), 30, 40, 50, 70, 100, 150, 200, 300, 414]])
+                                legend = cax.collections[0]
+                                ids = np.arange(1, 415)
+                                np.testing.assert_array_equal(legend.get_array().ravel(), ids)
+                                np.testing.assert_array_equal(
+                                    legend.get_cmap()(legend.norm(ids)),
+                                    image.get_cmap()(image.norm(ids)),
+                                )
+                                edges = legend.get_coordinates()[:, 0, 1]
+                                np.testing.assert_allclose(np.diff(edges[:21]), 1)
+                                self.assertTrue(np.all(np.diff(edges[20:]) < 1))
+                                self.assertEqual(cax.get_yscale(), "linear")
                             else:
                                 indices = np.unique(expected.compressed())
                                 colors = image.get_cmap()(image.norm(indices))[:, :3]
@@ -84,6 +98,10 @@ class RasterRiverMapTest(unittest.TestCase):
                                          row["visualization_id"] + " " + row["title"])
                         size = original_save(fig, ax, cax, args)
                         renderer = fig.canvas.get_renderer()
+                        if variable == "basin":
+                            boxes = [label.get_window_extent(renderer) for label in cax.get_yticklabels()]
+                            for lower, upper in zip(boxes, boxes[1:]):
+                                self.assertLess(lower.y1, upper.y0)
                         np.testing.assert_allclose(ax.get_window_extent().bounds[1::2],
                                                    cax.get_window_extent().bounds[1::2], atol=1e-8)
                         for axes in (ax, cax):

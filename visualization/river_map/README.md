@@ -60,7 +60,7 @@ observation-station data are required.
 | Panel | File and variable | Display |
 | --- | --- | --- |
 | f01a | `map/mekong_15min/netcdf/uparea.nc`: `uparea(lat, lon)`, m² | Convert to km²; mask missing/non-finite/non-positive values; retain `YlGnBu` with logarithmic normalization over all valid map cells. |
-| f01b | `map/mekong_15min/netcdf/basin.nc`: `basin(lat, lon)`, unitless | Display original positive integer IDs with one discrete bin per original integer value. Repeat the qualitative `tab20` palette across IDs; no conversion to `bsncol`. The colorbar labels actual IDs and states that colors repeat. |
+| f01b | `map/mekong_15min/netcdf/basin.nc`: `basin(lat, lon)`, unitless | Display original positive integer IDs with one discrete bin per original integer value. Repeat the qualitative `tab20` palette across IDs; no conversion to `bsncol`. A display-only pseudo-log categorical legend expands IDs 1–20 and labels representative higher IDs. |
 | f01c | `map/mekong_15min/netcdf/bsncol.nc`: `bsncol(lat, lon)`, unitless | Display the precomputed indices directly with discrete bins for 1–10. Mix the base `tab10` RGB colors with 60% opaque white to obtain distinguishable pastel colors; only used indices are labeled. |
 
 All three Git-tracked inputs share an 80 × 120 grid at 0.25°. Coordinates are
@@ -71,6 +71,16 @@ Repeated raw-ID colors in f01b are a display choice, not adjacency-aware basin
 coloring or unique identifiers. Use the numeric raster to identify a basin.
 In f01c, neighboring regions with different display indices retain different
 colors after lightening; the plot does not recalculate boundaries or indices.
+
+The f01b legend uses **display-only pseudo-log categorical spacing**. IDs 1–20
+each occupy a full slot with an individual label. Above 20, intervals ending
+at 30, 40, 50, 70, 100, 150, 200, 300 and the maximum ID share one slot each;
+only these representative IDs are labeled. Every integer's swatch still uses
+its existing map color, but higher-ID swatches are compressed. This custom
+legend changes display geometry only: the map retains its discrete
+`BoundaryNorm`, original categorical IDs and repeating palette. There is no
+`LogNorm`, continuous scientific scale, or physical meaning to legend spacing.
+Tick text adapts to configured panel height to avoid overlaps.
 
 ### Basin preparation and provenance
 

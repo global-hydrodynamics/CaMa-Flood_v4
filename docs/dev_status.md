@@ -22,6 +22,13 @@ Three f01 sizing scenarios and five f02 scenarios pass; f02 PNGs regenerated
 byte-for-byte unchanged. Gallery and map/model sources remain unchanged. See
 [VR-0139](../research/records/validation_runs/VR-0139.md) for evidence and limits.
 
+The maintainer's follow-up requests a display-only pseudo-log categorical legend
+for f01b: IDs 1–20 have individual expanded slots; higher IDs have compressed
+intervals and representative labels. Map colors, raw IDs and geometry remain
+unchanged. Three sizing checks pass with no overlapping legend labels; the map
+pixels exactly match the prior Figure. See
+[VR-0140](../research/records/validation_runs/VR-0140.md).
+
 ### Visualization method naming and discovery (2026-11-12)
 
 The maintainer assigned this bounded refactor to `manual-automation`, owned by
