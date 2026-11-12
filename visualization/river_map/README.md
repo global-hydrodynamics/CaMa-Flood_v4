@@ -154,7 +154,7 @@ provided to Matplotlib, which clips them at the axes boundary. The project
 Figure does not create or update a Gallery image; publication requires
 separate explicit authorization.
 
-#### Experimental virtual-colorbar layout
+#### Virtual-colorbar layout
 
 Both f02 panels reserve the same explicitly positioned map and vertical
 colorbar axes. The f02a colorbar axes are invisible (no ticks, labels, or
@@ -171,7 +171,9 @@ reserved colorbar space. A positive width limit proportionally reduces the
 complete panel if necessary. The Shell entry point's `MAX_WIDTH` and
 `MAX_HEIGHT` still limit the assembled Figure, including spacing and margins.
 Each panel prints its canvas and map/colorbar bounds in exported PNG pixels.
-This is an experimental f02 solution, not a new shared figure-making rule.
+Following successful verification, the maintainer adopted this approach in the
+[shared virtual-colorbar rule](../figure_making_guideline.md#virtual-colorbars-for-comparable-panels).
+The dimensions above remain specific to f02.
 
 Run the geometry/export regression check from the repository root with:
 `python visualization/river_map/script/test_river_network_layout.py`.

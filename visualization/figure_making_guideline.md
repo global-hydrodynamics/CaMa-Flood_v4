@@ -53,6 +53,37 @@ practices that can evolve as the Gallery grows.
   ratios, figure sizes, or output-resolution settings change.
 - Verify the alignment in the saved output.
 
+### Virtual colorbars for comparable panels
+
+When panels compare the same geographic extent and some have a colorbar while
+others do not, reserve identical colorbar space in every panel. A virtual
+colorbar is reserved layout space with no visible colorbar, ticks, labels, or
+frame; it must not change the meaning or normalization of the displayed data.
+
+- Share explicit map/plot and colorbar axes geometry between the panel scripts.
+  Keep map positions, dimensions, geographic extent and aspect, reserved
+  colorbar space, and complete PNG canvas dimensions identical.
+- Draw the real colorbar in its reserved axes. Hide those axes in panels
+  without a colorbar, for example with `cbar_ax.set_visible(False)`.
+- For fixed total height and automatic width, derive width from the map aspect,
+  margins, and reserved colorbar space. Adding a real colorbar must not reduce
+  the map height. Align its ends with the map axes and allow enough room for
+  tick labels and titles. Apply any width limit to the complete layout
+  proportionally.
+- Preserve the full canvas during export and assembly. Do not let
+  `bbox_inches="tight"`, automatic trimming, `tight_layout()`, or
+  `constrained_layout` remove hidden space or move corresponding axes
+  independently.
+- Verify saved canvas dimensions and axes bounds in pixels, including top and
+  bottom alignment, equal geographic pixel scale, invisible reserved regions,
+  and uncropped, non-overlapping labels. Recheck supported height/width settings
+  and the assembled Figure; visual inspection alone is insufficient.
+
+The verified [p01-f02 implementation](river_map/README.md#virtual-colorbar-layout)
+provides an example; its numeric margins are project-specific, not universal
+defaults. This rule does not require adding colorbars to figures that have no
+colorbar-related layout difference.
+
 ### Reproducibility and file ownership
 
 - A user-facing script should generate one complete Figure. A Figure may

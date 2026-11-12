@@ -1,4 +1,4 @@
-"""Experimental fixed-canvas layout shared by the two p01-f02 panels."""
+"""Fixed-canvas virtual-colorbar layout shared by the two p01-f02 panels."""
 
 from __future__ import annotations
 
