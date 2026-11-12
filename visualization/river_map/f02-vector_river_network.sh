@@ -28,22 +28,22 @@ PYTHON="python3"     # Activate the repository .venv first, or set its Python.
 
 # Panel and complete-Figure output paths.
 FIGURE_DIR="$SCRIPT_DIR/figure"
-PANEL_A="$FIGURE_DIR/f02a-line_river_map-connectivity.png"
-PANEL_B="$FIGURE_DIR/f02b-line_river_map-uparea.png"
-OUTPUT_FILE="$FIGURE_DIR/f02-line_river_map.png"
+PANEL_A="$FIGURE_DIR/f02a-vector_river_network-connectivity_type.png"
+PANEL_B="$FIGURE_DIR/f02b-vector_river_network-upstream_area.png"
+OUTPUT_FILE="$FIGURE_DIR/f02-vector_river_network.png"
 COMBINER="$VISUALIZATION_DIR/script/combine_panels.py"
 
 mkdir -p "$FIGURE_DIR"
 
 printf '\n[STEP 1/3] Draw every valid nextxy connection by link type.\n'
-"$PYTHON" "$SCRIPT_DIR/script/f02a-line_river_map-connectivity.py" \
+"$PYTHON" "$SCRIPT_DIR/script/f02a-vector_river_network-connectivity_type.py" \
     --uparea "$UPAREA_FILE" --nextxy "$NEXTXY_FILE" --params "$PARAMS_FILE" \
     --west "$WEST" --east "$EAST" --south "$SOUTH" --north "$NORTH" \
     --dpi "$DPI" --output "$PANEL_A"
 printf '[SUCCESS] Created %s\n' "$PANEL_A"
 
 printf '\n[STEP 2/3] Scale every nextxy connection by source-cell uparea.\n'
-"$PYTHON" "$SCRIPT_DIR/script/f02b-line_river_map-uparea.py" \
+"$PYTHON" "$SCRIPT_DIR/script/f02b-vector_river_network-upstream_area.py" \
     --uparea "$UPAREA_FILE" --nextxy "$NEXTXY_FILE" --params "$PARAMS_FILE" \
     --west "$WEST" --east "$EAST" --south "$SOUTH" --north "$NORTH" \
     --dpi "$DPI" --output "$PANEL_B"

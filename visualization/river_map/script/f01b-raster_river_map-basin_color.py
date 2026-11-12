@@ -43,7 +43,7 @@ def main() -> None:
     norm = BoundaryNorm(np.arange(0.5, 10.6, 1.0), cmap.N)
     fig, ax = create_map_axes(
         geometry, args.west, args.east, args.south, args.north,
-        "p01-f01b Basin display colors",
+        "p01-f01b Raster River Map: Basin Color",
     )
     image = draw_raster(ax, np.ma.masked_where(~valid, values), geometry, cmap, norm)
     colorbar = add_aligned_colorbar(

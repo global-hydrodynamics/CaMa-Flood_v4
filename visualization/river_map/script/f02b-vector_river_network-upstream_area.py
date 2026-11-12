@@ -39,7 +39,7 @@ def main() -> None:
 
     fig, ax, cax = create_network_axes(
         geometry, args,
-        "p01-f02b Source-cell upstream area",
+        "p01-f02b Vector River Network: Upstream Area",
         show_colorbar=True,
     )
     raster = network.uparea / 1_000_000.0

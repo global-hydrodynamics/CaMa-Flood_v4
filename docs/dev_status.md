@@ -9,6 +9,18 @@ Base snapshot: `origin/master` at `19e2c1a`, 2026-11-06. This branch-local propo
 
 ## Registered active projects
 
+### Visualization method naming and discovery (2026-11-12)
+
+The maintainer assigned this bounded refactor to `manual-automation`, owned by
+Dai Yamazaki with Codex implementation, and requested commit/push on completion.
+The development guide now defines stable method/option identifiers and semantic
+discovery; the catalog, river-map entry points, six panels, titles, and eight
+PNGs use consistent names. Both workflows and five f02 sizing scenarios pass;
+six-panel baseline comparisons preserve scientific content and axes geometry.
+Gallery, model/map tools, and historical evidence remain unchanged. See
+[VR-0137](../research/records/validation_runs/VR-0137.md) for naming mappings,
+semantic-discovery review, and validation details.
+
 ### Bounded p01-f02 layout experiment (2026-11-12)
 
 The maintainer explicitly assigned this task to `manual-automation`, owned by

@@ -111,9 +111,11 @@ colorbar-related layout difference.
   colorbars where they help explain the plotted quantity.
 - Begin each title shown inside a figure with its project and Figure IDs; when
   a title identifies an individual panel, include that panel ID as well. For
-  example: `p01-f01 Upstream Drainage Area` or `p01-f02b Seasonal Discharge`.
-  Keep the descriptive title after the IDs so the figure remains identifiable
-  when viewed outside the Gallery or project documentation.
+  example: `p01-f01a Raster River Map: Upstream Area` or
+  `p01-f02a Vector River Network: Connectivity Type`. Use human-readable
+  method and option names with consistent capitalization, following the
+  authoritative [naming convention](repository_development_guide.md#method-and-option-naming).
+  Keep the figure identifiable outside the Gallery or project documentation.
 - Use panel labels consistently when panels are referenced separately.
 - Ensure lines, markers, categories, and overlaid geographic layers remain
   distinguishable at the image's intended display size.

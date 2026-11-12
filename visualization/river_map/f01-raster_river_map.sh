@@ -39,17 +39,17 @@ PYTHON="python3"            # Activate the repository .venv first, or set its Py
 
 # Panel and complete-Figure outputs.
 FIGURE_DIR="$SCRIPT_DIR/figure"
-PANEL_A="$FIGURE_DIR/f01a-raster_river_map-uparea.png"
-PANEL_B="$FIGURE_DIR/f01b-raster_river_map-bsncol.png"
-PANEL_C="$FIGURE_DIR/f01c-raster_river_map-elevtn.png"
-PANEL_D="$FIGURE_DIR/f01d-raster_river_map-rivwth-merit.png"
+PANEL_A="$FIGURE_DIR/f01a-raster_river_map-upstream_area.png"
+PANEL_B="$FIGURE_DIR/f01b-raster_river_map-basin_color.png"
+PANEL_C="$FIGURE_DIR/f01c-raster_river_map-elevation.png"
+PANEL_D="$FIGURE_DIR/f01d-raster_river_map-merit_merged_width.png"
 OUTPUT_FILE="$FIGURE_DIR/f01-raster_river_map.png"
 COMBINER="$VISUALIZATION_DIR/script/combine_panels.py"
 
 mkdir -p "$FIGURE_DIR"
 
 printf '\n[STEP 1/5] Draw upstream drainage area (uparea).\n'
-"$PYTHON" "$SCRIPT_DIR/script/f01a-raster_river_map-uparea.py" \
+"$PYTHON" "$SCRIPT_DIR/script/f01a-raster_river_map-upstream_area.py" \
     --input "$UPAREA_FILE" --params "$PARAMS_FILE" \
     --west "$WEST" --east "$EAST" --south "$SOUTH" --north "$NORTH" \
     --cmap "$UPAREA_CMAP" --scale "$UPAREA_SCALE" \
@@ -57,7 +57,7 @@ printf '\n[STEP 1/5] Draw upstream drainage area (uparea).\n'
     --dpi "$DPI" --output "$PANEL_A"
 
 printf '\n[STEP 2/5] Draw basin display colors (bsncol).\n'
-"$PYTHON" "$SCRIPT_DIR/script/f01b-raster_river_map-bsncol.py" \
+"$PYTHON" "$SCRIPT_DIR/script/f01b-raster_river_map-basin_color.py" \
     --input "$BSNCOL_FILE" --params "$PARAMS_FILE" \
     --west "$WEST" --east "$EAST" --south "$SOUTH" --north "$NORTH" \
     --cmap "$BSNCOL_CMAP" \
@@ -65,7 +65,7 @@ printf '\n[STEP 2/5] Draw basin display colors (bsncol).\n'
     --dpi "$DPI" --output "$PANEL_B"
 
 printf '\n[STEP 3/5] Draw river-cell channel-top elevation (elevtn).\n'
-"$PYTHON" "$SCRIPT_DIR/script/f01c-raster_river_map-elevtn.py" \
+"$PYTHON" "$SCRIPT_DIR/script/f01c-raster_river_map-elevation.py" \
     --input "$ELEVTN_FILE" --params "$PARAMS_FILE" \
     --west "$WEST" --east "$EAST" --south "$SOUTH" --north "$NORTH" \
     --cmap "$ELEVTN_CMAP" \
@@ -73,7 +73,7 @@ printf '\n[STEP 3/5] Draw river-cell channel-top elevation (elevtn).\n'
     --dpi "$DPI" --output "$PANEL_C"
 
 printf '\n[STEP 4/5] Draw MERIT Hydro-merged channel width (rivwth_merit).\n'
-"$PYTHON" "$SCRIPT_DIR/script/f01d-raster_river_map-rivwth-merit.py" \
+"$PYTHON" "$SCRIPT_DIR/script/f01d-raster_river_map-merit_merged_width.py" \
     --input "$RIVWTH_MERIT_FILE" --params "$PARAMS_FILE" \
     --west "$WEST" --east "$EAST" --south "$SOUTH" --north "$NORTH" \
     --cmap "$RIVWTH_CMAP" --scale "$RIVWTH_SCALE" \

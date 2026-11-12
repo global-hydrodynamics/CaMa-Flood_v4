@@ -44,7 +44,7 @@ def main() -> None:
     )
     fig, ax = create_map_axes(
         geometry, args.west, args.east, args.south, args.north,
-        "p01-f01a Upstream drainage area",
+        "p01-f01a Raster River Map: Upstream Area",
     )
     image = draw_raster(
         ax, np.ma.masked_where(~valid, area_km2), geometry, args.cmap, norm

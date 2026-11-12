@@ -12,7 +12,7 @@ starting point even when no code is available.
 | Visualization project | A descriptive directory grouping related plotting methods, such as river maps or hydrographs. Project names do not contain numeric IDs. |
 | Figure project entry point | The user-facing Shell script at the project root. It exposes editable input and display settings and invokes the implementation. |
 | Figure implementation | Python or other plotting/data-processing code under the project's `script/` directory. For the preferred multi-panel workflow, each panel has its own script and PNG; a shared utility assembles the complete Figure. |
-| Project Figure (`<project>/figure/`) | Generated panel PNGs and assembled Figures. These reproducible project assets are always Git-tracked and may be updated during development. Match descriptive basenames, for example `f02a-seasonal-map.py`, `figure/f02a-seasonal-map.png`, and `figure/f02-seasonal-summary.png`. |
+| Project Figure (`<project>/figure/`) | Generated panel PNGs and assembled Figures. These reproducible project assets are always Git-tracked and may be updated during development. Match method/option basenames between panel scripts and images, as defined below. |
 | Published Gallery Figure (`visualization/gallery/`) | A separately selected copy of a Project Figure. Add, replace, or remove it only when the user explicitly authorizes Gallery publication. Routine generation, review, or `Tested` status is not authorization. |
 | `visualization/README.md` | The visual Gallery: approved images, figure IDs and titles, one-sentence descriptions, and links to each script and the relevant project README section. |
 | Project `README.md` | User-facing documentation for the whole visualization project, with common execution instructions and a stable, descriptive section for each Figure. |
@@ -24,6 +24,92 @@ The catalog is intended for human and AI discovery, including searches by
 natural-language descriptions of a scientific need. It is a reference, not a
 runtime dependency: tutorials may adapt a method without importing project
 scripts directly.
+
+## Method and option naming
+
+This guide is the authoritative reference for visualization naming and catalog
+conventions. Use two descriptive levels, independent of numeric IDs:
+
+- **Method name:** the general visualization technique, such as
+  `raster_river_map`, `vector_river_network`, `discharge_hydrograph`, or
+  `model_observation_scatter`. Keep it stable when panels are added or revised.
+- **Option name:** a scientific variable or representation within that method,
+  such as `upstream_area`, `basin_color`, `elevation`, `merit_merged_width`, or
+  `connectivity_type`. Express meaning rather than copying internal variable
+  names: `basin_color` displays color indices, not basin identifiers.
+
+Each name uses lowercase snake_case with no numeric ID. Separate method and
+option with one hyphen: `<method_name>-<option_name>`. The combination identifies
+a reusable visualization; numeric project, Figure, and panel IDs provide
+ordering and catalog references rather than its scientific meaning.
+
+| Resource | Filename |
+| --- | --- |
+| Figure-level Shell entry point | `fNN-<method_name>.sh` |
+| Panel-level Python implementation | `fNNa-<method_name>-<option_name>.py` |
+| Panel PNG | `fNNa-<method_name>-<option_name>.png` |
+| Combined Figure PNG | `fNN-<method_name>.png` |
+
+Use the same identifiers in scripts, PNGs, documentation, and catalog rows.
+A single-panel Figure may omit the option suffix when no meaningful variation
+exists. Keep one Shell entry point per Figure, implementations under `script/`,
+images under `figure/`, and one project README for all Figures. Shared helpers,
+tests, the combiner, and palette-library utilities retain names describing their
+roles; they are not independent cataloged Figure methods.
+
+Presentation titles use human-readable names, not raw snake_case:
+`p01-f02a Vector River Network: Connectivity Type`. Retain the project and
+Figure/panel ID and use consistent title capitalization, including scientific
+acronyms such as MERIT. Project README headings use
+`p01-f02 — Vector River Network`, with human-readable option names within the
+section. Published Gallery headings follow the same method terminology;
+existing Gallery image names or content require explicit publication approval
+before changes. Report a published naming mismatch instead of silently fixing it.
+
+Register `method_name` and `option_name` as stable machine-readable catalog
+identifiers and keep `title` human-readable. Leave `option_name` empty for a
+single-panel method without a meaningful option. Preserve descriptive metadata,
+input provenance, and evidence-based status when renaming resources. Update
+active links and callers; leave historical records and archived logs intact.
+Avoid compatibility wrappers for obsolete internal filenames.
+
+If no existing method or broad category fits, choose a concise name describing
+the scientific objects and visual technique, explain its purpose in the project
+README, and register an appropriate human-readable category in the CSV. Categories
+are broad discovery aids, not a closed taxonomy. Do not force an unrelated method
+into an existing one or invent scientific equivalence to reuse a name; consult
+the maintainer when the intended scientific meaning remains ambiguous.
+
+## Semantic discovery and reuse by AI agents
+
+Do not require exact names, IDs, or filename matches. When a user requests a
+visualization:
+
+1. Interpret the scientific and visual intent: quantity, representation,
+   spatial/temporal scope, and comparison.
+2. Search catalog `method_name`, `option_name`, `title`, `description`,
+   `purpose`, `variables`, and `method` together, using related scientific terms.
+3. Identify plausible implementations even when the wording differs from the
+   registered identifiers; inspect their Python scripts and documentation.
+4. Check scientific suitability, units, provenance, and required inputs. Reuse
+   or adapt a suitable implementation; create a new method only when existing
+   methods do not fit the request.
+
+For example, “Plot river width on a map,” “Show channel width as colored grid
+cells,” and “Create a raster map of MERIT-based river widths” can all lead to
+`raster_river_map-merit_merged_width` (p01-f01d). Confirm the suitability of the
+MERIT Hydro-merged product; a generic width request does not establish that
+the user wants this product rather than the model's selected default width.
+
+“Show downstream connectivity,” “Draw arrows between river grid cells,” and
+“Visualize the CaMa-Flood river network” can lead to `vector_river_network`
+(p01-f02). Select `connectivity_type` to distinguish local and Flexible Downstream
+links, or `upstream_area` to encode contributing area. The latter is not a
+discharge visualization. Semantic similarity helps find candidates; scientific
+meaning determines whether they fit.
+
+Keep the catalog a human-readable CSV index. This workflow does not require
+embeddings, a vector database, or an external search service.
 
 ## Visualization documentation structure
 
@@ -93,9 +179,9 @@ their source and permissions before redistribution.
 
 Use this sequence as a guide; review may lead back to an earlier step.
 
-1. Search `visualization_catalog.csv` for related methods by description,
-   purpose, variables, and method. Read the linked scripts and documentation
-   when they exist.
+1. Follow [semantic discovery and reuse](#semantic-discovery-and-reuse-by-ai-agents)
+   to find suitable methods in `visualization_catalog.csv`, then inspect their
+   scripts and documentation.
 2. Define the scientific question, intended audience, variables, units,
    temporal meaning, spatial extent, and comparison being shown.
 3. Select an existing descriptive visualization project or create a new one
@@ -150,14 +236,14 @@ This is a preferred, provisional workflow, not a requirement for every Figure.
 
 ```text
 visualization/<project>/
-├── f02-seasonal-summary.sh       # Settings, panel runs, assembly
+├── f02-vector_river_network.sh   # Settings, panel runs, assembly
 ├── script/
-│   ├── f02a-seasonal-map.py       # Creates one panel independently
-│   └── f02b-seasonal-series.py   # Creates one panel independently
+│   ├── f02a-vector_river_network-connectivity_type.py
+│   └── f02b-vector_river_network-upstream_area.py
 └── figure/
-    ├── f02a-seasonal-map.png
-    ├── f02b-seasonal-series.png
-    └── f02-seasonal-summary.png  # Complete Figure for review/publication
+    ├── f02a-vector_river_network-connectivity_type.png
+    ├── f02b-vector_river_network-upstream_area.png
+    └── f02-vector_river_network.png  # Complete Figure for review/publication
 ```
 
 The Shell entry point should define shared paths and user settings, run the
@@ -170,8 +256,9 @@ content, axes, legends, or colorbars.
 
 Use the existing IDs consistently: a Figure such as `p01-f02` has panel IDs
 `p01-f02a` and `p01-f02b`, and corresponding panel image names such as
-`f02a-seasonal-map.png` and `f02b-seasonal-series.png`; the assembled image
-uses the Figure-level stem, for example `f02-seasonal-summary.png`. Keep one
+`f02a-vector_river_network-connectivity_type.png` and
+`f02b-vector_river_network-upstream_area.png`; the assembled image uses the
+Figure-level stem, for example `f02-vector_river_network.png`. Keep one
 catalog row per panel. Each row describes that panel's purpose and variables,
 while rows for the same Figure share its user-facing Shell script and its
 assembled Gallery image. In the project README, explain the Figure and its
@@ -203,6 +290,7 @@ catalog columns are:
 | --- | --- |
 | `project_id`, `project_name` | Catalog ID and descriptive directory name. |
 | `figure_id`, `panel`, `visualization_id` | Figure identity, optional panel label, and integrated Figure/panel ID. |
+| `method_name`, `option_name` | Stable semantic identifiers defined in [Method and option naming](#method-and-option-naming); optional option for a single-panel method. |
 | `category`, `title` | Broad visualization type and human-readable panel or Figure title. |
 | `description`, `purpose` | What is shown and the scientific or practical reason for showing it. |
 | `variables`, `method` | Relevant CaMa-Flood variables and the plotting, normalization, overlay, or display method. |
@@ -228,8 +316,9 @@ agents do not need to know an ID before searching.
 remain unpublished, and `Tested` is never publication approval. Gallery
 publication requires explicit user authorization and a separate copy.
 IDs may be renumbered as the repository evolves. When doing so, update catalog
-rows, project documentation, Gallery filenames and links, and any current
-references. Pair IDs with a natural-language description; do not use an ID as
+rows, project documentation, and current references. Report Gallery filename
+or content changes for separate publication approval. Pair IDs with stable
+method/option names and a natural-language description; do not use an ID as
 the only reference to a method.
 
 ## Collaboration and human review

@@ -20,7 +20,16 @@ Entry points resolve repository paths relative to their own location, so they
 can also be run from another current directory. Extend this README with a
 descriptive section for each Figure added to the project.
 
-## p01-f01 — Four Mekong river-map attributes
+## p01-f01 — Raster River Map
+
+Method identifier: `raster_river_map`.
+
+| Panel | Option | Option identifier |
+| --- | --- | --- |
+| p01-f01a | Upstream Area | `upstream_area` |
+| p01-f01b | Basin Color | `basin_color` |
+| p01-f01c | Elevation | `elevation` |
+| p01-f01d | MERIT-Merged Width | `merit_merged_width` |
 
 ### Purpose and interpretation
 
@@ -101,7 +110,14 @@ Each panel script checks its variable, units, dimensions, coordinate centers,
 and map geometry against `params.txt`. Continuous color normalization uses
 valid data across the full map, not only the visible extent.
 
-## p01-f02 — Directed river-network connectivity
+## p01-f02 — Vector River Network
+
+Method identifier: `vector_river_network`.
+
+| Panel | Option | Option identifier |
+| --- | --- | --- |
+| p01-f02a | Connectivity Type | `connectivity_type` |
+| p01-f02b | Upstream Area | `upstream_area` |
 
 ### Purpose and interpretation
 
@@ -128,7 +144,7 @@ their direct segments lie outside the view. Curved Flexible Downstream arrows
 preserve their exact endpoints while bending consistently to make long links
 easier to follow.
 
-![p01-f02 directed CaMa-Flood river-network connectivity panels](figure/f02-line_river_map.png)
+![p01-f02 directed CaMa-Flood river-network connectivity panels](figure/f02-vector_river_network.png)
 
 ### Inputs, units, and method
 
@@ -143,10 +159,10 @@ needs no Tutorial02 run, external download, or simulation output.
 
 ### Settings and execution
 
-Run `./visualization/river_map/f02-line_river_map.sh` after the standard Python
-setup. It creates `figure/f02a-line_river_map-connectivity.png`,
-`figure/f02b-line_river_map-uparea.png`, and their combined
-`figure/f02-line_river_map.png`. All three are tracked project assets. Edit the
+Run `./visualization/river_map/f02-vector_river_network.sh` after the standard Python
+setup. It creates `figure/f02a-vector_river_network-connectivity_type.png`,
+`figure/f02b-vector_river_network-upstream_area.png`, and their combined
+`figure/f02-vector_river_network.png`. All three are tracked project assets. Edit the
 Shell settings to change the map inputs, common extent, panel layout, spacing,
 maximum complete-Figure dimensions, DPI, or Python executable. Plotting never
 filters links by extent: arrows with endpoints outside the view are still

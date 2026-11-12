@@ -40,7 +40,7 @@ def main() -> None:
     minimum, maximum = float(width[valid].min()), float(width[valid].max())
     fig, ax = create_map_axes(
         geometry, args.west, args.east, args.south, args.north,
-        "p01-f01d MERIT Hydro-merged channel width",
+        "p01-f01d Raster River Map: MERIT-Merged Width",
     )
     norm = LogNorm(vmin=minimum, vmax=maximum) if args.scale == "log" else Normalize(
         vmin=minimum, vmax=maximum

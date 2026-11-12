@@ -39,7 +39,7 @@ def main() -> None:
     minimum, maximum = float(elevation[valid].min()), float(elevation[valid].max())
     fig, ax = create_map_axes(
         geometry, args.west, args.east, args.south, args.north,
-        "p01-f01c River-cell channel-top elevation",
+        "p01-f01c Raster River Map: Elevation",
     )
     image = draw_raster(
         ax, np.ma.masked_where(~valid, elevation), geometry, args.cmap,
