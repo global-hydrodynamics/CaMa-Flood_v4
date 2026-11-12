@@ -242,3 +242,63 @@ completed image. Each panel prints exported canvas/map/colorbar pixel bounds.
 Run `python visualization/river_map/script/test_river_network_layout.py` for
 five sizing scenarios across all three real panels, including export geometry,
 labels, hidden slots, extent, link counts and foreground encodings.
+
+## p01-f03 — Vector River Map
+
+### Upstream area
+
+This Figure represents the main CaMa-Flood river network using geographic
+unit-catchment outlet locations. Each directed connection follows `nextxy`
+from the source map cell to its downstream cell, while `lonlat.nc` supplies
+the two cells' `outlon`/`outlat` coordinates. It therefore shows the stored
+model topology at outlets, not an observed river centerline. Tutorial02
+Figure 1c was the implementation reference; this panel keeps only its main
+river network and drainage-area encoding.
+
+![Vector River Map: Upstream Area](figure/f03-vector_river_map.png)
+
+Unlike p01-f02, which draws connections between regular computational
+grid-cell centers to emphasize local and Flexible Downstream links, p01-f03
+connects the corresponding geographic outlet coordinates. `nextxy` alone
+defines the downstream relationship; the script does not infer connections
+from outlet proximity. Each displayed segment is straight between its exact
+source and destination outlet coordinates. Real river paths may curve or
+meander between those points, so the lines must not be interpreted as traced
+channel centerlines.
+
+The source cell's `uparea` determines both line color and thickness. The
+script converts square metres to km² for interpretation, then divides the
+log-transformed areas of all valid-link source cells on the full map into
+four quartile classes. Q1 is the lowest-area quartile and Q4 the highest;
+their numeric cutoffs are calculated from the input map, not fixed physical
+thresholds. Classification is independent of the displayed extent.
+
+#### Required map data
+
+| Relative path | Variables and format | Use |
+| --- | --- | --- |
+| `map/mekong_15min/netcdf/nextxy_noedge.nc` | NetCDF `nextx`, `nexty` (`lat × lon`); one-based destination indices | Selects the downstream map cell for each main-network connection. Non-positive paired values are terminal or sentinel codes and do not define links. |
+| `map/mekong_15min/netcdf/lonlat.nc` | NetCDF `outlon`, `outlat` (`lat × lon`); degrees east/north | Supplies geographic outlet coordinates for each source and destination cell. Missing or invalid coordinates are excluded. |
+| `map/mekong_15min/netcdf/uparea.nc` | NetCDF `uparea` (`lat × lon`); m² | Selects valid river cells and provides the source-cell drainage area used for quartile class, color, and width. Values are converted to km² for the legend. |
+| `map/mekong_15min/params.txt` | Grid dimensions, resolution, and geographic bounds | Checks NetCDF grid shape and coordinate alignment; the vectors are plotted in geographic coordinates. |
+
+All inputs are Git-tracked map products. No simulation output, station data,
+external dataset, or map preparation is required. The script validates that
+NetCDF grids align, that one-based downstream indices resolve to valid river
+cells, and that each rendered arrow begins and ends at the outlet coordinates
+of its `nextxy` source and destination.
+
+#### Settings and execution
+
+After the standard Python setup, run:
+
+```bash
+./visualization/river_map/f03-vector_river_map.sh
+```
+
+Edit the input paths and `WEST`, `EAST`, `SOUTH`, and `NORTH` extent in the
+Shell entry point as needed. `FIG_WIDTH` and `FIG_HEIGHT` set the complete
+Figure size in inches (`0` selects automatic sizing); `DPI` controls the PNG
+resolution. The script writes the panel and single-panel Figure to
+`visualization/river_map/figure/`. The Figure-level PNG is a copy of the panel;
+no multi-panel composition or Gallery publication occurs.
