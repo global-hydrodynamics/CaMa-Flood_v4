@@ -34,7 +34,7 @@ conventions. Use two descriptive levels, independent of numeric IDs:
   `raster_river_map`, `line_river_map`, `discharge_hydrograph`, or
   `model_observation_scatter`. Keep it stable when panels are added or revised.
 - **Option name:** a scientific variable or representation within that method,
-  such as `upstream_area`, `basin_color`, `elevation`, `merit_merged_width`, or
+  such as `upstream_area`, `basin`, `basin_color`, or
   `connectivity_type`. Express meaning rather than copying internal variable
   names: `basin_color` displays color indices, not basin identifiers.
 
@@ -95,11 +95,14 @@ visualization:
    or adapt a suitable implementation; create a new method only when existing
    methods do not fit the request.
 
-For example, “Plot river width on a map,” “Show channel width as colored grid
-cells,” and “Create a raster map of MERIT-based river widths” can all lead to
-`raster_river_map-merit_merged_width` (p01-f01d). Confirm the suitability of the
-MERIT Hydro-merged product; a generic width request does not establish that
-the user wants this product rather than the model's selected default width.
+For example, “Plot contributing area,” “Show upstream catchment size as grid
+cells,” and “Create a raster of drainage area” can all lead to
+`raster_river_map-upstream_area` (p01-f01a). “Show original basin IDs” leads to
+`raster_river_map-basin` (p01-f01b); “Use soft basin colors behind overlays”
+leads to `raster_river_map-basin_color` (p01-f01c). Basin IDs and precomputed
+display indices have different meanings; semantic discovery must preserve
+that distinction. The former elevation and MERIT-width options were removed
+from the current Figure; historical examples do not establish availability.
 
 “Show downstream connectivity,” “Draw arrows between river grid cells,” and
 “Visualize the CaMa-Flood river network” can lead to `line_river_map`

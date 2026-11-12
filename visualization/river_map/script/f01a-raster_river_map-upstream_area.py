@@ -13,13 +13,13 @@ from matplotlib.ticker import FuncFormatter, LogLocator
 
 from river_map_common import (
     add_map_arguments,
-    add_aligned_colorbar,
-    add_log_colorbar,
-    create_map_axes,
     draw_raster,
     read_geometry,
     read_map_raster,
-    save_panel,
+)
+from river_network_layout import (
+    create_network_axes as create_panel_axes,
+    save_network_panel as save_fixed_panel,
 )
 
 
@@ -42,23 +42,19 @@ def main() -> None:
     norm = LogNorm(vmin=minimum, vmax=maximum) if args.scale == "log" else Normalize(
         vmin=minimum, vmax=maximum
     )
-    fig, ax = create_map_axes(
-        geometry, args.west, args.east, args.south, args.north,
-        "p01-f01a Raster River Map: Upstream Area",
+    fig, ax, cax = create_panel_axes(
+        geometry, args, "p01-f01a Raster River Map:\nUpstream Area", show_colorbar=True,
     )
     image = draw_raster(
         ax, np.ma.masked_where(~valid, area_km2), geometry, args.cmap, norm
     )
+    colorbar = fig.colorbar(image, cax=cax)
+    colorbar.set_label("Upstream drainage area (km²)")
     if args.scale == "log":
-        add_log_colorbar(fig, ax, image, "Upstream drainage area (km²)")
-    else:
-        colorbar = add_aligned_colorbar(
-            fig, ax, image, "Upstream drainage area (km²)"
-        )
-        colorbar.formatter = FuncFormatter(lambda value, _: f"{value:.0f}")
-        colorbar.update_ticks()
-    fig.tight_layout()
-    save_panel(fig, args.output, args.dpi, args.max_width, args.max_height)
+        colorbar.locator = LogLocator(base=10, subs=(1.0, 2.0, 5.0), numticks=18)
+    colorbar.formatter = FuncFormatter(lambda value, _: f"{value:.0f}")
+    colorbar.update_ticks()
+    save_fixed_panel(fig, ax, cax, args)
     plt.close(fig)
     print(f"Wrote {args.output}; uparea range: {minimum:g}–{maximum:g} km² ({args.scale})")
 

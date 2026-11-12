@@ -9,6 +9,19 @@ Base snapshot: `origin/master` at `19e2c1a`, 2026-11-06. This branch-local propo
 
 ## Registered active projects
 
+### Three-panel raster river map revision (2026-11-12)
+
+The maintainer assigned this bounded task to `manual-automation`, owned by
+Dai Yamazaki with Codex implementation, and requested commit/push after checks.
+f01 now contains Upstream Area (`uparea`), original Basin IDs (`basin`), and
+soft Basin Color indices (`bsncol`); the elevation and width panels are removed.
+All three panels reuse the verified explicit colorbar-slot layout and have
+identical map geometry. The README and catalog distinguish original IDs from
+display indices and reference the actual regional-map preparation code.
+Three f01 sizing scenarios and five f02 scenarios pass; f02 PNGs regenerated
+byte-for-byte unchanged. Gallery and map/model sources remain unchanged. See
+[VR-0139](../research/records/validation_runs/VR-0139.md) for evidence and limits.
+
 ### Visualization method naming and discovery (2026-11-12)
 
 The maintainer assigned this bounded refactor to `manual-automation`, owned by

@@ -24,91 +24,98 @@ descriptive section for each Figure added to the project.
 
 Method identifier: `raster_river_map`.
 
-| Panel | Option | Option identifier |
-| --- | --- | --- |
-| p01-f01a | Upstream Area | `upstream_area` |
-| p01-f01b | Basin Color | `basin_color` |
-| p01-f01c | Elevation | `elevation` |
-| p01-f01d | MERIT-Merged Width | `merit_merged_width` |
+| Panel | Option | Option identifier | Map variable |
+| --- | --- | --- | --- |
+| p01-f01a | Upstream Area | `upstream_area` | `uparea` |
+| p01-f01b | Basin | `basin` | `basin` |
+| p01-f01c | Basin Color | `basin_color` | `bsncol` |
 
 ### Purpose and interpretation
 
-This Figure compares four static attributes of the Mekong 15-minute river
-map: upstream drainage area, precomputed basin display colors, river-cell
-channel-top elevation, and MERIT Hydro-merged channel width. It requires no
-simulation.
+This three-panel Figure shows upstream drainage area, the original basin ID
+field, and precomputed basin display colors on the same Mekong 15-minute map.
+Upstream area describes contributing land area, not discharge. **Basin IDs are
+categorical identifiers**, not continuous physical quantities: numeric
+separation and color ordering have no physical interpretation. The Basin panel
+preserves the original stored IDs without replacing or renumbering them.
 
-CaMa-Flood uses Flexible Downstream connectivity, so a river cell can link to
-a downstream cell beyond the eight immediately neighboring cells (D8). Rivers
-may therefore look spatially discontinuous in the `uparea` raster even though
-their downstream connections are explicitly represented and treated as
-continuous by the model. Such apparent gaps do not necessarily indicate a
-disconnected river network or missing data.
+The Basin Color panel instead displays **`bsncol`**, a precomputed display-color
+index derived from basin information. It is not the basin ID. It reuses a
+small set of colors, considering neighboring basins, to support clear basin
+visualization. Its soft opaque palette is suitable as a background for future
+map overlays. Different basins can share a display index; the color map cannot
+recover their original IDs. The current sample has 414 basin IDs and five
+used display-color indices.
 
-![Four Mekong river-map panels: upstream drainage area, basin display colors, channel-top elevation, and MERIT Hydro-merged channel width](figure/f01-raster_river_map.png)
+CaMa-Flood uses Flexible Downstream connections beyond immediate grid
+neighbors. Apparent gaps in an upstream-area raster do not necessarily mean
+that the modeled river network is disconnected; connectivity is stored in
+`nextxy` rather than inferred from geographic proximity. No simulation or
+observation-station data are required.
+
+![Raster River Map](figure/f01-raster_river_map.png)
 
 ### Inputs, units, and methods
 
-The four NetCDF inputs and their roles are:
+| Panel | File and variable | Display |
+| --- | --- | --- |
+| f01a | `map/mekong_15min/netcdf/uparea.nc`: `uparea(lat, lon)`, m² | Convert to km²; mask missing/non-finite/non-positive values; retain `YlGnBu` with logarithmic normalization over all valid map cells. |
+| f01b | `map/mekong_15min/netcdf/basin.nc`: `basin(lat, lon)`, unitless | Display original positive integer IDs with one discrete bin per original integer value. Repeat the qualitative `tab20` palette across IDs; no conversion to `bsncol`. The colorbar labels actual IDs and states that colors repeat. |
+| f01c | `map/mekong_15min/netcdf/bsncol.nc`: `bsncol(lat, lon)`, unitless | Display the precomputed indices directly with discrete bins for 1–10. Mix the base `tab10` RGB colors with 60% opaque white to obtain distinguishable pastel colors; only used indices are labeled. |
 
-| Panel | File and variable | Meaning and units | Display |
-| --- | --- | --- | --- |
-| **f01a** | `map/mekong_15min/netcdf/uparea.nc`: `uparea(lat, lon)` | Upstream contributing area at river-map cells [m²]. | Converted to km²; non-finite and non-positive values are masked; `YlGnBu` with logarithmic normalization by default. |
-| **f01b** | `map/mekong_15min/netcdf/bsncol.nc`: `bsncol(lat, lon)` | Precomputed basin display-color index [unitless]. | Shown as discrete qualitative color categories, without logarithmic scaling. Values are display indices, not basin IDs or physical attributes. |
-| **f01c** | `map/mekong_15min/netcdf/elevtn.nc`: `elevtn(lat, lon)` | Unit-catchment river-cell channel-top elevation [m, EGM96]. | Continuous terrain palette and linear normalization; missing values are masked. This is not a complete high-resolution terrain DEM. |
-| **f01d** | `map/mekong_15min/netcdf/rivwth_merit.nc`: `rivwth(lat, lon)` | MERIT Hydro-merged river-channel width [m]. | Sequential palette with logarithmic normalization; missing and non-positive values are masked. |
+All three Git-tracked inputs share an 80 × 120 grid at 0.25°. Coordinates are
+cell centers, longitude increases eastward, latitude decreases southward,
+and the missing value is `-9999`. `params.txt` checks coordinates and map
+geometry. Missing cells stay white; valid basin IDs are retained exactly.
+Repeated raw-ID colors in f01b are a display choice, not adjacency-aware basin
+coloring or unique identifiers. Use the numeric raster to identify a basin.
+In f01c, neighboring regions with different display indices retain different
+colors after lightening; the plot does not recalculate boundaries or indices.
 
-All four files are Git-tracked and use the same 80 × 120 grid at 0.25°.
-Their coordinates are cell centers: longitude increases west to east and
-latitude decreases north to south. `params.txt` supplies the grid dimensions,
-resolution, and map bounds used to verify the NetCDF coordinates. The map
-missing value is `-9999`. No download, model run, or map parameterization is
-needed to generate this Figure.
+### Basin preparation and provenance
 
-Panel f01a masks non-finite and non-positive cells, converts area from m² to
-km², and uses nearest-neighbour rendering with `YlGnBu`. Logarithmic
-normalization is the default because drainage area spans a wide range; its
-limits use all valid cells in the map. Drainage area is not flow rate or
-discharge.
+The regional preparation workflow is
+[`map/tools/script_region/s01-regional_map.sh`](../../map/tools/script_region/s01-regional_map.sh),
+documented in the [regional-map guide](../../map/tools/script_region/README.md).
+It calls [`region_set_map.F90`](../../map/tools/code/region_set_map.F90), whose
+basin/color section labels network paths, orders basin IDs by upstream-grid
+count, and then assigns a small set of display colors using neighboring-color
+checks. Single-cell basins have a special display color. The plotted `basin`
+values are the original IDs already stored in the prepared map; visualization
+does not perform that preprocessing again. See the source for the full rules,
+rather than interpreting `bsncol` as a separate physical field or basin ID.
 
-Panel f01b displays the stored `bsncol` index directly. The index is a
-precomputed visualization product derived from basin classification and
-neighboring basin colors; it is not a basin identifier. The regional
-preparation implementation is [`region_set_map.F90`](../../map/tools/code/region_set_map.F90),
-called by [`s01-regional_map.sh`](../../map/tools/script_region/s01-regional_map.sh).
-The source labels basins from network connectivity and assigns display colors
-to distinguish neighboring basins where possible. This is a map-generation
-workflow, not a channel-parameterization step.
-
-Panel f01c shows channel-top elevation only at river cells. Elevations use
-metres relative to EGM96; blank areas are not an elevation estimate.
-
-Panel f01d shows an alternative channel-width product. The parameterization
-workflow first estimates channel width from annual-mean discharge with a
-power-law relationship, then combines that estimate with MERIT Hydro river
-widths to make `rivwth_merit`. It is not necessarily the width selected by the
-default CaMa-Flood model configuration. The detailed method is documented in
-the [channel-parameter workflow](../../map/tools/script_params/README.md#channel-parameter-workflow)
-and implemented by [`s01-channel_params.sh`](../../map/tools/script_params/s01-channel_params.sh).
-
-The panels use the same geographic extent, cell-center coordinates, map
-orientation, tick convention, and aspect ratio. The maps display stored
-attributes; river connections are represented by `nextxy`, not inferred from
-geographic proximity.
+The individual-map NetCDF preparation template is
+[`map/tools/script_bin2nc/s02-convert_netcdf.sh`](../../map/tools/script_bin2nc/s02-convert_netcdf.sh),
+using [`convert_map_binary_to_netcdf.py`](../../map/tools/code/convert_map_binary_to_netcdf.py).
+The three NetCDF inputs are already tracked, so plotting requires neither
+conversion nor map generation.
 
 ### Settings and execution
 
 Run `./visualization/river_map/f01-raster_river_map.sh` after the standard
-Python setup. Its settings expose all four input paths, the common map extent,
-each panel's palette and applicable scale, the 2 × 2 layout, spacing, panel
-and complete-Figure size limits, DPI, and Python executable. The Shell script
-creates the four panel PNGs and `figure/f01-raster_river_map.png`; these
-project-local figures are tracked and can be regenerated. It does not create
-or update a Gallery image.
+Python setup. It generates these tracked project assets:
 
-Each panel script checks its variable, units, dimensions, coordinate centers,
-and map geometry against `params.txt`. Continuous color normalization uses
-valid data across the full map, not only the visible extent.
+- `figure/f01a-raster_river_map-upstream_area.png`
+- `figure/f01b-raster_river_map-basin.png`
+- `figure/f01c-raster_river_map-basin_color.png`
+- `figure/f01-raster_river_map.png`
+
+Defaults are a horizontal three-panel arrangement, 6-inch total panel height,
+200 DPI, and maximum assembled dimensions of 12 × 8 inches. The common extent
+remains 90–110°E, 5–35°N, with the existing equal-degree raster aspect.
+The Shell settings expose input files, palettes, white mixing, spacing and
+size limits. Titles wrap between method and option to stay readable.
+
+All panels reuse the verified explicit map/colorbar layout from f02 through
+`script/river_network_layout.py`, with identical reserved colorbar space and
+complete canvases. Each f01 panel has a real colorbar; none reduces map height
+or triggers independent tight-layout/cropping. Colorbar ends align with map
+axes. The unchanged combiner proportionally fits the full horizontal Figure
+to its size limits. Generation does not update the Gallery.
+
+Run `python visualization/river_map/script/test_raster_river_map.py` to check
+raw IDs, data masks, pastel distinguishability, labels and common map geometry.
 
 ## p01-f02 — Line River Map
 
