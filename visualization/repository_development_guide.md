@@ -107,7 +107,8 @@ from the current Figure; historical examples do not establish availability.
 “Show downstream connectivity,” “Draw arrows between river grid cells,” and
 “Visualize the CaMa-Flood river network” can lead to `line_river_map`
 (p01-f02). Select `connectivity_type` to distinguish local and Flexible Downstream
-links, or `upstream_area` to encode contributing area. The latter is not a
+links, `upstream_area_thickness` for black area-scaled arrows, or
+`upstream_area` for colored contributing area. Upstream area is not a
 discharge visualization. Semantic similarity helps find candidates; scientific
 meaning determines whether they fit.
 
@@ -247,10 +248,12 @@ visualization/<project>/
 ├── f02-line_river_map.sh   # Settings, panel runs, assembly
 ├── script/
 │   ├── f02a-line_river_map-connectivity_type.py
-│   └── f02b-line_river_map-upstream_area.py
+│   ├── f02b-line_river_map-upstream_area_thickness.py
+│   └── f02c-line_river_map-upstream_area.py
 └── figure/
     ├── f02a-line_river_map-connectivity_type.png
-    ├── f02b-line_river_map-upstream_area.png
+    ├── f02b-line_river_map-upstream_area_thickness.png
+    ├── f02c-line_river_map-upstream_area.png
     └── f02-line_river_map.png  # Complete Figure for review/publication
 ```
 
@@ -265,7 +268,7 @@ content, axes, legends, or colorbars.
 Use the existing IDs consistently: a Figure such as `p01-f02` has panel IDs
 `p01-f02a` and `p01-f02b`, and corresponding panel image names such as
 `f02a-line_river_map-connectivity_type.png` and
-`f02b-line_river_map-upstream_area.png`; the assembled image uses the
+`f02b-line_river_map-upstream_area_thickness.png`; the assembled image uses the
 Figure-level stem, for example `f02-line_river_map.png`. Keep one
 catalog row per panel. Each row describes that panel's purpose and variables,
 while rows for the same Figure share its user-facing Shell script and its

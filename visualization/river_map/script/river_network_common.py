@@ -113,7 +113,7 @@ def count_segments_intersecting_extent(network: RiverNetwork, extent) -> tuple[i
 
 
 def draw_flexible_arrows(ax, network: RiverNetwork, colors, widths,
-                         alpha: float = 0.98, zorder: int = 5):
+                         alpha: float = 0.98, zorder: int = 5, head_sizes=8.5, curvature=0.16):
     """Draw nonlocal nextxy links as curved arrows between exact cell centers."""
     patches = []
     flexible_indices = np.flatnonzero(network.flexible)
@@ -121,16 +121,65 @@ def draw_flexible_arrows(ax, network: RiverNetwork, colors, widths,
         colors, np.ndarray
     ) else [colors] * len(flexible_indices)
     widths = np.broadcast_to(widths, (len(flexible_indices),))
-    for index, color, width in zip(flexible_indices, colors, widths):
+    head_sizes = np.broadcast_to(head_sizes, (len(flexible_indices),))
+    for index, color, width, head_size in zip(flexible_indices, colors, widths, head_sizes):
         source = (network.lon[network.source_cols[index]],
                   network.lat[network.source_rows[index]])
         destination = (network.lon[network.dest_cols[index]],
                       network.lat[network.dest_rows[index]])
         arrow = FancyArrowPatch(
-            source, destination, arrowstyle="-|>", connectionstyle="arc3,rad=0.16",
-            mutation_scale=8.5, linewidth=float(width), color=color, alpha=alpha,
+            source, destination, arrowstyle="-|>", connectionstyle=f"arc3,rad={curvature}",
+            mutation_scale=float(head_size), linewidth=float(width), color=color, alpha=alpha,
             shrinkA=0, shrinkB=0, zorder=zorder,
         )
         ax.add_patch(arrow)
         patches.append(arrow)
     return patches
+
+
+def draw_area_arrows(ax, network: RiverNetwork, area_km2, norm, *, cmap=None):
+    """Draw all links using six log-area shaft-width classes in physical inches.
+
+    Black arrows emphasize thickness; colored arrows use a narrower width
+    range so the palette stays legible. Full-map normalization is independent
+    of the view. Grouping quivers gives actual variable shaft widths.
+    """
+    scaled = np.clip(np.asarray(norm(area_km2)), 0, 1)
+    levels = np.minimum((scaled * 6).astype(int), 5)
+    widths = 0.008 + (0.024 if cmap is None else 0.014) * levels / 5
+    colors = np.tile([0., 0., 0., 1.], (len(area_km2), 1)) if cmap is None else cmap(norm(area_km2))
+    source_lon = network.lon[network.source_cols]
+    source_lat = network.lat[network.source_rows]
+    delta_lon = network.lon[network.dest_cols] - source_lon
+    delta_lat = network.lat[network.dest_rows] - source_lat
+    rendered = 0
+    # Narrow rivers first, so broad main-channel arrows remain visible.
+    for level in range(6):
+        selected = (~network.flexible) & (levels == level)
+        if not np.any(selected):
+            continue
+        shaft_width = float(widths[selected][0])
+        # Black b arrows keep a's 0.050-inch head width/length and 0.045-inch
+        # head-axis length, independently of the area-scaled shaft thickness.
+        if cmap is None:
+            headwidth, headlength, headaxislength = (
+                0.050 / shaft_width, 0.050 / shaft_width, 0.045 / shaft_width,
+            )
+        else:
+            headwidth, headlength, headaxislength = 3.5, 4.0, 3.5
+        arrows = ax.quiver(
+            source_lon[selected], source_lat[selected], delta_lon[selected], delta_lat[selected],
+            angles="xy", scale_units="xy", scale=1, pivot="tail", units="inches",
+            width=shaft_width, headwidth=headwidth, headlength=headlength,
+            headaxislength=headaxislength, color=colors[selected], zorder=4 + level * 0.1,
+        )
+        rendered += arrows.U.size
+    flexible = network.flexible
+    patches = draw_flexible_arrows(
+        ax, network, colors[flexible], widths[flexible] * 72,
+        alpha=1.0, zorder=5, head_sizes=7.0 if cmap is None else 5 + 200 * widths[flexible],
+    )
+    rendered += len(patches)
+    if rendered != len(network.source_rows):
+        raise RuntimeError(f"Rendered {rendered} arrows for {len(network.source_rows)} links")
+    return rendered, widths

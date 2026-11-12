@@ -9,6 +9,30 @@ Base snapshot: `origin/master` at `19e2c1a`, 2026-11-06. This branch-local propo
 
 ## Registered active projects
 
+### Three-panel line river map revision (2026-11-12)
+
+The maintainer assigned p01-f02's three-panel revision to the current
+`manual-automation` branch, owned by Dai Yamazaki with Codex implementation,
+and explicitly authorized commit/push after verification. Scope: f02 wrapper,
+panel scripts/helpers, tracked project figures, README/catalog and necessary
+naming examples; no Gallery publication. Acceptance: all panels use
+102–109°E, 10–17°N; f02a has stronger black local/orange flexible arrows;
+f02b has black area-scaled enhanced thickness; f02c uses shade-rainbow arrows
+over categorical dark-gray bsncol; aligned canvases and readable exports.
+All four PNGs are generated; five sizing scenarios pass across three panels,
+including exact extent, full-link counts, foreground encodings and aligned
+geometry. The composite was visually reviewed. See
+[VR-0141](../research/records/validation_runs/VR-0141.md).
+
+The maintainer's follow-up retains the current **99–109°E, 9–19°N** extent,
+superseding the initial bounds above. Targeted refinements reduce orange
+flexible-arrow heads and increase f02a curvature, keep f02b shaft scaling with
+standard-size heads, and darken f02c's categorical background. All four PNGs
+are regenerated; exact prior width/color/coordinate comparisons and five
+three-panel sizing scenarios pass. See
+[VR-0142](../research/records/validation_runs/VR-0142.md).
+
+
 ### Three-panel raster river map revision (2026-11-12)
 
 The maintainer assigned this bounded task to `manual-automation`, owned by

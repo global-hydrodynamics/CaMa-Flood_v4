@@ -32,7 +32,7 @@ def main() -> None:
     valid = np.isfinite(area_km2) & (area_km2 > 0)
     fig, ax, cax = create_network_axes(
         geometry, args,
-        "p01-f02a Line River Map: Connectivity Type",
+        "p01-f02a Line River Map:\nConnectivity Type",
         show_colorbar=False,
     )
     draw_raster(
@@ -48,18 +48,19 @@ def main() -> None:
     local_arrows = ax.quiver(
         source_lon[local], source_lat[local], delta_lon[local], delta_lat[local],
         angles="xy", scale_units="xy", scale=1, pivot="tail", units="inches",
-        width=0.007, headwidth=7.5, headlength=6.5, headaxislength=5.8,
-        color="#4778B5", alpha=0.9, zorder=3,
+        width=0.010, headwidth=5.0, headlength=5.0, headaxislength=4.5,
+        color="black", alpha=1.0, zorder=3,
     )
     flexible_arrows = draw_flexible_arrows(
-        ax, network, "#F28E2B", np.full(np.count_nonzero(network.flexible), 1.0)
+        ax, network, "#F28E2B", np.full(np.count_nonzero(network.flexible), 1.25),
+        head_sizes=7.0, curvature=0.22,
     )
     rendered = local_arrows.U.size + len(flexible_arrows)
     expected = len(network.source_rows)
     if rendered != expected:
         raise RuntimeError(f"Rendered {rendered} arrows for {expected} valid nextxy links")
 
-    ax.plot([], [], color="#4778B5", lw=1.4, label="Local D8 connection")
+    ax.plot([], [], color="black", lw=1.4, label="Local D8 connection")
     ax.plot([], [], color="#F28E2B", lw=1.8, label="Flexible Downstream connection")
     ax.legend(loc="lower left", frameon=True, framealpha=0.95)
     save_network_panel(fig, ax, cax, args)

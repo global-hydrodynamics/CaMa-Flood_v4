@@ -129,87 +129,111 @@ raw IDs, data masks, pastel distinguishability, labels and common map geometry.
 
 ## p01-f02 — Line River Map
 
-Method identifier: `line_river_map`.
-
-This method is named Line River Map by maintainer decision. The separately
-planned vector visualization is a different method.
+Method identifier: `line_river_map`. Vector visualization remains a separate
+future method.
 
 | Panel | Option | Option identifier |
 | --- | --- | --- |
 | p01-f02a | Connectivity Type | `connectivity_type` |
-| p01-f02b | Upstream Area | `upstream_area` |
+| p01-f02b | Upstream Area Thickness | `upstream_area_thickness` |
+| p01-f02c | Upstream Area | `upstream_area` |
 
 ### Purpose and interpretation
 
-CaMa-Flood stores downstream connectivity explicitly in `nextxy`; each
-positive `nextx`/`nexty` pair gives the one-based destination grid indices.
-Unlike a standard D8 network, Flexible Downstream connections may point beyond
-the eight neighboring cells. Panel **f02a** draws every valid connection as a
-directed arrow: local D8 links are blue and nonlocal Flexible Downstream links
-are orange. Panel **f02b** uses the source cell's upstream drainage area to
-scale every arrow's color and width logarithmically. Local links are straight;
-Flexible Downstream links are curved to reduce overlap with local arrows. Both
-panels show a faint `uparea` raster and use the same 98–110°E, 8–20°N extent.
-No observation stations or station-to-cell allocations are used.
+All three panels show directed `nextxy` river-network connections over
+**99–109°E, 9–19°N**, with the same map geometry and aligned panel heights.
+Upstream drainage area is contributing land area, not discharge.
 
-The map products are read from `map/mekong_15min/netcdf/uparea.nc`
-(`uparea`, m²), `map/mekong_15min/netcdf/nextxy_noedge.nc` (`nextx`, `nexty`),
-and `map/mekong_15min/params.txt`. Link direction and destination are taken
-from the explicit `nextxy` indices, never inferred from geographic proximity.
-All valid links are passed to the plot; the map axes clip those outside the
-selected view. The current map has 3,150 valid links: 3,022 local and 128
-Flexible Downstream. Of these, 1,374 straight source-to-destination segments
-intersect the current extent; the other 1,776 remain in the plotted data but
-their direct segments lie outside the view. Curved Flexible Downstream arrows
-preserve their exact endpoints while bending consistently to make long links
-easier to follow.
+- **f02a:** thicker black arrows show local D8 connections; orange curved
+  arrows distinguish nonlocal Flexible Downstream connections. A faint
+  upstream-area raster provides context. Flexible arrowheads are slightly
+  smaller (7-point mutation scale), with stronger curvature (`rad=0.22`).
+- **f02b:** all arrows are black, with enhanced shaft thickness representing
+  source-cell upstream area. A logarithmic six-class width scale makes larger
+  rivers stand out while retaining small links. A legend gives representative
+  areas; the faint raster is the same as f02a. Arrowheads stay at the standard
+  size instead of enlarging with shaft thickness: local heads match f02a
+  (0.050-inch width/length); flexible heads use the same 7-point mutation scale.
+- **f02c:** `cmf_colormap` **shade-rainbow** (`get_cmap("shade_rainbow")`) arrow colors represent source-cell
+  upstream area on a logarithmic scale. Moderate area-based widths reinforce
+  the network. Precomputed `bsncol` display indices form a darker charcoal-gray
+  categorical background, keeping colored arrows in the foreground.
 
-![p01-f02 directed CaMa-Flood river-network connectivity panels](figure/f02-line_river_map.png)
+![p01-f02 Line River Map: connectivity, enhanced thickness, and upstream-area color](figure/f02-line_river_map.png)
 
-### Inputs, units, and method
+### Inputs, units, and methods
 
-The Git-tracked `nextxy_noedge.nc` and `uparea.nc` have matching `lat, lon`
-dimensions and cell-center coordinates. Positive `nextx` and `nexty` values
-are one-based array indices; paired non-positive terminal/sentinel values do
-not define a downstream link. A link is classified as Flexible Downstream
-when either grid-index offset from source to destination is greater than one.
-The background area and source-cell areas are converted from m² to km². The
-background and f02b arrow colors use logarithmic normalization. The Figure
-needs no Tutorial02 run, external download, or simulation output.
+All inputs are Git-tracked under `map/mekong_15min/`; no simulation output,
+station data, external download, or map preparation is needed.
+
+| Input | Meaning and use |
+| --- | --- |
+| `netcdf/uparea.nc`: `uparea(lat, lon)`, m² | Convert to km²; read source-cell areas for arrows and a faint logarithmic background in a/b. Missing, non-finite and non-positive areas are excluded. |
+| `netcdf/nextxy_noedge.nc`: `nextx`, `nexty` | One-based destination indices; paired non-positive terminal/sentinel values do not define links. |
+| `netcdf/bsncol.nc`: `bsncol(lat, lon)`, unitless | Precomputed categorical display indices 1–10 for c's gray background. Missing/out-of-range cells stay white. These are not basin IDs or a physical magnitude. |
+| `params.txt` | Grid dimensions, resolution and bounds, checked against NetCDF cell-center coordinates. |
+
+The current map contains 3,150 valid links (3,022 local and 128 Flexible
+Downstream). Every valid link is passed to plotting; the axes clip the display
+without filtering connections by extent. Link direction comes directly from
+`nextxy`, never geographic proximity. A link is Flexible Downstream if either
+source/destination grid-index offset exceeds one. Local arrows are straight;
+flexible arrows curve between their exact original endpoints.
+
+For b and c, normalize log10(source area) over all valid links in the map,
+independently of the plotting extent. Divide the normalized range into six
+equal classes, with the maximum in the last class. In b, shaft widths range
+from 0.008 to 0.032 inches; in c, from 0.008 to 0.022 inches. Local quivers
+use actual shaft widths; flexible strokes use the corresponding widths in
+points. In b, head size is independent of area; c retains its existing
+proportional heads. Narrow local links are drawn before wider
+ones. The full-map area range is also used for c's continuous logarithmic
+colorbar. Inputs are never modified.
+
+The charcoal shades in c range from `#2b2b2b` to `#3b3b3b`, roughly halving
+the prior gray RGB intensities while preserving categorical distinctions.
+The gray shades in c distinguish display classes only; their brightness has
+no ordered basin meaning. Repeated `bsncol` values do not uniquely identify
+basins. See [f01 basin preparation](#basin-preparation-and-provenance) for
+preprocessing provenance. The background has no separate quantitative scale.
 
 ### Settings and execution
 
-Run `./visualization/river_map/f02-line_river_map.sh` after the standard Python
-setup. It creates `figure/f02a-line_river_map-connectivity_type.png`,
-`figure/f02b-line_river_map-upstream_area.png`, and their combined
-`figure/f02-line_river_map.png`. All three are tracked project assets. Edit the
-Shell settings to change the map inputs, common extent, panel layout, spacing,
-maximum complete-Figure dimensions, DPI, or Python executable. Plotting never
-filters links by extent: arrows with endpoints outside the view are still
-provided to Matplotlib, which clips them at the axes boundary. The project
-Figure does not create or update a Gallery image; publication requires
-separate explicit authorization.
+After the standard Python setup (including `cmf_colormap`), run:
+
+```bash
+./visualization/river_map/f02-line_river_map.sh
+```
+
+One wrapper invokes three independent panel scripts, then one unchanged
+`visualization/script/combine_panels.py` assembly step. It creates these
+tracked project assets:
+
+- `figure/f02a-line_river_map-connectivity_type.png`
+- `figure/f02b-line_river_map-upstream_area_thickness.png`
+- `figure/f02c-line_river_map-upstream_area.png`
+- `figure/f02-line_river_map.png`
+
+The former colored f02b is now f02c; f02b's descriptive option name identifies
+its thickness-only foreground encoding. The wrapper exposes input paths,
+common extent, layout, spacing, assembled size limits, DPI and Python.
+Defaults remain horizontal, maximum 12 × 8 inches, 200 DPI. No Gallery outputs
+are created or updated.
 
 #### Virtual-colorbar layout
 
-Both f02 panels reserve the same explicitly positioned map and vertical
-colorbar axes. The f02a colorbar axes are invisible (no ticks, labels, or
-frame); f02b fills that same space with its drainage-area colorbar. Shared
-dimensions in `script/river_network_layout.py` keep the map rectangles and
-complete PNG canvases identical. Both retain the existing equal-degree map
-aspect used by the background raster. Saving preserves the entire canvas,
-without tight layout or cropping, so the invisible region survives assembly.
-The combiner remains unchanged.
+All three panels reserve identical map and vertical-colorbar rectangles using
+`script/river_network_layout.py`. The colorbar axes in a/b are invisible;
+c fills the same slot with its area colorbar. All retain equal-degree map
+aspect and save the full canvas without tight layout or cropping. The
+unchanged combiner preserves their alignment during proportional resizing.
 
-For either panel script, `--max-height H --max-width 0` sets total panel
-height to H inches; automatic width includes the map aspect, margins, and
-reserved colorbar space. A positive width limit proportionally reduces the
-complete panel if necessary. The Shell entry point's `MAX_WIDTH` and
-`MAX_HEIGHT` still limit the assembled Figure, including spacing and margins.
-Each panel prints its canvas and map/colorbar bounds in exported PNG pixels.
-Following successful verification, the maintainer adopted this approach in the
-[shared virtual-colorbar rule](../figure_making_guideline.md#virtual-colorbars-for-comparable-panels).
-The dimensions above remain specific to f02.
+For each panel, `--max-height H --max-width 0` sets total height to H inches;
+automatic width includes map aspect, margins and colorbar space. A positive
+width limit proportionally reduces the complete panel. The wrapper's limits
+apply to the assembled Figure, including spacing and margins. Each panel
+prints exported canvas/map/colorbar pixel bounds.
 
-Run the geometry/export regression check from the repository root with:
-`python visualization/river_map/script/test_river_network_layout.py`.
+Run `python visualization/river_map/script/test_river_network_layout.py` for
+five sizing scenarios across all three real panels, including export geometry,
+labels, hidden slots, extent, link counts and foreground encodings.
