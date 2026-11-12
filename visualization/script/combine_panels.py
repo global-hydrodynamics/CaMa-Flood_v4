@@ -84,6 +84,25 @@ def fit_image(image: Image.Image, max_width: float, max_height: float,
     return resized
 
 
+def pad_image(image: Image.Image, figure_width: float, figure_height: float,
+              dpi: int, background: tuple[int, int, int]) -> Image.Image:
+    """Place the composition on an exact-size canvas without scaling panels."""
+    target_width = math.floor(figure_width * dpi + 0.5) if figure_width > 0 else image.width
+    target_height = math.floor(figure_height * dpi + 0.5) if figure_height > 0 else image.height
+    if target_width < image.width or target_height < image.height:
+        raise ValueError(
+            "panel composition exceeds the requested figure dimensions; "
+            "increase FIG_WIDTH/FIG_HEIGHT or reduce panel spacing"
+        )
+    if (target_width, target_height) == image.size:
+        return image
+    canvas = Image.new("RGB", (target_width, target_height), background)
+    canvas.paste(image, ((target_width - image.width) // 2,
+                         (target_height - image.height) // 2))
+    image.close()
+    return canvas
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("inputs", nargs="+", type=Path, help="Panel PNGs in display order")
@@ -95,10 +114,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--gap", type=int, default=24, help="Space between panels in pixels")
     parser.add_argument("--margin", type=int, default=24, help="Outer margin in pixels")
     parser.add_argument("--background", default="white", help="Canvas background color")
+    parser.add_argument("--figure-width", type=float, default=0.0,
+                        help="Exact complete-Figure width in inches; 0 is automatic")
+    parser.add_argument("--figure-height", type=float, default=0.0,
+                        help="Exact complete-Figure height in inches; 0 is automatic")
+    # Keep the original post-render bounds available for backward compatibility.
     parser.add_argument("--max-width", type=float, default=0.0,
-                        help="Maximum complete-image width in inches; 0 is unconstrained")
+                        help="Legacy maximum complete-image width in inches")
     parser.add_argument("--max-height", type=float, default=0.0,
-                        help="Maximum complete-image height in inches; 0 is unconstrained")
+                        help="Legacy maximum complete-image height in inches")
     parser.add_argument("--dpi", type=int, default=200)
     args = parser.parse_args()
     if args.gap < 0 or args.margin < 0:
@@ -110,6 +134,12 @@ def parse_args() -> argparse.Namespace:
     if (not math.isfinite(args.max_width) or not math.isfinite(args.max_height) or
             args.max_width < 0 or args.max_height < 0):
         parser.error("--max-width and --max-height must be finite and non-negative")
+    if (not math.isfinite(args.figure_width) or not math.isfinite(args.figure_height) or
+            args.figure_width < 0 or args.figure_height < 0):
+        parser.error("--figure-width and --figure-height must be finite and non-negative")
+    if ((args.figure_width > 0 or args.figure_height > 0) and
+            (args.max_width > 0 or args.max_height > 0)):
+        parser.error("--figure-* cannot be combined with legacy --max-* bounds")
     try:
         ImageColor.getrgb(args.background)
     except ValueError as exc:
@@ -129,7 +159,11 @@ def main() -> None:
                 panels.append(source.convert("RGB"))
         combined = arrange_panels(
             panels, args.layout, args.columns, args.gap, args.margin, background)
-        combined = fit_image(combined, args.max_width, args.max_height, args.dpi)
+        if args.figure_width > 0 or args.figure_height > 0:
+            combined = pad_image(combined, args.figure_width, args.figure_height,
+                                 args.dpi, background)
+        else:
+            combined = fit_image(combined, args.max_width, args.max_height, args.dpi)
         with tempfile.TemporaryDirectory(prefix=".combine-panels-",
                                          dir=args.output.parent) as temp_dir:
             temporary_output = Path(temp_dir) / "combined.png"

@@ -128,22 +128,41 @@ different approach when the data or scientific question calls for it.
 ### Figure size and aspect ratio
 
 When users need to control figure dimensions, user-facing Shell scripts should
-offer independent `MAX_WIDTH` and `MAX_HEIGHT` limits in inches. A value of
-`0` means that dimension is unconstrained; either or both limits may be set.
-When neither is specified, use a reasonable automatic size. Recommended
-maximum dimensions are 4, 6, 8, or 10 inches (S/M/L/XL), but projects may use
-other numeric limits and need not share one physical size.
+offer independent `FIG_WIDTH`, `FIG_HEIGHT`, and `DPI` settings. Width and
+height are the complete saved Figure dimensions in inches; `0` means automatic
+sizing. Resolve the requested dimensions before final rendering and save at
+the requested DPI. Include titles, labels, ticks, legends, colorbars, and
+margins in the complete-Figure dimensions.
 
-Respect scientific and geographic aspect ratios. Apply limits to the complete
-saved figure, including titles, labels, ticks, legends, colorbars, and margins;
-do not treat them as limits on only the plotting area. Scale all visual
-elements proportionally and preserve the overall aspect ratio. The initial
-recommended approach is to render a readable reference Figure, then resize
-the complete raster image with a high-quality resampler to meet the limits.
-Keep the requested DPI unchanged. Future approaches are acceptable if they
-preserve the same relationships and do not make text or other elements collide.
-Prefer a simple, transparent sizing method over a complex automatic layout
-system.
+Support these sizing modes:
+
+1. `FIG_HEIGHT > 0`, `FIG_WIDTH = 0`: keep the complete Figure height fixed and
+   determine the width automatically. For map Figures, a vertical colorbar or
+   legend should primarily add width, rather than reduce the map's height.
+2. `FIG_WIDTH > 0`, `FIG_HEIGHT = 0`: keep the complete Figure width fixed and
+   determine the height automatically. Horizontal decorations should add
+   height rather than unnecessarily shrinking the plotting area.
+3. Both dimensions greater than zero: fit the complete Figure in the requested
+   box. Preserve scientific plotting-area aspect ratios; do not distort maps
+   or stretch text.
+4. Both dimensions zero: estimate readable dimensions from the map extent,
+   panel arrangement, and required decorations.
+
+Keep scientific and geographic aspect ratios. When one dimension is
+automatic, use it to accommodate axes decorations while retaining the fixed
+dimension. When both dimensions are fixed, keep the axes aspect correct inside
+the available box. Avoid post-render raster resizing as the primary layout
+method because it also scales text and line widths. Simple reusable Matplotlib
+layout helpers are appropriate; do not create an elaborate sizing framework.
+Pixel dimensions are rounded to the nearest pixel at the selected DPI, so
+physical dimensions are exact to that output-pixel precision.
+
+`FIG_WIDTH` and `FIG_HEIGHT` specify desired dimensions. Existing `MAX_WIDTH`
+and `MAX_HEIGHT` or `--max-width` and `--max-height` settings, where retained
+for compatibility, remain maximum bounding dimensions and may proportionally
+resize a completed image. Do not silently reinterpret maximum bounds as exact
+dimensions. New and updated Shell workflows should use `FIG_WIDTH` and
+`FIG_HEIGHT`.
 
 - Use sequential color maps for ordered nonnegative quantities, diverging
   maps for signed quantities with a meaningful center, and categorical colors

@@ -216,10 +216,12 @@ tracked project assets:
 
 The option identifiers are maintainer-specified: `connect_type`,
 `enhance_tickness` (spelling retained as requested), and `enhance_color`.
-The wrapper exposes input paths,
-common extent, layout, spacing, assembled size limits, DPI and Python.
-Defaults remain horizontal, maximum 12 × 8 inches, 200 DPI. No Gallery outputs
-are created or updated.
+The wrapper exposes input paths, common extent, layout, spacing, complete
+Figure dimensions, DPI and Python. `FIG_WIDTH=0` selects automatic width;
+`FIG_HEIGHT=8` sets the complete Figure height to 8 inches at 200 DPI. The
+layout reserves the requested dimensions across panel cells, including gaps
+and margins. Set either dimension to `0` for automatic sizing. No Gallery
+outputs are created or updated.
 
 #### Virtual-colorbar layout
 
@@ -227,13 +229,15 @@ All three panels reserve identical map and vertical-colorbar rectangles using
 `script/river_network_layout.py`. The colorbar axes in a/b are invisible;
 c fills the same slot with its area colorbar. All retain equal-degree map
 aspect and save the full canvas without tight layout or cropping. The
-unchanged combiner preserves their alignment during proportional resizing.
+combiner pads panels to the requested complete-Figure dimensions without
+resizing their content.
 
-For each panel, `--max-height H --max-width 0` sets total height to H inches;
-automatic width includes map aspect, margins and colorbar space. A positive
-width limit proportionally reduces the complete panel. The wrapper's limits
-apply to the assembled Figure, including spacing and margins. Each panel
-prints exported canvas/map/colorbar pixel bounds.
+`FIG_WIDTH` and `FIG_HEIGHT` are independent complete-Figure dimensions in
+inches; `0` selects automatic sizing. Fixed dimensions include panel gaps and
+margins. With one dimension automatic, the layout uses it to preserve the
+map plotting area and its aspect. Existing `--max-width` and `--max-height`
+CLI options remain maximum bounds for older direct callers and may resize the
+completed image. Each panel prints exported canvas/map/colorbar pixel bounds.
 
 Run `python visualization/river_map/script/test_river_network_layout.py` for
 five sizing scenarios across all three real panels, including export geometry,

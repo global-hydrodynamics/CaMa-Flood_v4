@@ -24,10 +24,15 @@ def add_map_arguments(parser) -> None:
     parser.add_argument("--east", type=float, required=True, help="Displayed eastern edge")
     parser.add_argument("--south", type=float, required=True, help="Displayed southern edge")
     parser.add_argument("--north", type=float, required=True, help="Displayed northern edge")
+    parser.add_argument("--figure-width", type=float, default=0.0,
+                        help="Panel width in inches; 0 chooses it automatically")
+    parser.add_argument("--figure-height", type=float, default=0.0,
+                        help="Panel height in inches; 0 chooses it automatically")
+    # Retain the original post-render maximum-size options for older callers.
     parser.add_argument("--max-width", type=float, default=0.0,
-                        help="Maximum panel width in inches; 0 is unconstrained")
+                        help="Legacy maximum panel width in inches")
     parser.add_argument("--max-height", type=float, default=0.0,
-                        help="Maximum panel height in inches; 0 is unconstrained")
+                        help="Legacy maximum panel height in inches")
     parser.add_argument("--dpi", type=int, default=200)
     parser.add_argument("--output", type=Path, required=True, help="Output panel PNG")
 
@@ -127,7 +132,7 @@ def draw_raster(ax: Axes, values, geometry, cmap, norm):
     _, _, _, west, east, south, north = geometry
     return ax.imshow(
         values, origin="upper", extent=(west, east, south, north),
-        cmap=cmap, norm=norm, interpolation="nearest",
+        cmap=cmap, norm=norm, interpolation="nearest", aspect=ax.get_aspect(),
     )
 
 
@@ -143,6 +148,9 @@ def add_aligned_colorbar(fig: Figure, ax: Axes, mappable, label: str,
         raise ValueError("orientation must be 'vertical' or 'horizontal'")
     colorbar = fig.colorbar(mappable, cax=cax, orientation=orientation, **kwargs)
     colorbar.set_label(label)
+    cax._river_map_colorbar_parent = ax
+    cax._river_map_colorbar_orientation = orientation
+    cax._river_map_colorbar_pad = 0.08 if orientation == "vertical" else 0.55
     return colorbar
 
 
@@ -154,10 +162,129 @@ def add_log_colorbar(fig: Figure, ax: Axes, image, label: str) -> None:
     colorbar.update_ticks()
 
 
+def _fit_unconstrained_figure_dimension(fig: Figure, width: float,
+                                        height: float) -> None:
+    """Expand an automatic dimension when decorations constrain a map axes."""
+    map_axes = [ax for ax in fig.axes if hasattr(ax, "_river_map_extent")]
+    if not map_axes:
+        return
+
+    initial_width, initial_height = fig.get_size_inches()
+    target_boxes = {}
+    for ax in map_axes:
+        original = ax.get_position(original=True)
+        target_boxes[ax] = (original.width * initial_width,
+                            original.height * initial_height)
+
+    for _ in range(8):
+        fig.canvas.draw()
+        _align_colorbar_axes(fig)
+        fig.canvas.draw()
+        renderer = fig.canvas.get_renderer()
+        figure_width, figure_height = fig.get_size_inches()
+        width_change = 1.0
+        height_change = 1.0
+        for ax in map_axes:
+            target_ratio = 1.0 / (ax.get_data_ratio() * float(ax.get_aspect()))
+            original_width, original_height = target_boxes[ax]
+            target_width = min(original_width, target_ratio * original_height)
+            target_height = min(original_height, original_width / target_ratio)
+            axes_box = ax.get_window_extent(renderer)
+            axes_width = axes_box.width / fig.dpi
+            axes_height = axes_box.height / fig.dpi
+            for other in fig.axes:
+                if other is ax:
+                    continue
+                colorbar_position = other.get_position()
+                if (colorbar_position.height > 2 * colorbar_position.width and
+                        width == 0 and axes_width < target_width * 0.999):
+                    width_change = max(width_change, target_width / axes_width)
+                elif (colorbar_position.width > 2 * colorbar_position.height and
+                      height == 0 and axes_height < target_height * 0.999):
+                    height_change = max(height_change, target_height / axes_height)
+
+        # Include titles and labels that extend beyond the canvas.
+        tight_bbox = fig.get_tightbbox(renderer)
+        if width == 0:
+            overflow = max(0.0, -tight_bbox.x0) + max(0.0, tight_bbox.x1 - figure_width)
+            if overflow > 0.01:
+                width_change = max(width_change,
+                                   (figure_width + overflow + 0.02) / figure_width)
+        if height == 0:
+            overflow = max(0.0, -tight_bbox.y0) + max(0.0, tight_bbox.y1 - figure_height)
+            if overflow > 0.01:
+                height_change = max(height_change,
+                                    (figure_height + overflow + 0.02) / figure_height)
+
+        if width_change <= 1.001 and height_change <= 1.001:
+            break
+        fig.set_size_inches(figure_width * width_change,
+                            figure_height * height_change, forward=True)
+
+
+def _align_colorbar_axes(fig: Figure) -> None:
+    """Align attached colorbar axes to the map axes' active plotting area."""
+    figure_width, figure_height = fig.get_size_inches()
+    for cax in fig.axes:
+        parent = getattr(cax, "_river_map_colorbar_parent", None)
+        if parent is None:
+            continue
+        position = cax.get_position()
+        if not hasattr(cax, "_river_map_colorbar_thickness"):
+            orientation = cax._river_map_colorbar_orientation
+            thickness = (position.width * figure_width if orientation == "vertical"
+                         else position.height * figure_height)
+            cax._river_map_colorbar_thickness = thickness
+            cax.set_axes_locator(None)
+
+        map_position = parent.get_position()
+        orientation = cax._river_map_colorbar_orientation
+        pad = cax._river_map_colorbar_pad
+        thickness = cax._river_map_colorbar_thickness
+        if orientation == "vertical":
+            cax.set_position((map_position.x1 + pad / figure_width,
+                              map_position.y0, thickness / figure_width,
+                              map_position.height))
+        else:
+            cax.set_position((map_position.x0,
+                              map_position.y0 - pad / figure_height -
+                              thickness / figure_height,
+                              map_position.width, thickness / figure_height))
+
+
 def save_panel(fig: Figure, output: Path, dpi: int,
-               max_width: float, max_height: float) -> tuple[int, int]:
-    """Render and proportionally scale a complete panel to configured limits."""
+               max_width: float = 0.0, max_height: float = 0.0,
+               figure_width: float = 0.0, figure_height: float = 0.0
+               ) -> tuple[int, int]:
+    """Render at the requested physical size, or honor legacy max bounds."""
     output.parent.mkdir(parents=True, exist_ok=True)
+    dimensions = (figure_width, figure_height, max_width, max_height)
+    if not all(math.isfinite(value) and value >= 0 for value in dimensions):
+        raise ValueError("figure dimensions and maximum bounds must be finite and non-negative")
+    if dpi < 1:
+        raise ValueError("DPI must be positive")
+    if (figure_width > 0 or figure_height > 0) and (max_width > 0 or max_height > 0):
+        raise ValueError("new figure dimensions cannot be combined with legacy max bounds")
+
+    if (figure_width > 0 or figure_height > 0 or
+            (max_width == 0 and max_height == 0)):
+        current_width, current_height = fig.get_size_inches()
+        if figure_height > 0 and figure_width == 0:
+            target_height = figure_height
+            target_width = current_width * target_height / current_height
+        elif figure_width > 0 and figure_height == 0:
+            target_width = figure_width
+            target_height = current_height * target_width / current_width
+        elif figure_width > 0 or figure_height > 0:
+            target_width = figure_width or current_width
+            target_height = figure_height or current_height
+        if figure_width > 0 or figure_height > 0:
+            fig.set_size_inches(target_width, target_height, forward=True)
+        _fit_unconstrained_figure_dimension(fig, figure_width, figure_height)
+        fig.savefig(output, dpi=dpi, format="png")
+        with Image.open(output) as image:
+            return image.size
+
     with tempfile.TemporaryDirectory(prefix=".river-map-panel-", dir=output.parent) as tmp:
         reference = Path(tmp) / "reference.png"
         resized = Path(tmp) / "resized.png"

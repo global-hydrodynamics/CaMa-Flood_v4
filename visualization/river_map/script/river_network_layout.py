@@ -20,29 +20,48 @@ RIGHT = 1.05
 
 
 def create_network_axes(geometry, args, title, *, show_colorbar):
-    """Reserve identical map and colorbar rectangles, including hidden space.
-
-    Height-only sizing uses the requested total height, with automatic width
-    derived from the map aspect and reserved margins. A width limit scales the
-    complete reference layout proportionally, as for other river-map panels.
-    """
+    """Reserve identical map and colorbar rectangles, including hidden space."""
     fig, ax = create_map_axes(
         geometry, args.west, args.east, args.south, args.north, title,
     )
-    height = args.max_height if args.max_height > 0 else fig.get_figheight()
-    if height <= BOTTOM + TOP:
-        raise ValueError(f"Panel height must exceed {BOTTOM + TOP:g} inches")
-    map_height = height - BOTTOM - TOP
-    # Preserve the equal-degree aspect used by the existing background imshow.
-    # imshow sets aspect='equal' after create_map_axes in both original panels.
-    map_width = map_height * (args.east - args.west) / (args.north - args.south)
-    width = LEFT + map_width + COLORBAR_GAP + COLORBAR_WIDTH + RIGHT
+    default_height = args.max_height if args.max_height > 0 else fig.get_figheight()
+    width = args.figure_width
+    height = args.figure_height
+    aspect = (args.east - args.west) / (args.north - args.south)
+    horizontal_furniture = LEFT + COLORBAR_GAP + COLORBAR_WIDTH + RIGHT
+    vertical_furniture = BOTTOM + TOP
+
+    if width == 0 and height == 0:
+        height = default_height
+    if height > 0 and width == 0:
+        map_height = height - vertical_furniture
+        map_width = map_height * aspect
+        width = horizontal_furniture + map_width
+    elif width > 0 and height == 0:
+        map_width = width - horizontal_furniture
+        map_height = map_width / aspect
+        height = vertical_furniture + map_height
+    else:
+        available_width = width - horizontal_furniture
+        available_height = height - vertical_furniture
+        if available_width <= 0 or available_height <= 0:
+            raise ValueError("Panel dimensions are too small for map labels and colorbar space")
+        map_width = min(available_width, available_height * aspect)
+        map_height = map_width / aspect
+
+    if map_width <= 0 or map_height <= 0:
+        raise ValueError("Panel dimensions must leave positive space for the map")
+
+    # Keep equal-degree map scaling and center the map when both dimensions constrain it.
+    x_offset = LEFT + max(0.0, (width - horizontal_furniture - map_width) / 2.0)
+    y_offset = BOTTOM + max(0.0, (height - vertical_furniture - map_height) / 2.0)
     fig.set_size_inches(width, height)
     fig.set_layout_engine(None)
-    ax.set_position((LEFT / width, BOTTOM / height, map_width / width, map_height / height))
+    ax.set_position((x_offset / width, y_offset / height,
+                     map_width / width, map_height / height))
     ax.set_aspect(1.0)
     cax = fig.add_axes((
-        (LEFT + map_width + COLORBAR_GAP) / width, BOTTOM / height,
+        (x_offset + map_width + COLORBAR_GAP) / width, y_offset / height,
         COLORBAR_WIDTH / width, map_height / height,
     ))
     cax.set_visible(show_colorbar)
@@ -55,7 +74,8 @@ def save_network_panel(fig, ax, cax, args):
     fig.set_layout_engine(None)
     with plt.rc_context({"savefig.bbox": None}):
         size = save_panel(
-            fig, args.output, args.dpi, args.max_width, 0,
+            fig, args.output, args.dpi, args.max_width, args.max_height,
+            args.figure_width, args.figure_height,
         )
     fig.canvas.draw()
 

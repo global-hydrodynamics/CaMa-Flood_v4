@@ -18,7 +18,7 @@ EAST=110
 SOUTH=5
 NORTH=35
 
-# User settings: panel appearance, layout, and generated image dimensions.
+# User settings: panel appearance, layout, and complete Figure dimensions.
 UPAREA_CMAP="YlGnBu"      # Sequential palette for drainage area.
 UPAREA_SCALE="log"         # Choose: log or linear.
 BASIN_CMAP="tab20"         # Discrete colors repeated across original basin IDs.
@@ -28,10 +28,8 @@ LAYOUT="horizontal"        # Combiner layout: horizontal, vertical, or grid.
 COLUMNS=2                   # Number of columns when LAYOUT is grid.
 GAP=28                      # Gap between panels [pixels].
 MARGIN=28                   # Outer margin around the assembled Figure [pixels].
-PANEL_MAX_WIDTH=0           # Maximum panel width [inches]; 0 is unconstrained.
-PANEL_MAX_HEIGHT=6          # Total panel height [inches]; 0 selects automatic height.
-MAX_WIDTH=12                # Maximum complete-Figure width [inches].
-MAX_HEIGHT=8                # Maximum complete-Figure height [inches].
+FIG_WIDTH=0                 # Complete Figure width [inches]; 0 selects automatic width.
+FIG_HEIGHT=8                # Complete Figure height [inches]; 0 selects automatic height.
 DPI=200                     # PNG resolution.
 PYTHON="python3"            # Activate the repository .venv first, or set its Python.
 
@@ -43,6 +41,21 @@ PANEL_C="$FIGURE_DIR/f01c-raster_river_map-basin_color.png"
 OUTPUT_FILE="$FIGURE_DIR/f01-raster_river_map.png"
 COMBINER="$VISUALIZATION_DIR/script/combine_panels.py"
 
+# Split fixed complete-Figure dimensions across the panel grid. The $(...) command
+# substitutions capture awk's per-panel inch calculations, including gaps and margins.
+case "$LAYOUT" in
+    horizontal) GRID_COLUMNS=3; GRID_ROWS=1 ;;
+    vertical) GRID_COLUMNS=1; GRID_ROWS=3 ;;
+    grid) GRID_COLUMNS="$COLUMNS"; GRID_ROWS=$(( (3 + COLUMNS - 1) / COLUMNS )) ;;
+    *) GRID_COLUMNS=3; GRID_ROWS=1 ;;
+esac
+PANEL_WIDTH=$(awk -v width="$FIG_WIDTH" -v dpi="$DPI" -v columns="$GRID_COLUMNS" \
+    -v gap="$GAP" -v margin="$MARGIN" \
+    'BEGIN { if (width > 0) printf "%.6f", (width*dpi - 2*margin - (columns-1)*gap)/(columns*dpi); else print 0 }')
+PANEL_HEIGHT=$(awk -v height="$FIG_HEIGHT" -v dpi="$DPI" -v rows="$GRID_ROWS" \
+    -v gap="$GAP" -v margin="$MARGIN" \
+    'BEGIN { if (height > 0) printf "%.6f", (height*dpi - 2*margin - (rows-1)*gap)/(rows*dpi); else print 0 }')
+
 mkdir -p "$FIGURE_DIR"
 
 printf '\n[STEP 1/4] Draw upstream drainage area (uparea).\n'
@@ -50,7 +63,7 @@ printf '\n[STEP 1/4] Draw upstream drainage area (uparea).\n'
     --input "$UPAREA_FILE" --params "$PARAMS_FILE" \
     --west "$WEST" --east "$EAST" --south "$SOUTH" --north "$NORTH" \
     --cmap "$UPAREA_CMAP" --scale "$UPAREA_SCALE" \
-    --max-width "$PANEL_MAX_WIDTH" --max-height "$PANEL_MAX_HEIGHT" \
+    --figure-width "$PANEL_WIDTH" --figure-height "$PANEL_HEIGHT" \
     --dpi "$DPI" --output "$PANEL_A"
 
 printf '\n[STEP 2/4] Draw original basin IDs (basin).\n'
@@ -58,7 +71,7 @@ printf '\n[STEP 2/4] Draw original basin IDs (basin).\n'
     --input "$BASIN_FILE" --params "$PARAMS_FILE" \
     --west "$WEST" --east "$EAST" --south "$SOUTH" --north "$NORTH" \
     --cmap "$BASIN_CMAP" \
-    --max-width "$PANEL_MAX_WIDTH" --max-height "$PANEL_MAX_HEIGHT" \
+    --figure-width "$PANEL_WIDTH" --figure-height "$PANEL_HEIGHT" \
     --dpi "$DPI" --output "$PANEL_B"
 
 printf '\n[STEP 3/4] Draw soft basin display colors (bsncol).\n'
@@ -66,13 +79,13 @@ printf '\n[STEP 3/4] Draw soft basin display colors (bsncol).\n'
     --input "$BSNCOL_FILE" --params "$PARAMS_FILE" \
     --west "$WEST" --east "$EAST" --south "$SOUTH" --north "$NORTH" \
     --cmap "$BSNCOL_CMAP" --white-mix "$BSNCOL_WHITE_MIX" \
-    --max-width "$PANEL_MAX_WIDTH" --max-height "$PANEL_MAX_HEIGHT" \
+    --figure-width "$PANEL_WIDTH" --figure-height "$PANEL_HEIGHT" \
     --dpi "$DPI" --output "$PANEL_C"
 
 printf '\n[STEP 4/4] Assemble the three panels into the complete Figure.\n'
 "$PYTHON" "$COMBINER" "$PANEL_A" "$PANEL_B" "$PANEL_C" \
     --layout "$LAYOUT" --columns "$COLUMNS" --gap "$GAP" --margin "$MARGIN" \
-    --max-width "$MAX_WIDTH" --max-height "$MAX_HEIGHT" --dpi "$DPI" \
+    --figure-width "$FIG_WIDTH" --figure-height "$FIG_HEIGHT" --dpi "$DPI" \
     --output "$OUTPUT_FILE"
 
 printf '\n[SUCCESS] Created the three-panel Figure: %s\n' "$OUTPUT_FILE"
