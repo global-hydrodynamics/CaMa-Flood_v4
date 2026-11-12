@@ -263,4 +263,26 @@ if ! "$VENV_PYTHON" -c 'from cmf_colormap import get_cmap; cmap = get_cmap("shad
 fi
 
 printf '\n[SUCCESS] Python environment ready.\n\n'
-printf 'Activate the environment:\n\n  source .venv/bin/activate\n'
+
+printf '############################################################'
+printf '\n'
+printf 'Alternatively, to use your own Python environment\n'
+printf '(e.g., an existing Miniforge/Conda environment):\n\n'
+printf '  1. Activate your preferred Python environment.\n'
+printf '     For Conda/Miniforge, for example:\n'
+printf '       conda activate YOUR_ENV_NAME\n\n'
+printf '  2. Install the CaMa-Flood Python dependencies:\n'
+printf '       cd "%s"\n' "$SCRIPT_DIR"
+printf '       python -m pip install -r requirements.txt\n'
+printf '       python -m pip install -e ./visualization/cmf_colormap\n\n'
+
+printf 'These commands install packages into your active environment.\n'
+printf 'They do not create or modify the CaMa-Flood .venv.\n'
+
+printf '\n'
+printf '%s\n' '###############################################'
+printf 'Activate the CaMa-Flood repository-local\n'
+printf 'Python environment (.venv):\n\n'
+printf '       cd "%s"\n' "$SCRIPT_DIR"
+printf '       source .venv/bin/activate\n'
+printf '%s\n' '###############################################'
