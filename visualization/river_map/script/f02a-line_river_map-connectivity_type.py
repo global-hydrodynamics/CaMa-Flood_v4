@@ -32,7 +32,7 @@ def main() -> None:
     valid = np.isfinite(area_km2) & (area_km2 > 0)
     fig, ax, cax = create_network_axes(
         geometry, args,
-        "p01-f02a Vector River Network: Connectivity Type",
+        "p01-f02a Line River Map: Connectivity Type",
         show_colorbar=False,
     )
     draw_raster(

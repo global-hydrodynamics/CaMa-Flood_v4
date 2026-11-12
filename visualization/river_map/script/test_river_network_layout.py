@@ -32,7 +32,7 @@ class NetworkLayoutTest(unittest.TestCase):
         for height, width in ((0, 0), (4, 0), (6, 0), (8, 0), (6, 4)):
             with self.subTest(height=height, width=width), tempfile.TemporaryDirectory() as tmp:
                 panels = []
-                for suffix in ("a-vector_river_network-connectivity_type", "b-vector_river_network-upstream_area"):
+                for suffix in ("a-line_river_map-connectivity_type", "b-line_river_map-upstream_area"):
                     output = Path(tmp) / f"f02{suffix}.png"
                     argv = [str(SCRIPTS / f"f02{suffix}.py"),
                             "--uparea", str(MAP / "netcdf/uparea.nc"),

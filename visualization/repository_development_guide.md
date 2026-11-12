@@ -31,7 +31,7 @@ This guide is the authoritative reference for visualization naming and catalog
 conventions. Use two descriptive levels, independent of numeric IDs:
 
 - **Method name:** the general visualization technique, such as
-  `raster_river_map`, `vector_river_network`, `discharge_hydrograph`, or
+  `raster_river_map`, `line_river_map`, `discharge_hydrograph`, or
   `model_observation_scatter`. Keep it stable when panels are added or revised.
 - **Option name:** a scientific variable or representation within that method,
   such as `upstream_area`, `basin_color`, `elevation`, `merit_merged_width`, or
@@ -58,10 +58,10 @@ tests, the combiner, and palette-library utilities retain names describing their
 roles; they are not independent cataloged Figure methods.
 
 Presentation titles use human-readable names, not raw snake_case:
-`p01-f02a Vector River Network: Connectivity Type`. Retain the project and
+`p01-f02a Line River Map: Connectivity Type`. Retain the project and
 Figure/panel ID and use consistent title capitalization, including scientific
 acronyms such as MERIT. Project README headings use
-`p01-f02 — Vector River Network`, with human-readable option names within the
+`p01-f02 — Line River Map`, with human-readable option names within the
 section. Published Gallery headings follow the same method terminology;
 existing Gallery image names or content require explicit publication approval
 before changes. Report a published naming mismatch instead of silently fixing it.
@@ -102,11 +102,16 @@ MERIT Hydro-merged product; a generic width request does not establish that
 the user wants this product rather than the model's selected default width.
 
 “Show downstream connectivity,” “Draw arrows between river grid cells,” and
-“Visualize the CaMa-Flood river network” can lead to `vector_river_network`
+“Visualize the CaMa-Flood river network” can lead to `line_river_map`
 (p01-f02). Select `connectivity_type` to distinguish local and Flexible Downstream
 links, or `upstream_area` to encode contributing area. The latter is not a
 discharge visualization. Semantic similarity helps find candidates; scientific
 meaning determines whether they fit.
+
+The maintainer identifies p01-f02 as **Line River Map** (`line_river_map`).
+A future vector visualization is a distinct method, not a synonym for this
+implementation. Register it separately when its scientific specification and
+implementation are available; do not infer its behavior from the word vector.
 
 Keep the catalog a human-readable CSV index. This workflow does not require
 embeddings, a vector database, or an external search service.
@@ -236,14 +241,14 @@ This is a preferred, provisional workflow, not a requirement for every Figure.
 
 ```text
 visualization/<project>/
-├── f02-vector_river_network.sh   # Settings, panel runs, assembly
+├── f02-line_river_map.sh   # Settings, panel runs, assembly
 ├── script/
-│   ├── f02a-vector_river_network-connectivity_type.py
-│   └── f02b-vector_river_network-upstream_area.py
+│   ├── f02a-line_river_map-connectivity_type.py
+│   └── f02b-line_river_map-upstream_area.py
 └── figure/
-    ├── f02a-vector_river_network-connectivity_type.png
-    ├── f02b-vector_river_network-upstream_area.png
-    └── f02-vector_river_network.png  # Complete Figure for review/publication
+    ├── f02a-line_river_map-connectivity_type.png
+    ├── f02b-line_river_map-upstream_area.png
+    └── f02-line_river_map.png  # Complete Figure for review/publication
 ```
 
 The Shell entry point should define shared paths and user settings, run the
@@ -256,9 +261,9 @@ content, axes, legends, or colorbars.
 
 Use the existing IDs consistently: a Figure such as `p01-f02` has panel IDs
 `p01-f02a` and `p01-f02b`, and corresponding panel image names such as
-`f02a-vector_river_network-connectivity_type.png` and
-`f02b-vector_river_network-upstream_area.png`; the assembled image uses the
-Figure-level stem, for example `f02-vector_river_network.png`. Keep one
+`f02a-line_river_map-connectivity_type.png` and
+`f02b-line_river_map-upstream_area.png`; the assembled image uses the
+Figure-level stem, for example `f02-line_river_map.png`. Keep one
 catalog row per panel. Each row describes that panel's purpose and variables,
 while rows for the same Figure share its user-facing Shell script and its
 assembled Gallery image. In the project README, explain the Figure and its

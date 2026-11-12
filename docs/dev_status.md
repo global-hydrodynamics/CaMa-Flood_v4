@@ -21,6 +21,12 @@ Gallery, model/map tools, and historical evidence remain unchanged. See
 [VR-0137](../research/records/validation_runs/VR-0137.md) for naming mappings,
 semantic-discovery review, and validation details.
 
+The maintainer subsequently clarified that f02 is **Line River Map**
+(`line_river_map`); vector visualization is a distinct future method. Active
+resources, titles, catalog and naming examples now use this corrected name;
+the implementation and virtual-colorbar layout are unchanged. See
+[VR-0138](../research/records/validation_runs/VR-0138.md).
+
 ### Bounded p01-f02 layout experiment (2026-11-12)
 
 The maintainer explicitly assigned this task to `manual-automation`, owned by

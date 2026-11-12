@@ -110,9 +110,12 @@ Each panel script checks its variable, units, dimensions, coordinate centers,
 and map geometry against `params.txt`. Continuous color normalization uses
 valid data across the full map, not only the visible extent.
 
-## p01-f02 — Vector River Network
+## p01-f02 — Line River Map
 
-Method identifier: `vector_river_network`.
+Method identifier: `line_river_map`.
+
+This method is named Line River Map by maintainer decision. The separately
+planned vector visualization is a different method.
 
 | Panel | Option | Option identifier |
 | --- | --- | --- |
@@ -144,7 +147,7 @@ their direct segments lie outside the view. Curved Flexible Downstream arrows
 preserve their exact endpoints while bending consistently to make long links
 easier to follow.
 
-![p01-f02 directed CaMa-Flood river-network connectivity panels](figure/f02-vector_river_network.png)
+![p01-f02 directed CaMa-Flood river-network connectivity panels](figure/f02-line_river_map.png)
 
 ### Inputs, units, and method
 
@@ -159,10 +162,10 @@ needs no Tutorial02 run, external download, or simulation output.
 
 ### Settings and execution
 
-Run `./visualization/river_map/f02-vector_river_network.sh` after the standard Python
-setup. It creates `figure/f02a-vector_river_network-connectivity_type.png`,
-`figure/f02b-vector_river_network-upstream_area.png`, and their combined
-`figure/f02-vector_river_network.png`. All three are tracked project assets. Edit the
+Run `./visualization/river_map/f02-line_river_map.sh` after the standard Python
+setup. It creates `figure/f02a-line_river_map-connectivity_type.png`,
+`figure/f02b-line_river_map-upstream_area.png`, and their combined
+`figure/f02-line_river_map.png`. All three are tracked project assets. Edit the
 Shell settings to change the map inputs, common extent, panel layout, spacing,
 maximum complete-Figure dimensions, DPI, or Python executable. Plotting never
 filters links by extent: arrows with endpoints outside the view are still
