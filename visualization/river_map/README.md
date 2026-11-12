@@ -134,9 +134,9 @@ future method.
 
 | Panel | Option | Option identifier |
 | --- | --- | --- |
-| p01-f02a | Connectivity Type | `connectivity_type` |
-| p01-f02b | Upstream Area Thickness | `upstream_area_thickness` |
-| p01-f02c | Upstream Area | `upstream_area` |
+| p01-f02a | Connect Type | `connect_type` |
+| p01-f02b | Enhance Tickness | `enhance_tickness` |
+| p01-f02c | Enhance Color | `enhance_color` |
 
 ### Purpose and interpretation
 
@@ -209,13 +209,14 @@ One wrapper invokes three independent panel scripts, then one unchanged
 `visualization/script/combine_panels.py` assembly step. It creates these
 tracked project assets:
 
-- `figure/f02a-line_river_map-connectivity_type.png`
-- `figure/f02b-line_river_map-upstream_area_thickness.png`
-- `figure/f02c-line_river_map-upstream_area.png`
+- `figure/f02a-line_river_map-connect_type.png`
+- `figure/f02b-line_river_map-enhance_tickness.png`
+- `figure/f02c-line_river_map-enhance_color.png`
 - `figure/f02-line_river_map.png`
 
-The former colored f02b is now f02c; f02b's descriptive option name identifies
-its thickness-only foreground encoding. The wrapper exposes input paths,
+The option identifiers are maintainer-specified: `connect_type`,
+`enhance_tickness` (spelling retained as requested), and `enhance_color`.
+The wrapper exposes input paths,
 common extent, layout, spacing, assembled size limits, DPI and Python.
 Defaults remain horizontal, maximum 12 × 8 inches, 200 DPI. No Gallery outputs
 are created or updated.

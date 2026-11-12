@@ -42,7 +42,7 @@ def main() -> None:
 
     fig, ax, cax = create_network_axes(
         geometry, args,
-        "p01-f02c Line River Map:\nUpstream Area",
+        "p01-f02c Line River Map:\nEnhance Color",
         show_colorbar=True,
     )
     # bsncol is categorical context, not basin identity or a physical scale.

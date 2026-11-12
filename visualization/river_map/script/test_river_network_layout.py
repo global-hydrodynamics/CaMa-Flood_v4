@@ -32,8 +32,8 @@ class NetworkLayoutTest(unittest.TestCase):
         for height, width in ((0, 0), (4, 0), (6, 0), (8, 0), (6, 4)):
             with self.subTest(height=height, width=width), tempfile.TemporaryDirectory() as tmp:
                 panels = []
-                for suffix in ("a-line_river_map-connectivity_type", "b-line_river_map-upstream_area_thickness",
-                               "c-line_river_map-upstream_area"):
+                for suffix in ("a-line_river_map-connect_type", "b-line_river_map-enhance_tickness",
+                               "c-line_river_map-enhance_color"):
                     output = Path(tmp) / f"f02{suffix}.png"
                     argv = [str(SCRIPTS / f"f02{suffix}.py"),
                             "--uparea", str(MAP / "netcdf/uparea.nc"),

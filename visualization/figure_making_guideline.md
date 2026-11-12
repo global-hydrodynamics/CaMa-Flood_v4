@@ -112,7 +112,7 @@ colorbar-related layout difference.
 - Begin each title shown inside a figure with its project and Figure IDs; when
   a title identifies an individual panel, include that panel ID as well. For
   example: `p01-f01a Raster River Map: Upstream Area` or
-  `p01-f02a Line River Map: Connectivity Type`. Use human-readable
+  `p01-f02a Line River Map: Connect Type`. Use human-readable
   method and option names with consistent capitalization, following the
   authoritative [naming convention](repository_development_guide.md#method-and-option-naming).
   Keep the figure identifiable outside the Gallery or project documentation.

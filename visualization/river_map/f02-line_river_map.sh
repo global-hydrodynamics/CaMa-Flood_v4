@@ -29,30 +29,30 @@ PYTHON="python3"     # Activate the repository .venv first, or set its Python.
 
 # Panel and complete-Figure output paths.
 FIGURE_DIR="$SCRIPT_DIR/figure"
-PANEL_A="$FIGURE_DIR/f02a-line_river_map-connectivity_type.png"
-PANEL_B="$FIGURE_DIR/f02b-line_river_map-upstream_area_thickness.png"
-PANEL_C="$FIGURE_DIR/f02c-line_river_map-upstream_area.png"
+PANEL_A="$FIGURE_DIR/f02a-line_river_map-connect_type.png"
+PANEL_B="$FIGURE_DIR/f02b-line_river_map-enhance_tickness.png"
+PANEL_C="$FIGURE_DIR/f02c-line_river_map-enhance_color.png"
 OUTPUT_FILE="$FIGURE_DIR/f02-line_river_map.png"
 COMBINER="$VISUALIZATION_DIR/script/combine_panels.py"
 
 mkdir -p "$FIGURE_DIR"
 
 printf '\n[STEP 1/4] Draw every valid nextxy connection by link type.\n'
-"$PYTHON" "$SCRIPT_DIR/script/f02a-line_river_map-connectivity_type.py" \
+"$PYTHON" "$SCRIPT_DIR/script/f02a-line_river_map-connect_type.py" \
     --uparea "$UPAREA_FILE" --nextxy "$NEXTXY_FILE" --params "$PARAMS_FILE" \
     --west "$WEST" --east "$EAST" --south "$SOUTH" --north "$NORTH" \
     --dpi "$DPI" --output "$PANEL_A"
 printf '[SUCCESS] Created %s\n' "$PANEL_A"
 
 printf '\n[STEP 2/4] Draw black arrows with enhanced upstream-area thickness.\n'
-"$PYTHON" "$SCRIPT_DIR/script/f02b-line_river_map-upstream_area_thickness.py" \
+"$PYTHON" "$SCRIPT_DIR/script/f02b-line_river_map-enhance_tickness.py" \
     --uparea "$UPAREA_FILE" --nextxy "$NEXTXY_FILE" --params "$PARAMS_FILE" \
     --west "$WEST" --east "$EAST" --south "$SOUTH" --north "$NORTH" \
     --dpi "$DPI" --output "$PANEL_B"
 printf '[SUCCESS] Created %s\n' "$PANEL_B"
 
 printf '\n[STEP 3/4] Color upstream-area arrows over subdued basin indices.\n'
-"$PYTHON" "$SCRIPT_DIR/script/f02c-line_river_map-upstream_area.py" \
+"$PYTHON" "$SCRIPT_DIR/script/f02c-line_river_map-enhance_color.py" \
     --uparea "$UPAREA_FILE" --nextxy "$NEXTXY_FILE" --params "$PARAMS_FILE" \
     --bsncol "$BSNCOL_FILE" \
     --west "$WEST" --east "$EAST" --south "$SOUTH" --north "$NORTH" \

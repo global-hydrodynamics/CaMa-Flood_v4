@@ -9,6 +9,16 @@ Base snapshot: `origin/master` at `19e2c1a`, 2026-11-06. This branch-local propo
 
 ## Registered active projects
 
+### f02 option naming update (2026-11-12)
+
+Maintainer-assigned naming follow-up on `manual-automation`, owned by Dai
+Yamazaki with Codex implementation: a `connect_type`, b `enhance_tickness`,
+c `enhance_color` (exact requested spelling). Filenames, titles, wrapper,
+README/catalog and active examples now agree; all PNGs regenerated. Plotting
+content is unchanged, verified by exact non-title pixel/source comparisons
+and five three-panel sizing scenarios. See
+[VR-0143](../research/records/validation_runs/VR-0143.md).
+
 ### Three-panel line river map revision (2026-11-12)
 
 The maintainer assigned p01-f02's three-panel revision to the current

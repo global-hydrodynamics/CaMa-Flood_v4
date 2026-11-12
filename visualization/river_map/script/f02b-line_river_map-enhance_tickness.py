@@ -39,7 +39,7 @@ def main() -> None:
 
     fig, ax, cax = create_network_axes(
         geometry, args,
-        "p01-f02b Line River Map:\nUpstream Area Thickness",
+        "p01-f02b Line River Map:\nEnhance Tickness",
         show_colorbar=False,
     )
     raster = network.uparea / 1_000_000.0
