@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Plot black nextxy arrows with enhanced upstream-area-based thickness."""
+"""Plot black nextxy lines without arrowheads with enhanced upstream-area-based thickness."""
 
 from __future__ import annotations
 
@@ -48,7 +48,7 @@ def main() -> None:
                 LogNorm(vmin=float(raster[valid].min()), vmax=float(raster[valid].max()))
                 ).set_alpha(0.17)
 
-    rendered, widths = draw_area_arrows(ax, network, area_km2, norm)
+    rendered, widths = draw_area_arrows(ax, network, area_km2, norm, show_heads=False)
     # Representative physical areas, drawn with the same six width classes.
     handles = []
     for area in (1_000, 10_000, 100_000):
@@ -65,7 +65,7 @@ def main() -> None:
         network, (args.west, args.east, args.south, args.north)
     )
     print(
-        f"Wrote {args.output}: {rendered} arrows ({np.count_nonzero(~network.flexible)} straight local, "
+        f"Wrote {args.output}: {rendered} links ({np.count_nonzero(~network.flexible)} straight local, "
         f"{np.count_nonzero(network.flexible)} curved flexible); source-cell uparea "
         f"range {minimum:g}–{maximum:g} km²; shaft width range "
         f"{widths.min():.3f}–{widths.max():.3f} inches. "

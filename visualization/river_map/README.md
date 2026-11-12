@@ -148,12 +148,12 @@ Upstream drainage area is contributing land area, not discharge.
   arrows distinguish nonlocal Flexible Downstream connections. A faint
   upstream-area raster provides context. Flexible arrowheads are slightly
   smaller (7-point mutation scale), with stronger curvature (`rad=0.22`).
-- **f02b:** all arrows are black, with enhanced shaft thickness representing
+- **f02b:** black lines without arrowheads have enhanced thickness representing
   source-cell upstream area. A logarithmic six-class width scale makes larger
   rivers stand out while retaining small links. A legend gives representative
-  areas; the faint raster is the same as f02a. Arrowheads stay at the standard
-  size instead of enlarging with shaft thickness: local heads match f02a
-  (0.050-inch width/length); flexible heads use the same 7-point mutation scale.
+  areas; the faint raster is the same as f02a. Both straight local links and
+  curved flexible links omit arrowheads in this trial. Line widths and exact
+  endpoints are preserved; flow direction is not explicitly marked in b.
 - **f02c:** `cmf_colormap` **shade-rainbow** (`get_cmap("shade_rainbow")`) arrow colors represent source-cell
   upstream area on a logarithmic scale. Moderate area-based widths reinforce
   the network. Precomputed `bsncol` display indices form a darker charcoal-gray
@@ -185,7 +185,7 @@ independently of the plotting extent. Divide the normalized range into six
 equal classes, with the maximum in the last class. In b, shaft widths range
 from 0.008 to 0.032 inches; in c, from 0.008 to 0.022 inches. Local quivers
 use actual shaft widths; flexible strokes use the corresponding widths in
-points. In b, head size is independent of area; c retains its existing
+points. In b, arrowheads are disabled; c retains its existing
 proportional heads. Narrow local links are drawn before wider
 ones. The full-map area range is also used for c's continuous logarithmic
 colorbar. Inputs are never modified.

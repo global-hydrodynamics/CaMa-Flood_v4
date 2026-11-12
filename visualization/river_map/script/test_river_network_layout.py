@@ -63,12 +63,13 @@ class NetworkLayoutTest(unittest.TestCase):
                             self.assertGreater(max(item.width for item in arrows),
                                                3 * min(item.width for item in arrows))
                             for item in arrows:
-                                self.assertAlmostEqual(item.width * item.headwidth, 0.050)
-                                self.assertAlmostEqual(item.width * item.headlength, 0.050)
-                                self.assertAlmostEqual(item.width * item.headaxislength, 0.045)
+                                self.assertEqual(item.headwidth, 1.0)
+                                self.assertEqual(item.headlength, 0.0)
+                                self.assertEqual(item.headaxislength, 0.0)
                             for item in ax.patches:
                                 np.testing.assert_allclose(item.get_edgecolor()[:3], 0)
-                                self.assertEqual(item.get_mutation_scale(), 7.0)
+                                from matplotlib.patches import ArrowStyle
+                                self.assertIsInstance(item.get_arrowstyle(), ArrowStyle.Curve)
                         if suffix.startswith("a-"):
                             for item in ax.patches:
                                 self.assertEqual(item.get_mutation_scale(), 7.0)

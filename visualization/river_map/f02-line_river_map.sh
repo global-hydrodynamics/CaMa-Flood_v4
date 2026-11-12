@@ -44,7 +44,7 @@ printf '\n[STEP 1/4] Draw every valid nextxy connection by link type.\n'
     --dpi "$DPI" --output "$PANEL_A"
 printf '[SUCCESS] Created %s\n' "$PANEL_A"
 
-printf '\n[STEP 2/4] Draw black arrows with enhanced upstream-area thickness.\n'
+printf '\n[STEP 2/4] Draw black links without arrowheads, using upstream-area thickness.\n'
 "$PYTHON" "$SCRIPT_DIR/script/f02b-line_river_map-enhance_tickness.py" \
     --uparea "$UPAREA_FILE" --nextxy "$NEXTXY_FILE" --params "$PARAMS_FILE" \
     --west "$WEST" --east "$EAST" --south "$SOUTH" --north "$NORTH" \

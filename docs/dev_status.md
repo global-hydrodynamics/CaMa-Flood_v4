@@ -9,6 +9,15 @@ Base snapshot: `origin/master` at `19e2c1a`, 2026-11-06. This branch-local propo
 
 ## Registered active projects
 
+### Headless f02b trial (2026-11-12)
+
+Maintainer requested this bounded trial on `manual-automation`, owned by
+Dai Yamazaki with Codex implementation. f02b omits both local and curved
+flexible arrowheads; thickness scaling, endpoints and extent are preserved.
+The b panel and composite are regenerated; a/c PNGs remain byte-identical.
+Five sizing scenarios pass. See
+[VR-0144](../research/records/validation_runs/VR-0144.md).
+
 ### f02 option naming update (2026-11-12)
 
 Maintainer-assigned naming follow-up on `manual-automation`, owned by Dai

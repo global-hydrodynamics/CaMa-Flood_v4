@@ -113,8 +113,9 @@ def count_segments_intersecting_extent(network: RiverNetwork, extent) -> tuple[i
 
 
 def draw_flexible_arrows(ax, network: RiverNetwork, colors, widths,
-                         alpha: float = 0.98, zorder: int = 5, head_sizes=8.5, curvature=0.16):
-    """Draw nonlocal nextxy links as curved arrows between exact cell centers."""
+                         alpha: float = 0.98, zorder: int = 5, head_sizes=8.5, curvature=0.16,
+                         show_heads=True):
+    """Draw curved links between exact cell centers, with optional arrowheads."""
     patches = []
     flexible_indices = np.flatnonzero(network.flexible)
     colors = np.broadcast_to(colors, (len(flexible_indices), 4)) if isinstance(
@@ -128,7 +129,7 @@ def draw_flexible_arrows(ax, network: RiverNetwork, colors, widths,
         destination = (network.lon[network.dest_cols[index]],
                       network.lat[network.dest_rows[index]])
         arrow = FancyArrowPatch(
-            source, destination, arrowstyle="-|>", connectionstyle=f"arc3,rad={curvature}",
+            source, destination, arrowstyle="-|>" if show_heads else "-", connectionstyle=f"arc3,rad={curvature}",
             mutation_scale=float(head_size), linewidth=float(width), color=color, alpha=alpha,
             shrinkA=0, shrinkB=0, zorder=zorder,
         )
@@ -137,10 +138,10 @@ def draw_flexible_arrows(ax, network: RiverNetwork, colors, widths,
     return patches
 
 
-def draw_area_arrows(ax, network: RiverNetwork, area_km2, norm, *, cmap=None):
+def draw_area_arrows(ax, network: RiverNetwork, area_km2, norm, *, cmap=None, show_heads=True):
     """Draw all links using six log-area shaft-width classes in physical inches.
 
-    Black arrows emphasize thickness; colored arrows use a narrower width
+    Black links emphasize thickness; colored arrows use a narrower width
     range so the palette stays legible. Full-map normalization is independent
     of the view. Grouping quivers gives actual variable shaft widths.
     """
@@ -161,7 +162,9 @@ def draw_area_arrows(ax, network: RiverNetwork, area_km2, norm, *, cmap=None):
         shaft_width = float(widths[selected][0])
         # Black b arrows keep a's 0.050-inch head width/length and 0.045-inch
         # head-axis length, independently of the area-scaled shaft thickness.
-        if cmap is None:
+        if not show_heads:
+            headwidth, headlength, headaxislength = 1.0, 0.0, 0.0
+        elif cmap is None:
             headwidth, headlength, headaxislength = (
                 0.050 / shaft_width, 0.050 / shaft_width, 0.045 / shaft_width,
             )
@@ -178,6 +181,7 @@ def draw_area_arrows(ax, network: RiverNetwork, area_km2, norm, *, cmap=None):
     patches = draw_flexible_arrows(
         ax, network, colors[flexible], widths[flexible] * 72,
         alpha=1.0, zorder=5, head_sizes=7.0 if cmap is None else 5 + 200 * widths[flexible],
+        show_heads=show_heads,
     )
     rendered += len(patches)
     if rendered != len(network.source_rows):
