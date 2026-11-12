@@ -10,7 +10,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import LogNorm
 
-from river_map_common import add_map_arguments, create_map_axes, draw_raster, read_geometry, save_panel
+from river_map_common import add_map_arguments, draw_raster, read_geometry
+from river_network_layout import create_network_axes, save_network_panel
 from river_network_common import (
     count_segments_intersecting_extent,
     draw_flexible_arrows,
@@ -29,9 +30,10 @@ def main() -> None:
     network = read_river_network(args.uparea, args.nextxy, geometry)
     area_km2 = network.uparea / 1_000_000.0
     valid = np.isfinite(area_km2) & (area_km2 > 0)
-    fig, ax = create_map_axes(
-        geometry, args.west, args.east, args.south, args.north,
+    fig, ax, cax = create_network_axes(
+        geometry, args,
         "p01-f02a Explicit river-network connectivity",
+        show_colorbar=False,
     )
     draw_raster(
         ax, np.ma.masked_where(~valid, area_km2), geometry, "YlGnBu",
@@ -60,8 +62,7 @@ def main() -> None:
     ax.plot([], [], color="#4778B5", lw=1.4, label="Local D8 connection")
     ax.plot([], [], color="#F28E2B", lw=1.8, label="Flexible Downstream connection")
     ax.legend(loc="lower left", frameon=True, framealpha=0.95)
-    fig.tight_layout()
-    save_panel(fig, args.output, args.dpi, args.max_width, args.max_height)
+    save_network_panel(fig, ax, cax, args)
     plt.close(fig)
 
     visible, visible_local, visible_flexible = count_segments_intersecting_extent(

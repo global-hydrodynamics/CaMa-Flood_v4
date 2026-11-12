@@ -153,3 +153,25 @@ filters links by extent: arrows with endpoints outside the view are still
 provided to Matplotlib, which clips them at the axes boundary. The project
 Figure does not create or update a Gallery image; publication requires
 separate explicit authorization.
+
+#### Experimental virtual-colorbar layout
+
+Both f02 panels reserve the same explicitly positioned map and vertical
+colorbar axes. The f02a colorbar axes are invisible (no ticks, labels, or
+frame); f02b fills that same space with its drainage-area colorbar. Shared
+dimensions in `script/river_network_layout.py` keep the map rectangles and
+complete PNG canvases identical. Both retain the existing equal-degree map
+aspect used by the background raster. Saving preserves the entire canvas,
+without tight layout or cropping, so the invisible region survives assembly.
+The combiner remains unchanged.
+
+For either panel script, `--max-height H --max-width 0` sets total panel
+height to H inches; automatic width includes the map aspect, margins, and
+reserved colorbar space. A positive width limit proportionally reduces the
+complete panel if necessary. The Shell entry point's `MAX_WIDTH` and
+`MAX_HEIGHT` still limit the assembled Figure, including spacing and margins.
+Each panel prints its canvas and map/colorbar bounds in exported PNG pixels.
+This is an experimental f02 solution, not a new shared figure-making rule.
+
+Run the geometry/export regression check from the repository root with:
+`python visualization/river_map/script/test_river_network_layout.py`.

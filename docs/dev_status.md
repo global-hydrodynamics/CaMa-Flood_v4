@@ -9,6 +9,18 @@ Base snapshot: `origin/master` at `19e2c1a`, 2026-11-06. This branch-local propo
 
 ## Registered active projects
 
+### Bounded p01-f02 layout experiment (2026-11-12)
+
+The maintainer explicitly assigned this task to `manual-automation`, owned by
+Dai Yamazaki with Codex implementation, and authorized commit/push after checks.
+Scope: shared f02 map/colorbar layout, river-map README, and three regenerated
+project PNGs; preserve scientific plotting, Gallery, and the shared guideline.
+The virtual-colorbar experiment passes five real-panel sizing/export scenarios:
+both default map rectangles are 968x968 pixels on identical 1393x1188 canvases,
+with aligned real/hidden colorbar axes. See
+[VR-0136](../research/records/validation_runs/VR-0136.md) for evidence and limits.
+This records the bounded assignment, not a change to other registered projects.
+
 ### Tutorial01 manual-authoring milestone (2026-11-08)
 
 Tutorial01 now has a standalone educational GOSH script and beginner manual at [`tutorial/tutorial01-get_started/`](../tutorial/tutorial01-get_started/); manual design, reset tooling, assessment, original drafts, and developer-only manual-generation evidence are separated under `design/`. The standard beginner build command is `make all` from `src_main/`, for either a new or existing executable. The 40-day Mekong simulation completed in a disposable checkout, and reset preserved `config/Mkinclude`. The manual defines `cmf_root`, shows verified repository and data listings, explains setup prompts and required actions, and introduces the map/runoff/matrix before their GOSH settings. Tutorial01 now uses `PROJ` and isolates results under `out/${PROJ}/`; rerun and developer-reset checks preserved sibling projects, input data, and configuration. The shared agent instructions remain evolving defaults. Python package installation remains optional; the setup script was tested in diagnosis/decline mode. This is not release-package validation, scientific validation, or Linux portability evidence. See the [tutorial collection](../tutorial/README.md), [contributor guide](../tutorial/how_to_develop_tutorials.md), [development plan](tutorial_development_plan.md), DT-0083–DT-0088, and VR-0126–VR-0131.
