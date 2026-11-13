@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 
 import matplotlib.pyplot as plt
+from PIL import Image, PngImagePlugin
 
 from river_map_common import create_map_axes, save_panel
 
@@ -17,10 +20,14 @@ TOP = 0.48
 COLORBAR_GAP = 0.18
 COLORBAR_WIDTH = 0.18
 RIGHT = 1.05
+RIGHT_WITHOUT_COLORBAR = 0.24
 
 
-def create_network_axes(geometry, args, title, *, show_colorbar):
+def create_network_axes(geometry, args, title, *, show_colorbar,
+                        reserve_colorbar=True, right_margin=None):
     """Reserve identical map and colorbar rectangles, including hidden space."""
+    if show_colorbar and not reserve_colorbar:
+        raise ValueError("a visible colorbar requires reserved colorbar space")
     fig, ax = create_map_axes(
         geometry, args.west, args.east, args.south, args.north, title,
     )
@@ -28,7 +35,14 @@ def create_network_axes(geometry, args, title, *, show_colorbar):
     width = args.figure_width
     height = args.figure_height
     aspect = (args.east - args.west) / (args.north - args.south)
-    horizontal_furniture = LEFT + COLORBAR_GAP + COLORBAR_WIDTH + RIGHT
+    outer_right = (RIGHT if reserve_colorbar else RIGHT_WITHOUT_COLORBAR)
+    if right_margin is not None:
+        if right_margin < 0:
+            raise ValueError("right margin must be non-negative")
+        outer_right = right_margin
+    horizontal_furniture = LEFT + outer_right
+    if reserve_colorbar:
+        horizontal_furniture += COLORBAR_GAP + COLORBAR_WIDTH
     vertical_furniture = BOTTOM + TOP
 
     if width == 0 and height == 0:
@@ -60,15 +74,21 @@ def create_network_axes(geometry, args, title, *, show_colorbar):
     ax.set_position((x_offset / width, y_offset / height,
                      map_width / width, map_height / height))
     ax.set_aspect(1.0)
-    cax = fig.add_axes((
-        (x_offset + map_width + COLORBAR_GAP) / width, y_offset / height,
-        COLORBAR_WIDTH / width, map_height / height,
-    ))
+    if reserve_colorbar:
+        cax = fig.add_axes((
+            (x_offset + map_width + COLORBAR_GAP) / width, y_offset / height,
+            COLORBAR_WIDTH / width, map_height / height,
+        ))
+    else:
+        cax = fig.add_axes((
+            (x_offset + map_width) / width, y_offset / height,
+            0, map_height / height,
+        ))
     cax.set_visible(show_colorbar)
     return fig, ax, cax
 
 
-def save_network_panel(fig, ax, cax, args):
+def save_network_panel(fig, ax, cax, args, *, embed_map_layout=False):
     """Save the full canvas and report axes geometry in exported PNG pixels."""
     # Explicit axes must not be moved or cropped by user Matplotlib settings.
     fig.set_layout_engine(None)
@@ -91,8 +111,37 @@ def save_network_panel(fig, ax, cax, args):
         x, y, width, height = axes.get_window_extent().bounds
         return [round(v, 6) for v in (x * sx, y * sy, width * sx, height * sy)]
 
-    print("Panel layout: " + json.dumps({
-        "canvas_px": size, "map_xywh_px": pixel_bounds(ax),
+    map_bounds = pixel_bounds(ax)
+    layout = {
+        "canvas_px": size, "map_xywh_px": map_bounds,
         "colorbar_xywh_px": pixel_bounds(cax), "colorbar_visible": cax.get_visible(),
-    }))
+    }
+    if embed_map_layout:
+        extent = [float(value) for value in (*ax.get_xlim(), *ax.get_ylim())]
+        image_bounds = [map_bounds[0], size[1] - map_bounds[1] - map_bounds[3],
+                        map_bounds[2], map_bounds[3]]
+        colorbar_bounds = layout["colorbar_xywh_px"]
+        image_colorbar_bounds = [
+            colorbar_bounds[0], size[1] - colorbar_bounds[1] - colorbar_bounds[3],
+            colorbar_bounds[2], colorbar_bounds[3],
+        ]
+        metadata = PngImagePlugin.PngInfo()
+        metadata.add_text("cama_map_layout", json.dumps({
+            "bounds_px": image_bounds, "extent": extent,
+            "colorbar_bounds_px": image_colorbar_bounds,
+            "colorbar_visible": cax.get_visible(),
+        }))
+        with tempfile.NamedTemporaryFile(
+                prefix=f".{args.output.stem}-", suffix=".png",
+                dir=args.output.parent, delete=False) as temporary:
+            temporary_path = temporary.name
+        try:
+            with Image.open(args.output) as image:
+                image.save(temporary_path, format="PNG", pnginfo=metadata,
+                           dpi=(args.dpi, args.dpi))
+            os.replace(temporary_path, args.output)
+        finally:
+            if os.path.exists(temporary_path):
+                os.unlink(temporary_path)
+    print("Panel layout: " + json.dumps(layout))
     return size

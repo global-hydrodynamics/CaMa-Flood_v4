@@ -4,8 +4,8 @@ This project contains raster and network visualizations of CaMa-Flood river maps
 Each Figure has a project-root Shell entry point with editable settings and
 Python implementations under `script/`. Working images are written to
 `figure/`; selected combined figures are published separately in the
-[Visualization Gallery](../README.md). The current Gallery includes p01-f01,
-p01-f02, and p01-f03.
+[Visualization Gallery](../README.md). The current Gallery includes p01-f01
+through p01-f05.
 
 ## Run a figure
 
@@ -447,6 +447,8 @@ and reserves the same legend area.
 
 ![p01-f04 River Map Catchment](figure/f04-rivmap_catchment.png)
 
+The combined figure is also included in the repository Gallery.
+
 The background follows Tutorial02 fig01d. Each assigned pixel in
 `1min.catmxy.bin` inherits the upstream area of its one-based 15-minute
 unit-catchment from `uparea.nc`. It is shown in km² with a logarithmic
@@ -512,3 +514,96 @@ The outputs are the two panel images listed above and the combined
 `visualization/river_map/figure/f04-rivmap_catchment.png`.
 The script uses the map's stored assignments and network connections; it does
 not infer catchments or river links from geographic proximity.
+
+## p01-f05 — High-resolution Background
+
+Method identifier: `hires_background`.
+
+| Panel | Option | Background data | Panel image |
+| --- | --- | --- | --- |
+| p01-f05a | `gray_elevtn` | `1min.elevtn.bin` (`elevtn`, m) | `f05a-hires_background-gray_elevtn.png` |
+| p01-f05b | `gray_slope` | `1min.elevtn.bin` (`elevtn`, m; derived) | `f05b-hires_background-gray_slope.png` |
+| p01-f05c | `gray_flddif` | `1min.flddif.bin` (`flddif`, m) | `f05c-hires_background-gray_flddif.png` |
+| p01-f05d | `terrain_elevtn` | `1min.elevtn.bin` (`elevtn`, m) | `f05d-hires_background-terrain_elevtn.png` |
+| p01-f05e | `terrain_slope` | `1min.elevtn.bin` (`elevtn`, m; derived) | `f05e-hires_background-terrain_slope.png` |
+| p01-f05f | `terrain_flddif` | `1min.flddif.bin` (`flddif`, m) | `f05f-hires_background-terrain_flddif.png` |
+
+![p01-f05 High-resolution Background](figure/f05-hires_background.png)
+
+The combined figure is also included in the repository Gallery.
+
+The combined Figure uses a 3-column × 2-row layout: panels a–c are on the
+first row and panels d–f are directly below them.
+The assembler aligns the embedded map-area rectangles and verifies their
+pixel dimensions and geographic extents; it does not resize complete panel
+images to match their outer borders.
+
+All six panels use the same outlet-based vector river network, geographic
+extent (99–109°E, 9–19°N), figure dimensions, colors, widths, outlet markers,
+and headwater guides. The high-resolution background is the only panel change.
+Main-channel links follow `nextxy` between the exact geographic outlet
+coordinates in `lonlat.nc`; `shade_rainbow` color and six line-width classes
+both represent source-cell upstream area. Red arrows show `bifprm.nc` paths
+with positive first-layer width (channel bifurcations). Gray guides connect
+assigned headwater catchment pixel centroids to their outlets. No observation
+station data are read. Panels a–c show the upstream-area colorbar for the
+`shade_rainbow` river colors. Panels d–f use black river lines and omit that
+colorbar because color no longer carries quantitative information. They retain
+the same colorbar axes geometry as a–c to keep all six map areas aligned.
+
+Panels d–f repeat the corresponding a–c background fields and transformations,
+but use the repository's `pale_terrain` palette and black network lines.
+The main-channel arrow widths still encode source-cell upstream area; channel
+bifurcations retain their existing 0.024-inch line width and midpoint arrows,
+and headwater guides remain thinner. The legend uses black line samples for
+all three network features. No background colorbar is added.
+
+The `pale_terrain` palette is defined in the shared
+[`cmf_colormap` package](../cmf_colormap/README.md#pale-terrain-background). Panels d–f
+reuse the same full-map 2nd–98th percentile clipping, square-root transform,
+fill values, and missing-data masks as their paired gray panels. To use the
+palette's pink high end, the resulting display intensity (0.16–0.58) is mapped
+back to 0–1, then the palette position is raised to the power 0.4. This is a
+display-only color-position adjustment: it leaves source values, percentile
+limits, the square-root data stretch, and masks unchanged. In f05f,
+`flddif`-missing pixels with valid `elevtn` retain the same pre-palette 50%
+fill value, and pixels missing in both remain masked white.
+
+The `elevtn` and `flddif` inputs are little-endian float32, one Fortran-order
+record on the 1200 × 1800, 1-minute grid. The first row is northmost, matching
+the grid coordinates. `-9999` and non-finite values are masked. In f05c, a
+pixel missing from `flddif` but valid in `elevtn` is shown as 50% gray to mark
+land without a defined floodplain-difference value; pixels missing in both
+remain white.
+Each panel derives grayscale limits from the full map's 2nd and 98th
+percentiles, clips values to that range, and applies a square-root stretch to
+make lower-range variation visible while keeping the background subdued.
+These display transformations do not alter the source data.
+
+No stored 1-minute `slope` product is available for this sample. For p01-f05b,
+the script derives a display field from `elevtn`: for each valid pixel it takes
+the maximum absolute elevation difference between that pixel and its valid
+neighbors among the eight adjacent pixels. The value and display are in metres;
+this calculation does not normalize by horizontal distance and should not be
+interpreted as a conventional dimensionless terrain gradient. Pixels with no
+valid neighbor remain masked. The percentile stretch is calculated separately
+for each background field.
+
+| Input | Role |
+| --- | --- |
+| `map/mekong_15min/1min/1min.elevtn.bin` | 1-minute elevation [m]; background for f05a, source for f05b, and land-validity mask for f05c. |
+| `map/mekong_15min/1min/1min.flddif.bin` | 1-minute floodplain elevation difference [m]; background for f05c. Missing `flddif` where `elevtn` is valid is filled with 50% gray. |
+| `map/mekong_15min/1min/location.txt` | 1-minute grid bounds, dimensions, and resolution. |
+| `map/mekong_15min/1min/1min.catmxy.bin` | Coarse-cell assignments used to summarize headwater catchment pixel centroids. |
+| `map/mekong_15min/netcdf/uparea.nc` | Coarse-grid upstream area [m²] for link color and width. |
+| `map/mekong_15min/netcdf/nextxy_noedge.nc` | One-based main-network downstream connectivity. |
+| `map/mekong_15min/netcdf/lonlat.nc` | Geographic grid and outlet coordinates (`outlon`, `outlat`). |
+| `map/mekong_15min/netcdf/bifprm.nc` | Stored bifurcation paths and layer widths; positive first-layer width selects channel paths. |
+| `map/mekong_15min/params.txt` | Coarse-grid geometry used to validate alignment. |
+
+Run `./visualization/river_map/f05-hires_background.sh` after the standard
+Python setup. It writes panels a–f and combines them in a 3-column × 2-row
+grid in `figure/f05-hires_background.png`, with panels a–c above d–f. The
+individual panel scripts can also be run independently. Every panel embeds
+its map-area bounds and geographic extent in PNG metadata; the combiner checks
+these values and aligns maps without resizing panel images.

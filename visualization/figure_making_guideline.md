@@ -38,6 +38,37 @@ practices that can evolve as the Gallery grows.
   color normalization. Do not let panel arrangement, resizing, or cropping
   distort geographic or other scientifically meaningful aspect ratios.
 
+### Map-area-first layout and assembly
+
+- For a map Figure, decide the map axes' physical size and aspect ratio before
+  allocating space for titles, colorbars, legends, captions, or margins. Panels
+  in the same series must use the same map-area size and geographic extent so
+  their geographic scale is directly comparable.
+- Place titles, colorbars, legends, and captions outside the map area. Expand
+  the canvas or outer margins to fit them; do not shrink the map to accommodate
+  longer decorations. Wrap long titles or legends before reducing map size.
+- Decide whether a title or legend needs wrapping from measured layout bounds,
+  not character count alone. For panel-specific titles and legends, use the map
+  axes width as the default maximum single-line width unless the design
+  explicitly allocates a wider decoration area. Measure text with the final
+  font, size, and output DPI; include legend handles and spacing. If a line or
+  legend exceeds its allocated width, wrap the title, split the legend into
+  rows/columns, or shorten nonessential wording before expanding the canvas.
+- Check horizontal whitespace as well as text bounds: compare the map width,
+  canvas width, and planned left/right decoration margins. If a long title or
+  legend forces extra canvas width while the map size stays fixed, reflow that
+  decoration first. Do not use a universal whitespace-percentage threshold;
+  the target is the explicitly allocated layout, with no unexplained excess
+  space and no reduction of the map area.
+- Export the full canvas with fixed margins. Avoid output-specific automatic
+  cropping that changes the map area's apparent size or position.
+- When assembling map panels, align their map-area rectangles, not their image
+  borders. Do not resize complete panel images to make the maps appear aligned.
+  Store or otherwise provide each panel's map-area bounds and geographic extent
+  to the assembler, then place panels without scaling them.
+- Verify physical map-area bounds, aspect ratio, geographic extent, label
+  clearance, and the final assembled Figure.
+
 ### Colorbar alignment
 
 - For a colorbar associated with a single map or plot, its length must match
