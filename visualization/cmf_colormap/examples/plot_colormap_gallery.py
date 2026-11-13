@@ -11,7 +11,7 @@ from pathlib import Path
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.colors import Normalize, TwoSlopeNorm
+from matplotlib.colors import FuncNorm, LinearSegmentedColormap, Normalize, TwoSlopeNorm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 
@@ -20,6 +20,49 @@ from cmf_colormap.core import _interpolate_rgb
 
 HERE = Path(__file__).resolve().parent
 DATA_DIR = Path(__file__).resolve().parents[1] / "src" / "cmf_colormap" / "data"
+
+
+def _asymmetric_signed_flow_norm():
+    """Build the documented nonlinear flow example, separate from palette data."""
+    vmin, vmax = -1000.0, 10000.0
+    threshold = 1.0
+    linear_fraction = 0.05
+
+    def forward(values):
+        values = np.asarray(values, dtype=np.float64)
+        transformed = np.empty_like(values)
+        negative = values < -threshold
+        central = (values >= -threshold) & (values <= threshold)
+        positive = values > threshold
+        transformed[negative] = -linear_fraction - (1 - linear_fraction) * (
+            np.log10(np.abs(values[negative]) / threshold) /
+            np.log10(abs(vmin) / threshold)
+        )
+        transformed[central] = linear_fraction * values[central] / threshold
+        transformed[positive] = linear_fraction + (1 - linear_fraction) * (
+            np.log10(values[positive] / threshold) /
+            np.log10(vmax / threshold)
+        )
+        return transformed
+
+    def inverse(values):
+        values = np.asarray(values, dtype=np.float64)
+        data = np.empty_like(values)
+        negative = values < -linear_fraction
+        central = (values >= -linear_fraction) & (values <= linear_fraction)
+        positive = values > linear_fraction
+        data[negative] = -threshold * 10 ** (
+            ((-linear_fraction - values[negative]) / (1 - linear_fraction)) *
+            np.log10(abs(vmin) / threshold)
+        )
+        data[central] = threshold * values[central] / linear_fraction
+        data[positive] = threshold * 10 ** (
+            ((values[positive] - linear_fraction) / (1 - linear_fraction)) *
+            np.log10(vmax / threshold)
+        )
+        return data
+
+    return FuncNorm((forward, inverse), vmin=vmin, vmax=vmax, clip=False)
 
 
 def _gradient(cmap, count=1024):
@@ -77,7 +120,7 @@ def plot_detailed_preview(name, example_kind):
     cmap = get_cmap(name)
     position = np.linspace(0, 1, 1024)
     _, hsv = _hsv_diagnostics(position, controls)
-    diverging_example = example_kind == "signed_overlay"
+    diverging_example = example_kind in ("signed_overlay", "asymmetric_signed_flow")
     figure = plt.figure(figsize=(18, 15 if diverging_example else 12))
     if diverging_example:
         grid = figure.add_gridspec(
@@ -94,7 +137,7 @@ def plot_detailed_preview(name, example_kind):
         ax.set_facecolor(item["hex"])
         ax.set_xticks([])
         ax.set_yticks([])
-        control_position = index / (len(controls) - 1)
+        control_position = item.get("position", index / (len(controls) - 1))
         ax.set_title(
             f"{index + 1}\n{item['name']}\n{item['hex']}\n{control_position:.3f}",
             fontsize=7,
@@ -206,6 +249,30 @@ def plot_detailed_preview(name, example_kind):
         ax.text(0, 0.5, "zero", ha="center", va="center", fontsize=8,
                 bbox={"facecolor": "white", "alpha": 0.8, "edgecolor": "none"})
         ax.set_yticks([])
+    elif example_kind == "asymmetric_signed_flow":
+        values = np.linspace(-1000, 10000, 1024)
+        norm = _asymmetric_signed_flow_norm()
+        ax.imshow(values[None, :], cmap=cmap, norm=norm, aspect="auto",
+                  extent=(-1000, 10000, 0, 1), interpolation="nearest")
+        ax.set(xlim=(-1000, 10000), ylim=(0, 1))
+        ax.axvline(0, color="#202020", linewidth=1.2, linestyle="--")
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_title("Separate log branches with a linear ±1 m³/s center", fontsize=9)
+        flow_ticks = [-1000, -300, -100, -30, -10, 0, 10, 30,
+                      100, 300, 1000, 3000, 10000]
+        colorbar_axes = make_axes_locatable(ax).append_axes(
+            "bottom", size="10%", pad=0.42
+        )
+        colorbar = figure.colorbar(
+            plt.cm.ScalarMappable(norm=norm, cmap=cmap),
+            cax=colorbar_axes, orientation="horizontal", ticks=flow_ticks,
+            extend="both",
+        )
+        colorbar.ax.set_xticklabels([
+            f"−{abs(value):,}" if value < 0 else f"{value:,}" for value in flow_ticks
+        ], fontsize=7)
+        colorbar.set_label("Illustrative signed outflow (m³/s)", fontsize=8)
 
         overlay = figure.add_subplot(grid[4])
         x = np.linspace(0, 1, 240)
@@ -219,25 +286,55 @@ def plot_detailed_preview(name, example_kind):
         river_x = np.linspace(0.04, 0.96, 400)
         river_y = 0.48 + 0.22 * np.sin(2.6 * np.pi * river_x) + 0.07 * np.sin(9 * np.pi * river_x)
         overlay.plot(river_x, river_y, color="#333333", linewidth=2.0, label="Synthetic river")
-        station_x = np.asarray((0.12, 0.25, 0.37, 0.49, 0.61, 0.74, 0.87))
+        station_x = (
+            np.linspace(0.12, 0.87, 13) if example_kind == "asymmetric_signed_flow"
+            else np.asarray((0.12, 0.25, 0.37, 0.49, 0.61, 0.74, 0.87))
+        )
         station_y = 0.48 + 0.22 * np.sin(2.6 * np.pi * station_x) + 0.07 * np.sin(9 * np.pi * station_x)
-        signed_error = np.asarray((-82, -35, -8, 0, 6, 42, 91))
+        if example_kind == "asymmetric_signed_flow":
+            signed_error = np.asarray((
+                -1500, -1000, -300, -100, -10, -1, 0, 1, 10, 100, 1000, 10000, 12000,
+            ))
+            norm = _asymmetric_signed_flow_norm()
+        else:
+            signed_error = np.asarray((-82, -35, -8, 0, 6, 42, 91))
+            norm = TwoSlopeNorm(vmin=-100, vcenter=0, vmax=100)
         points = overlay.scatter(
             station_x, station_y, c=signed_error, cmap=cmap, norm=norm,
             s=100, edgecolors="#242424", linewidths=0.8, zorder=3,
         )
-        overlay.annotate("0% is pale mint, not white", (station_x[3], station_y[3]),
+        zero_index = int(np.flatnonzero(signed_error == 0)[0])
+        zero_note = ("0 is pale warm yellow" if example_kind == "asymmetric_signed_flow"
+                     else "0% is pale mint, not white")
+        overlay.annotate(zero_note, (station_x[zero_index], station_y[zero_index]),
                          xytext=(0.53, 0.88), arrowprops={"arrowstyle": "->"}, fontsize=8)
         overlay.set(xlim=(0, 1), ylim=(0, 1), xlabel="Synthetic longitude", ylabel="Synthetic latitude")
-        overlay.set_title("Illustrative gauge errors over a synthetic shaded-relief background", fontsize=9)
+        overlay_title = (
+            "Illustrative signed outflow over a synthetic shaded-relief background"
+            if example_kind == "asymmetric_signed_flow"
+            else "Illustrative gauge errors over a synthetic shaded-relief background"
+        )
+        overlay.set_title(overlay_title, fontsize=9)
         overlay.legend(loc="lower left", fontsize=8)
         colorbar_axes = make_axes_locatable(overlay).append_axes(
             "bottom", size="8%", pad=0.42
         )
-        figure.colorbar(
-            points, cax=colorbar_axes, orientation="horizontal",
-            label="Synthetic signed error (%)",
-        )
+        if example_kind == "asymmetric_signed_flow":
+            flow_ticks = [-1000, -300, -100, -30, -10, 0, 10, 30,
+                          100, 300, 1000, 3000, 10000]
+            colorbar = figure.colorbar(
+                points, cax=colorbar_axes, orientation="horizontal",
+                ticks=flow_ticks, extend="both",
+            )
+            colorbar.ax.set_xticklabels([
+                f"−{abs(value):,}" if value < 0 else f"{value:,}" for value in flow_ticks
+            ], fontsize=7)
+            colorbar.set_label("Synthetic signed outflow (m³/s)", fontsize=8)
+        else:
+            figure.colorbar(
+                points, cax=colorbar_axes, orientation="horizontal",
+                label="Synthetic signed error (%)",
+            )
     else:
         raise ValueError(f"Unknown preview example kind: {example_kind}")
     ax.set_yticks([])
@@ -269,13 +366,68 @@ def plot_diverge_rainbow_detail():
     plot_detailed_preview("diverge_rainbow", "signed_overlay")
 
 
+def plot_diverge_spectral_detail():
+    """Write signed-flow diagnostics with an asymmetric logarithmic example."""
+    plot_detailed_preview("diverge_spectral", "asymmetric_signed_flow")
+
+
+def plot_diverge_asymmetry_detail():
+    """Write signed-flow diagnostics for the extended red-to-violet palette."""
+    plot_detailed_preview("diverge_asymmetry", "asymmetric_signed_flow")
+
+
+def plot_diverge_spectral_blue_comparison():
+    """Compare the previous blue endpoint with the vivid cobalt-blue endpoint."""
+    definition = json.loads(
+        (DATA_DIR / "diverge_spectral.json").read_text(encoding="utf-8")
+    )
+    controls = definition["control_colors"]
+    positions = [item["position"] for item in controls]
+    colors = [item["hex"] for item in controls]
+    previous_colors = [*colors[:-1], "#1769C2"]
+    previous_cmap = LinearSegmentedColormap.from_list(
+        "diverge_spectral_previous_blue", list(zip(positions, previous_colors))
+    )
+    current_cmap = get_cmap("diverge_spectral")
+    values = np.linspace(0.0, 1.0, 1024)[None, :]
+    figure, axes = plt.subplots(1, 2, figsize=(12, 3.8), sharey=True)
+    for axis, cmap, label in zip(
+        axes,
+        (previous_cmap, current_cmap),
+        ("Previous blue endpoint #1769C2", "Vivid cobalt-blue endpoint #005BFF"),
+    ):
+        axis.imshow(values, cmap=cmap, aspect="auto", extent=(0, 1, 0, 1))
+        axis.axvline(0.5, color="#202020", linewidth=1.2, linestyle="--")
+        axis.set_yticks([])
+        axis.set_xticks((0, 0.5, 1.0))
+        axis.set_xticklabels(("negative", "zero", "positive"))
+        axis.set_title(label, fontsize=10)
+    for axis in axes:
+        axis.get_xticklabels()[0].set_ha("left")
+        axis.get_xticklabels()[-1].set_ha("right")
+    figure.suptitle("Diverge-Spectral blue-endpoint comparison")
+    figure.text(
+        0.5, 0.015,
+        "Both use the same red–orange–pale-yellow–green stops and zero at 0.5; only the final blue stop differs.",
+        ha="center", fontsize=9,
+    )
+    figure.subplots_adjust(left=0.06, right=0.99, top=0.78, bottom=0.27, wspace=0.18)
+    path = HERE / "diverge_spectral_blue_comparison.png"
+    figure.savefig(path, dpi=180)
+    plt.close(figure)
+    print(f"Wrote {path}")
+
+
 if __name__ == "__main__":
     plot_gallery()
     detail_by_name = {
         "shade_rainbow": plot_shade_rainbow_detail,
         "white_rainbow": plot_white_rainbow_detail,
         "diverge_rainbow": plot_diverge_rainbow_detail,
+        "diverge_spectral": plot_diverge_spectral_detail,
+        "diverge_asymmetry": plot_diverge_asymmetry_detail,
         "pale_terrain": plot_pale_terrain_detail,
     }
     for colormap_name in presentation_order():
         detail_by_name[colormap_name]()
+    plot_diverge_spectral_blue_comparison()

@@ -1,5 +1,7 @@
 name,display_name,type,definition,version,interpolation,display_order,description
 shade_rainbow,Shade-Rainbow,sequential,shade_rainbow.json,1.0.0,linear_srgb,1,"Sequential colormap transitioning from muted gray to vivid rainbow colors"
 white_rainbow,White-Rainbow,sequential,white_rainbow.json,1.0.0,linear_srgb,2,"Sequential colormap transitioning from white through cyan, yellow, orange, and red for nonnegative magnitudes"
-pale_terrain,Pale-Terrain,sequential,pale_terrain.json,1.0.0,linear_srgb,4,"Subtle low-saturation colormap for topographic backgrounds with prominent foreground features"
+pale_terrain,Pale-Terrain,sequential,pale_terrain.json,1.0.0,linear_srgb,6,"Subtle low-saturation colormap for topographic backgrounds with prominent foreground features"
 diverge_rainbow,Diverge-Rainbow,diverging,diverge_rainbow.json,1.0.0,linear_srgb,3,"Diverging colormap with a pale mint-green center for signed errors and anomalies"
+diverge_spectral,Diverge-Spectral,diverging,diverge_spectral.json,1.0.0,linear_srgb,4,"Custom Spectral-inspired diverging colors for signed flow: red-orange for negative values, pale warm yellow at zero, and bright green-cobalt blue for positive values; not the standard Spectral palette"
+diverge_asymmetry,Diverge-Asymmetry,diverging,diverge_asymmetry.json,1.0.0,linear_srgb,5,"Diverging signed-flow colors from muted red-brown and orange through pale yellow zero to bright green, blue, and blue-violet"

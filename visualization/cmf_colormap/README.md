@@ -2,7 +2,7 @@
 
 CMF Colormaps is a small, reusable Python library of palettes for scientific
 visualization of rivers, river basins, floodplains, and related geospatial
-information. Its four colormaps have different visual roles; they are not
+information. Its six colormaps have different visual roles; they are not
 universal replacements for other palettes.
 
 ## Overlay-Aware Colormap Design
@@ -25,9 +25,9 @@ uniformity, color-vision accessibility, and quantitative comparability.
 ## General Colormap Gallery
 
 The gallery uses the canonical presentation order: Shade-Rainbow,
-White-Rainbow, Diverge-Rainbow, and Pale-Terrain. The first three are intended
-primarily for foreground scientific data; Pale-Terrain is intended primarily
-for background visualization.
+White-Rainbow, Diverge-Rainbow, Diverge-Spectral, Diverge-Asymmetry, and
+Pale-Terrain. The first five are intended primarily for foreground scientific
+data; Pale-Terrain is intended primarily for background visualization.
 
 ![CMF colormap gallery](examples/colormap_gallery.png)
 
@@ -60,6 +60,40 @@ mint-green zero value. The center remains distinct from the grayscale terrain
 and dark river linework.
 
 ![Diverge-Rainbow signed errors and synthetic gauge overlay](examples/diverge_rainbow_detailed.png)
+
+### Diverge-Spectral signed flow
+
+Diverge-Spectral assigns negative flow to red and orange, zero to pale warm
+yellow, and positive flow to bright green and vivid cobalt blue. Its stops are inspired by
+Spectral-style diverging palettes, but this is a custom polarity-emphasizing
+design, not the standard Spectral palette.
+
+![Diverge-Spectral signed-flow scale and synthetic river overlay](examples/diverge_spectral_detailed.png)
+
+The endpoint comparison below keeps all other stops and the zero center fixed;
+only the positive extreme changes from the previous `#1769C2` blue to the more
+saturated `#005BFF` cobalt blue.
+
+![Diverge-Spectral blue endpoint comparison](examples/diverge_spectral_blue_comparison.png)
+
+### Diverge-Asymmetry signed flow
+
+Diverge-Asymmetry transitions from muted red-brown through red-orange and
+golden orange for negative values, pale warm yellow at zero, and bright green
+through cobalt blue to blue-violet for positive values. Its control colors are
+independent of units, limits, and normalization. This is a custom diverging
+palette, not a standard named scheme. The authoritative definition is
+[`src/cmf_colormap/data/diverge_asymmetry.json`](src/cmf_colormap/data/diverge_asymmetry.json).
+
+![Diverge-Asymmetry color definition and diagnostics](examples/diverge_asymmetry_detailed.png)
+
+The following comparison applies the existing p02-f01 `outflw` data, limits,
+ticks, and asymmetric signed-log normalization to both Diverge-Spectral and
+Diverge-Asymmetry. It uses the current f01 range (−3,000 to +30,000 m³/s),
+`LINTHRESH=10`, and `LINEAR_FRAC=0.10`; only the palette changes between map
+panels.
+
+![Diverge-Spectral and Diverge-Asymmetry compared on p02-f01 outflow](examples/diverge_outflow_comparison.png)
 
 ### Pale-Terrain background
 
@@ -111,8 +145,10 @@ Available names and optional Matplotlib registration:
 ```python
 from cmf_colormap import get_cmap, list_colormaps, register_colormaps
 
-print(list_colormaps())  # Stable API order: shade, white, pale, diverge
+print(list_colormaps())  # Stable API order: shade, white, pale, diverge, spectral, asymmetry
 cmap = get_cmap("diverge_rainbow")
+flow_cmap = get_cmap("diverge_spectral")
+asymmetry_cmap = get_cmap("diverge_asymmetry")
 register_colormaps()     # Optional global names: cmf.<name>
 ```
 
@@ -170,6 +206,77 @@ plt.colorbar(label="Signed error")
 The `-50` to `100` range is illustrative only. Set limits for the variable and
 comparison being shown.
 
+### Diverge-Spectral for asymmetric signed flow
+
+The palette contains only color stops; it does not contain a unit, value range,
+or logarithmic transformation. For signed flow, use a normalization that maps
+zero to position `0.5` even when the negative and positive ranges differ. This
+example maps `−1,000` to 0 and `+10,000 m³/s` to 1, with a continuous linear
+interval from `−1` to `+1 m³/s` and logarithmic branches outside it. The 5%
+central color allocation is a display setting, separate from the colormap:
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.colors import FuncNorm
+from cmf_colormap import get_cmap
+
+vmin, vmax = -1000.0, 10000.0
+linthresh = 1.0
+linear_fraction = 0.05
+
+def forward(values):
+    values = np.asarray(values, dtype=float)
+    result = np.empty_like(values)
+    negative = values < -linthresh
+    central = (values >= -linthresh) & (values <= linthresh)
+    positive = values > linthresh
+    result[negative] = -linear_fraction - (1 - linear_fraction) * (
+        np.log10(np.abs(values[negative]) / linthresh)
+        / np.log10(abs(vmin) / linthresh)
+    )
+    result[central] = linear_fraction * values[central] / linthresh
+    result[positive] = linear_fraction + (1 - linear_fraction) * (
+        np.log10(values[positive] / linthresh)
+        / np.log10(vmax / linthresh)
+    )
+    return result
+
+def inverse(values):
+    values = np.asarray(values, dtype=float)
+    result = np.empty_like(values)
+    negative = values < -linear_fraction
+    central = (values >= -linear_fraction) & (values <= linear_fraction)
+    positive = values > linear_fraction
+    result[negative] = -linthresh * 10 ** (
+        ((-linear_fraction - values[negative]) / (1 - linear_fraction))
+        * np.log10(abs(vmin) / linthresh)
+    )
+    result[central] = linthresh * values[central] / linear_fraction
+    result[positive] = linthresh * 10 ** (
+        ((values[positive] - linear_fraction) / (1 - linear_fraction))
+        * np.log10(vmax / linthresh)
+    )
+    return result
+
+norm = FuncNorm((forward, inverse), vmin=vmin, vmax=vmax)
+image = ax.pcolormesh(
+    longitude, latitude, outflw,
+    cmap=get_cmap("diverge_spectral"), norm=norm,
+)
+fig.colorbar(image, ax=ax, label="Outflow (m³/s)", extend="both")
+```
+
+The same normalization can be used with `get_cmap("diverge_asymmetry")`; the
+palette provides colors only and does not define or change the data transform.
+
+The transform is continuous and monotonic: `−1,000`, `−1`, `0`, `+1`, and
+`+10,000` map to `0`, `0.475`, `0.5`, `0.525`, and `1`. The inverse lets
+Matplotlib place colorbar ticks at their corresponding data values. `extend`
+marks values outside the display range; choose bounds from the data and report
+any out-of-range values rather than silently treating the limits as data
+clipping.
+
 ### Pale-Terrain
 
 Pale-Terrain is a low-saturation sequential map for background topographic
@@ -210,7 +317,17 @@ python examples/plot_river_overlay_examples.py
 ```
 
 The plotting scripts read color definitions from package data; they do not
-duplicate palette colors. Install test dependencies and run the focused tests
+duplicate palette colors. Recreate the p02-f01 comparison from the CaMa-Flood
+repository root with:
+
+```bash
+source .venv/bin/activate
+python visualization/cmf_colormap/examples/compare_p02_f01_colormaps.py
+```
+
+It reads `visualization/output_2d_maps/out_sample/outflw_2001-09-01.nc` and
+writes `diverge_outflow_comparison.png` beside the other examples. Install test
+dependencies and run the focused tests
 from this directory:
 
 ```bash
@@ -224,7 +341,10 @@ None of the maps is designed to be perceptually uniform. Multihue transitions
 may be difficult for some viewers with color-vision deficiencies, and hue
 changes can suggest boundaries that are not present in the data. White-Rainbow
 can blend into a white background at its low end; Pale-Terrain is intentionally
-subtle; and Diverge-Rainbow is not perfectly symmetric in perceived brightness.
+subtle; Diverge-Rainbow is not perfectly symmetric in perceived brightness;
+and Diverge-Spectral is a custom Spectral-inspired palette rather than the
+standard Spectral colors. Diverge-Asymmetry's strong hue changes likewise do
+not encode a perceptually uniform magnitude scale.
 Overlay-aware design is not a claim of universal superiority. Consider the
 data, background, audience, accessibility, and alternative palettes; do not
 interpret the colors as scientific classifications by themselves.

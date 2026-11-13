@@ -7,6 +7,9 @@ set -eu
 SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 CMF_BASE=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd -P)
 
+PROJ="mek02-2year_netcdf"
+RUNDIR="${CMF_BASE}/out/${PROJ}" # Dedicated individual-map test output directory.
+
 # -------------------------- User settings ------------------------------
 # Simulation years are inclusive; the model ends at January 1 of END_YEAR+1.
 START_YEAR=2000                  # First simulation year; starts at January 1 00:00.
@@ -19,8 +22,8 @@ INPMAT_TAG="test-mek_1deg"     # Selects the existing input matrix for the same 
 # Map input files; LMAPCDF=.FALSE. makes the reader select Binary or NetCDF from each extension.
 MAPDIR="${CMF_BASE}/map/mekong_15min"  # Mekong river-map root containing params.txt and bifprm.txt.
 MAP_NETCDF_DIR="${MAPDIR}/netcdf"      # Individual NetCDF map products.
-#NEXTXY="${MAP_NETCDF_DIR}/nextxy.nc"       # Includes river networks affected by regional edges.
-NEXTXY="${MAP_NETCDF_DIR}/nextxy_noedge.nc" # Excludes boundary-affected river networks (default).
+NEXTXY="${MAP_NETCDF_DIR}/nextxy.nc"       # Includes river networks affected by regional edges.
+#NEXTXY="${MAP_NETCDF_DIR}/nextxy_noedge.nc" # Excludes boundary-affected river networks (default).
 #RIVWTH="${MAP_NETCDF_DIR}/rivwth.nc"       # Empirical power-law channel width.
 RIVWTH="${MAP_NETCDF_DIR}/rivwth_merit.nc"  # MERIT Hydro-merged channel width (default).
 
@@ -43,22 +46,22 @@ CVNTIME="time"                  # NetCDF CF time-coordinate variable name.
 
 # Output and restart products.
 IFRQ_OUT=24                      # Model-output interval [hours]; 24 means daily output.
-CVARSOUT="outflw,storge,sfcelv,flddph,fldfrc" # Comma-separated model output variable names.
+CVARSOUT="outflw,storge,sfcelv,rivdph,flddph,fldfrc,fldare" # Comma-separated model output variable names.
 LOUTCDF=".TRUE."                # TRUE: write NetCDF model output; FALSE: write Binary output.
 IFRQ_RST=0                       # 0: write restart at end only; 1-24: hourly; 30: monthly (also at end).
 CVNREST="restart"               # Prefix for dated restart files.
 LRESTCDF=".TRUE."               # TRUE: NetCDF restart; FALSE: Binary restart.
-RUNDIR="${CMF_BASE}/out/mek02-longterm_mapnc" # Dedicated individual-map test output directory.
 
 # ----------------------------------------------------------------------
 # User settings end here. Paths and annual model runs follow.
 # ----------------------------------------------------------------------
 
 NAMELIST="${RUNDIR}/input_cmf.nam"
-EXEC_CMF="${CMF_BASE}/out/bin/MAIN_cmf_netcdf"
 RUNOFF_DIR="${CMF_BASE}/inp/${ROFFTAG}"
 INPDIM="${MAPDIR}/inpdim_${INPMAT_TAG}.txt"
 INPMAT="${MAPDIR}/inpmat_${INPMAT_TAG}.bin"
+
+EXEC_CMF="${CMF_BASE}/src_main/MAIN_cmf"
 
 printf '\n==================================================\n'
 printf '[STEP 1/3] Prepare the individual map test\n'

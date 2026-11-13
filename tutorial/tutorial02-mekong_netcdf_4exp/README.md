@@ -55,10 +55,38 @@ terminal is available, rerun it from a terminal to approve setup. For detailed
 verification and troubleshooting, see the
 [Python environment guide](../../docs/python_environment.md).
 
+The station locations for Figure 3 are read from
+`station_map_locations.csv`; run `export_station_map_csv.py` to refresh that
+file from the definitions kept inline in `v01-network_maps.py`. Figures `v01`
+and `v02` keep their station definitions in source for the network-mapping
+learning example and spin-up comparison. `v00-visualize_all.sh` does not create
+or validate the CSV. Figure `v04` currently has no station-specific sampling
+or labels, so there is no station data in that script to replace with CSV input.
+
 There is no dedicated tutorial package assembler yet. The legacy v4
 `doc/make_package.sh` is not used for tutorial distribution; `design/` and
 completed alternatives must be excluded by any future tutorial packaging
 workflow.
+
+## Reproducible figure analysis data
+
+The processed data drawn by Figures 2–4 are saved under the ignored
+`out/analysis/` directory so figures can be inspected or regenerated without
+repeating the extraction and annual-statistic calculations. The NetCDF files
+record their source outputs, station/map indices, units, time coverage, and
+processing description. Context-only elevation backdrops are read from the map
+data and are not copied into these analysis files.
+
+| Figure | Saved analysis data |
+|---|---|
+| Figure 2 | `out/analysis/v02_spinup_station_discharge.nc` — four years of station discharge aligned to a non-leap 2001 calendar; February 29, 2000 is omitted. |
+| Figure 3 | `out/analysis/v03_station_discharge.nc` — daily station discharge for all four experiments from 1 May 2001 through 31 March 2002. |
+| Figure 4 | `out/analysis/v04_annual_max_discharge.nc` — annual maximum absolute discharge grids, main-link values and configuration differences, and channel-bifurcation path values and geometry. |
+
+Figure 4 requires Default's `o_pthflw2001.nc` in addition to the four
+`o_outflw2001.nc` files. If that path-flow output is absent, its complete
+analysis dataset and figure cannot be regenerated until the required model
+output is available.
 
 ## Figure 4 — annual maximum discharge
 

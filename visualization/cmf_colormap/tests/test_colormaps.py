@@ -36,6 +36,12 @@ class ColormapTests(unittest.TestCase):
         cls.diverge_definition = json.loads(
             cls.data.joinpath("diverge_rainbow.json").read_text(encoding="utf-8")
         )
+        cls.diverge_spectral_definition = json.loads(
+            cls.data.joinpath("diverge_spectral.json").read_text(encoding="utf-8")
+        )
+        cls.diverge_asymmetry_definition = json.loads(
+            cls.data.joinpath("diverge_asymmetry.json").read_text(encoding="utf-8")
+        )
 
     def test_registry_is_unique_and_matches_each_definition(self):
         names = [row["name"] for row in self.registry]
@@ -52,13 +58,15 @@ class ColormapTests(unittest.TestCase):
             self.assertTrue(row["display_name"])
         self.assertEqual(
             list_colormaps(),
-            ["shade_rainbow", "white_rainbow", "pale_terrain", "diverge_rainbow"],
+            ["shade_rainbow", "white_rainbow", "pale_terrain", "diverge_rainbow",
+             "diverge_spectral", "diverge_asymmetry"],
         )
         display_order = [int(row["display_order"]) for row in self.registry]
-        self.assertEqual(sorted(display_order), [1, 2, 3, 4])
+        self.assertEqual(sorted(display_order), [1, 2, 3, 4, 5, 6])
         self.assertEqual(
             [row["name"] for row in sorted(self.registry, key=lambda row: int(row["display_order"]))],
-            ["shade_rainbow", "white_rainbow", "diverge_rainbow", "pale_terrain"],
+            ["shade_rainbow", "white_rainbow", "diverge_rainbow",
+             "diverge_spectral", "diverge_asymmetry", "pale_terrain"],
         )
 
     def test_shade_rainbow_controls_are_exact_and_evenly_spaced(self):
@@ -185,6 +193,70 @@ class ColormapTests(unittest.TestCase):
         cmap = get_cmap("diverge_rainbow")
         self.assertEqual(cmap.name, "diverge_rainbow")
 
+    def test_diverge_spectral_definition_and_exact_stop_positions(self):
+        definition = self.diverge_spectral_definition
+        controls = definition["control_colors"]
+        self.assertEqual(definition["name"], "diverge_spectral")
+        self.assertEqual(definition["version"], "1.0.0")
+        self.assertEqual(definition["type"], "diverging")
+        self.assertEqual(definition["interpolation"], "linear_srgb")
+        self.assertEqual(definition["center_position"], 0.5)
+        self.assertEqual(
+            [item["position"] for item in controls],
+            [0.0, 0.22, 0.43, 0.50, 0.70, 1.0],
+        )
+        self.assertEqual(
+            [item["hex"] for item in controls],
+            ["#C51B1D", "#E96F1F", "#F6B13A", "#FFF9D8", "#49D17D", "#005BFF"],
+        )
+        cmap = get_cmap("diverge_spectral")
+        for item in controls:
+            position = item["position"]
+            expected = tuple(int(item["hex"][i:i + 2], 16) / 255 for i in (1, 3, 5))
+            np.testing.assert_allclose(cmap(position)[:3], expected, atol=2e-5)
+        center = tuple(int("FFF9D8"[i:i + 2], 16) / 255 for i in (0, 2, 4))
+        np.testing.assert_allclose(cmap(0.5)[:3], center, atol=2e-5)
+        self.assertEqual(self.registry_by_name["diverge_spectral"]["display_name"], "Diverge-Spectral")
+
+    def test_diverge_spectral_asymmetric_example_norm(self):
+        script = Path(__file__).resolve().parents[1] / "examples" / "plot_colormap_gallery.py"
+        spec = importlib.util.spec_from_file_location("cmf_colormap_spectral_example", script)
+        gallery = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(gallery)
+        norm = gallery._asymmetric_signed_flow_norm()
+        values = np.asarray([-1000, -1, 0, 1, 10000], dtype=np.float64)
+        positions = np.asarray(norm(values))
+        np.testing.assert_allclose(positions, [0, 0.475, 0.5, 0.525, 1], atol=1e-12)
+        np.testing.assert_allclose(norm.inverse(positions), values, rtol=1e-12)
+
+    def test_diverge_asymmetry_definition_and_registered_colors(self):
+        definition = self.diverge_asymmetry_definition
+        controls = definition["control_colors"]
+        expected_positions = [0.00, 0.14, 0.28, 0.40, 0.50, 0.67, 0.84, 1.00]
+        expected_colors = [
+            "#9F5A45", "#E04B1F", "#E96F1F", "#F6B13A", "#FFF9D8",
+            "#49D17D", "#005BFF", "#7040FF",
+        ]
+        self.assertEqual(definition["name"], "diverge_asymmetry")
+        self.assertEqual(definition["type"], "diverging")
+        self.assertEqual(definition["center_position"], 0.5)
+        self.assertEqual([item["position"] for item in controls], expected_positions)
+        self.assertEqual([item["hex"] for item in controls], expected_colors)
+        self.assertFalse({"units", "vmin", "vmax", "normalization"} & definition.keys())
+        cmap = get_cmap("diverge_asymmetry")
+        for control in controls:
+            expected = tuple(
+                int(control["hex"][index:index + 2], 16) / 255
+                for index in (1, 3, 5)
+            )
+            np.testing.assert_allclose(
+                cmap(control["position"])[:3], expected, atol=2e-5,
+            )
+        self.assertEqual(
+            self.registry_by_name["diverge_asymmetry"]["display_name"],
+            "Diverge-Asymmetry",
+        )
+
     def test_interpolation_endpoints_and_intermediate_rgb(self):
         controls = self.definition["control_colors"]
         first = tuple(int(controls[0]["hex"][i:i + 2], 16) / 255 for i in (1, 3, 5))
@@ -219,7 +291,8 @@ class ColormapTests(unittest.TestCase):
     def test_registration_is_explicit_and_repeatable(self):
         names = (
             "cmf.shade_rainbow", "cmf.white_rainbow", "cmf.pale_terrain",
-            "cmf.diverge_rainbow",
+            "cmf.diverge_rainbow", "cmf.diverge_spectral",
+            "cmf.diverge_asymmetry",
         )
         if any(name in colormaps for name in names):
             self.fail("Unexpected pre-existing CMF Matplotlib colormap")
@@ -238,11 +311,13 @@ class ColormapTests(unittest.TestCase):
             with mock.patch.object(gallery, "HERE", Path(directory)):
                 self.assertEqual(
                     gallery.plot_gallery(),
-                    ["shade_rainbow", "white_rainbow", "diverge_rainbow", "pale_terrain"],
+                    ["shade_rainbow", "white_rainbow", "diverge_rainbow",
+                     "diverge_spectral", "diverge_asymmetry", "pale_terrain"],
                 )
                 self.assertEqual(
                     gallery.presentation_order(),
-                    ["shade_rainbow", "white_rainbow", "diverge_rainbow", "pale_terrain"],
+                    ["shade_rainbow", "white_rainbow", "diverge_rainbow",
+                     "diverge_spectral", "diverge_asymmetry", "pale_terrain"],
                 )
             self.assertGreater((Path(directory) / "colormap_gallery.png").stat().st_size, 0)
 
@@ -275,6 +350,42 @@ class ColormapTests(unittest.TestCase):
             with mock.patch.object(gallery, "HERE", Path(directory)):
                 gallery.plot_diverge_rainbow_detail()
             self.assertGreater((Path(directory) / "diverge_rainbow_detailed.png").stat().st_size, 0)
+
+    def test_diverge_spectral_detailed_preview_generates_signed_flow_scale(self):
+        script = Path(__file__).resolve().parents[1] / "examples" / "plot_colormap_gallery.py"
+        spec = importlib.util.spec_from_file_location("cmf_colormap_spectral_detail", script)
+        gallery = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(gallery)
+        with tempfile.TemporaryDirectory() as directory:
+            with mock.patch.object(gallery, "HERE", Path(directory)):
+                gallery.plot_diverge_spectral_detail()
+            self.assertGreater((Path(directory) / "diverge_spectral_detailed.png").stat().st_size, 0)
+
+    def test_diverge_spectral_blue_comparison_preview_generates(self):
+        script = Path(__file__).resolve().parents[1] / "examples" / "plot_colormap_gallery.py"
+        spec = importlib.util.spec_from_file_location("cmf_colormap_spectral_blue_compare", script)
+        gallery = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(gallery)
+        with tempfile.TemporaryDirectory() as directory:
+            with mock.patch.object(gallery, "HERE", Path(directory)):
+                gallery.plot_diverge_spectral_blue_comparison()
+            self.assertGreater(
+                (Path(directory) / "diverge_spectral_blue_comparison.png").stat().st_size,
+                0,
+            )
+
+    def test_diverge_asymmetry_detailed_preview_generates(self):
+        script = Path(__file__).resolve().parents[1] / "examples" / "plot_colormap_gallery.py"
+        spec = importlib.util.spec_from_file_location("cmf_colormap_asymmetry_detail", script)
+        gallery = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(gallery)
+        with tempfile.TemporaryDirectory() as directory:
+            with mock.patch.object(gallery, "HERE", Path(directory)):
+                gallery.plot_diverge_asymmetry_detail()
+            self.assertGreater(
+                (Path(directory) / "diverge_asymmetry_detailed.png").stat().st_size,
+                0,
+            )
 
     def test_river_overlay_examples_are_connected_deterministic_linework(self):
         script = Path(__file__).resolve().parents[1] / "examples" / "plot_river_overlay_examples.py"

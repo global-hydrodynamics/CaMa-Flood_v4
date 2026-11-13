@@ -325,11 +325,10 @@ labels, hidden slots, extent, link counts and foreground encodings.
 
 ## p01-f03 — Vector River Map
 
-The two options show the main network at geographic unit-catchment outlets.
-f03a encodes source-cell upstream area; f03b adds mapped bifurcations and
-headwater catchment-centroid guides. Both use stored `nextxy` topology and
-`outlon`/`outlat` locations rather than estimating links from geographic
-proximity. Tutorial02 Figure 1c is the original implementation reference.
+The three panels show the main network at geographic unit-catchment outlets.
+They use stored `nextxy` topology and `outlon`/`outlat` locations rather than
+estimating links from geographic proximity. Tutorial02 Figure 1c is the
+original implementation reference.
 
 ![p01-f03 Vector River Map](figure/f03-vector_river_map.png)
 
@@ -339,6 +338,7 @@ Method identifier: `vector_river_map`.
 | --- | --- | --- | --- |
 | p01-f03a | Upstream Area | `upstream_area` | 99–109°E, 9–19°N |
 | p01-f03b | Extended Network | `extended_network` | 102–108°E, 9–15°N |
+| p01-f03c | Gray Subcol Background | `gray_subcol_background` | 92–110°E, 9–30°N |
 
 ### f03a — Upstream Area
 
@@ -355,6 +355,19 @@ The background uses `subcol-sample.bin`: category `0` is gray, positive
 display-color indices use the same lightened `tab10` colors as f01c, and
 `-9999` remains white. This categorical fill is visual context; river links
 and their area encoding are unchanged.
+
+### f03c — Gray Subcol Background
+
+This panel uses the standard `nextxy.nc` outlet-to-outlet links and the same
+four source-area line-width classes as f03a, over 92–110°E and 9–30°N. Links
+are drawn as straight, arrowless segments between exact outlet coordinates.
+Smaller source-cell areas are drawn first so larger main-channel links remain
+visible on top. `shade-rainbow` colors each segment by source-cell `uparea`
+using logarithmic normalization (area in km²), with an aligned colorbar. The
+`subcol-sample.bin` background uses discrete gray shades: `0` is medium gray,
+positive display indices use progressively darker gray, and `-9999` or other
+invalid values are white. These gray categories are display context, not a
+physical quantity or a unique basin identifier.
 
 ### f03b — Extended Network
 
@@ -399,10 +412,11 @@ observed flows.
 
 | Relative path | Variables and format | Use |
 | --- | --- | --- |
-| `map/mekong_15min/netcdf/nextxy_noedge.nc` | NetCDF `nextx`, `nexty` (`lat × lon`); one-based indices | Supplies every valid main-channel source-to-downstream-cell relationship. |
+| `map/mekong_15min/netcdf/nextxy_noedge.nc` | NetCDF `nextx`, `nexty` (`lat × lon`); one-based indices | Supplies main-channel links for f03a and f03b. |
+| `map/mekong_15min/netcdf/nextxy.nc` | NetCDF `nextx`, `nexty` (`lat × lon`); one-based indices | Supplies main-channel links for f03c. |
 | `map/mekong_15min/netcdf/lonlat.nc` | NetCDF `outlon`, `outlat` (`lat × lon`); degrees east/north | Gives outlet coordinates for main links, bifurcation endpoints, and headwater guide termini. |
 | `map/mekong_15min/netcdf/uparea.nc` | NetCDF `uparea` (`lat × lon`); m² | Provides main-channel source-cell area classes and identifies valid river cells. |
-| `map/mekong_15min/subcol-sample.bin` | Binary little-endian int32; one 80 × 120 Fortran-order record | Background for f03a: zero is gray, positive display indices are pastel-colored, and `-9999` is white. |
+| `map/mekong_15min/subcol-sample.bin` | Binary little-endian int32; one 80 × 120 Fortran-order record | Categorical background for f03a and f03c. f03a uses pastel display colors; f03c uses discrete grays. Zero is gray and `-9999` is white in both. |
 | `map/mekong_15min/netcdf/bsncol.nc` | NetCDF `bsncol` (`lat × lon`); categorical indices | Pale basin-color background for f03b; it is display context, not connectivity. |
 | `map/mekong_15min/netcdf/bifprm.nc` | NetCDF `ix`, `iy`, `jx`, `jy`, `width(layer, path)` | Defines bifurcation endpoints and channel width. Width is in metres; first-layer width distinguishes channel from overland paths. |
 | `map/mekong_15min/1min/1min.catmxy.bin` | Binary little-endian int16; two `1200 × 1800` planes (`catmx`, `catmy`) | Assigns each 1-minute pixel to a one-based coarse cell. `-999` and `-9999` sentinel indices are excluded from centroids. |
@@ -410,7 +424,7 @@ observed flows.
 | `map/mekong_15min/params.txt` | Text metadata; 80 × 120 grid at 0.25° | Checks the coarse grid geometry shared by the NetCDF products and catchment assignments. |
 
 All listed inputs are Git-tracked; no model output, station data, or map
-preparation is required. The figures reconstruct topology from stored
+preparation is required. The panels reconstruct topology from stored
 `nextxy` and `bifprm` links, not from geographic outlet proximity. The
 high-resolution `catmxy` allocation independently supplies the pixels used
 for headwater-centroid guides.
@@ -423,11 +437,11 @@ After the standard Python setup, run:
 ./visualization/river_map/f03-vector_river_map.sh
 ```
 
-Edit the input paths and the separate `A_*` / `B_*` extent settings in the
-Shell entry point as needed. Defaults preserve f03a at 99–109°E, 9–19°N and
-set f03b to 102–108°E, 9–15°N. `FIG_WIDTH` and `FIG_HEIGHT` set the complete
+Edit the input paths and the separate `A_*`, `B_*`, and `C_*` extent settings
+in the Shell entry point as needed. Defaults set f03a to 99–109°E, 9–19°N,
+f03b to 102–108°E, 9–15°N, and f03c to 92–110°E, 9–30°N. `FIG_WIDTH` and `FIG_HEIGHT` set the complete
 combined Figure size in inches (`0` selects automatic sizing); `DPI` controls
-PNG resolution. The script writes both panels and the combined Figure under
+PNG resolution. The script writes all three panels and the combined Figure under
 `visualization/river_map/figure/`. Gallery images are not changed.
 
 ## p01-f04 — River Map Catchment
@@ -480,7 +494,10 @@ align. The compact legend occupies a separate row just below the map; the
 ticks follow f01a/f02c, with labeled 1, 2, and 5 multiples formatted as
 decimal values. Main-channel, channel-bifurcation, and headwater-guide lines
 are slightly thicker than the initial f04 rendering while retaining their
-relative classes and colors.
+relative classes and colors. Edit `MAIN_WIDTHS` and `CHANNEL_WIDTHS` near the
+top of `f04-rivmap_catchment.sh` to adjust the four ascending width classes
+for main channels and channel bifurcations; values are in points and apply to
+both panels and their legend samples.
 
 For `p01-f04b` (`channel_pixel`), the same green area raster and network layers
 are used. The signed-int8 `1min.visual.bin` categories are overlaid only on
@@ -521,16 +538,20 @@ Method identifier: `hires_background`.
 
 | Panel | Option | Background data | Panel image |
 | --- | --- | --- | --- |
-| p01-f05a | `gray_elevtn` | `1min.elevtn.bin` (`elevtn`, m) | `f05a-hires_background-gray_elevtn.png` |
-| p01-f05b | `gray_slope` | `1min.elevtn.bin` (`elevtn`, m; derived) | `f05b-hires_background-gray_slope.png` |
-| p01-f05c | `gray_flddif` | `1min.flddif.bin` (`flddif`, m) | `f05c-hires_background-gray_flddif.png` |
-| p01-f05d | `terrain_elevtn` | `1min.elevtn.bin` (`elevtn`, m) | `f05d-hires_background-terrain_elevtn.png` |
-| p01-f05e | `terrain_slope` | `1min.elevtn.bin` (`elevtn`, m; derived) | `f05e-hires_background-terrain_slope.png` |
-| p01-f05f | `terrain_flddif` | `1min.flddif.bin` (`flddif`, m) | `f05f-hires_background-terrain_flddif.png` |
+| p01-f05a — Elevation (`elevtn`) | `gray_elevtn` | `1min.elevtn.bin` (`elevtn`, m) | `f05a-hires_background-gray_elevtn.png` |
+| p01-f05b — Slope (based on `elevtn`) | `gray_slope` | `1min.elevtn.bin` (`elevtn`, m; derived) | `f05b-hires_background-gray_slope.png` |
+| p01-f05c — Floodplain height (`flddif`) | `gray_flddif` | `1min.flddif.bin` (`flddif`, m) | `f05c-hires_background-gray_flddif.png` |
+| p01-f05d — Elevation (`elevtn`) | `terrain_elevtn` | `1min.elevtn.bin` (`elevtn`, m) | `f05d-hires_background-terrain_elevtn.png` |
+| p01-f05e — Slope (based on `elevtn`) | `terrain_slope` | `1min.elevtn.bin` (`elevtn`, m; derived) | `f05e-hires_background-terrain_slope.png` |
+| p01-f05f — Floodplain height (`flddif`) | `terrain_flddif` | `1min.flddif.bin` (`flddif`, m) | `f05f-hires_background-terrain_flddif.png` |
 
 ![p01-f05 High-resolution Background](figure/f05-hires_background.png)
 
 The combined figure is also included in the repository Gallery.
+
+Each panel title uses `p01-f05X High-resolution Background` on its first
+line; the second line shows the exact panel option name (`gray_*` or
+`terrain_*`) and its background variable.
 
 The combined Figure uses a 3-column × 2-row layout: panels a–c are on the
 first row and panels d–f are directly below them.
@@ -573,7 +594,7 @@ The `elevtn` and `flddif` inputs are little-endian float32, one Fortran-order
 record on the 1200 × 1800, 1-minute grid. The first row is northmost, matching
 the grid coordinates. `-9999` and non-finite values are masked. In f05c, a
 pixel missing from `flddif` but valid in `elevtn` is shown as 50% gray to mark
-land without a defined floodplain-difference value; pixels missing in both
+land without a defined floodplain-height value; pixels missing in both
 remain white.
 Each panel derives grayscale limits from the full map's 2nd and 98th
 percentiles, clips values to that range, and applies a square-root stretch to
@@ -592,7 +613,7 @@ for each background field.
 | Input | Role |
 | --- | --- |
 | `map/mekong_15min/1min/1min.elevtn.bin` | 1-minute elevation [m]; background for f05a, source for f05b, and land-validity mask for f05c. |
-| `map/mekong_15min/1min/1min.flddif.bin` | 1-minute floodplain elevation difference [m]; background for f05c. Missing `flddif` where `elevtn` is valid is filled with 50% gray. |
+| `map/mekong_15min/1min/1min.flddif.bin` | 1-minute floodplain height field [m] (`flddif`); background for f05c. Missing `flddif` where `elevtn` is valid is filled with 50% gray. |
 | `map/mekong_15min/1min/location.txt` | 1-minute grid bounds, dimensions, and resolution. |
 | `map/mekong_15min/1min/1min.catmxy.bin` | Coarse-cell assignments used to summarize headwater catchment pixel centroids. |
 | `map/mekong_15min/netcdf/uparea.nc` | Coarse-grid upstream area [m²] for link color and width. |

@@ -1,0 +1,16 @@
+{
+  "name": "diverge_spectral",
+  "version": "1.0.0",
+  "type": "diverging",
+  "interpolation": "linear_srgb",
+  "center_position": 0.5,
+  "description": "A custom Spectral-inspired diverging palette for signed river flow, with red-orange negative colors, a pale warm-yellow zero center, and green-blue positive colors.",
+  "control_colors": [
+    {"name": "Red (negative extreme)", "hex": "#C51B1D", "position": 0.0},
+    {"name": "Yellow-orange", "hex": "#E96F1F", "position": 0.22},
+    {"name": "Golden orange", "hex": "#F6B13A", "position": 0.43},
+    {"name": "Pale warm yellow (zero)", "hex": "#FFF9D8", "position": 0.5},
+    {"name": "Bright green", "hex": "#49D17D", "position": 0.7},
+    {"name": "Vivid cobalt blue (positive extreme)", "hex": "#005BFF", "position": 1.0}
+  ]
+}

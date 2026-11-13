@@ -30,12 +30,12 @@ read_catchment_mapping = _f03b.read_catchment_mapping
 
 
 PANEL = {
-    "gray_elevtn": ("a", "Gray Elevation", "gray", False),
-    "gray_slope": ("b", "Gray Slope", "gray", False),
-    "gray_flddif": ("c", "Gray Floodplain Difference", "gray", False),
-    "terrain_elevtn": ("d", "Terrain Elevation", "pale_terrain", True),
-    "terrain_slope": ("e", "Terrain Slope", "pale_terrain", True),
-    "terrain_flddif": ("f", "Terrain Floodplain Difference", "pale_terrain", True),
+    "gray_elevtn": ("a", "gray_elevtn", "Elevation (elevtn)", "gray", False),
+    "gray_slope": ("b", "gray_slope", "Slope (based on elevtn)", "gray", False),
+    "gray_flddif": ("c", "gray_flddif", "Floodplain height (flddif)", "gray", False),
+    "terrain_elevtn": ("d", "terrain_elevtn", "Elevation (elevtn)", "pale_terrain", True),
+    "terrain_slope": ("e", "terrain_slope", "Slope (based on elevtn)", "pale_terrain", True),
+    "terrain_flddif": ("f", "terrain_flddif", "Floodplain height (flddif)", "pale_terrain", True),
 }
 EXTENT = (99.0, 109.0, 9.0, 19.0)
 AREA_WIDTHS = np.linspace(0.012, 0.036, 6)
@@ -233,7 +233,7 @@ def add_network_legend(ax, black_network):
 
 def render(args):
     option = args.option
-    suffix, description, background_palette, black_network = PANEL[option]
+    suffix, background_option, description, background_palette, black_network = PANEL[option]
     geometry = read_geometry(args.params)
     high_grid = read_high_resolution_grid(args.location, geometry)
     highres = read_float_raster(args.background, high_grid[0], high_grid[1])
@@ -263,7 +263,8 @@ def render(args):
 
     fig, ax, cax = create_network_axes(
         geometry, args,
-        f"p01-f05{suffix} High-resolution Background:\n{description}",
+        f"p01-f05{suffix} High-resolution Background\n"
+        f"{background_option}: {description}",
         show_colorbar=not black_network, reserve_colorbar=True, right_margin=0.55,
     )
     ax.set_xlabel("Longitude")
@@ -330,8 +331,8 @@ def render(args):
         (outlat >= -90) & (outlat <= 90)
     )
     outlet_points = np.unique(np.column_stack((outlon[valid_outlets], outlat[valid_outlets])), axis=0)
-    ax.scatter(outlet_points[:, 0], outlet_points[:, 1], s=5, facecolors="white",
-               edgecolors="black", linewidths=0.35, zorder=7)
+    ax.scatter(outlet_points[:, 0], outlet_points[:, 1], s=5, facecolors="none",
+               edgecolors="0.5", linewidths=0.35, zorder=7)
 
     if not black_network:
         sm = plt.cm.ScalarMappable(norm=norm, cmap=area_cmap)

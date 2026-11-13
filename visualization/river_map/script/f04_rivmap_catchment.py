@@ -26,11 +26,22 @@ from f04_layout import add_f04_legend, create_f04_layout, format_f04_colorbar
 from river_network_common import read_river_network
 
 
-MAIN_COLORS = ("#7FA6D6", "#4F80BF", "#285A9B", "#103A70")
-MAIN_WIDTHS = (0.8, 1.15, 1.65, 2.2)
-CHANNEL_COLORS = ("#F4A582", "#D6604D", "#B2182B", "#67001F")
-CHANNEL_WIDTHS = (0.7, 0.95, 1.2, 1.5)
+MAIN_COLORS = ("#5E88BE", "#4F80BF", "#285A9B", "#103A70")
+CHANNEL_COLORS = ("#E38768", "#D6604D", "#B2182B", "#67001F")
 EXTENT = (104.5, 107.0, 9.5, 12.0)
+
+
+def parse_line_widths(value: str) -> tuple[float, float, float, float]:
+    """Parse four positive line widths supplied by the Shell settings."""
+    try:
+        widths = tuple(float(item) for item in value.split(","))
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("line widths must be comma-separated numbers") from exc
+    if len(widths) != 4 or not np.all(np.isfinite(widths)) or min(widths) <= 0:
+        raise argparse.ArgumentTypeError("provide exactly four positive finite line widths")
+    if tuple(sorted(widths)) != widths:
+        raise argparse.ArgumentTypeError("line widths must increase from smallest to largest class")
+    return widths
 
 
 def read_catchment_mapping(path: Path, location_path: Path, geometry,
@@ -297,6 +308,10 @@ def main(default_option: str) -> None:
     parser.add_argument("--catmxy", type=Path, required=True)
     parser.add_argument("--location", type=Path, required=True)
     parser.add_argument("--visual", type=Path)
+    parser.add_argument("--main-widths", type=parse_line_widths, required=True,
+                        help="Four ascending main-channel widths in points")
+    parser.add_argument("--channel-widths", type=parse_line_widths, required=True,
+                        help="Four ascending channel-bifurcation widths in points")
     parser.add_argument("--option", choices=("outlet_uparea", "channel_pixel"),
                         default=default_option)
     add_map_arguments(parser)
@@ -425,7 +440,7 @@ def main(default_option: str) -> None:
     main_classes = np.digitize(
         np.log10(main_area), np.quantile(np.log10(main_area), [0.25, 0.5, 0.75]))
     main_arrow_count = 0
-    for group, (color, width) in enumerate(zip(MAIN_COLORS, MAIN_WIDTHS)):
+    for group, (color, width) in enumerate(zip(MAIN_COLORS, args.main_widths)):
         group_mask = main_classes == group
         group_segments = main_segments[group_mask]
         if not len(group_segments):
@@ -450,7 +465,7 @@ def main(default_option: str) -> None:
     bif_classes = np.digitize(
         np.log10(bif_width), np.quantile(np.log10(bif_width), [0.25, 0.5, 0.75]))
     channel_arrow_count = 0
-    for group, (color, width) in enumerate(zip(CHANNEL_COLORS, CHANNEL_WIDTHS)):
+    for group, (color, width) in enumerate(zip(CHANNEL_COLORS, args.channel_widths)):
         group_segments = bif_segments[bif_classes == group]
         if not len(group_segments):
             continue
@@ -478,9 +493,9 @@ def main(default_option: str) -> None:
                label="Unit-catchment boundary"),
         Patch(facecolor="#D9D9D9", edgecolor="none",
               label="Unassigned land pixel (catmxy = -999)"),
-        Line2D([], [], color=MAIN_COLORS[2], linewidth=1.7,
+        Line2D([], [], color=MAIN_COLORS[2], linewidth=args.main_widths[2],
                label="Main channel (upstream area at unit-catchment)"),
-        Line2D([], [], color=CHANNEL_COLORS[2], linewidth=1.3,
+        Line2D([], [], color=CHANNEL_COLORS[2], linewidth=args.channel_widths[2],
                label="Channel bifurcation (path-width colors)"),
         Line2D([], [], color="#888888", linewidth=0.9, alpha=0.65,
                label="Headwater catchment guide"),

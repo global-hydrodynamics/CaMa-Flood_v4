@@ -69,6 +69,15 @@ practices that can evolve as the Gallery grows.
 - Verify physical map-area bounds, aspect ratio, geographic extent, label
   clearance, and the final assembled Figure.
 
+### River-network line draw order
+
+- In `line_river_map` and `vector_river_map` figures where main-channel links
+  overlap and line width or color represents source-cell upstream area, draw
+  smaller-area links first and larger-area links afterward. This keeps broad
+  main channels visible above tributary links. Preserve the specified link
+  geometry, categories, and visual encoding; draw order must not filter or
+  alter network connections.
+
 ### Colorbar alignment
 
 - For a colorbar associated with a single map or plot, its length must match
@@ -124,6 +133,13 @@ colorbar-related layout difference.
   project root, editable input and display settings there, and Python or other
   plotting implementation under `script/`. This makes the run configuration
   easy to find while keeping plotting logic separate.
+- Put user-adjustable visualization parameters in the user-facing Shell
+  script whenever practical. Examples include color limits and ticks, colors,
+  line widths, dates or periods, map extents, and displayed variables or
+  features. Pass these settings to Python through command-line arguments or
+  environment variables instead of requiring users to edit plotting code.
+  Keep Python responsible for drawing and interpretation logic, and avoid
+  maintaining the same setting independently in both Shell and Python.
 - Save the default output as PNG under the owning project's `figure/`
   directory. Git-track all project-local figure PNGs, including individual
   panels and assembled figures. Keep generated files with the visualization

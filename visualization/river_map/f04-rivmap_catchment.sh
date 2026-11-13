@@ -19,6 +19,11 @@ CATMXY_FILE="$MAP_DIR/1min/1min.catmxy.bin"      # 1-minute pixel to coarse-cell
 VISUAL_FILE="$MAP_DIR/1min/1min.visual.bin"      # Signed int8 channel-pixel categories.
 LOCATION_FILE="$MAP_DIR/1min/location.txt"       # 1-minute grid geometry.
 PARAMS_FILE="$MAP_DIR/params.txt"                # Coarse grid dimensions and bounds.
+
+# User settings: line widths [points], ordered from smallest to largest class.
+MAIN_WIDTHS="1.5,2.0,2.5,3.0"       # Main-channel upstream-area classes.
+CHANNEL_WIDTHS="1.2,1.6,2.0,2.4" # Channel-bifurcation path-width classes.
+
 WEST=104.5
 EAST=107
 SOUTH=9.5
@@ -53,6 +58,7 @@ printf '\n[STEP 1/3] Draw f04a upstream area at unit-catchment.\n'
     --lonlat "$LONLAT_FILE" --bifprm "$BIFPRM_FILE" \
     --catmxy "$CATMXY_FILE" --location "$LOCATION_FILE" \
     --params "$PARAMS_FILE" \
+    --main-widths "$MAIN_WIDTHS" --channel-widths "$CHANNEL_WIDTHS" \
     --west "$WEST" --east "$EAST" --south "$SOUTH" --north "$NORTH" \
     --figure-width "$PANEL_WIDTH" --figure-height "$PANEL_HEIGHT" \
     --dpi "$DPI" --output "$PANEL_A"
@@ -66,6 +72,7 @@ printf '\n[STEP 2/3] Draw f04b channel-pixel classes.\n'
     --lonlat "$LONLAT_FILE" --bifprm "$BIFPRM_FILE" \
     --catmxy "$CATMXY_FILE" --location "$LOCATION_FILE" \
     --params "$PARAMS_FILE" \
+    --main-widths "$MAIN_WIDTHS" --channel-widths "$CHANNEL_WIDTHS" \
     --west "$WEST" --east "$EAST" --south "$SOUTH" --north "$NORTH" \
     --figure-width "$PANEL_WIDTH" --figure-height "$PANEL_HEIGHT" \
     --dpi "$DPI" --output "$PANEL_B"

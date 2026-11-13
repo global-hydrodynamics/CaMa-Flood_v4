@@ -48,6 +48,7 @@ TUTORIAL_DIR = Path(__file__).resolve().parent
 ROOT = Path(__file__).resolve().parents[2]
 RUN_DIR = TUTORIAL_DIR / "out"
 FIGURE_DIR = TUTORIAL_DIR / "figure"
+ANALYSIS_FILE = TUTORIAL_DIR / "out" / "analysis" / "v04_annual_max_discharge.nc"
 YEAR = 2001
 EXPERIMENTS = {
     "mek_default": "Default",
@@ -196,6 +197,135 @@ def colored_segments(ax, segments, values, cmap, norm, zero_color,
             segments[positive], colors=cmap(norm(values[positive])),
             linewidths=linewidth, linestyles=linestyle, zorder=zorder))
     return values[positive]
+
+
+def write_analysis_data(lon, lat, annual_grids, main_segments, main_source_cells,
+                        main_source_area, main_maxima, differences, bif_segments,
+                        path_ids, path_maximum, channel_paths, time_count):
+    """Persist derived discharge fields and network values used by Figure 4."""
+    ANALYSIS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    experiments = list(EXPERIMENTS)
+    pairs = list(DIFFERENCE_PAIRS)
+    with Dataset(ANALYSIS_FILE, "w", format="NETCDF4") as analysis:
+        analysis.createDimension("experiment", len(experiments))
+        analysis.createDimension("difference_pair", len(pairs))
+        analysis.createDimension("main_link", len(main_segments))
+        analysis.createDimension("bifurcation_path", len(path_ids))
+        analysis.createDimension("endpoint", 2)
+        analysis.createDimension("lon", len(lon))
+        analysis.createDimension("lat", len(lat))
+
+        analysis.createVariable("lon", "f8", ("lon",))[:] = lon
+        analysis.createVariable("lat", "f8", ("lat",))[:] = lat
+        experiment_var = analysis.createVariable("experiment", str, ("experiment",))
+        for index, name in enumerate(experiments):
+            experiment_var[index] = name
+        pair_var = analysis.createVariable("difference_pair", str, ("difference_pair",))
+        difference_left = analysis.createVariable(
+            "difference_left", str, ("difference_pair",)
+        )
+        difference_right = analysis.createVariable(
+            "difference_right", str, ("difference_pair",)
+        )
+        for index, (left, right) in enumerate(pairs):
+            pair_var[index] = f"{left}_minus_{right}"
+            difference_left[index] = left
+            difference_right[index] = right
+
+        grid_var = analysis.createVariable(
+            "outflw_annual_max_abs", "f4", ("experiment", "lat", "lon"),
+            fill_value=-9999.0, zlib=True,
+        )
+        grid_var.units = "m3/s"
+        grid_var.long_name = "annual maximum absolute daily mean discharge"
+        grid_var.cell_methods = "time: maximum (abs(outflw)); outflw: mean"
+        grid_var[:] = np.stack([
+            np.nan_to_num(annual_grids[name], nan=-9999.0) for name in experiments
+        ]).astype(np.float32)
+
+        analysis.createVariable("main_link_endpoint", "i1", ("endpoint",))[:] = [1, 2]
+        analysis.createVariable("main_source_map_x", "i4", ("main_link",))[:] = \
+            main_source_cells[:, 0]
+        analysis.createVariable("main_source_map_y", "i4", ("main_link",))[:] = \
+            main_source_cells[:, 1]
+        source_area_var = analysis.createVariable(
+            "main_source_uparea", "f8", ("main_link",)
+        )
+        source_area_var[:] = main_source_area
+        source_area_var.units = "m2"
+        source_area_var.long_name = "upstream drainage area at the main-link source cell"
+        main_lon = analysis.createVariable(
+            "main_link_longitude", "f8", ("main_link", "endpoint")
+        )
+        main_lat = analysis.createVariable(
+            "main_link_latitude", "f8", ("main_link", "endpoint")
+        )
+        main_lon.units = "degrees_east"
+        main_lat.units = "degrees_north"
+        main_lon[:] = main_segments[:, :, 0]
+        main_lat[:] = main_segments[:, :, 1]
+        main_flow = analysis.createVariable(
+            "main_outflw_annual_max_abs", "f4", ("experiment", "main_link"),
+            fill_value=-9999.0,
+        )
+        main_flow.units = "m3/s"
+        main_flow.long_name = "source-cell annual maximum absolute daily mean discharge"
+        main_flow[:] = np.stack([
+            np.nan_to_num(main_maxima[name], nan=-9999.0) for name in experiments
+        ]).astype(np.float32)
+        difference_var = analysis.createVariable(
+            "main_outflw_annual_max_abs_difference", "f4",
+            ("difference_pair", "main_link"), fill_value=-9999.0,
+        )
+        difference_var.units = "m3/s"
+        difference_var.long_name = (
+            "difference between adjacent experiments in annual maximum absolute discharge"
+        )
+        difference_var[:] = np.stack([
+            np.nan_to_num(differences[pair], nan=-9999.0) for pair in pairs
+        ]).astype(np.float32)
+
+        analysis.createVariable("pth_id", "i4", ("bifurcation_path",))[:] = path_ids
+        analysis.createVariable("is_channel_bifurcation", "i1", ("bifurcation_path",))[:] = \
+            channel_paths.astype(np.int8)
+        bif_lon = analysis.createVariable(
+            "bifurcation_longitude", "f8", ("bifurcation_path", "endpoint")
+        )
+        bif_lat = analysis.createVariable(
+            "bifurcation_latitude", "f8", ("bifurcation_path", "endpoint")
+        )
+        bif_lon.units = "degrees_east"
+        bif_lat.units = "degrees_north"
+        bif_lon[:] = bif_segments[:, :, 0]
+        bif_lat[:] = bif_segments[:, :, 1]
+        bif_flow = analysis.createVariable(
+            "pthflw_annual_max_abs", "f4", ("bifurcation_path",),
+            fill_value=-9999.0,
+        )
+        bif_flow.units = "m3/s"
+        bif_flow.long_name = "channel-layer annual maximum absolute daily mean path discharge"
+        bif_flow[:] = np.where(channel_paths, path_maximum, -9999.0).astype(np.float32)
+
+        analysis.title = "Tutorial 02 Figure 4 annual discharge analysis data"
+        analysis.time_period = f"{YEAR}-01-01 through {YEAR}-12-31"
+        analysis.daily_record_count = time_count
+        analysis.source_outputs = ", ".join(
+            f"out/{experiment}/o_outflw{YEAR}.nc" for experiment in experiments
+        ) + f", out/mek_default/o_pthflw{YEAR}.nc"
+        analysis.map_sources = (
+            "map/mekong_15min/netcdf/uparea.nc; "
+            "map/mekong_15min/netcdf/nextxy_noedge.nc; "
+            "map/mekong_15min/netcdf/lonlat.nc; "
+            "map/mekong_15min/netcdf/bifprm.nc"
+        )
+        analysis.context_background_source = (
+            "map/mekong_15min/1min_nc/1min.elevtn.nc; not copied into this analysis file"
+        )
+        analysis.processing = (
+            "Annual grid and path statistics are max_t(abs(daily mean discharge)); "
+            "main-link values are sampled from each source cell; difference values "
+            "are computed between adjacent experiments."
+        )
 
 
 def read_elevation_background(path, extent):
@@ -348,6 +478,26 @@ def main():
                          for values in differences.values())
     if not np.isfinite(difference_max) or difference_max <= 0:
         raise ValueError("No nonzero main-channel differences from Default are available")
+
+    ordered_main_maxima = {
+        experiment: values[main_segment_order]
+        for experiment, values in main_maxima.items()
+    }
+    ordered_differences = {
+        pair: values[main_segment_order]
+        for pair, values in differences.items()
+    }
+    source_cells = np.column_stack((
+        source_cols[main_segment_order] + 1,
+        source_rows[main_segment_order] + 1,
+    ))
+    source_area = uparea[source_rows, source_cols][main_segment_order]
+    write_analysis_data(
+        lon, lat, annual_grids, main_segments_by_area, source_cells, source_area,
+        ordered_main_maxima, ordered_differences, bif_segments, path_ids,
+        path_maximum, channel_paths, len(reference_times),
+    )
+
     # A 256-entry copy keeps BoundaryNorm's integer color indices in range.
     difference_cmap = get_cmap("diverge_rainbow").resampled(256)
     difference_cmap.set_bad("white")

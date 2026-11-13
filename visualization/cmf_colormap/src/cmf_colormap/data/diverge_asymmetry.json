@@ -1,0 +1,18 @@
+{
+  "name": "diverge_asymmetry",
+  "version": "1.0.0",
+  "type": "diverging",
+  "interpolation": "linear_srgb",
+  "center_position": 0.5,
+  "description": "A diverging palette for signed flow with muted red-brown through orange negative colors, pale warm yellow at zero, and bright green through cobalt-blue violet positive colors.",
+  "control_colors": [
+    {"name": "Muted red-brown (negative extreme)", "hex": "#9F5A45", "position": 0.00},
+    {"name": "Red-orange", "hex": "#E04B1F", "position": 0.14},
+    {"name": "Orange", "hex": "#E96F1F", "position": 0.28},
+    {"name": "Golden orange", "hex": "#F6B13A", "position": 0.40},
+    {"name": "Pale warm yellow (zero)", "hex": "#FFF9D8", "position": 0.50},
+    {"name": "Bright green", "hex": "#49D17D", "position": 0.67},
+    {"name": "Vivid blue", "hex": "#005BFF", "position": 0.84},
+    {"name": "Blue-violet (positive extreme)", "hex": "#7040FF", "position": 1.00}
+  ]
+}

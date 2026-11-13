@@ -14,7 +14,7 @@ from netCDF4 import Dataset
 from river_map_common import create_map_axes, read_geometry, read_map_raster, save_panel
 
 
-AREA_COLORS = ("#7FA6D6", "#4F80BF", "#285A9B", "#103A70")
+AREA_COLORS = ("#5E88BE", "#4F80BF", "#285A9B", "#103A70")
 AREA_WIDTHS = (0.014, 0.018, 0.024, 0.032)
 
 

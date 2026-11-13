@@ -52,7 +52,7 @@ printf '\n[STEP 2/7] Draw the gray maximum-neighbor elevation-difference panel.\
     --figure-width "$PANEL_WIDTH" --figure-height "$PANEL_HEIGHT" \
     --dpi "$DPI" --output "$FIGURE_DIR/f05b-hires_background-gray_slope.png"
 
-printf '\n[STEP 3/7] Draw the gray floodplain-difference panel.\n'
+printf '\n[STEP 3/7] Draw the gray floodplain-height panel.\n'
 "$PYTHON" "$SCRIPT_DIR/script/f05c-hires_background-gray_flddif.py" \
     --background "$FLOOD_DIFFERENCE_FILE" --elevtn "$ELEVATION_FILE" \
     --uparea "$UPAREA_FILE" \
@@ -77,7 +77,7 @@ printf '\n[STEP 5/7] Draw the terrain-palette slope panel with black river lines
     --figure-width "$PANEL_WIDTH" --figure-height "$PANEL_HEIGHT" \
     --dpi "$DPI" --output "$FIGURE_DIR/f05e-hires_background-terrain_slope.png"
 
-printf '\n[STEP 6/7] Draw the terrain-palette floodplain-difference panel.\n'
+printf '\n[STEP 6/7] Draw the terrain-palette floodplain-height panel.\n'
 "$PYTHON" "$SCRIPT_DIR/script/f05f-hires_background-terrain_flddif.py" \
     --background "$FLOOD_DIFFERENCE_FILE" --elevtn "$ELEVATION_FILE" \
     --uparea "$UPAREA_FILE" --nextxy "$NEXTXY_FILE" \

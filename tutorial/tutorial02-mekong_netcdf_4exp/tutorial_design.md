@@ -214,12 +214,19 @@ The two discharge variables use daily time means and have matching 365-record co
 The visualization workflow is numbered in execution order. Run
 `v00-visualize_all.sh` to generate the following figures:
 
-| Step | Script | Figure outputs |
-|---|---|---|
-| v01 Network | `v01-network_maps.py` | `figure/f01a-upstream_area.png`, `figure/f01b-grid_network.png`, `figure/f01c-outlet_bifurcation.png`, `figure/f01d-delta_catchments.png` |
-| v02 Spin-up | `v02-spinup_comparison.py` | `figure/f02-spinup_comparison.png` |
-| v03 Discharge | `v03-discharge_comparison.py` | `figure/f03-discharge_comparison.png` |
-| v04 Annual maximum | `v04-annual_max_discharge.py` | `figure/f04-annual_max_discharge.png` |
+| Step | Script | Figure outputs | Processed data outputs |
+|---|---|---|---|
+| v01 Network | `v01-network_maps.py` | `figure/f01a-upstream_area.png`, `figure/f01b-grid_network.png`, `figure/f01c-outlet_bifurcation.png`, `figure/f01d-delta_catchments.png` | None; panels draw map products directly. |
+| v02 Spin-up | `v02-spinup_comparison.py` | `figure/f02-spinup_comparison.png` | `out/analysis/v02_spinup_station_discharge.nc` |
+| v03 Discharge | `v03-discharge_comparison.py` | `figure/f03-discharge_comparison.png` | `out/analysis/v03_station_discharge.nc` |
+| v04 Annual maximum | `v04-annual_max_discharge.py` | `figure/f04-annual_max_discharge.png` | `out/analysis/v04_annual_max_discharge.nc` |
+
+The analysis NetCDF files preserve the derived values directly used by Figures
+2–4, along with the source outputs and grid/station metadata. Context-only
+background data such as the elevation raster used by Figure 4 are not copied
+into the analysis files. Figure 4 requires Default's
+`out/mek_default/o_pthflw2001.nc`; its analysis file is written only when that
+input is available.
 
 The network script currently emits four related map panels, so all are retained
 under the `f01a`–`f01d` subfigure convention. The other steps use `f02`, `f03`, and `f04` prefixes. Figure 3 is the six-panel discharge comparison.

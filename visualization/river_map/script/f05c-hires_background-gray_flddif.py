@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw p01-f05c with a gray floodplain elevation-difference background."""
+"""Draw p01-f05c with a gray floodplain-height background."""
 
 import sys
 

@@ -17,7 +17,7 @@ from river_map_common import create_map_axes, read_geometry, read_map_raster, sa
 from river_network_common import read_river_network
 
 
-AREA_COLORS = ("#7FA6D6", "#4F80BF", "#285A9B", "#103A70")
+AREA_COLORS = ("#5E88BE", "#4F80BF", "#285A9B", "#103A70")
 AREA_WIDTHS = (0.014, 0.018, 0.024, 0.032)
 BIFURCATION_COLORS = ("#F4A582", "#D6604D", "#B2182B", "#FF0000")
 OVERLAND_COLOR = "#76B77B"
