@@ -29,11 +29,13 @@ Method identifier: `raster_river_map`.
 | p01-f01a | Upstream Area | `upstream_area` | `uparea` |
 | p01-f01b | Basin | `basin` | `basin` |
 | p01-f01c | Basin Color | `basin_color` | `bsncol` |
+| p01-f01d | Subbasin Color | `subbasin_color` | `subcol` |
 
 ### Purpose and interpretation
 
-This three-panel Figure shows upstream drainage area, the original basin ID
-field, and precomputed basin display colors on the same Mekong 15-minute map.
+This four-panel Figure shows upstream drainage area, the original basin ID
+field, basin display colors, and subbasin display colors on the same Mekong
+15-minute map.
 Upstream area describes contributing land area, not discharge. **Basin IDs are
 categorical identifiers**, not continuous physical quantities: numeric
 separation and color ordering have no physical interpretation. The Basin panel
@@ -46,6 +48,22 @@ visualization. Its soft opaque palette is suitable as a background for future
 map overlays. Different basins can share a display index; the color map cannot
 recover their original IDs. The current sample has 414 basin IDs and five
 used display-color indices.
+
+The Subbasin Color panel compares `subcol` against the original basin coloring
+in `bsncol`. Here a subbasin is a segment of the directed river network produced
+by the upstream-area-increase analysis, not necessarily an independent whole
+river basin. `subbsn` stores segment IDs; `subcol` stores reusable display-color
+indices assigned to those segments. Neither `bsncol` nor `subcol` is a physical
+quantity or a unique identifier. These are optional analysis/visualization
+products, not required model simulation inputs.
+
+In f01d, **the main fill remains `subcol`**. Thin black lines mark shared
+cell edges where two adjacent positive original `basin` IDs differ, showing
+higher-level basin boundaries independently of the display colors. These are
+categorical grid boundaries, not interpolated numerical contours. Gray cells
+are excluded/missing in `nextxy_noedge`; this is a network-validity mask, not a
+land/sea classification. Valid negative terminal codes (`-9` and `-10`) remain
+valid network cells. A small key identifies the boundary and mask overlays.
 
 CaMa-Flood uses Flexible Downstream connections beyond immediate grid
 neighbors. Apparent gaps in an upstream-area raster do not necessarily mean
@@ -62,15 +80,35 @@ observation-station data are required.
 | f01a | `map/mekong_15min/netcdf/uparea.nc`: `uparea(lat, lon)`, m² | Convert to km²; mask missing/non-finite/non-positive values; retain `YlGnBu` with logarithmic normalization over all valid map cells. |
 | f01b | `map/mekong_15min/netcdf/basin.nc`: `basin(lat, lon)`, unitless | Display original positive integer IDs with one discrete bin per original integer value. Repeat the qualitative `tab20` palette across IDs; no conversion to `bsncol`. A display-only pseudo-log categorical legend expands IDs 1–20 and labels representative higher IDs. |
 | f01c | `map/mekong_15min/netcdf/bsncol.nc`: `bsncol(lat, lon)`, unitless | Display the precomputed indices directly with discrete bins for 1–10. Mix the base `tab10` RGB colors with 60% opaque white to obtain distinguishable pastel colors; only used indices are labeled. |
+| f01d | `map/mekong_15min/subcol-30000.bin`: `subcol`, unitless | Read the prepared little-endian int32 raster directly; use the same `tab10` palette and 60% opaque white mix as f01c. Discrete categories only, nearest-neighbor rendering, no log normalization; only present display indices appear in the colorbar. Overlay original basin-ID boundaries in black and the `nextxy_noedge` mask in neutral gray. |
 
-All three Git-tracked inputs share an 80 × 120 grid at 0.25°. Coordinates are
-cell centers, longitude increases eastward, latitude decreases southward,
-and the missing value is `-9999`. `params.txt` checks coordinates and map
-geometry. Missing cells stay white; valid basin IDs are retained exactly.
+All main and overlay rasters are Git-tracked and share an 80 × 120 grid at
+0.25°. Coordinates are cell centers, longitude increases eastward, latitude
+decreases southward, and the missing value is `-9999`. NetCDF coordinates are
+checked against `params.txt`; binary geometry comes directly from that file.
+Unassigned main-fill cells are white, except where the explicit gray no-edge
+mask overlays them in f01d. Valid basin IDs are retained exactly.
 Repeated raw-ID colors in f01b are a display choice, not adjacency-aware basin
 coloring or unique identifiers. Use the numeric raster to identify a basin.
 In f01c, neighboring regions with different display indices retain different
 colors after lightening; the plot does not recalculate boundaries or indices.
+
+The f01d binary has exactly one 38,400-byte record: 80 × 120 little-endian
+int32 values in Fortran array order, with x varying fastest. Its first row is
+the northern row, matching the existing map orientation. `-9999` and any
+unassigned zero cells are white in the main fill; the no-edge overlay takes
+precedence and shows excluded cells in gray. The sample contains display indices 2–6;
+non-sentinel values outside the registered 1–10 range are rejected. The paired
+`subbsn-30000.bin` has 64 positive segment IDs, plus zero for unassigned network
+cells and `-9999` outside the network. Shared colors do not identify a segment;
+use `subbsn` for identity. Plotting reads `subcol`, geometry, the original `netcdf/basin.nc` for boundaries,
+and `netcdf/nextxy_noedge.nc` for the gray mask. It never recalculates segmentation
+or converts the binary to NetCDF. A cell is gray when either downstream-index
+component is missing/non-finite; finite terminal codes are not masked. The
+no-edge product excludes boundary-affected river networks as prepared by
+[`region_cut_domain.F90`](../../map/tools/code/region_cut_domain.F90). Black
+boundaries use basin IDs rather than `bsncol` or `subcol`, whose repeated colors
+cannot uniquely identify basin units.
 
 The f01b legend uses **display-only pseudo-log categorical spacing**. IDs 1–20
 each occupy a full slot with an individual label. Above 20, intervals ending
@@ -101,6 +139,24 @@ using [`convert_map_binary_to_netcdf.py`](../../map/tools/code/convert_map_binar
 The three NetCDF inputs are already tracked, so plotting requires neither
 conversion nor map generation.
 
+### Subbasin preparation and threshold meaning
+
+The reusable [s06 subbasin workflow](../../map/tools/script_params/s06-subbasin.sh)
+calls [`analysis_subbasin.F90`](../../map/tools/code/analysis_subbasin.F90).
+The [Mekong example](../../map/mekong_15min/script_params/s06-subbasin.sh) uses
+`AREA_THRESHOLD_KM2=30000` and names the outputs `subbsn-30000.bin` and
+`subcol-30000.bin`. A qualifying link is cut when the current cell's upstream
+area exceeds 30,000 km² **and** its downstream cell's upstream area exceeds the
+current area by more than 30,000 km². This is an upstream-area-increment
+segmentation threshold, not a universal minimum subbasin size: the output
+segments are not guaranteed to have at least 30,000 km² each. See the
+[river-network analysis documentation](../../map/tools/script_params/README.md#river-network-analysis)
+for the workflow and full algorithm references rather than treating display
+colors as physical basin attributes.
+
+The prepared binary is already distributed with the Git-tracked Mekong sample.
+Users do not need to run this generation workflow merely to make the Figure.
+
 ### Settings and execution
 
 Run `./visualization/river_map/f01-raster_river_map.sh` after the standard
@@ -109,23 +165,30 @@ Python setup. It generates these tracked project assets:
 - `figure/f01a-raster_river_map-upstream_area.png`
 - `figure/f01b-raster_river_map-basin.png`
 - `figure/f01c-raster_river_map-basin_color.png`
+- `figure/f01d-raster_river_map-subbasin_color.png`
 - `figure/f01-raster_river_map.png`
 
-Defaults are a horizontal three-panel arrangement, 6-inch total panel height,
-200 DPI, and maximum assembled dimensions of 12 × 8 inches. The common extent
-remains 90–110°E, 5–35°N, with the existing equal-degree raster aspect.
-The Shell settings expose input files, palettes, white mixing, spacing and
-size limits. Titles wrap between method and option to stay readable.
+Defaults are a **2 × 2 grid**, `FIG_HEIGHT=8` inches, automatic `FIG_WIDTH=0`,
+and 200 DPI. The complete Figure includes gaps and margins; the wrapper derives
+equal panel cells before rendering. Set either physical dimension to zero for
+automatic sizing, or specify both to fit the complete Figure in a fixed box.
+`GAP`, `MARGIN`, layout and columns remain editable. The common extent stays
+90–110°E, 5–35°N with the existing equal-degree raster aspect. Existing f01a–c
+scientific calculations, palettes and titles are unchanged. The grid changes
+their allocated physical panel size, not their scientific styling.
 
-All panels reuse the verified explicit map/colorbar layout from f02 through
-`script/river_network_layout.py`, with identical reserved colorbar space and
-complete canvases. Each f01 panel has a real colorbar; none reduces map height
-or triggers independent tight-layout/cropping. Colorbar ends align with map
-axes. The unchanged combiner proportionally fits the full horizontal Figure
-to its size limits. Generation does not update the Gallery.
+`SUBCOL_FILE`, `SUBCOL_CMAP` and `SUBCOL_WHITE_MIX` control the new panel;
+defaults are the prepared sample, `tab10` and `0.60`, matching f01c. `BASIN_FILE`
+also supplies the boundary IDs; `NEXTXY_NOEDGE_FILE` supplies the exclusion mask. All four
+panels reuse `script/river_network_layout.py`, reserving identical map and
+colorbar rectangles. Colorbars align with map height. Full canvases are saved
+without tight cropping, then the shared combiner assembles the Figure without
+resizing its content. The published Gallery remains a separately approved
+snapshot; this four-panel development update does not replace it.
 
 Run `python visualization/river_map/script/test_raster_river_map.py` to check
-raw IDs, data masks, pastel distinguishability, labels and common map geometry.
+raw IDs, binary orientation, masks, matching pastel palettes, labels and common
+geometry under legacy limits and the physical sizing modes.
 
 ## p01-f02 — Line River Map
 

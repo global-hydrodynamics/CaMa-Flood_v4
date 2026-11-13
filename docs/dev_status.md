@@ -9,6 +9,21 @@ Base snapshot: `origin/master` at `19e2c1a`, 2026-11-06. This branch-local propo
 
 ## Registered active projects
 
+### Subbasin Color and basin/network context (2026-11-13)
+
+The maintainer assigned this bounded addition to `manual-automation` and
+requested commit/push on completion. f01d reads the prepared Mekong
+`subcol-30000.bin` directly with the same pastel palette as f01c; f01 defaults
+to a four-panel 2x2 grid using the existing physical sizing/layout helpers.
+The follow-up adds thin black original-basin-ID boundaries and a gray
+`nextxy_noedge` missing-cell overlay, retaining finite terminal codes.
+README/catalog describe display indices versus IDs and the upstream-area
+increment threshold. Binary orientation/masks, categorical palette and layout
+checks pass; the final Figure was visually reviewed. f01a-c scientific scripts,
+f02, map generation, tutorials and Gallery snapshots are unchanged. Owner:
+Dai Yamazaki (maintainer); Codex implements. See
+[VR-0146](../research/records/validation_runs/VR-0146.md).
+
 ### Headless f02b trial (2026-11-12)
 
 Maintainer requested this bounded trial on `manual-automation`, owned by
