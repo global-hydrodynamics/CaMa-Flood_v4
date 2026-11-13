@@ -138,16 +138,19 @@ def draw_flexible_arrows(ax, network: RiverNetwork, colors, widths,
     return patches
 
 
-def draw_area_arrows(ax, network: RiverNetwork, area_km2, norm, *, cmap=None, show_heads=True):
+def draw_area_arrows(ax, network: RiverNetwork, area_km2, norm, *, cmap=None,
+                     show_heads=True, width_range=None):
     """Draw all links using six log-area shaft-width classes in physical inches.
 
-    Black links emphasize thickness; colored arrows use a narrower width
-    range so the palette stays legible. Full-map normalization is independent
-    of the view. Grouping quivers gives actual variable shaft widths.
+    Six log-area classes set link widths unless an explicit range is supplied.
+    Full-map normalization is independent of the view; grouped quivers preserve
+    the requested shaft widths for local links.
     """
     scaled = np.clip(np.asarray(norm(area_km2)), 0, 1)
     levels = np.minimum((scaled * 6).astype(int), 5)
-    widths = 0.008 + (0.024 if cmap is None else 0.014) * levels / 5
+    if width_range is None:
+        width_range = (0.008, 0.032 if cmap is None else 0.022)
+    widths = width_range[0] + (width_range[1] - width_range[0]) * levels / 5
     colors = np.tile([0., 0., 0., 1.], (len(area_km2), 1)) if cmap is None else cmap(norm(area_km2))
     source_lon = network.lon[network.source_cols]
     source_lat = network.lat[network.source_rows]

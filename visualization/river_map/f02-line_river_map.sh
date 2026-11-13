@@ -11,7 +11,7 @@ REPO_ROOT="$(cd "$VISUALIZATION_DIR/.." && pwd)"
 MAP_DIR="$REPO_ROOT/map/mekong_15min"
 UPAREA_FILE="$MAP_DIR/netcdf/uparea.nc"              # Upstream drainage area [m²].
 NEXTXY_FILE="$MAP_DIR/netcdf/nextxy_noedge.nc"       # One-based downstream grid indices.
-BSNCOL_FILE="$MAP_DIR/netcdf/bsncol.nc"             # Categorical basin display indices.
+SUBCOL_FILE="$MAP_DIR/subcol-sample.bin"           # Categorical subbasin display indices.
 PARAMS_FILE="$MAP_DIR/params.txt"                    # Grid dimensions, resolution, and bounds.
 WEST=99
 EAST=109
@@ -69,10 +69,10 @@ printf '\n[STEP 2/4] Draw black links without arrowheads, using upstream-area th
     --dpi "$DPI" --output "$PANEL_B"
 printf '[SUCCESS] Created %s\n' "$PANEL_B"
 
-printf '\n[STEP 3/4] Color upstream-area arrows over subdued basin indices.\n'
+printf '\n[STEP 3/4] Color and size arrowless links over subbasin grays.\n'
 "$PYTHON" "$SCRIPT_DIR/script/f02c-line_river_map-enhance_color.py" \
     --uparea "$UPAREA_FILE" --nextxy "$NEXTXY_FILE" --params "$PARAMS_FILE" \
-    --bsncol "$BSNCOL_FILE" \
+    --subcol "$SUBCOL_FILE" \
     --west "$WEST" --east "$EAST" --south "$SOUTH" --north "$NORTH" \
     --figure-width "$PANEL_WIDTH" --figure-height "$PANEL_HEIGHT" \
     --dpi "$DPI" --output "$PANEL_C"

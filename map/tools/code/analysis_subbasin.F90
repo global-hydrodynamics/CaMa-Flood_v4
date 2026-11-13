@@ -6,9 +6,10 @@
 ! its downstream cell, not as a simple test of whether either cell exceeds it.
 ! Outputs are one int32 NX x NY record each: parameter-labeled analysis files
 ! in the map root by default, unless output paths are supplied. In subbsn,
-! positive IDs are segments, zero marks modeled river cells below the threshold,
-! and -9999 marks cells outside the modeled river network. These optional
-! products are not runtime inputs.
+! positive IDs are segments, zero marks unassigned modeled river cells, and
+! -9999 marks cells outside the modeled river network. subcol uses the same
+! zero/-9999 mask convention; positive IDs receive display colors 1-10.
+! These optional products are not runtime inputs.
       program analysis_subbasin
 ! ================================================
       use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
@@ -467,6 +468,10 @@ print *, 'SET_MAP color basin'
           end do
         endif
       end do
+
+      ! Match the subbasin mask in the color product: keep unassigned river
+      ! cells distinct from cells outside the modeled network.
+      where( basin==0 ) color=0
 
 ! ====================
       end subroutine set_color

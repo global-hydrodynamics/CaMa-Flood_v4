@@ -15,6 +15,7 @@ MAP_DIR="$REPO_ROOT/map/mekong_15min"
 UPAREA_FILE="$MAP_DIR/netcdf/uparea.nc"          # Source-cell upstream area [m²].
 NEXTXY_FILE="$MAP_DIR/netcdf/nextxy_noedge.nc"  # One-based downstream cell indices.
 LONLAT_FILE="$MAP_DIR/netcdf/lonlat.nc"          # Unit-catchment outlet coordinates.
+SUBCOL_FILE="$MAP_DIR/subcol-sample.bin"         # Subbasin display-color categories.
 BSNCOL_FILE="$MAP_DIR/netcdf/bsncol.nc"          # Categorical basin display colors.
 BIFPRM_FILE="$MAP_DIR/netcdf/bifprm.nc"          # Bifurcation paths and layer widths.
 PARAMS_FILE="$MAP_DIR/params.txt"                # Coarse grid dimensions and bounds.
@@ -55,10 +56,10 @@ PANEL_HEIGHT=$(awk -v height="$FIG_HEIGHT" -v dpi="$DPI" -v margin="$MARGIN" \
 
 mkdir -p "$FIGURE_DIR"
 
-printf '\n[STEP 1/3] Draw the f03a upstream-area outlet network.\n'
+printf '\n[STEP 1/3] Draw f03a subcol background and upstream-area outlet network.\n'
 "$PYTHON" "$SCRIPT_DIR/script/f03a-vector_river_map-upstream_area.py" \
     --uparea "$UPAREA_FILE" --nextxy "$NEXTXY_FILE" \
-    --lonlat "$LONLAT_FILE" --params "$PARAMS_FILE" \
+    --lonlat "$LONLAT_FILE" --subcol "$SUBCOL_FILE" --params "$PARAMS_FILE" \
     --west "$A_WEST" --east "$A_EAST" --south "$A_SOUTH" --north "$A_NORTH" \
     --figure-width "$PANEL_WIDTH" --figure-height "$PANEL_HEIGHT" \
     --dpi "$DPI" --output "$PANEL_A"

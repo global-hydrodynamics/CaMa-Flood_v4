@@ -3,7 +3,9 @@
 This project contains raster and network visualizations of CaMa-Flood river maps.
 Each Figure has a project-root Shell entry point with editable settings and
 Python implementations under `script/`. Working images are written to
-`figure/`; only separately authorized copies are published in the Gallery.
+`figure/`; selected combined figures are published separately in the
+[Visualization Gallery](../README.md). The current Gallery includes p01-f01,
+p01-f02, and p01-f03.
 
 ## Run a figure
 
@@ -53,17 +55,21 @@ The Subbasin Color panel compares `subcol` against the original basin coloring
 in `bsncol`. Here a subbasin is a segment of the directed river network produced
 by the upstream-area-increase analysis, not necessarily an independent whole
 river basin. `subbsn` stores segment IDs; `subcol` stores reusable display-color
-indices assigned to those segments. Neither `bsncol` nor `subcol` is a physical
+indices for assigned segments. In both products, `0` marks an unassigned river
+cell and `-9999` marks a cell outside the modeled network; positive `subcol`
+values are display indices 1–10. Neither `bsncol` nor `subcol` is a physical
 quantity or a unique identifier. These are optional analysis/visualization
 products, not required model simulation inputs.
 
-In f01d, **the main fill remains `subcol`**. Thin black lines mark shared
-cell edges where two adjacent positive original `basin` IDs differ, showing
-higher-level basin boundaries independently of the display colors. These are
-categorical grid boundaries, not interpolated numerical contours. Gray cells
-are excluded/missing in `nextxy_noedge`; this is a network-validity mask, not a
-land/sea classification. Valid negative terminal codes (`-9` and `-10`) remain
-valid network cells. A small key identifies the boundary and mask overlays.
+In f01d, **the main fill remains `subcol`**. The `bsncol` raster provides
+network coverage and higher-level display context: adjacent valid cells with
+different `bsncol` color indices receive a thin black shared-edge line. Since
+`bsncol` is a reusable display index rather than a unique basin ID, these lines
+show color-class transitions and cannot recover every original basin boundary.
+On valid `bsncol` cells, `subcol=0` or `subcol=-9999` is shown gray as an
+unassigned river cell. Missing `bsncol` cells remain white. White therefore
+includes both sea and any network-external land that these two inputs cannot
+distinguish. f01d does not use `nextxy_noedge` or classify land and sea.
 
 CaMa-Flood uses Flexible Downstream connections beyond immediate grid
 neighbors. Apparent gaps in an upstream-area raster do not necessarily mean
@@ -80,14 +86,15 @@ observation-station data are required.
 | f01a | `map/mekong_15min/netcdf/uparea.nc`: `uparea(lat, lon)`, m² | Convert to km²; mask missing/non-finite/non-positive values; retain `YlGnBu` with logarithmic normalization over all valid map cells. |
 | f01b | `map/mekong_15min/netcdf/basin.nc`: `basin(lat, lon)`, unitless | Display original positive integer IDs with one discrete bin per original integer value. Repeat the qualitative `tab20` palette across IDs; no conversion to `bsncol`. A display-only pseudo-log categorical legend expands IDs 1–20 and labels representative higher IDs. |
 | f01c | `map/mekong_15min/netcdf/bsncol.nc`: `bsncol(lat, lon)`, unitless | Display the precomputed indices directly with discrete bins for 1–10. Mix the base `tab10` RGB colors with 60% opaque white to obtain distinguishable pastel colors; only used indices are labeled. |
-| f01d | `map/mekong_15min/subcol-sample.bin`: `subcol`, unitless | Read the prepared little-endian int32 raster directly; use the same `tab10` palette and 60% opaque white mix as f01c. Discrete categories only, nearest-neighbor rendering, no log normalization; only present display indices appear in the colorbar. Overlay original basin-ID boundaries in black and the `nextxy_noedge` mask in neutral gray. |
+| f01d | `map/mekong_15min/subcol-sample.bin`: `subcol`, unitless; `map/mekong_15min/netcdf/bsncol.nc`: `bsncol(lat, lon)`, unitless | Read `subcol` as little-endian int32 in Fortran order (x varies fastest). Use the f01c `tab10` palette with 60% opaque white mix and discrete nearest-neighbor categories. Draw gray where `bsncol` is valid but `subcol` is zero/missing; leave missing `bsncol` white. Draw black shared cell edges where neighboring valid `bsncol` indices differ. The indices are categorical display classes, not basin IDs. |
 
 All main and overlay rasters are Git-tracked and share an 80 × 120 grid at
 0.25°. Coordinates are cell centers, longitude increases eastward, latitude
 decreases southward, and the missing value is `-9999`. NetCDF coordinates are
 checked against `params.txt`; binary geometry comes directly from that file.
-Unassigned main-fill cells are white, except where the explicit gray no-edge
-mask overlays them in f01d. Valid basin IDs are retained exactly.
+In f01d, `bsncol` validity distinguishes mapped network cells from the white
+background, while unassigned `subcol` cells within that coverage are gray.
+Valid basin IDs are retained exactly in f01b.
 Repeated raw-ID colors in f01b are a display choice, not adjacency-aware basin
 coloring or unique identifiers. Use the numeric raster to identify a basin.
 In f01c, neighboring regions with different display indices retain different
@@ -95,21 +102,25 @@ colors after lightening; the plot does not recalculate boundaries or indices.
 
 The f01d binary has exactly one 38,400-byte record: 80 × 120 little-endian
 int32 values in Fortran array order, with x varying fastest. Its first row is
-the northern row, matching the existing map orientation. `-9999` and any
-unassigned zero cells are white in the main fill; the no-edge overlay takes
-precedence and shows excluded cells in gray. The two-stage sample contains display indices 1–6;
-non-sentinel values outside the registered 1–10 range are rejected. The paired
-`subbsn-sample.bin` has 113 positive segment IDs (64 from Stage 1 and 49
-additional Stage 2 IDs), plus zero for 686 unassigned network
-cells and `-9999` outside the network. Shared colors do not identify a segment;
-use `subbsn` for identity. Plotting reads `subcol`, geometry, the original `netcdf/basin.nc` for boundaries,
-and `netcdf/nextxy_noedge.nc` for the gray mask. It never recalculates segmentation
-or converts the binary to NetCDF. A cell is gray when either downstream-index
-component is missing/non-finite; finite terminal codes are not masked. The
-no-edge product excludes boundary-affected river networks as prepared by
-[`region_cut_domain.F90`](../../map/tools/code/region_cut_domain.F90). Black
-boundaries use basin IDs rather than `bsncol` or `subcol`, whose repeated colors
-cannot uniquely identify basin units.
+the northern row, matching the existing map orientation. Positive values are
+display indices 1–10; this sample uses indices 1–6. Zero and `-9999` are
+unassigned/missing `subcol` cells. The paired `subbsn-sample.bin` records
+segment identity (113 positive IDs, 686 unassigned network cells, and `-9999`
+outside the network), but is not read by the f01d plotting script. Shared
+colors do not identify a segment; use `subbsn` when segment identity is
+needed.
+
+For plotting, the two raster inputs are `subcol-sample.bin` and
+`netcdf/bsncol.nc`; `params.txt` supplies grid geometry. `bsncol` must be a
+valid categorical index (1–10) for a cell to be treated as network-covered.
+Valid coverage with zero or missing `subcol` is gray, positive `subcol` is
+pastel-colored, and missing `bsncol` is white. White can include network-
+external land as well as sea, because these inputs do not distinguish them.
+Black edges mark adjacent changes in `bsncol` display class, not boundaries
+reconstructed from original basin IDs; repeated classes can hide boundaries
+between distinct basins. The script does not read `basin.nc`,
+`subbsn-sample.bin`, or `nextxy_noedge.nc`, and does not recalculate
+segmentation or convert the binary to NetCDF.
 
 The f01b legend uses **display-only pseudo-log categorical spacing**. IDs 1–20
 each occupy a full slot with an individual label. Above 20, intervals ending
@@ -222,10 +233,12 @@ Upstream drainage area is contributing land area, not discharge.
   areas; the faint raster is the same as f02a. Both straight local links and
   curved flexible links omit arrowheads in this trial. Line widths and exact
   endpoints are preserved; flow direction is not explicitly marked in b.
-- **f02c:** `cmf_colormap` **shade-rainbow** (`get_cmap("shade_rainbow")`) arrow colors represent source-cell
-  upstream area on a logarithmic scale. Moderate area-based widths reinforce
-  the network. Precomputed `bsncol` display indices form a darker charcoal-gray
-  categorical background, keeping colored arrows in the foreground.
+- **f02c:** Arrowless links use the same straight local and curved Flexible
+  Downstream geometry as f02b. Both `shade-rainbow` color and f02b's six-class
+  line widths encode source-cell upstream area; the colorbar identifies both
+  encodings. `subcol-sample.bin` categories form a discrete light-gray
+  background: zero is light gray, positive classes are progressively darker,
+  and `-9999` remains white.
 
 ![p01-f02 Line River Map: connectivity, enhanced thickness, and upstream-area color](figure/f02-line_river_map.png)
 
@@ -236,34 +249,33 @@ station data, external download, or map preparation is needed.
 
 | Input | Meaning and use |
 | --- | --- |
-| `netcdf/uparea.nc`: `uparea(lat, lon)`, m² | Convert to km²; read source-cell areas for arrows and a faint logarithmic background in a/b. Missing, non-finite and non-positive areas are excluded. |
+| `netcdf/uparea.nc`: `uparea(lat, lon)`, m² | Convert to km²; read source-cell areas for network links and a faint logarithmic background in a/b. Missing, non-finite and non-positive areas are excluded. |
 | `netcdf/nextxy_noedge.nc`: `nextx`, `nexty` | One-based destination indices; paired non-positive terminal/sentinel values do not define links. |
-| `netcdf/bsncol.nc`: `bsncol(lat, lon)`, unitless | Precomputed categorical display indices 1–10 for c's gray background. Missing/out-of-range cells stay white. These are not basin IDs or a physical magnitude. |
+| `subcol-sample.bin`: little-endian int32, one Fortran-order record | Categorical subbasin display indices for c's background. Zero maps to gray (0.50 brightness); positive classes 1–10 map to discrete grays from 0.45 to 0.10; `-9999` is white. The file has 80 × 120 values, with x varying fastest. |
 | `params.txt` | Grid dimensions, resolution and bounds, checked against NetCDF cell-center coordinates. |
 
 The current map contains 3,150 valid links (3,022 local and 128 Flexible
 Downstream). Every valid link is passed to plotting; the axes clip the display
 without filtering connections by extent. Link direction comes directly from
 `nextxy`, never geographic proximity. A link is Flexible Downstream if either
-source/destination grid-index offset exceeds one. Local arrows are straight;
-flexible arrows curve between their exact original endpoints.
+source/destination grid-index offset exceeds one. Local links are straight;
+flexible links curve between their exact original endpoints.
 
 For b and c, normalize log10(source area) over all valid links in the map,
 independently of the plotting extent. Divide the normalized range into six
-equal classes, with the maximum in the last class. In b, shaft widths range
-from 0.008 to 0.032 inches; in c, from 0.008 to 0.022 inches. Local quivers
-use actual shaft widths; flexible strokes use the corresponding widths in
-points. In b, arrowheads are disabled; c retains its existing
-proportional heads. Narrow local links are drawn before wider
-ones. The full-map area range is also used for c's continuous logarithmic
-colorbar. Inputs are never modified.
+equal classes, with the maximum in the last class. Both panels use shaft widths
+from 0.008 to 0.032 inches. Local links are straight and flexible links retain
+the curved geometry; neither panel draws arrowheads. Narrow links are drawn
+before wider ones. In c, `shade-rainbow` color uses the same full-map area
+normalization as its line widths and logarithmic colorbar. Inputs are never
+modified.
 
-The charcoal shades in c range from `#2b2b2b` to `#3b3b3b`, roughly halving
-the prior gray RGB intensities while preserving categorical distinctions.
-The gray shades in c distinguish display classes only; their brightness has
-no ordered basin meaning. Repeated `bsncol` values do not uniquely identify
-basins. See [f01 basin preparation](#basin-preparation-and-provenance) for
-preprocessing provenance. The background has no separate quantitative scale.
+The c background reads `subcol-sample.bin` as little-endian int32 in Fortran
+array order, reshaped to the 120 × 80 image orientation (x varies fastest).
+Category zero is gray (0.50 brightness), positive display categories
+are discrete grays from 0.45 to 0.10, and `-9999` is white. Gray shades
+distinguish categorical display classes only and have no physical or ordered
+basin meaning. This panel does not read `bsncol.nc`.
 
 ### Settings and execution
 
@@ -339,6 +351,10 @@ physical thresholds. These are stored network connections, not traced
 river-centerline paths: straight segments join exact outlet endpoints.
 The legend is omitted to keep the panel uncluttered; color and line width still
 encode the four full-map upstream-area quartiles described above.
+The background uses `subcol-sample.bin`: category `0` is gray, positive
+display-color indices use the same lightened `tab10` colors as f01c, and
+`-9999` remains white. This categorical fill is visual context; river links
+and their area encoding are unchanged.
 
 ### f03b — Extended Network
 
@@ -355,8 +371,10 @@ classes are independent of the main-channel upstream-area classes.
 The compact legend identifies only the network feature types; it omits detailed
 upstream-area and bifurcation-width class entries. Both classifications remain
 encoded by the line colors and widths described above.
-Full links retain their exact outlet-to-outlet geometry, while small direction
-arrows sit near each link's midpoint to reduce arrowhead crowding at junctions.
+Full links retain their exact outlet-to-outlet geometry. Main-channel links
+have no direction arrows; small white circles with black outlines mark valid
+outlet pixels. Channel and overland bifurcation arrows remain near each link's
+midpoint to reduce arrowhead crowding at junctions.
 
 Thin gray guides connect a candidate headwater cell's unit-catchment centroid
 to that cell's river outlet. Candidates are river cells with no incoming valid
@@ -371,9 +389,11 @@ assert that every candidate is a physical headwater.
 The f03b extent is intentionally zoomed to 102–108°E and 9–15°N to make the
 delta bifurcation network legible. It is independent of f03a's wider default
 extent. Pale categorical basin colors and subtle grid lines provide context;
-they do not define connectivity. Main and bifurcation arrows follow stored
-map links, while straight gray guides summarize catchment geometry. None of
-these lines are terrain-traced river paths or observed flows.
+they do not define connectivity. Main-channel links follow stored `nextxy`
+without direction arrows; bifurcation arrows follow stored paths. White
+outlined circles identify outlet pixels, and straight gray guides summarize
+catchment geometry. None of these lines are terrain-traced river paths or
+observed flows.
 
 #### Required map data
 
@@ -382,6 +402,7 @@ these lines are terrain-traced river paths or observed flows.
 | `map/mekong_15min/netcdf/nextxy_noedge.nc` | NetCDF `nextx`, `nexty` (`lat × lon`); one-based indices | Supplies every valid main-channel source-to-downstream-cell relationship. |
 | `map/mekong_15min/netcdf/lonlat.nc` | NetCDF `outlon`, `outlat` (`lat × lon`); degrees east/north | Gives outlet coordinates for main links, bifurcation endpoints, and headwater guide termini. |
 | `map/mekong_15min/netcdf/uparea.nc` | NetCDF `uparea` (`lat × lon`); m² | Provides main-channel source-cell area classes and identifies valid river cells. |
+| `map/mekong_15min/subcol-sample.bin` | Binary little-endian int32; one 80 × 120 Fortran-order record | Background for f03a: zero is gray, positive display indices are pastel-colored, and `-9999` is white. |
 | `map/mekong_15min/netcdf/bsncol.nc` | NetCDF `bsncol` (`lat × lon`); categorical indices | Pale basin-color background for f03b; it is display context, not connectivity. |
 | `map/mekong_15min/netcdf/bifprm.nc` | NetCDF `ix`, `iy`, `jx`, `jy`, `width(layer, path)` | Defines bifurcation endpoints and channel width. Width is in metres; first-layer width distinguishes channel from overland paths. |
 | `map/mekong_15min/1min/1min.catmxy.bin` | Binary little-endian int16; two `1200 × 1800` planes (`catmx`, `catmy`) | Assigns each 1-minute pixel to a one-based coarse cell. `-999` and `-9999` sentinel indices are excluded from centroids. |

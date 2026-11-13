@@ -147,18 +147,29 @@ class AnalysisMigrationTests(unittest.TestCase):
                 v5_subcol = (v5_map / "subcol.bin").read_bytes()
             else:
                 legacy_subbsn = (legacy_map / "subbsn.bin").read_bytes()
+                legacy_subcol = (legacy_map / "subcol.bin").read_bytes()
                 old_values = struct.unpack("<" + "i" * (80 * 120), legacy_subbsn)
                 new_values = struct.unpack("<" + "i" * (80 * 120), v5_subbsn)
+                old_colors = struct.unpack("<" + "i" * (80 * 120), legacy_subcol)
+                new_colors = struct.unpack("<" + "i" * (80 * 120), v5_subcol)
                 nextx_values = struct.unpack("<" + "i" * (80 * 120),
                                              (v5_map / "nextxy.bin").read_bytes()[:80 * 120 * 4])
-                for old, new, downstream_x in zip(old_values, new_values, nextx_values):
+                for old, new, downstream_x, old_color, new_color in zip(
+                        old_values, new_values, nextx_values, old_colors, new_colors):
                     if old > 0:
                         self.assertEqual(new, old)
                     elif downstream_x == -9999:
                         self.assertEqual(new, -9999)
                     else:
                         self.assertEqual(new, 0)
-                self.assertEqual((legacy_map / "subcol.bin").read_bytes(), v5_subcol)
+                    if new > 0:
+                        self.assertEqual(new_color, old_color)
+                        self.assertTrue(1 <= new_color <= 10)
+                    elif new == 0:
+                        self.assertEqual(old_color, -9999)
+                        self.assertEqual(new_color, 0)
+                    else:
+                        self.assertEqual(new_color, -9999)
 
         legacy_analysis = legacy_map / "script_analysis"
         legacy_analysis.mkdir()
@@ -189,14 +200,19 @@ class AnalysisMigrationTests(unittest.TestCase):
         self.assertEqual(len(v5_subbsn), record_bytes)
         self.assertEqual(len(v5_subcol), record_bytes)
         upstream_values = struct.unpack("<" + "i" * (80 * 120), v5_upbasin)
-        subbasin_values = struct.unpack("<" + "i" * (80 * 120), v5_subbsn_30000)
+        subbasin_values = struct.unpack("<" + "i" * (80 * 120), v5_subbsn)
         color_values = struct.unpack("<" + "i" * (80 * 120), v5_subcol)
         self.assertTrue({-9999, 0, 1}.issubset(set(upstream_values)))
         self.assertIn(-9999, subbasin_values)
         self.assertIn(0, subbasin_values)
         self.assertTrue(any(value > 0 for value in subbasin_values))
         self.assertIn(-9999, color_values)
-        self.assertTrue(all(value == -9999 or 1 <= value <= 10 for value in color_values))
+        self.assertIn(0, color_values)
+        for subbasin, color in zip(subbasin_values, color_values):
+            if subbasin > 0:
+                self.assertTrue(1 <= color <= 10)
+            else:
+                self.assertEqual(color, subbasin)
         ctl_dir = self.root / "ctl"
         ctl_dir.mkdir()
         shutil.copy2(v5_map / "upbasin.bin", v5_map / "upbasin-2569002.bin")
@@ -332,7 +348,10 @@ class AnalysisMigrationTests(unittest.TestCase):
             if new > 0:
                 self.assertTrue(1 <= color <= 10)
                 groups.setdefault(new, set()).add(index)
+            elif new == 0:
+                self.assertEqual(color, 0)
             else:
+                self.assertEqual(new, -9999)
                 self.assertEqual(color, -9999)
         for cells in groups.values():
             # Each ID is one connected directed tree, never reused in another segment.

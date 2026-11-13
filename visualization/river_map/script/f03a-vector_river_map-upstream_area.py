@@ -8,6 +8,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.colors import BoundaryNorm, ListedColormap
 from netCDF4 import Dataset
 
 from river_map_common import create_map_axes, read_geometry, read_map_raster, save_panel
@@ -15,6 +16,21 @@ from river_map_common import create_map_axes, read_geometry, read_map_raster, sa
 
 AREA_COLORS = ("#7FA6D6", "#4F80BF", "#285A9B", "#103A70")
 AREA_WIDTHS = (0.014, 0.018, 0.024, 0.032)
+
+
+def read_subcol(path: Path, geometry):
+    """Read one little-endian int32 Fortran-order subcol raster."""
+    nx, ny = geometry[:2]
+    expected_bytes = nx * ny * 4
+    if path.stat().st_size != expected_bytes:
+        raise ValueError(
+            f"{path} must contain exactly {expected_bytes} bytes for {nx}x{ny} int32 cells"
+        )
+    values = np.fromfile(path, dtype="<i4").reshape((ny, nx))
+    valid = ((values == -9999) | (values == 0) | ((values >= 1) & (values <= 10)))
+    if not np.all(valid):
+        raise ValueError(f"{path} has values outside -9999, 0, or display indices 1–10")
+    return values
 
 
 def read_network(uparea_path: Path, nextxy_path: Path, lonlat_path: Path,
@@ -145,6 +161,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--uparea", type=Path, required=True)
     parser.add_argument("--nextxy", type=Path, required=True)
     parser.add_argument("--lonlat", type=Path, required=True)
+    parser.add_argument("--subcol", type=Path, required=True)
     parser.add_argument("--params", type=Path, required=True)
     parser.add_argument("--west", type=float, required=True)
     parser.add_argument("--east", type=float, required=True)
@@ -165,6 +182,8 @@ def main() -> None:
     (geometry, source_lon, source_lat, destination_lon, destination_lat,
      source_area_km2, area_classes, quartile_limits, out_of_map,
      invalid_outlets) = read_network(args.uparea, args.nextxy, args.lonlat, args.params)
+    subcol = read_subcol(args.subcol, geometry)
+    _, _, _, west, east, south, north = geometry
 
     title = "p01-f03a Vector River Map: Upstream Area"
     fig, ax = create_map_axes(
@@ -172,6 +191,18 @@ def main() -> None:
     )
     fig.patch.set_facecolor("white")
     ax.set_facecolor("white")
+
+    pastel_colors = plt.get_cmap("tab10")(np.arange(10))
+    pastel_colors[:, :3] = 0.4 * pastel_colors[:, :3] + 0.6
+    background_colors = np.vstack(((0.70, 0.70, 0.70, 1.0), pastel_colors))
+    subcol_cmap = ListedColormap(background_colors, name="subcol_pastel")
+    subcol_cmap.set_bad("white")
+    subcol_values = np.ma.masked_where(subcol < 0, subcol)
+    ax.imshow(
+        subcol_values, origin="upper", extent=(west, east, south, north),
+        cmap=subcol_cmap, norm=BoundaryNorm(np.arange(-0.5, 11.5), subcol_cmap.N),
+        interpolation="nearest", zorder=0,
+    )
 
     arrows = []
     for area_class, (color, width) in enumerate(zip(AREA_COLORS, AREA_WIDTHS)):

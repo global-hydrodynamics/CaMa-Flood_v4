@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Plot nextxy links with source-cell upstream area encoded by color and width."""
+"""Plot arrowless nextxy links with upstream area encoded by color and width."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.colors import LogNorm, BoundaryNorm, ListedColormap
+from matplotlib.colors import BoundaryNorm, ListedColormap, LogNorm
 from cmf_colormap import get_cmap
 from matplotlib.ticker import FuncFormatter, LogLocator
 
@@ -16,7 +16,6 @@ from river_map_common import (
     add_map_arguments,
     draw_raster,
     read_geometry,
-    read_map_raster,
 )
 from river_network_layout import create_network_axes, save_network_panel
 from river_network_common import (
@@ -30,7 +29,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--uparea", type=Path, required=True)
     parser.add_argument("--nextxy", type=Path, required=True)
-    parser.add_argument("--bsncol", type=Path, required=True)
+    parser.add_argument("--subcol", type=Path, required=True)
     add_map_arguments(parser)
     args = parser.parse_args()
 
@@ -45,21 +44,31 @@ def main() -> None:
         "p01-f02c Line River Map:\nEnhance Color",
         show_colorbar=True,
     )
-    # bsncol is categorical context, not basin identity or a physical scale.
-    _, _, basin = read_map_raster(args.bsncol, "bsncol", "1", geometry)
-    values = basin.filled(np.nan)
-    valid = np.isfinite(values) & (values >= 1) & (values <= 10)
-    gray = ListedColormap(["#2b2b2b", "#343434", "#2f2f2f", "#3a3a3a", "#313131",
-                          "#383838", "#2c2c2c", "#363636", "#303030", "#3b3b3b"])
+    nx, ny, _, _, _, _, _ = geometry
+    subcol = np.fromfile(args.subcol, dtype="<i4")
+    if subcol.size != nx * ny:
+        raise ValueError(
+            f"{args.subcol} contains {subcol.size} int32 values; expected {nx * ny}"
+        )
+    # Fortran (NX, NY) storage has x varying fastest; reshape to plotted (NY, NX).
+    subcol = subcol.reshape((ny, nx))
+    valid = (subcol >= 0) & (subcol <= 10)
+    gray_levels = [0.50, *np.linspace(0.45, 0.10, 10)]
+    gray = ListedColormap([(level, level, level) for level in gray_levels])
     gray = gray.with_extremes(bad="white")
-    draw_raster(ax, np.ma.masked_where(~valid, values), geometry, gray,
-                BoundaryNorm(np.arange(0.5, 10.6), gray.N))
+    draw_raster(ax, np.ma.masked_where(~valid, subcol), geometry, gray,
+                BoundaryNorm(np.arange(-0.5, 11.5), gray.N))
 
     cmap = get_cmap("shade_rainbow")
-    rendered, widths = draw_area_arrows(ax, network, area_km2, norm, cmap=cmap)
+    rendered, widths = draw_area_arrows(
+        ax, network, area_km2, norm, cmap=cmap, show_heads=False,
+        width_range=(0.008, 0.032),
+    )
     mappable = plt.cm.ScalarMappable(norm=norm, cmap=cmap)
     colorbar = fig.colorbar(mappable, cax=cax)
-    colorbar.set_label("Source-cell upstream drainage area (km²)")
+    colorbar.set_label(
+        "Source-cell upstream drainage area (km²)\n(color and line width)"
+    )
     colorbar.locator = LogLocator(base=10, subs=(1.0, 2.0, 5.0), numticks=18)
     colorbar.formatter = FuncFormatter(lambda value, _: f"{value:.0f}")
     colorbar.update_ticks()
@@ -70,7 +79,7 @@ def main() -> None:
         network, (args.west, args.east, args.south, args.north)
     )
     print(
-        f"Wrote {args.output}: {rendered} arrows ({np.count_nonzero(~network.flexible)} straight local, "
+        f"Wrote {args.output}: {rendered} arrowless links ({np.count_nonzero(~network.flexible)} straight local, "
         f"{np.count_nonzero(network.flexible)} curved flexible); source-cell uparea "
         f"range {minimum:g}–{maximum:g} km²; shaft width range "
         f"{widths.min():.3f}–{widths.max():.3f} inches. "

@@ -303,20 +303,27 @@ def add_legend(ax):
     legend.set_zorder(10)
 
 
-def draw_directed_links(ax, segments, color, line_width, arrow_width, alpha, zorder):
-    """Draw full links with a small direction arrow centered on each link."""
+def draw_directed_links(ax, segments, color, line_width, arrow_width, alpha, zorder,
+                        marker_position="midpoint", show_direction=True):
+    """Draw full links and, optionally, a direction arrow on each link."""
     ax.add_collection(LineCollection(
         segments, colors=color, linewidths=line_width * 72,
         alpha=alpha, zorder=zorder, clip_on=True,
     ))
 
+    if not show_direction:
+        return
+
     starts, ends = segments[:, 0, :], segments[:, 1, :]
-    midpoints = (starts + ends) / 2.0
     arrow_vectors = (ends - starts) * 0.34
+    if marker_position == "tip":
+        arrow_x, arrow_y = ends[:, 0], ends[:, 1]
+    else:
+        midpoints = (starts + ends) / 2.0
+        arrow_x = midpoints[:, 0] - arrow_vectors[:, 0] / 2.0
+        arrow_y = midpoints[:, 1] - arrow_vectors[:, 1] / 2.0
     arrows = ax.quiver(
-        midpoints[:, 0] - arrow_vectors[:, 0] / 2.0,
-        midpoints[:, 1] - arrow_vectors[:, 1] / 2.0,
-        arrow_vectors[:, 0], arrow_vectors[:, 1],
+        arrow_x, arrow_y, arrow_vectors[:, 0], arrow_vectors[:, 1],
         angles="xy", scale_units="xy", scale=1, pivot="tip", units="inches",
         minlength=0.0, width=arrow_width, headwidth=5.0, headlength=5.0,
         headaxislength=4.5, color=color, alpha=alpha, zorder=zorder + 0.1,
@@ -410,11 +417,12 @@ def main():
         segments = main_segments[selected]
         draw_directed_links(
             ax, segments, color, width, 0.01, 0.95, 2 + area_class * 0.1,
+            show_direction=False,
         )
         main_count += len(segments)
 
     if main_count != len(main_segments):
-        raise RuntimeError(f"Rendered {main_count} main arrows for {len(main_segments)} valid links")
+        raise RuntimeError(f"Rendered {main_count} main links for {len(main_segments)} valid links")
 
     bif_count = 0
     for width_class, color in enumerate(BIFURCATION_COLORS):
@@ -432,6 +440,21 @@ def main():
     )
     if bif_count != int(channel.sum()) or len(overland_segments) != int(overland.sum()):
         raise RuntimeError("Not all valid bifurcation connections were rendered")
+
+    river_cells = np.isfinite(network.uparea) & (network.uparea > 0)
+    valid_outlets = (
+        river_cells & np.isfinite(outlon) & np.isfinite(outlat) &
+        (outlon != -9999) & (outlat != -9999) &
+        (outlon >= -180) & (outlon <= 360) &
+        (outlat >= -90) & (outlat <= 90)
+    )
+    outlet_nodes = np.unique(
+        np.column_stack((outlon[valid_outlets], outlat[valid_outlets])), axis=0
+    )
+    ax.scatter(
+        outlet_nodes[:, 0], outlet_nodes[:, 1], s=5,
+        facecolors="white", edgecolors="black", linewidths=0.35, zorder=7,
+    )
 
     add_legend(ax)
     save_panel(fig, args.output, args.dpi,

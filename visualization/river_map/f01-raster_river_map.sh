@@ -13,7 +13,6 @@ UPAREA_FILE="$MAP_DIR/netcdf/uparea.nc"              # Upstream catchment area [
 BASIN_FILE="$MAP_DIR/netcdf/basin.nc"                 # Original basin IDs.
 BSNCOL_FILE="$MAP_DIR/netcdf/bsncol.nc"              # Precomputed basin display-color indices.
 SUBCOL_FILE="$MAP_DIR/subcol-sample.bin"              # Prepared int32 subbasin display-color indices.
-NEXTXY_NOEDGE_FILE="$MAP_DIR/netcdf/nextxy_noedge.nc" # Exclusion mask for the Subbasin Color overlay.
 PARAMS_FILE="$MAP_DIR/params.txt"                    # 15-minute grid dimensions and extent.
 WEST=90
 EAST=110
@@ -28,7 +27,7 @@ BSNCOL_CMAP="tab10"        # Base qualitative palette for display indices.
 BSNCOL_WHITE_MIX=0.60      # Opaque white fraction for soft basin backgrounds.
 SUBCOL_CMAP="tab10"        # Same base palette as Basin Color.
 SUBCOL_WHITE_MIX=0.60      # Same opaque white fraction as Basin Color.
-LAYOUT="grid"              # Combiner layout: horizontal, vertical, or grid.
+LAYOUT="horizontal"       # Combiner layout: horizontal, vertical, or grid.
 COLUMNS=2                   # Number of columns when LAYOUT is grid.
 GAP=28                      # Gap between panels [pixels].
 MARGIN=28                   # Outer margin around the assembled Figure [pixels].
@@ -90,7 +89,7 @@ printf '\n[STEP 3/5] Draw soft basin display colors (bsncol).\n'
 printf '\n[STEP 4/5] Draw prepared subbasin display colors (subcol).\n'
 "$PYTHON" "$SCRIPT_DIR/script/f01d-raster_river_map-subbasin_color.py" \
     --input "$SUBCOL_FILE" --params "$PARAMS_FILE" \
-    --basin "$BASIN_FILE" --nextxy "$NEXTXY_NOEDGE_FILE" \
+    --bsncol "$BSNCOL_FILE" \
     --west "$WEST" --east "$EAST" --south "$SOUTH" --north "$NORTH" \
     --cmap "$SUBCOL_CMAP" --white-mix "$SUBCOL_WHITE_MIX" \
     --figure-width "$PANEL_WIDTH" --figure-height "$PANEL_HEIGHT" \
