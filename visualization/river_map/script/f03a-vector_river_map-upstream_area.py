@@ -8,7 +8,6 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.lines import Line2D
 from netCDF4 import Dataset
 
 from river_map_common import create_map_axes, read_geometry, read_map_raster, save_panel
@@ -200,22 +199,6 @@ def main() -> None:
         if not (np.array_equal(actual_start, expected_start) and
                 np.allclose(actual_end, expected_end, rtol=0, atol=1e-12)):
             raise ValueError("A plotted arrow does not match its nextxy outlet endpoints")
-
-    legend_handles = [
-        Line2D([], [], color=color, linewidth=width * 72,
-               label=label)
-        for color, width, label in zip(
-            AREA_COLORS, AREA_WIDTHS,
-            ("Q1 (lowest)", "Q2", "Q3", "Q4 (highest)"),
-        )
-    ]
-    legend = ax.legend(
-        handles=legend_handles,
-        title="Source-cell upstream area (km²; full-map quartiles)",
-        loc="lower left", framealpha=0.94, fontsize=8, title_fontsize=8,
-        borderpad=0.55, labelspacing=0.35, handlelength=2.1,
-    )
-    legend.set_zorder(5)
 
     save_panel(
         fig, args.output, args.dpi,

@@ -245,48 +245,86 @@ labels, hidden slots, extent, link counts and foreground encodings.
 
 ## p01-f03 — Vector River Map
 
-### Upstream area
+The two options show the main network at geographic unit-catchment outlets.
+f03a encodes source-cell upstream area; f03b adds mapped bifurcations and
+headwater catchment-centroid guides. Both use stored `nextxy` topology and
+`outlon`/`outlat` locations rather than estimating links from geographic
+proximity. Tutorial02 Figure 1c is the original implementation reference.
 
-This Figure represents the main CaMa-Flood river network using geographic
-unit-catchment outlet locations. Each directed connection follows `nextxy`
-from the source map cell to its downstream cell, while `lonlat.nc` supplies
-the two cells' `outlon`/`outlat` coordinates. It therefore shows the stored
-model topology at outlets, not an observed river centerline. Tutorial02
-Figure 1c was the implementation reference; this panel keeps only its main
-river network and drainage-area encoding.
+![p01-f03 Vector River Map](figure/f03-vector_river_map.png)
 
-![Vector River Map: Upstream Area](figure/f03-vector_river_map.png)
+Method identifier: `vector_river_map`.
 
-Unlike p01-f02, which draws connections between regular computational
-grid-cell centers to emphasize local and Flexible Downstream links, p01-f03
-connects the corresponding geographic outlet coordinates. `nextxy` alone
-defines the downstream relationship; the script does not infer connections
-from outlet proximity. Each displayed segment is straight between its exact
-source and destination outlet coordinates. Real river paths may curve or
-meander between those points, so the lines must not be interpreted as traced
-channel centerlines.
+| Panel | Option | Option identifier | Extent |
+| --- | --- | --- | --- |
+| p01-f03a | Upstream Area | `upstream_area` | 99–109°E, 9–19°N |
+| p01-f03b | Extended Network | `extended_network` | 102–108°E, 9–15°N |
 
-The source cell's `uparea` determines both line color and thickness. The
-script converts square metres to km² for interpretation, then divides the
-log-transformed areas of all valid-link source cells on the full map into
-four quartile classes. Q1 is the lowest-area quartile and Q4 the highest;
-their numeric cutoffs are calculated from the input map, not fixed physical
-thresholds. Classification is independent of the displayed extent.
+### f03a — Upstream Area
+
+This panel draws main-channel links from each source cell's outlet to the
+outlet of its `nextxy` downstream cell. The source cell's `uparea` determines
+line color and thickness. Square metres are converted to km² for display; the
+log-transformed areas of valid source links across the full map are divided
+into four quartiles. Numeric cutoffs depend on the input map and are not fixed
+physical thresholds. These are stored network connections, not traced
+river-centerline paths: straight segments join exact outlet endpoints.
+The legend is omitted to keep the panel uncluttered; color and line width still
+encode the four full-map upstream-area quartiles described above.
+
+### f03b — Extended Network
+
+This panel keeps the outlet-based main-channel network and its four upstream
+area classes, then adds two kinds of bifurcation from `bifprm.nc`. The table's
+one-based `(ix, iy)` and `(jx, jy)` indices select the start and end map cells;
+those cells' `outlon`/`outlat` values provide the plotted endpoints. A positive
+`width` in the first floodplain layer identifies a channel bifurcation. These
+connections use four colors grouped by quartiles of channel width in metres;
+the widest class is vivid red (`#FF0000`) for visibility where links overlap.
+Remaining valid paths are shown in subdued green as overland
+bifurcations, following Tutorial02 Figure 1c's classification. These width
+classes are independent of the main-channel upstream-area classes.
+The compact legend identifies only the network feature types; it omits detailed
+upstream-area and bifurcation-width class entries. Both classifications remain
+encoded by the line colors and widths described above.
+Full links retain their exact outlet-to-outlet geometry, while small direction
+arrows sit near each link's midpoint to reduce arrowhead crowding at junctions.
+
+Thin gray guides connect a candidate headwater cell's unit-catchment centroid
+to that cell's river outlet. Candidates are river cells with no incoming valid
+main-channel `nextxy` link in the regional map. For each candidate, the script
+finds the high-resolution pixels assigned to its coarse cell by `catmxy`,
+computes the geographic center of each pixel from `location.txt`, then takes
+the mean of those pixel-center coordinates. The regional map has 220 such
+candidate cells on its outer grid boundary. Some may lack upstream links only
+because those connections lie outside this regional map, so the guides do not
+assert that every candidate is a physical headwater.
+
+The f03b extent is intentionally zoomed to 102–108°E and 9–15°N to make the
+delta bifurcation network legible. It is independent of f03a's wider default
+extent. Pale categorical basin colors and subtle grid lines provide context;
+they do not define connectivity. Main and bifurcation arrows follow stored
+map links, while straight gray guides summarize catchment geometry. None of
+these lines are terrain-traced river paths or observed flows.
 
 #### Required map data
 
 | Relative path | Variables and format | Use |
 | --- | --- | --- |
-| `map/mekong_15min/netcdf/nextxy_noedge.nc` | NetCDF `nextx`, `nexty` (`lat × lon`); one-based destination indices | Selects the downstream map cell for each main-network connection. Non-positive paired values are terminal or sentinel codes and do not define links. |
-| `map/mekong_15min/netcdf/lonlat.nc` | NetCDF `outlon`, `outlat` (`lat × lon`); degrees east/north | Supplies geographic outlet coordinates for each source and destination cell. Missing or invalid coordinates are excluded. |
-| `map/mekong_15min/netcdf/uparea.nc` | NetCDF `uparea` (`lat × lon`); m² | Selects valid river cells and provides the source-cell drainage area used for quartile class, color, and width. Values are converted to km² for the legend. |
-| `map/mekong_15min/params.txt` | Grid dimensions, resolution, and geographic bounds | Checks NetCDF grid shape and coordinate alignment; the vectors are plotted in geographic coordinates. |
+| `map/mekong_15min/netcdf/nextxy_noedge.nc` | NetCDF `nextx`, `nexty` (`lat × lon`); one-based indices | Supplies every valid main-channel source-to-downstream-cell relationship. |
+| `map/mekong_15min/netcdf/lonlat.nc` | NetCDF `outlon`, `outlat` (`lat × lon`); degrees east/north | Gives outlet coordinates for main links, bifurcation endpoints, and headwater guide termini. |
+| `map/mekong_15min/netcdf/uparea.nc` | NetCDF `uparea` (`lat × lon`); m² | Provides main-channel source-cell area classes and identifies valid river cells. |
+| `map/mekong_15min/netcdf/bsncol.nc` | NetCDF `bsncol` (`lat × lon`); categorical indices | Pale basin-color background for f03b; it is display context, not connectivity. |
+| `map/mekong_15min/netcdf/bifprm.nc` | NetCDF `ix`, `iy`, `jx`, `jy`, `width(layer, path)` | Defines bifurcation endpoints and channel width. Width is in metres; first-layer width distinguishes channel from overland paths. |
+| `map/mekong_15min/1min/1min.catmxy.bin` | Binary little-endian int16; two `1200 × 1800` planes (`catmx`, `catmy`) | Assigns each 1-minute pixel to a one-based coarse cell. `-999` and `-9999` sentinel indices are excluded from centroids. |
+| `map/mekong_15min/1min/location.txt` | Text grid metadata; 1-minute resolution and bounds | Converts high-resolution pixel row/column positions to geographic pixel-center coordinates. |
+| `map/mekong_15min/params.txt` | Text metadata; 80 × 120 grid at 0.25° | Checks the coarse grid geometry shared by the NetCDF products and catchment assignments. |
 
-All inputs are Git-tracked map products. No simulation output, station data,
-external dataset, or map preparation is required. The script validates that
-NetCDF grids align, that one-based downstream indices resolve to valid river
-cells, and that each rendered arrow begins and ends at the outlet coordinates
-of its `nextxy` source and destination.
+All listed inputs are Git-tracked; no model output, station data, or map
+preparation is required. The figures reconstruct topology from stored
+`nextxy` and `bifprm` links, not from geographic outlet proximity. The
+high-resolution `catmxy` allocation independently supplies the pixels used
+for headwater-centroid guides.
 
 #### Settings and execution
 
@@ -296,9 +334,9 @@ After the standard Python setup, run:
 ./visualization/river_map/f03-vector_river_map.sh
 ```
 
-Edit the input paths and `WEST`, `EAST`, `SOUTH`, and `NORTH` extent in the
-Shell entry point as needed. `FIG_WIDTH` and `FIG_HEIGHT` set the complete
-Figure size in inches (`0` selects automatic sizing); `DPI` controls the PNG
-resolution. The script writes the panel and single-panel Figure to
-`visualization/river_map/figure/`. The Figure-level PNG is a copy of the panel;
-no multi-panel composition or Gallery publication occurs.
+Edit the input paths and the separate `A_*` / `B_*` extent settings in the
+Shell entry point as needed. Defaults preserve f03a at 99–109°E, 9–19°N and
+set f03b to 102–108°E, 9–15°N. `FIG_WIDTH` and `FIG_HEIGHT` set the complete
+combined Figure size in inches (`0` selects automatic sizing); `DPI` controls
+PNG resolution. The script writes both panels and the combined Figure under
+`visualization/river_map/figure/`. Gallery images are not changed.

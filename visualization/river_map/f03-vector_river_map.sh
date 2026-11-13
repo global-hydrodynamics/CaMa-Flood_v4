@@ -1,42 +1,81 @@
 #!/usr/bin/env bash
-# Draw the Mekong river network between geographic outlet locations.
+# Draw and combine the two Mekong outlet-based river-network panels.
 set -euo pipefail
 
-# The $(...) expressions resolve paths from this script, independent of the caller's directory.
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+# The Figure is saved to PNG; do not require an interactive desktop backend.
+export MPLBACKEND=Agg
 
-# User settings: tracked map inputs and displayed geographic extent.
+# Resolve paths from this script, independent of the caller's directory.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VISUALIZATION_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPO_ROOT="$(cd "$VISUALIZATION_DIR/.." && pwd)"
+
+# User settings: tracked coarse- and high-resolution Mekong map products.
 MAP_DIR="$REPO_ROOT/map/mekong_15min"
 UPAREA_FILE="$MAP_DIR/netcdf/uparea.nc"          # Source-cell upstream area [m²].
 NEXTXY_FILE="$MAP_DIR/netcdf/nextxy_noedge.nc"  # One-based downstream cell indices.
-LONLAT_FILE="$MAP_DIR/netcdf/lonlat.nc"         # Outlet coordinates for river cells.
-PARAMS_FILE="$MAP_DIR/params.txt"               # Map grid dimensions and bounds.
-WEST=99
-EAST=109
-SOUTH=9
-NORTH=19
+LONLAT_FILE="$MAP_DIR/netcdf/lonlat.nc"          # Unit-catchment outlet coordinates.
+BSNCOL_FILE="$MAP_DIR/netcdf/bsncol.nc"          # Categorical basin display colors.
+BIFPRM_FILE="$MAP_DIR/netcdf/bifprm.nc"          # Bifurcation paths and layer widths.
+PARAMS_FILE="$MAP_DIR/params.txt"                # Coarse grid dimensions and bounds.
+CATMXY_FILE="$MAP_DIR/1min/1min.catmxy.bin"      # 1-minute to coarse-cell assignment.
+LOCATION_FILE="$MAP_DIR/1min/location.txt"       # High-resolution grid bounds and size.
 
-# User settings: output size and file locations.
-FIG_WIDTH=0        # Complete Figure width [inches]; 0 selects automatic width.
-FIG_HEIGHT=8       # Complete Figure height [inches]; 0 selects automatic height.
-DPI=200            # PNG resolution.
-PYTHON="python3"   # Use the repository .venv Python after standard setup.
+# User settings: independent extents for the preserved f03a and new f03b panels.
+A_WEST=99
+A_EAST=109
+A_SOUTH=9
+A_NORTH=19
+B_WEST=102
+B_EAST=108
+B_SOUTH=9
+B_NORTH=15
+
+# User settings: horizontal panel layout and complete Figure dimensions.
+GAP=24               # Space between panels [pixels].
+MARGIN=24            # Outer margin around the combined Figure [pixels].
+FIG_WIDTH=0         # Complete Figure width [inches]; 0 selects automatic width.
+FIG_HEIGHT=8        # Complete Figure height [inches]; 0 selects automatic height.
+DPI=200             # PNG resolution.
+PYTHON="python3"    # Use the repository .venv Python after standard setup.
+
+# Panel and complete-Figure output paths.
 FIGURE_DIR="$SCRIPT_DIR/figure"
-PANEL_FILE="$FIGURE_DIR/f03a-vector_river_map-upstream_area.png"
+PANEL_A="$FIGURE_DIR/f03a-vector_river_map-upstream_area.png"
+PANEL_B="$FIGURE_DIR/f03b-vector_river_map-extended_network.png"
 OUTPUT_FILE="$FIGURE_DIR/f03-vector_river_map.png"
-PANEL_SCRIPT="$SCRIPT_DIR/script/f03a-vector_river_map-upstream_area.py"
+COMBINER="$VISUALIZATION_DIR/script/combine_panels.py"
+
+# Divide fixed complete-Figure dimensions between two horizontal panels.
+PANEL_WIDTH=$(awk -v width="$FIG_WIDTH" -v dpi="$DPI" \
+    -v gap="$GAP" -v margin="$MARGIN" \
+    'BEGIN { if (width > 0) printf "%.6f", (width*dpi - 2*margin - gap)/(2*dpi); else print 0 }')
+PANEL_HEIGHT=$(awk -v height="$FIG_HEIGHT" -v dpi="$DPI" -v margin="$MARGIN" \
+    'BEGIN { if (height > 0) printf "%.6f", (height*dpi - 2*margin)/dpi; else print 0 }')
 
 mkdir -p "$FIGURE_DIR"
 
-printf '\n[STEP 1/2] Draw outlet-to-outlet river connections.\n'
-"$PYTHON" "$PANEL_SCRIPT" \
+printf '\n[STEP 1/3] Draw the f03a upstream-area outlet network.\n'
+"$PYTHON" "$SCRIPT_DIR/script/f03a-vector_river_map-upstream_area.py" \
     --uparea "$UPAREA_FILE" --nextxy "$NEXTXY_FILE" \
     --lonlat "$LONLAT_FILE" --params "$PARAMS_FILE" \
-    --west "$WEST" --east "$EAST" --south "$SOUTH" --north "$NORTH" \
-    --figure-width "$FIG_WIDTH" --figure-height "$FIG_HEIGHT" \
-    --dpi "$DPI" --output "$PANEL_FILE"
+    --west "$A_WEST" --east "$A_EAST" --south "$A_SOUTH" --north "$A_NORTH" \
+    --figure-width "$PANEL_WIDTH" --figure-height "$PANEL_HEIGHT" \
+    --dpi "$DPI" --output "$PANEL_A"
 
-printf '\n[STEP 2/2] Copy the single panel as the complete Figure.\n'
-cp "$PANEL_FILE" "$OUTPUT_FILE"
+printf '\n[STEP 2/3] Draw the f03b extended outlet network.\n'
+"$PYTHON" "$SCRIPT_DIR/script/f03b-vector_river_map-extended_network.py" \
+    --uparea "$UPAREA_FILE" --nextxy "$NEXTXY_FILE" \
+    --lonlat "$LONLAT_FILE" --bsncol "$BSNCOL_FILE" \
+    --bifprm "$BIFPRM_FILE" --params "$PARAMS_FILE" \
+    --catmxy "$CATMXY_FILE" --location "$LOCATION_FILE" \
+    --west "$B_WEST" --east "$B_EAST" --south "$B_SOUTH" --north "$B_NORTH" \
+    --figure-width "$PANEL_WIDTH" --figure-height "$PANEL_HEIGHT" \
+    --dpi "$DPI" --output "$PANEL_B"
+
+printf '\n[STEP 3/3] Combine f03a and f03b into the project Figure.\n'
+"$PYTHON" "$COMBINER" "$PANEL_A" "$PANEL_B" \
+    --layout horizontal --gap "$GAP" --margin "$MARGIN" \
+    --figure-width "$FIG_WIDTH" --figure-height "$FIG_HEIGHT" --dpi "$DPI" \
+    --output "$OUTPUT_FILE"
 printf '[SUCCESS] Created %s\n' "$OUTPUT_FILE"
