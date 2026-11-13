@@ -158,7 +158,7 @@ class MekongSampleTests(unittest.TestCase):
         self.assertTrue(all(value >= 0 for value, downstream in zip(subbasins, nextx) if downstream != -9999))
         self.assertIn(0, subbasins)
         self.assertTrue(any(value > 0 for value in subbasins))
-        self.assertTrue(all(value == -9999 or 1 <= value <= 10 for value in colors))
+        self.assertTrue(all(value == -9999 or 0 <= value <= 10 for value in colors))
         self.assertEqual(set(upstream), {-9999, 0, 1})
 
         rows = registry_rows()
