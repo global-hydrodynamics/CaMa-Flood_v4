@@ -20,7 +20,7 @@ Previously copied executable files are not needed when using the link. Inspect a
 
 - `a01-river_point_info.sh` writes the selected cell or geographic query report.
 - `a02-upbasin.sh` writes an exploratory outlet mask and report, separate from `upbasin-2569002.bin`.
-- `a03-subbasin.sh` writes a 50,000 km2 exploratory subbasin and color map, separate from `subbsn-30000.bin` and `subcol-30000.bin`.
+- `a03-subbasin.sh` writes a 50,000 km2 exploratory subbasin and color map, separate from `subbsn-sample.bin` and `subcol-sample.bin`.
 - `a04-river_node_latlon.sh` writes a text table for the configured Mekong-region bounds.
 - `a05-check_mpi_bifurcation.sh` optionally writes dropped pathways as CSV; a relative filename is placed in `OUT_DIR`.
 

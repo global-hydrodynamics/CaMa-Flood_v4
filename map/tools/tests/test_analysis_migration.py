@@ -5,6 +5,7 @@ against the preserved v4 programs; they do not claim scientific validation.
 """
 from __future__ import annotations
 
+import hashlib
 import os
 import shutil
 import struct
@@ -177,11 +178,11 @@ class AnalysisMigrationTests(unittest.TestCase):
         # this compiler; verify the sample threshold through the v5-only wrapper.
         result = run(
             [str(self.v5_dir / "analysis_subbasin"), "30000",
-             str(v5_map / "subbsn-30000.bin"), str(v5_map / "subcol.bin")],
+             str(v5_map / "subbsn-sample.bin"), str(v5_map / "subcol.bin")],
             v5_params,
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        v5_subbsn_30000 = (v5_map / "subbsn-30000.bin").read_bytes()
+        v5_subbsn_30000 = (v5_map / "subbsn-sample.bin").read_bytes()
 
         record_bytes = 80 * 120 * 4
         self.assertEqual(len(v5_upbasin), record_bytes)
@@ -199,12 +200,12 @@ class AnalysisMigrationTests(unittest.TestCase):
         ctl_dir = self.root / "ctl"
         ctl_dir.mkdir()
         shutil.copy2(v5_map / "upbasin.bin", v5_map / "upbasin-2569002.bin")
-        shutil.copy2(v5_map / "subcol.bin", v5_map / "subcol-30000.bin")
-        for name in ("params.txt", "upbasin-2569002.bin", "subbsn-30000.bin", "subcol-30000.bin"):
+        shutil.copy2(v5_map / "subcol.bin", v5_map / "subcol-sample.bin")
+        for name in ("params.txt", "upbasin-2569002.bin", "subbsn-sample.bin", "subcol-sample.bin"):
             shutil.copy2(v5_map / name, ctl_dir / name)
         result = generate_directory(ctl_dir, ROOT / "variable_table" / "map_variables.csv")
         self.assertEqual(result.generated, 3, result)
-        for stem, variable in (("upbasin-2569002", "upbasin"), ("subbsn-30000", "subbsn"), ("subcol-30000", "subcol")):
+        for stem, variable in (("upbasin-2569002", "upbasin"), ("subbsn-sample", "subbsn"), ("subcol-sample", "subcol")):
             ctl = (ctl_dir / f"{stem}.ctl").read_text(encoding="utf-8")
             self.assertIn(f"{variable} 1", ctl)
             self.assertIn("undef", ctl)
@@ -252,8 +253,8 @@ class AnalysisMigrationTests(unittest.TestCase):
 
         result = run([str(params / "s06-subbasin.sh")], self.root)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual((map_dir / "subbsn.bin").stat().st_size, 80 * 120 * 4)
-        self.assertEqual((map_dir / "subcol.bin").stat().st_size, 80 * 120 * 4)
+        self.assertEqual((map_dir / "subbsn-sample.bin").stat().st_size, 80 * 120 * 4)
+        self.assertEqual((map_dir / "subcol-sample.bin").stat().st_size, 80 * 120 * 4)
 
         result = run([str(params / "s07-upbasin.sh")], self.root)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -282,17 +283,94 @@ class AnalysisMigrationTests(unittest.TestCase):
         self.assertTrue(vector_output.is_file())
         self.assertIn("ori-lat", vector_output.read_text(encoding="ascii").splitlines()[0])
 
-    def test_mekong_sample_subbasin_wrapper_labels_threshold_output(self) -> None:
+    def test_mekong_sample_subbasin_wrapper_uses_stable_output_names(self) -> None:
         map_dir, params = self.make_map("sample-script")
         script = params / "s06-subbasin.sh"
         shutil.copy2(SAMPLE / "script_params" / "s06-subbasin.sh", script)
         script.chmod(0o755)
         result = run([str(script)], self.root)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual((map_dir / "subbsn-30000.bin").stat().st_size, 80 * 120 * 4)
+        self.assertEqual((map_dir / "subbsn-sample.bin").stat().st_size, 80 * 120 * 4)
         self.assertFalse((map_dir / "subbsn.bin").exists())
-        self.assertEqual((map_dir / "subcol-30000.bin").stat().st_size, 80 * 120 * 4)
+        self.assertEqual((map_dir / "subcol-sample.bin").stat().st_size, 80 * 120 * 4)
         self.assertFalse((map_dir / "subcol.bin").exists())
+        script.write_text(script.read_text().replace("AREA_THRESHOLD2_KM2=5000", "AREA_THRESHOLD2_KM2="))
+        result = run([str(script)], self.root)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(hashlib.sha256((map_dir / "subbsn-sample.bin").read_bytes()).hexdigest(),
+                         "4c5e85be796a3957fe67d3883ec8ad7cafd15689d1fc81ccf87ef4da0e4a7b1e")
+
+    def test_two_stage_subbasins_preserve_stage1_and_connected_ids(self) -> None:
+        # Detect a full smaller-threshold rerun that would destroy Stage 1 IDs.
+        map_dir, params = self.make_map("two-stage")
+        executable = str(self.debug_dir / "analysis_subbasin")
+        for arguments in (
+            ["30000", "first.bin", "first-col.bin"],
+            ["30000", "5000", "second.bin", "second-col.bin"],
+        ):
+            result = run([executable, *arguments], params)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        first_bytes = (params / "first.bin").read_bytes()
+        # Original tracked 30,000 km2 sample at d4d5b0e2, before two-stage support.
+        self.assertEqual(hashlib.sha256(first_bytes).hexdigest(),
+                         "4c5e85be796a3957fe67d3883ec8ad7cafd15689d1fc81ccf87ef4da0e4a7b1e")
+        first = struct.unpack("<9600i", first_bytes)
+        second = struct.unpack("<9600i", (params / "second.bin").read_bytes())
+        colors = struct.unpack("<9600i", (params / "second-col.bin").read_bytes())
+        nextxy = struct.unpack("<19200i", (map_dir / "nextxy.bin").read_bytes())
+        self.assertEqual(max(first), 64)
+        self.assertEqual(max(second), 113)
+        self.assertEqual(first.count(0), 1274)
+        self.assertEqual(second.count(0), 686)
+        groups: dict[int, set[int]] = {}
+        for index, (old, new, color) in enumerate(zip(first, second, colors)):
+            if old != 0:
+                self.assertEqual(new, old)
+            elif new > 0:
+                self.assertGreater(new, max(first))
+            self.assertTrue(new >= 0 or new == -9999)
+            if new > 0:
+                self.assertTrue(1 <= color <= 10)
+                groups.setdefault(new, set()).add(index)
+            else:
+                self.assertEqual(color, -9999)
+        for cells in groups.values():
+            # Each ID is one connected directed tree, never reused in another segment.
+            edges = 0
+            neighbors: dict[int, list[int]] = {index: [] for index in cells}
+            for index in cells:
+                x, y = nextxy[index], nextxy[9600 + index]
+                downstream = (y - 1) * 80 + x - 1
+                if x > 0 and y > 0 and downstream in cells:
+                    edges += 1
+                    neighbors[index].append(downstream)
+                    neighbors[downstream].append(index)
+            reached: set[int] = set()
+            pending = [next(iter(cells))]
+            while pending:
+                index = pending.pop()
+                if index not in reached:
+                    reached.add(index)
+                    pending.extend(neighbors[index])
+            self.assertEqual(reached, cells)
+            self.assertEqual(edges, len(cells) - 1)
+            self.assertEqual(len({colors[index] for index in cells}), 1)
+
+        # The two-argument default-path form must match the explicit-path form.
+        result = run([executable, "30000", "5000"], params)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual((map_dir / "analysis_subbsn_30000_5000.bin").read_bytes(),
+                         (params / "second.bin").read_bytes())
+
+    def test_subbasin_rejects_invalid_thresholds(self) -> None:
+        _, params = self.make_map("invalid-thresholds")
+        for arguments in (["0"], ["-1"], ["NaN"], ["invalid"],
+                          ["30000", "30000"], ["30000", "40000"],
+                          ["30000", "0"], ["30000", "NaN"], ["30000", "bad"]):
+            with self.subTest(arguments=arguments):
+                result = run([str(self.debug_dir / "analysis_subbasin"), *arguments], params)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("ERROR:", result.stdout)
 
     def test_direct_cli_runs_from_map_local_script_analysis(self) -> None:
         map_dir, _ = self.make_map("portable-cli")

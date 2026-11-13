@@ -54,7 +54,7 @@ def draw_basin_boundaries(ax, basin, geometry):
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--input", type=Path, required=True, help="Prepared subcol-30000.bin")
+    parser.add_argument("--input", type=Path, required=True, help="Prepared subcol-sample.bin")
     parser.add_argument("--basin", type=Path, required=True, help="Original basin ID NetCDF raster")
     parser.add_argument("--nextxy", type=Path, required=True, help="nextxy_noedge.nc for the exclusion mask")
     parser.add_argument("--cmap", default="tab10", help="Qualitative discrete palette, as in Basin Color")

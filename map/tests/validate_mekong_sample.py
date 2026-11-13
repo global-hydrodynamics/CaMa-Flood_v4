@@ -151,8 +151,8 @@ class MekongSampleTests(unittest.TestCase):
         dims = read_map_dimensions()
         cells = dims["NX"] * dims["NY"]
         nextx = struct.unpack("<" + "i" * cells, (MAP / "nextxy.bin").read_bytes()[:cells * 4])
-        subbasins = struct.unpack("<" + "i" * cells, (MAP / "subbsn-30000.bin").read_bytes())
-        colors = struct.unpack("<" + "i" * cells, (MAP / "subcol-30000.bin").read_bytes())
+        subbasins = struct.unpack("<" + "i" * cells, (MAP / "subbsn-sample.bin").read_bytes())
+        colors = struct.unpack("<" + "i" * cells, (MAP / "subcol-sample.bin").read_bytes())
         upstream = struct.unpack("<" + "i" * cells, (MAP / "upbasin-2569002.bin").read_bytes())
         self.assertTrue(all(value == -9999 for value, downstream in zip(subbasins, nextx) if downstream == -9999))
         self.assertTrue(all(value >= 0 for value, downstream in zip(subbasins, nextx) if downstream != -9999))
@@ -162,8 +162,8 @@ class MekongSampleTests(unittest.TestCase):
         self.assertEqual(set(upstream), {-9999, 0, 1})
 
         rows = registry_rows()
-        self.assertEqual(len(rows_for_sample_file(MAP / "subbsn-30000.bin", rows)), 1)
-        self.assertEqual(len(rows_for_sample_file(MAP / "subcol-30000.bin", rows)), 1)
+        self.assertEqual(len(rows_for_sample_file(MAP / "subbsn-sample.bin", rows)), 1)
+        self.assertEqual(len(rows_for_sample_file(MAP / "subcol-sample.bin", rows)), 1)
         self.assertEqual(len(rows_for_sample_file(MAP / "upbasin-2569002.bin", rows)), 1)
 
     def test_sample_binary_sizes_match_registry_types_and_dimensions(self) -> None:

@@ -80,7 +80,7 @@ observation-station data are required.
 | f01a | `map/mekong_15min/netcdf/uparea.nc`: `uparea(lat, lon)`, m² | Convert to km²; mask missing/non-finite/non-positive values; retain `YlGnBu` with logarithmic normalization over all valid map cells. |
 | f01b | `map/mekong_15min/netcdf/basin.nc`: `basin(lat, lon)`, unitless | Display original positive integer IDs with one discrete bin per original integer value. Repeat the qualitative `tab20` palette across IDs; no conversion to `bsncol`. A display-only pseudo-log categorical legend expands IDs 1–20 and labels representative higher IDs. |
 | f01c | `map/mekong_15min/netcdf/bsncol.nc`: `bsncol(lat, lon)`, unitless | Display the precomputed indices directly with discrete bins for 1–10. Mix the base `tab10` RGB colors with 60% opaque white to obtain distinguishable pastel colors; only used indices are labeled. |
-| f01d | `map/mekong_15min/subcol-30000.bin`: `subcol`, unitless | Read the prepared little-endian int32 raster directly; use the same `tab10` palette and 60% opaque white mix as f01c. Discrete categories only, nearest-neighbor rendering, no log normalization; only present display indices appear in the colorbar. Overlay original basin-ID boundaries in black and the `nextxy_noedge` mask in neutral gray. |
+| f01d | `map/mekong_15min/subcol-sample.bin`: `subcol`, unitless | Read the prepared little-endian int32 raster directly; use the same `tab10` palette and 60% opaque white mix as f01c. Discrete categories only, nearest-neighbor rendering, no log normalization; only present display indices appear in the colorbar. Overlay original basin-ID boundaries in black and the `nextxy_noedge` mask in neutral gray. |
 
 All main and overlay rasters are Git-tracked and share an 80 × 120 grid at
 0.25°. Coordinates are cell centers, longitude increases eastward, latitude
@@ -97,9 +97,10 @@ The f01d binary has exactly one 38,400-byte record: 80 × 120 little-endian
 int32 values in Fortran array order, with x varying fastest. Its first row is
 the northern row, matching the existing map orientation. `-9999` and any
 unassigned zero cells are white in the main fill; the no-edge overlay takes
-precedence and shows excluded cells in gray. The sample contains display indices 2–6;
+precedence and shows excluded cells in gray. The two-stage sample contains display indices 1–6;
 non-sentinel values outside the registered 1–10 range are rejected. The paired
-`subbsn-30000.bin` has 64 positive segment IDs, plus zero for unassigned network
+`subbsn-sample.bin` has 113 positive segment IDs (64 from Stage 1 and 49
+additional Stage 2 IDs), plus zero for 686 unassigned network
 cells and `-9999` outside the network. Shared colors do not identify a segment;
 use `subbsn` for identity. Plotting reads `subcol`, geometry, the original `netcdf/basin.nc` for boundaries,
 and `netcdf/nextxy_noedge.nc` for the gray mask. It never recalculates segmentation
@@ -144,15 +145,19 @@ conversion nor map generation.
 The reusable [s06 subbasin workflow](../../map/tools/script_params/s06-subbasin.sh)
 calls [`analysis_subbasin.F90`](../../map/tools/code/analysis_subbasin.F90).
 The [Mekong example](../../map/mekong_15min/script_params/s06-subbasin.sh) uses
-`AREA_THRESHOLD_KM2=30000` and names the outputs `subbsn-30000.bin` and
-`subcol-30000.bin`. A qualifying link is cut when the current cell's upstream
-area exceeds 30,000 km² **and** its downstream cell's upstream area exceeds the
-current area by more than 30,000 km². This is an upstream-area-increment
-segmentation threshold, not a universal minimum subbasin size: the output
-segments are not guaranteed to have at least 30,000 km² each. See the
-[river-network analysis documentation](../../map/tools/script_params/README.md#river-network-analysis)
-for the workflow and full algorithm references rather than treating display
-colors as physical basin attributes.
+editable defaults `AREA_THRESHOLD1_KM2=30000` and `AREA_THRESHOLD2_KM2=5000`,
+and writes stable `subbsn-sample.bin` / `subcol-sample.bin` filenames. Stage 1
+retains the existing large-area segmentation; Stage 2 only assigns additional
+IDs to previously unassigned river-network regions and preserves all positive
+Stage 1 IDs and boundaries. The Mekong sample retains 64 Stage 1 IDs, adds 49,
+and reduces unassigned network cells from 1,274 to 686. Both thresholds describe
+upstream-area-increase segmentation, not guaranteed minimum segment sizes or
+universal scientific parameters. Set the second setting empty for single-stage
+operation. `subcol` is regenerated from the final IDs using the existing
+adjacency coloring routine. See the
+[river-network analysis documentation](../../map/tools/script_params/README.md#river-network-analysis).
+Detailed methods, alternative thresholds and user-generated datasets are deferred
+to a future Map Analysis Tutorial.
 
 The prepared binary is already distributed with the Git-tracked Mekong sample.
 Users do not need to run this generation workflow merely to make the Figure.

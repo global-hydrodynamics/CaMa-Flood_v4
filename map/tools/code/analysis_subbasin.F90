@@ -1,5 +1,6 @@
 ! Divide the directed river network at sufficiently large adjacent drainage-area increases.
-! Usage: analysis_subbasin THRESHOLD_KM2 [SUBBSN_OUTPUT SUBCOL_OUTPUT]
+! Usage: analysis_subbasin THRESHOLD1 [THRESHOLD2] [SUBBSN_OUTPUT SUBCOL_OUTPUT]
+! Stage 2 only subdivides Stage 1 unassigned cells; positive Stage 1 IDs are frozen.
 ! Working directory: a directory directly under the map root; map inputs are read via ../.
 ! The threshold is applied to the increase in upstream area between a cell and
 ! its downstream cell, not as a simple test of whether either cell exceeds it.
@@ -10,6 +11,7 @@
 ! products are not runtime inputs.
       program analysis_subbasin
 ! ================================================
+      use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
       implicit none
 ! ===================
 ! calculation type
@@ -39,32 +41,57 @@
       integer,allocatable::  basin_order(:), basin_new(:)
       real,allocatable   ::  basin_size(:)
       real               ::  upa_thrs          !! minimum downstream area increase used to split a segment [km2]
+      real               ::  upa_thrs2        !! optional smaller threshold [km2]
+      integer            ::  nargs, output_arg, nbsn_stage1
+      logical            ::  two_stage
+      character*256      ::  threshold_label
 ! file
       character*256       ::  finp, fparam, fout_subbsn, fout_subcol
       integer             ::  ios
 ! ================================================
 ! read parameters from arguments
       print *, '######################################################'
-      print *, 'USAGE: analysis_subbasin THRESHOLD_KM2 [SUBBSN_OUTPUT SUBCOL_OUTPUT]'
-      print *, '    Output path arguments are an optional pair; defaults are parameter-labeled analysis files in ../.'
+      print *, 'USAGE: analysis_subbasin THRESHOLD1 [THRESHOLD2] [SUBBSN_OUTPUT SUBCOL_OUTPUT]'
+      print *, '    Positive thresholds in km2; THRESHOLD2 must be smaller than THRESHOLD1.'
+      print *, '    Output paths are an optional pair; defaults are parameter-labeled files in ../.'
 
-      upa_thrs=100000.
-      if( command_argument_count()/=1 .and. command_argument_count()/=3 )then
-        print *, 'ERROR: provide a threshold and optionally both output paths'
+      nargs=command_argument_count()
+      if( nargs<1 .or. nargs>4 )then
+        print *, 'ERROR: provide one or two thresholds and optionally both output paths'
         stop 1
       endif
+      two_stage=(nargs==2 .or. nargs==4)
       call get_command_argument(1,buf)
-      if( trim(buf)=='' )then
-        print *, 'ERROR: threshold is required'
+      read(buf,*,iostat=ios) upa_thrs
+      if( ios/=0 )then
+        print *, 'ERROR: THRESHOLD1 must be a positive finite number'
         stop 1
-      else
-        read(buf,*) upa_thrs
       endif
-      fout_subbsn='../analysis_subbsn_'//trim(adjustl(buf))//'.bin'
-      fout_subcol='../analysis_subcol_'//trim(adjustl(buf))//'.bin'
-      if( command_argument_count()==3 )then
-        call get_command_argument(2,fout_subbsn)
-        call get_command_argument(3,fout_subcol)
+      if( .not.ieee_is_finite(upa_thrs) .or. upa_thrs<=0 )then
+        print *, 'ERROR: THRESHOLD1 must be a positive finite number'
+        stop 1
+      endif
+      threshold_label=trim(adjustl(buf))
+      output_arg=2
+      if( two_stage )then
+        call get_command_argument(2,buf)
+        read(buf,*,iostat=ios) upa_thrs2
+        if( ios/=0 )then
+          print *, 'ERROR: THRESHOLD2 must be positive and smaller than THRESHOLD1'
+          stop 1
+        endif
+        if( .not.ieee_is_finite(upa_thrs2) .or. upa_thrs2<=0 .or. upa_thrs2>=upa_thrs )then
+          print *, 'ERROR: THRESHOLD2 must be positive and smaller than THRESHOLD1'
+          stop 1
+        endif
+        threshold_label=trim(threshold_label)//'_'//trim(adjustl(buf))
+        output_arg=3
+      endif
+      fout_subbsn='../analysis_subbsn_'//trim(threshold_label)//'.bin'
+      fout_subcol='../analysis_subcol_'//trim(threshold_label)//'.bin'
+      if( nargs>=3 )then
+        call get_command_argument(output_arg,fout_subbsn)
+        call get_command_argument(output_arg+1,fout_subcol)
         if( trim(fout_subbsn)=='' .or. trim(fout_subcol)=='' )then
           print *, 'ERROR: both output paths must be non-empty'
           stop 1
@@ -185,6 +212,76 @@
         end do
       end do
 
+      ! Stage 1 is unchanged above. Stage 2 may only relabel its zero cells.
+      nbsn_stage1=nbsn
+      print *, 'Stage 1 subbasins / unassigned cells:', nbsn, count(basin==0)
+      if( two_stage )then
+        ! Freeze positive IDs and outside-network cells. Reset only zeros to
+        ! the internal marker, and make Stage 1 connections terminal boundaries.
+        where( basin==0 ) basin=-999
+        do iy=1, ny
+          do ix=1, nx
+            if( basin(ix,iy)/=-999 ) cycle
+            jx=nextx(ix,iy)
+            jy=nexty(ix,iy)
+            if( jx>=1 .and. jx<=nx .and. jy>=1 .and. jy<=ny )then
+              if( basin(jx,jy)>0 )then
+                nextx(ix,iy)=-9
+                nexty(ix,iy)=-9
+              else if( uparea(ix,iy)>upa_thrs2 .and. &
+                       uparea(jx,jy)>uparea(ix,iy)+upa_thrs2 )then
+                nextx(ix,iy)=-9
+                nexty(ix,iy)=-9
+              endif
+            endif
+          end do
+        end do
+
+        ! Scan order and seed rule match Stage 1; new IDs follow all old IDs.
+        ibsn=nbsn_stage1
+        do iy=1, ny
+          do ix=1, nx
+            if( basin(ix,iy)/=-999 ) cycle
+            if( nextx(ix,iy)==-9 .or. nextx(ix,iy)==-10 )then
+              if( uparea(ix,iy)>=upa_thrs2 )then
+                ibsn=ibsn+1
+                basin(ix,iy)=ibsn
+              else
+                basin(ix,iy)=0
+              endif
+            endif
+          end do
+        end do
+        nbsn=ibsn
+
+        ! Propagate only within the remaining regions, never through frozen IDs.
+        do iy=1, ny
+          do ix=1, nx
+            if( nextx(ix,iy)>0 .and. basin(ix,iy)==-999 )then
+              jx=ix
+              jy=iy
+              do while( nextx(jx,jy)>0 .and. basin(jx,jy)==-999 )
+                kx=nextx(jx,jy)
+                ky=nexty(jx,jy)
+                jx=kx
+                jy=ky
+              end do
+              jbsn=basin(jx,jy)
+              jx=ix
+              jy=iy
+              do while( nextx(jx,jy)>0 .and. basin(jx,jy)==-999 )
+                basin(jx,jy)=jbsn
+                kx=nextx(jx,jy)
+                ky=nexty(jx,jy)
+                jx=kx
+                jy=ky
+              end do
+            endif
+          end do
+        end do
+        print *, 'Stage 2 added subbasins / remaining unassigned cells:', nbsn-nbsn_stage1, count(basin==0)
+      endif
+
       ! Legacy ordering arrays are not consumed by current outputs. basin_size
       ! and basin_order are populated, but basin_new is only allocated.
       allocate(basin_size(nbsn))
@@ -208,11 +305,11 @@
 
 ! ==========
 
-      open(11,file=fout_subbsn,form='unformatted',access='direct',recl=4*nx*ny)
+      open(11,file=fout_subbsn,form='unformatted',access='direct',recl=4*nx*ny,status='replace')
       write(11,rec=1) basin
       close(11)
 
-      open(11,file=fout_subcol,form='unformatted',access='direct',recl=4*nx*ny)
+      open(11,file=fout_subcol,form='unformatted',access='direct',recl=4*nx*ny,status='replace')
       write(11,rec=1) color
       close(11)
 

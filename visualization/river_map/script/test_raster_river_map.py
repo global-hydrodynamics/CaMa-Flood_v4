@@ -62,7 +62,7 @@ class RasterRiverMapTest(unittest.TestCase):
                     name = f"f01{panel}-raster_river_map-{option}"
                     output = Path(tmp) / (name + ".png")
                     argv = [str(SCRIPTS / (name + ".py")),
-                            "--input", str(MAP / "subcol-30000.bin" if variable == "subcol"
+                            "--input", str(MAP / "subcol-sample.bin" if variable == "subcol"
                                            else MAP / "netcdf" / (variable + ".nc")),
                             "--params", str(MAP / "params.txt"),
                             "--west", "90", "--east", "110", "--south", "5", "--north", "35",
@@ -117,7 +117,7 @@ class RasterRiverMapTest(unittest.TestCase):
                             else:
                                 indices = np.unique(expected.compressed())
                                 colors = image.get_cmap()(image.norm(indices))[:, :3]
-                                self.assertEqual(len(indices), 5)
+                                self.assertEqual(len(indices), 6 if variable == "subcol" else 5)
                                 # Quantify useful opacity/lightness and separation
                                 # for the actual neighboring-color index palette.
                                 self.assertTrue(np.all(colors @ [0.2126, 0.7152, 0.0722] > 0.70))
@@ -128,7 +128,7 @@ class RasterRiverMapTest(unittest.TestCase):
                                 if variable == "subcol":
                                     self.assertEqual(cax.get_ylabel(), "Subbasin display-color index (not subbasin ID)")
                                     self.assertEqual([label.get_text() for label in cax.get_yticklabels()],
-                                                     ["2", "3", "4", "5", "6"])
+                                                     [str(int(value)) for value in indices])
                                     self.assertEqual(image.get_interpolation(), "nearest")
                                     rgba = image.to_rgba(image.get_array())
                                     self.assertTrue(np.all(rgba[np.ma.getmaskarray(raw)] == [1, 1, 1, 1]))
