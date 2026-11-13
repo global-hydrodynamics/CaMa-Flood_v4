@@ -111,11 +111,15 @@ colorbar-related layout difference.
   colorbars where they help explain the plotted quantity.
 - Begin each title shown inside a figure with its project and Figure IDs; when
   a title identifies an individual panel, include that panel ID as well. For
-  example: `p01-f01a Raster River Map: Upstream Area` or
-  `p01-f02a Line River Map: Connect Type`. Use human-readable
-  method and option names with consistent capitalization, following the
+  example, use `p01-f01a Raster River Map: Upstream Area` or
+  `p01-f02a Line River Map: Connect Type`: ID, human-readable drawing-method
+  name, then option name. Use consistent capitalization and follow the
   authoritative [naming convention](repository_development_guide.md#method-and-option-naming).
-  Keep the figure identifiable outside the Gallery or project documentation.
+  Omit the option suffix only when the figure has no meaningful option. Keep
+  the figure identifiable outside the Gallery or project documentation.
+- For geographic map axes, use the concise labels `Longitude` and `Latitude`;
+  do not repeat east/north degree units in parentheses when the map coordinates
+  and tick values already make the units clear.
 - Use panel labels consistently when panels are referenced separately.
 - Ensure lines, markers, categories, and overlaid geographic layers remain
   distinguishable at the image's intended display size.

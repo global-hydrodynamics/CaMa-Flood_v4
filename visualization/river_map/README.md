@@ -429,3 +429,86 @@ set f03b to 102–108°E, 9–15°N. `FIG_WIDTH` and `FIG_HEIGHT` set the comple
 combined Figure size in inches (`0` selects automatic sizing); `DPI` controls
 PNG resolution. The script writes both panels and the combined Figure under
 `visualization/river_map/figure/`. Gallery images are not changed.
+
+## p01-f04 — River Map Catchment
+
+Method identifier: `rivmap_catchment`.
+
+| Panel | Option | Option identifier | Map variables | Panel script | Panel image |
+| --- | --- | --- | --- | --- | --- |
+| p01-f04a | Upstream Area at Unit Catchment | `outlet_uparea` | `catmxy`, `uparea`, `nextxy`, `lonlat`, `bifprm` | `f04a-rivmap_catchment-outlet_uparea.py` | `f04a-rivmap_catchment-outlet_uparea.png` |
+| p01-f04b | Channel Pixel | `channel_pixel` | `catmxy`, `visual`, `uparea`, `nextxy`, `lonlat`, `bifprm` | `f04b-rivmap_catchment-channel_pixel.py` | `f04b-rivmap_catchment-channel_pixel.png` |
+
+These two panels combine the 1-minute unit-catchment geometry with the Mekong
+outlet-based river network over 104.5–107°E and 9.5–12°N. Neither reads
+observation-station data or shows station markers and station links. The shared
+plotting implementation gives both options identical map and colorbar geometry
+and reserves the same legend area.
+
+![p01-f04 River Map Catchment](figure/f04-rivmap_catchment.png)
+
+The background follows Tutorial02 fig01d. Each assigned pixel in
+`1min.catmxy.bin` inherits the upstream area of its one-based 15-minute
+unit-catchment from `uparea.nc`. It is shown in km² with a logarithmic
+pale-yellow-to-green scale. Pixels with `catmxy = -999` are unassigned land
+and are gray; other unassigned/background pixels, including the sea, are
+white. Thin dark outlines show changes in unit-catchment assignment, while
+faint gray lines show the 15-minute grid.
+
+Main-channel arrows connect the exact `lonlat.nc` outlet coordinates selected
+by each valid `nextxy` link. Source-cell `uparea` for visible links is grouped
+into four log-area quartiles, shown with the Tutorial02 fig01d blue colors and
+line widths. Thin gray guides connect the mean geographic center of each
+candidate headwater's assigned 1-minute pixels to its outlet. Candidates are
+river cells with no incoming valid main-channel link in the regional map; a
+candidate at the map edge may have an upstream link outside the regional map.
+
+Red bifurcation arrows show unique `bifprm.nc` paths whose first-layer
+`width` is positive, identifying channel bifurcations. Their colors and widths
+use four quartiles of visible path width in metres. Zero-width overland paths
+are excluded. These arrows reproduce stored endpoint connections; they are
+not terrain-traced channel paths. White square markers identify mapped
+river-cell outlets. The colorbar and main-channel legend describe this
+quantity as “Upstream area at unit-catchment.” No observation sites, station
+labels, or station-to-outlet links are included.
+
+The map and vertical colorbar share a GridSpec row, so their top and bottom
+align. The compact legend occupies a separate row just below the map; the
+15-minute grid remains visible but has no legend entry. Logarithmic colorbar
+ticks follow f01a/f02c, with labeled 1, 2, and 5 multiples formatted as
+decimal values. Main-channel, channel-bifurcation, and headwater-guide lines
+are slightly thicker than the initial f04 rendering while retaining their
+relative classes and colors.
+
+For `p01-f04b` (`channel_pixel`), the same green area raster and network layers
+are used. The signed-int8 `1min.visual.bin` categories are overlaid only on
+pixels assigned by `catmxy`: value 10 marks main-channel pixels (pale blue),
+and value 7 is the source-defined small-stream category (pale purple, usable as
+a tributary visualization class). The remaining `visual` categories are not
+drawn as channel pixels. The binary missing value is signed `-9`; the GrADS
+CTL's `undef 247` is only its unsigned-byte representation and is not used as
+the source-data missing value. The two pixel swatches are added to the f04b
+legend; f04a keeps the same legend-row space without showing these entries.
+
+| Input | Use |
+| --- | --- |
+| `map/mekong_15min/1min/1min.catmxy.bin`, `1min/location.txt` | Two little-endian int16 assignment planes and 1-minute grid geometry; provide high-resolution pixels and their one-based coarse-cell assignment. |
+| `map/mekong_15min/1min/1min.visual.bin` | Signed int8 visualization categories; f04b overlays value 10 (main stream) and value 7 (small stream) on assigned catchment pixels only. |
+| `map/mekong_15min/netcdf/uparea.nc` | Coarse-grid upstream drainage area in m²; supplies pixel colors and main-link area classes. |
+| `map/mekong_15min/netcdf/nextxy_noedge.nc` | Main-network downstream connectivity (`nextx`, `nexty`), with one-based grid indices. |
+| `map/mekong_15min/netcdf/lonlat.nc` | Coarse-cell outlet coordinates (`outlon`, `outlat`) in degrees east/north. |
+| `map/mekong_15min/netcdf/bifprm.nc` | Bifurcation endpoint indices and layer widths; only unique paths with positive first-layer width are drawn. |
+| `map/mekong_15min/params.txt` | Coarse-grid dimensions, resolution, and bounds used to validate map alignment. |
+
+Run the Figure script after the standard Python setup. It renders both
+independent panels and combines them horizontally with
+`visualization/script/combine_panels.py`:
+
+```bash
+./visualization/river_map/f04-rivmap_catchment.sh
+```
+
+The outputs are the two panel images listed above and the combined
+`visualization/river_map/figure/f04-rivmap_catchment.png`.
+The script uses the map's stored assignments and network connections; it does
+not infer catchments or river links from geographic proximity.
