@@ -25,6 +25,8 @@ once, then run the Figure's Shell entry point:
 source .venv/bin/activate
 ./visualization/output_analysis/f01-discharge_raster.sh
 ./visualization/output_analysis/f02-discharge_vector.sh
+./visualization/output_analysis/f03-flooded_area.sh
+./visualization/output_analysis/f04-flood_depth.sh
 ```
 
 The entry point resolves repository paths relative to its own location. It
@@ -101,11 +103,20 @@ selects the unique midnight record for the requested date; it does not infer
 the record index from the start date. For f01, it extracts variable `outflw`
 at 2001-09-01 00:00 from `o_outflw2001.nc` and writes a one-record NetCDF
 containing `time`, `lat`, `lon`, and `outflw` to
-`out_sample/outflw_2001-09-01.nc`. It also extracts `pthflw` at the same CF
-timestamp to `out_sample/pthflw_2001-09-01.nc`, preserving the layer and path
-dimensions and static path metadata such as `pth_id`, endpoints, and widths.
-Both samples retain their source attributes, time-coordinate definition, and
+`out_sample/outflw_2001-09-01.nc`. For f02, it extracts `pthflw` at the same
+CF timestamp to `out_sample/pthflw_2001-09-01.nc`, preserving the layer and
+path dimensions and static metadata such as `pth_id`, endpoints, and widths.
+These samples retain their source attributes, time-coordinate definition, and
 provenance identifying the selected record.
+
+The standalone `s01-extract_output_variables.sh` defaults also extract
+`fldare`, `fldfrc`, and `flddph` at the same requested CF timestamp into
+`out_sample/fldare_2001-09-01.nc`, `out_sample/fldfrc_2001-09-01.nc`, and
+`out_sample/flddph_2001-09-01.nc`. These are one-record 120 × 80 fields with
+units m², 1, and m, respectively. Their `time: point` metadata identifies
+output snapshots; unlike daily-mean `outflw`, they are not interval means.
+Extraction preserves their `lat`/`lon` grid, source attributes, fill values,
+and selected CF timestamp.
 
 The same Shell workflow also calls `script/extract_station_outflw.py`. It reads
 the six selected locations in `station_map_locations.csv` and extracts each
@@ -125,8 +136,8 @@ records the variable, requested date and selected CF time, source file and
 zero-based record index, destination, grid dimensions, data type, and units.
 This makes the extraction reproducible and identifies exactly which output
 record was used. The extractor accepts comma-separated `--variables` and
-`--dates` lists for `outflw` and `pthflw`, so additional dates can be extracted
-without changing the Python source. Output filenames use
+`--dates` lists for `outflw`, `pthflw`, `fldare`, `fldfrc`, and `flddph`, so
+additional dates can be extracted without changing the Python source. Output filenames use
 `<variable>_<YYYY-MM-DD>.nc`; annual source files use
 `o_<variable><year>.nc`.
 
@@ -153,8 +164,9 @@ Run `./visualization/output_analysis/f01-discharge_raster.sh`. It invokes the
 extraction wrapper, draws both panels, then assembles the complete Figure.
 To prepare the dated map sample and two-year station series without drawing
 f01, run `./visualization/output_analysis/s01-extract_output_variables.sh`; its
-defaults are `VARIABLES="outflw,pthflw"` and `DATES="2001-09-01"`. Edit those settings or pass
-`--variables` and `--dates` to select more output variables and CF dates. Edit
+defaults are `VARIABLES="outflw,pthflw,fldare,fldfrc,flddph"` and
+`DATES="2001-09-01"`. Edit those settings or pass `--variables` and `--dates`
+to select more output variables and CF dates. Edit
 `TARGET_DATE` in the f01 wrapper to select another daily CF timestamp. Edit
 `CELV`, `LINTHRESH`,
 and `LINEAR_FRAC` in the same Shell script to adjust the scale without changing
@@ -169,8 +181,6 @@ endpoints must extend beyond `±LINTHRESH`. `LINEAR_FRAC` must be between 0 and
 
 Negative values indicate flow opposite to the model-defined positive
 direction.
-
-
 
 
 ## p02-f02 — Discharge Vector
@@ -230,6 +240,9 @@ CF-timestamped records, render the panels, and assemble the Figure. The Shell
 script exposes `WEST`, `EAST`, `SOUTH`, and `NORTH` for the map extent,
 `COLORMAP` for palette selection, `LINE_WIDTH_SCALE` for main and bifurcation
 line widths, and `CELV`, `LINTHRESH`, and `LINEAR_FRAC` for scale adjustment.
+`TITLE_SIZE`, `AXIS_LABEL_SIZE`, `TICK_LABEL_SIZE`, `LEGEND_SIZE`, and
+`COLORBAR_LABEL_SIZE` control typography; review the assembled Figure at its
+intended display size when adjusting them.
 It creates:
 
 - `figure/f02a-discharge-vector_default.png`
@@ -240,4 +253,97 @@ The pthflw panel requires `o_pthflw<year>.nc` alongside the annual outflw
 file. The extractor selects both records by their CF time coordinates.
 
 
+## p02-f03 — Flooded Area
 
+![p02-f03 Flooded Area](figure/f03-flooded_area.png)
+
+Method: `flooded_area`.
+
+| Panel | Option identifier | Variable / measure |
+| --- | --- | --- |
+| (a) Raw flooded area | `flooded_area-area_raw` | `fldare` [km²] |
+| (b) Unit-catchment flooded fraction | `flooded_area-flood_frac` | `fldfrc` [1] |
+| (c) Temporary flooded fraction | `flooded_area-season_frac` | `max(fldare - prmwat, 0) / ctmare` [1] |
+| (d) Permanent-water fraction | `flooded_area-prmwat` | `prmwat / ctmare` [1] |
+
+The Figure compares the 2001-09-01 snapshot over 98–110°E and 9–22°N. Panel
+(a) shows `fldare` converted from m² to km² on a linear 0–1,000 km² scale;
+zero-area cells are gray and missing or out-of-network cells are white. Raw
+area depends on the size of each unit catchment, so it should not be read as a
+direct comparison of inundation fraction. Panel (b) shows `fldfrc`, the flooded
+fraction within each unit catchment. Panel (c) subtracts the mapped permanent
+water area `prmwat` from `fldare` before dividing by `ctmare`, showing the
+temporary flooded fraction with permanent water excluded. Panel (d) shows the
+permanent-water fraction `prmwat / ctmare`. Panels (b), (c), and (d) share a
+0–1 color scale for direct comparison. Panel (d) uses the `YlOrBr` sequential
+palette; panels (b) and (c) retain `YlGnBu`. No figure legend is displayed.
+
+The dated `fldare_2001-09-01.nc` and `fldfrc_2001-09-01.nc` samples are reused
+from `out_sample/`; this Figure does not re-extract or duplicate them.
+`ctmare.nc` and `prmwat.nc` are read as static 15-minute map fields. The
+NetCDF attributes confirm that `fldare`, `ctmare`, and `prmwat` use m², while
+`fldfrc` is dimensionless. Both static maps and the output samples use the
+same 80 × 120 cell-center grid. For valid cells, `fldfrc` agrees with
+`fldare / ctmare` to a maximum absolute difference of `3.64×10⁻⁸` for this
+snapshot. The plotted raw flooded area ranges from 0 to 985.443 km², within the
+linear color scale. The temporary fraction ranges from 0 to 0.872 and the
+permanent-water fraction from 0 to 0.807; no valid cells in either derived
+fraction fall outside [0, 1]. Values are not clipped.
+
+Run `./visualization/output_analysis/f03-flooded_area.sh` to regenerate the
+four panels and their map-area-aligned single-row combined Figure. The Shell
+settings control the geographic extent, linear `fldare` range and ticks in
+km², shared fraction range and ticks, colormaps, zero-area color, and output
+dimensions. `TITLE_SIZE`, `AXIS_LABEL_SIZE`, `TICK_LABEL_SIZE`, and
+`COLORBAR_LABEL_SIZE` control text size and are reviewed on the assembled
+Figure.
+Individual panels are saved as `figure/f03a-flooded_area-area_raw.png`,
+`figure/f03b-flooded_area-flood_frac.png`, and
+`figure/f03c-flooded_area-season_frac.png`, and
+`figure/f03d-flooded_area-prmwat.png`.
+
+
+## p02-f04 — Flood Depth
+
+![p02-f04 Flood Depth](figure/f04-flood_depth.png)
+
+Method: `flood_depth`.
+
+| Panel | Option identifier | Variable / method |
+| --- | --- | --- |
+| (a) Native-grid raster | `flood_depth-raster` | `flddph` [m] |
+| (b) 1-minute downscaling | `flood_depth-downscale_1min` | `flddph` [m] |
+
+The Figure compares the 2001-09-01 floodplain-depth snapshot over
+102–108°E and 9–15°N. Panel (a) displays the native 15-minute cells without
+interpolation. Panel (b) applies the existing Tutorial guide01
+`downscale_flddph_trib.F90` tributary downscaling method at 1-minute
+resolution. The `flddif` map is shown beneath downscaled positive depths in a
+dark gray stretch to provide high-resolution terrain context; dry pixels show
+the background. The same YlGnBu scale (0–20 m) is used in both panels, and
+colorbar extensions disclose any values outside that range.
+
+The source `out_sample/flddph_2001-09-01.nc` is reused. The Shell entry point
+converts its single CF-timestamped record to the little-endian Float32 direct
+record expected by the existing downscaler, builds that program in a temporary
+directory, links the Mekong map directory as `map/`, and runs the requested
+domain. It saves the downscaled result as
+`out_sample/flddph_1min_2001-09-01.nc`, including the date, coordinates, units,
+and method provenance. The 1-minute raster is 360 × 360 cells, north to south
+in latitude and west to east in longitude. For this sample, `flddph` ranges
+from 0 to 17.878 m on the native grid and 0 to 17.526 m among assigned
+downscaled pixels; 95,543 of 129,600 1-minute pixels are assigned. No values
+are outside the shared 0–20 m display scale.
+
+The downscaler uses the existing 15-minute `nextxy.bin` and `uparea.bin`, plus
+1-minute `catmxy`, `downxy`, `flddif`, and `rivwth` map files. Its domain and
+resolution are read from the existing map metadata. The project script does
+not change those maps or the downscaling algorithm.
+
+Run `./visualization/output_analysis/f04-flood_depth.sh` to regenerate the two
+panels and the side-by-side, map-area-aligned Figure. Shell settings control
+the date, extent, common depth range and ticks, YlGnBu palette, figure size,
+DPI, and text sizes. The project-local outputs are
+`figure/f04a-flood_depth-raster.png`,
+`figure/f04b-flood_depth-downscale_1min.png`, and
+`figure/f04-flood_depth.png`.

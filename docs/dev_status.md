@@ -9,6 +9,32 @@ Base snapshot: `origin/master` at `19e2c1a`, 2026-11-06. This branch-local propo
 
 ## Registered active projects
 
+### p02-f04 flood-depth visualization (2026-11-14)
+
+The maintainer assigned this bounded addition to the existing
+`manual-automation` branch. Owner: Dai Yamazaki (maintainer); Codex implements.
+Scope: add f04a `flood_depth-raster` and f04b `flood_depth-downscale_1min` for
+the 2001-09-01 `flddph` snapshot over 102–108°E, 9–15°N, reusing the existing
+Tutorial guide01 downscaling workflow and displaying the 1-minute `flddif`
+background in gray. Main files: `visualization/output_analysis/` f04 entry
+point, plotting implementation, project README, catalog, and project-local
+figures; no model or map-data generation changes. Acceptance: verify units,
+time, dimensions, masks, output orientation, and the downscaler inputs; render
+and visually inspect the two panels and assembled Figure. Gallery publication
+is outside this assignment unless separately authorized.
+
+Completed 2026-11-14: reused the existing 2001-09-01 `flddph` sample and ran
+`downscale_flddph_trib.F90` for 102–108°E, 9–15°N at 1-minute resolution.
+Saved the assigned 360 × 360 result as a dated NetCDF sample and rendered the
+two panels plus a side-by-side Figure. Native and downscaled valid depths range
+from 0 to 17.878 m and 0 to 17.526 m, respectively; the common 0–20 m scale
+contains all values. Both panel PNGs have identical map and colorbar bounds;
+the combined Figure was visually inspected. The existing downscaler compiled
+with four REAL(8)-to-REAL(4) conversion warnings in coordinate calculations.
+The maintainer subsequently authorized Gallery publication of p02-f01 through
+p02-f04; the selected combined Figures and their README/catalog references
+were synchronized.
+
 ### Subbasin Color and basin/network context (2026-11-13)
 
 The maintainer assigned this bounded addition to `manual-automation` and

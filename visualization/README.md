@@ -72,7 +72,7 @@ are `discharge_raster-map` (a) and `discharge_raster-hydrograph` (b); see the
 
 #### p02-f02 — Discharge Vector
 
-![p02-f02 Discharge Vector](output_analysis/figure/f02-discharge-vector.png)
+![p02-f02 Discharge Vector](gallery/p02-f02-discharge-vector.png)
 
 Panels (a) and (b) compare two views of complex signed flow on 2001-09-01.
 Both sum signed `pthflw` across all pathway layers and include channel and
@@ -86,3 +86,25 @@ magnitude of their layer sum. Both use `diverge_asymmetry` over 103–108°E,
 and branching flows easier to interpret.
 See the [Figure script](output_analysis/f02-discharge_vector.sh) and the
 [project explanation](output_analysis/README.md#p02-f02--discharge-vector).
+
+#### p02-f03 — Flooded Area
+
+![p02-f03 Flooded Area](gallery/p02-f03-flooded-area.png)
+
+Four panels compare raw flooded area (`fldare`), its flooded fraction
+(`fldfrc`), temporary flooded fraction with permanent water excluded, and
+permanent-water fraction (`prmwat / ctmare`). The three fraction panels share
+a 0–1 scale. See the
+[Figure script](output_analysis/f03-flooded_area.sh) and the
+[project explanation](output_analysis/README.md#p02-f03--flooded-area).
+
+#### p02-f04 — Flood Depth
+
+![p02-f04 Flood Depth](gallery/p02-f04-flood-depth.png)
+
+Two panels compare the 2001-09-01 `flddph` snapshot on the native 15-minute
+grid and after 1-minute tributary downscaling. The downscaled panel overlays
+positive flood depth on a dark-gray `flddif` background. Both panels share a
+0–20 m YlGnBu scale over 102–108°E, 9–15°N. See the
+[Figure script](output_analysis/f04-flood_depth.sh) and the
+[project explanation](output_analysis/README.md#p02-f04--flood-depth).

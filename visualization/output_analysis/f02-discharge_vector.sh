@@ -22,6 +22,13 @@ FIGURE_HEIGHT=8       # Complete panel height [inches]; width is automatic.
 DPI=200               # PNG resolution.
 PYTHON="python3"       # Activate the repository .venv before running.
 
+# User settings: typography for panels viewed individually and after assembly.
+TITLE_SIZE=14            # Panel title [pt].
+AXIS_LABEL_SIZE=12       # Longitude/latitude labels [pt].
+TICK_LABEL_SIZE=10       # Axis and colorbar tick labels [pt].
+LEGEND_SIZE=9            # Combined-figure legend [pt].
+COLORBAR_LABEL_SIZE=11   # Colorbar quantity and units [pt].
+
 SAMPLES="$PROJECT_DIR/out_sample"
 FIGURES="$PROJECT_DIR/figure"
 PANEL_A="$FIGURES/f02a-discharge-vector_default.png"
@@ -37,6 +44,9 @@ printf '\n[STEP 2/4] Draw signed main-channel and bifurcation discharge without 
     --pthflw "$SAMPLES/pthflw_${TARGET_DATE}.nc" \
     --params "$REPO_ROOT/map/mekong_15min/params.txt" \
     --output "$PANEL_A" --figure-height "$FIGURE_HEIGHT" --dpi "$DPI" \
+    --title-size "$TITLE_SIZE" --axis-label-size "$AXIS_LABEL_SIZE" \
+    --tick-label-size "$TICK_LABEL_SIZE" --legend-size "$LEGEND_SIZE" \
+    --colorbar-label-size "$COLORBAR_LABEL_SIZE" \
     --celv="$CELV" --linthresh="$LINTHRESH" --linear-frac="$LINEAR_FRAC" \
     --colormap "$COLORMAP" --west "$WEST" --east "$EAST" \
     --south "$SOUTH" --north "$NORTH" --line-width-scale "$LINE_WIDTH_SCALE"
@@ -47,6 +57,9 @@ printf '\n[STEP 3/4] Draw direction-aware main-channel and bifurcation flow.\n'
     --direction-aware \
     --params "$REPO_ROOT/map/mekong_15min/params.txt" \
     --output "$PANEL_B" --figure-height "$FIGURE_HEIGHT" --dpi "$DPI" \
+    --title-size "$TITLE_SIZE" --axis-label-size "$AXIS_LABEL_SIZE" \
+    --tick-label-size "$TICK_LABEL_SIZE" --legend-size "$LEGEND_SIZE" \
+    --colorbar-label-size "$COLORBAR_LABEL_SIZE" \
     --celv="$CELV" --linthresh="$LINTHRESH" --linear-frac="$LINEAR_FRAC" \
     --colormap "$COLORMAP" --west "$WEST" --east "$EAST" \
     --south "$SOUTH" --north "$NORTH" --line-width-scale "$LINE_WIDTH_SCALE"

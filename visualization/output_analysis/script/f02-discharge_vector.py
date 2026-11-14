@@ -61,6 +61,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--figure-height", type=float, default=8.0)
     parser.add_argument("--dpi", type=int, default=200)
+    parser.add_argument("--title-size", type=float, required=True)
+    parser.add_argument("--axis-label-size", type=float, required=True)
+    parser.add_argument("--tick-label-size", type=float, required=True)
+    parser.add_argument("--legend-size", type=float, required=True)
+    parser.add_argument("--colorbar-label-size", type=float, required=True)
     parser.add_argument("--celv", required=True)
     parser.add_argument("--linthresh", type=float, required=True)
     parser.add_argument("--linear-frac", type=float, required=True)
@@ -317,9 +322,10 @@ def draw(args: argparse.Namespace) -> None:
 
     ax.set_xlim(extent[0], extent[1])
     ax.set_ylim(extent[2], extent[3])
-    ax.set_xlabel("Longitude")
-    ax.set_ylabel("Latitude")
-    ax.set_title(title)
+    ax.set_xlabel("Longitude", fontsize=args.axis_label_size)
+    ax.set_ylabel("Latitude", fontsize=args.axis_label_size)
+    ax.tick_params(axis="both", labelsize=args.tick_label_size)
+    ax.set_title(title, fontsize=args.title_size)
     ax.set_aspect(1.0 / np.cos(np.deg2rad((extent[2] + extent[3]) / 2)))
     ax._river_map_extent = extent
     if args.direction_aware:
@@ -366,13 +372,15 @@ def draw(args: argparse.Namespace) -> None:
             legend_handles.extend((channel_bifurcation_legend, overland_bifurcation_legend))
     fig.legend(handles=legend_handles, loc="lower center", ncols=len(legend_handles),
                bbox_to_anchor=(0.48, 0.025), frameon=False,
-               fontsize=7 if args.direction_aware else 8)
+               fontsize=args.legend_size)
     colorbar = add_aligned_colorbar(
         fig, ax, ScalarMappable(norm=norm, cmap=cmap),
         "Daily mean discharge (m³/s)", extend="both",
     )
     colorbar.set_ticks(levels)
     colorbar.ax.set_yticklabels([RASTER.format_color_level(value) for value in levels])
+    colorbar.ax.tick_params(labelsize=args.tick_label_size)
+    colorbar.ax.yaxis.label.set_size(args.colorbar_label_size)
     save_panel(fig, args.output, args.dpi, figure_height=args.figure_height)
     embed_map_layout(fig, ax, colorbar.ax, args.output, args.dpi)
     plt.close(fig)

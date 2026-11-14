@@ -188,6 +188,10 @@ colorbar-related layout difference.
 - Use panel labels consistently when panels are referenced separately.
 - Ensure lines, markers, categories, and overlaid geographic layers remain
   distinguishable at the image's intended display size.
+- For multi-panel Figures, inspect the saved, assembled Figure at its intended
+  display size, not only the individual panels. Confirm that panel titles, axis
+  and tick labels, legends, and colorbar labels remain readable after assembly
+  and any expected display scaling; adjust typography and layout together.
 - Set an intentional drawing order for map layers so backgrounds and boundary
   overlays do not obscure the river network, outlets, or observation markers
   that the Figure is intended to show. Choose marker fills and outlines to
