@@ -29,7 +29,7 @@ The script reads `inp/test-mek_1deg/runoff/Roff____YYYYMMDD.one` and writes annu
 
 The initial 2000–2001 generation was checked against its 731 binary daily fields, with an exact float32 round-trip. The repository later expanded to six annual files; their current tracked sizes and availability are listed above. This task checked repository tracking and documented coverage, not the numerical contents of the expanded files. Format-conversion checks are not scientific validation.
 
-`mek02-longterm_netcdf.sh` selects this dataset using `ROFFTAG="test-mek_1deg_nc"` and reuses the map-specific `inpmat_test-mek_1deg.bin` by setting `INPMAT_TAG="test-mek_1deg"`. The sample was used in the two-year restart-connected v5 run described in [`gosh_sample/README.md`](../../gosh_sample/README.md).
+`mek02-longterm_netcdf.sh` selects this dataset using `ROFFTAG="test-mek_1deg_nc"` and reuses the map-specific `inpmat_test-mek_1deg.bin` by setting `INPMAT_TAG="test-mek_1deg"`. The sample was used in the two-year restart-connected v5 run described in [`gosh_test/README.md`](../../gosh_test/README.md).
 
 The six compact NetCDF files are GitHub-tracked sample data. Their inclusion in a future downloadable v5 package remains undecided until the v5 packaging workflow is defined.
 

@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import csv
 import json
+import math
 import re
+from bisect import bisect_right
 from functools import lru_cache
 from importlib.resources import files
 from typing import Any
@@ -53,6 +55,17 @@ def _read_definition(name: str) -> dict[str, Any]:
             raise ValueError(f"Invalid HEX color at control index {index} in {path}")
         if not isinstance(color.get("name"), str) or not color["name"].strip():
             raise ValueError(f"Missing color name at control index {index} in {path}")
+    explicit_positions = ["position" in color for color in colors]
+    if any(explicit_positions) and not all(explicit_positions):
+        raise ValueError(f"Control positions must be provided for every color in {path}")
+    if all(explicit_positions):
+        positions = [color["position"] for color in colors]
+        if any(not isinstance(position, (int, float)) or isinstance(position, bool) or
+               not math.isfinite(position) for position in positions):
+            raise ValueError(f"Control positions must be numeric in {path}")
+        if (positions[0] != 0 or positions[-1] != 1 or
+                any(left >= right for left, right in zip(positions, positions[1:]))):
+            raise ValueError(f"Control positions must increase strictly from 0 to 1 in {path}")
     return definition
 
 
@@ -99,20 +112,27 @@ def _hex_to_rgb(value: str) -> tuple[float, float, float]:
     return tuple(int(value[offset:offset + 2], 16) / 255.0 for offset in (1, 3, 5))
 
 
-def _interpolate_rgb(control_colors: list[dict[str, str]], position: float) -> tuple[float, float, float]:
+def _interpolate_rgb(control_colors: list[dict[str, Any]], position: float) -> tuple[float, float, float]:
     """Piecewise-linear interpolation in numerical sRGB channels."""
     if not 0.0 <= position <= 1.0:
         raise ValueError("position must be in the normalized interval [0, 1]")
     colors = [_hex_to_rgb(item["hex"]) for item in control_colors]
+    positions = _control_positions(control_colors)
     if position == 1.0:
         return colors[-1]
-    scaled = position * (len(colors) - 1)
-    left = int(scaled)
-    fraction = scaled - left
+    left = max(0, bisect_right(positions, position) - 1)
+    fraction = (position - positions[left]) / (positions[left + 1] - positions[left])
     return tuple(
         colors[left][channel] * (1.0 - fraction) + colors[left + 1][channel] * fraction
         for channel in range(3)
     )
+
+
+def _control_positions(control_colors: list[dict[str, Any]]) -> list[float]:
+    """Return explicit stop positions or the legacy evenly spaced positions."""
+    if "position" in control_colors[0]:
+        return [float(color["position"]) for color in control_colors]
+    return [index / (len(control_colors) - 1) for index in range(len(control_colors))]
 
 
 @lru_cache(maxsize=None)
@@ -126,7 +146,7 @@ def get_cmap(name: str) -> LinearSegmentedColormap:
     """
     definition = _read_definition(name)
     colors = definition["control_colors"]
-    control_positions = [index / (len(colors) - 1) for index in range(len(colors))]
+    control_positions = _control_positions(colors)
     cmap = LinearSegmentedColormap.from_list(
         f"cmf.{name}",
         list(zip(control_positions, [color["hex"] for color in colors])),

@@ -2,7 +2,7 @@
 # Generate standard subbasin segmentation and display-color maps.
 # Copy to <map>/script_params/ and run from any working directory.
 # Inputs: params.txt, nextxy.bin, uparea.bin.
-# Outputs: subbsn.bin and subcol.bin in the map root; existing files are overwritten.
+# Outputs: subbsn-sample.bin and subcol-sample.bin in the map root; existing files are overwritten.
 set -eu
 
 # Paths
@@ -11,8 +11,9 @@ SCRIPT_DIR=$(CDPATH= cd "$(dirname "$0")" && pwd -P)
 MAP_DIR=$(CDPATH= cd "$SCRIPT_DIR/.." && pwd -P)
 CODE_DIR=$(CDPATH= cd "$SCRIPT_DIR/../../tools/code" && pwd -P)
 
-# Example segmentation threshold; this is not a universal scientific calibration.
-AREA_THRESHOLD_KM2=30000  # Upstream-area threshold for subbasin segmentation (km2).
+# Editable example thresholds, not universal scientific parameters.
+AREA_THRESHOLD1_KM2=30000  # First segmentation threshold [km2].
+AREA_THRESHOLD2_KM2=5000   # Second threshold [km2]; set empty for single-stage operation.
 
 # ----------------------------------------------------------------------
 # User settings end here. Program paths and processing steps follow.
@@ -44,11 +45,17 @@ trap 'exit 143' TERM
 
 EXEC_SUBBASIN="$CODE_DIR/analysis_subbasin"
 
-# The program reads map inputs and writes the standard products via ../.
+# The program reads map inputs via ../; explicit paths select the sample outputs.
 cd "$SCRIPT_DIR"
 
-STEP="Segment the river network at the ${AREA_THRESHOLD_KM2} km2 example threshold"
-printf '\n==================================================\n[STEP 1/1] Generate subbasin maps (%s km2)\n==================================================\n\n' "$AREA_THRESHOLD_KM2"
-"$EXEC_SUBBASIN" "$AREA_THRESHOLD_KM2" ../subbsn.bin ../subcol.bin
+STEP="Segment the river network at the ${AREA_THRESHOLD1_KM2}/${AREA_THRESHOLD2_KM2} km2 example thresholds"
+printf '\n==================================================\n[STEP 1/1] Generate sample subbasin maps (%s / %s km2)\n==================================================\n\n' "$AREA_THRESHOLD1_KM2" "$AREA_THRESHOLD2_KM2"
+if [ -n "$AREA_THRESHOLD2_KM2" ]; then
+    "$EXEC_SUBBASIN" "$AREA_THRESHOLD1_KM2" "$AREA_THRESHOLD2_KM2" \
+        "$MAP_DIR/subbsn-sample.bin" "$MAP_DIR/subcol-sample.bin"
+else
+    "$EXEC_SUBBASIN" "$AREA_THRESHOLD1_KM2" \
+        "$MAP_DIR/subbsn-sample.bin" "$MAP_DIR/subcol-sample.bin"
+fi
 
 printf '\n==================================================\n[SUCCESS] %s\n==================================================\n' "$SCRIPT_NAME"

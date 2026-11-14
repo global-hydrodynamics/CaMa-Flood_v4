@@ -1,0 +1,179 @@
+# Development status
+
+Development policy: [AGENTS.md](../AGENTS.md).
+
+Authoritative registry and dashboard snapshot: `origin/master:docs/dev_status.md`.
+Latest progress and work claims: a linked GitHub Issue when one is used; otherwise the project status and plan.
+
+Base snapshot: `origin/master` at `19e2c1a`, 2026-11-06. This branch-local proposal was updated on 2026-11-08; reconcile it with the authoritative origin copy before publication.
+
+## Registered active projects
+
+### p02-f04 flood-depth visualization (2026-11-14)
+
+The maintainer assigned this bounded addition to the existing
+`manual-automation` branch. Owner: Dai Yamazaki (maintainer); Codex implements.
+Scope: add f04a `flood_depth-raster` and f04b `flood_depth-downscale_1min` for
+the 2001-09-01 `flddph` snapshot over 102–108°E, 9–15°N, reusing the existing
+Tutorial guide01 downscaling workflow and displaying the 1-minute `flddif`
+background in gray. Main files: `visualization/output_analysis/` f04 entry
+point, plotting implementation, project README, catalog, and project-local
+figures; no model or map-data generation changes. Acceptance: verify units,
+time, dimensions, masks, output orientation, and the downscaler inputs; render
+and visually inspect the two panels and assembled Figure. Gallery publication
+is outside this assignment unless separately authorized.
+
+Completed 2026-11-14: reused the existing 2001-09-01 `flddph` sample and ran
+`downscale_flddph_trib.F90` for 102–108°E, 9–15°N at 1-minute resolution.
+Saved the assigned 360 × 360 result as a dated NetCDF sample and rendered the
+two panels plus a side-by-side Figure. Native and downscaled valid depths range
+from 0 to 17.878 m and 0 to 17.526 m, respectively; the common 0–20 m scale
+contains all values. Both panel PNGs have identical map and colorbar bounds;
+the combined Figure was visually inspected. The existing downscaler compiled
+with four REAL(8)-to-REAL(4) conversion warnings in coordinate calculations.
+The maintainer subsequently authorized Gallery publication of p02-f01 through
+p02-f04; the selected combined Figures and their README/catalog references
+were synchronized.
+
+### Subbasin Color and basin/network context (2026-11-13)
+
+The maintainer assigned this bounded addition to `manual-automation` and
+requested commit/push on completion. f01d reads the prepared Mekong
+`subcol-30000.bin` directly with the same pastel palette as f01c; f01 defaults
+to a four-panel 2x2 grid using the existing physical sizing/layout helpers.
+The follow-up adds thin black original-basin-ID boundaries and a gray
+`nextxy_noedge` missing-cell overlay, retaining finite terminal codes.
+README/catalog describe display indices versus IDs and the upstream-area
+increment threshold. Binary orientation/masks, categorical palette and layout
+checks pass; the final Figure was visually reviewed. f01a-c scientific scripts,
+f02, map generation, tutorials and Gallery snapshots are unchanged. Owner:
+Dai Yamazaki (maintainer); Codex implements. See
+[VR-0146](../research/records/validation_runs/VR-0146.md).
+
+### Headless f02b trial (2026-11-12)
+
+Maintainer requested this bounded trial on `manual-automation`, owned by
+Dai Yamazaki with Codex implementation. f02b omits both local and curved
+flexible arrowheads; thickness scaling, endpoints and extent are preserved.
+The b panel and composite are regenerated; a/c PNGs remain byte-identical.
+Five sizing scenarios pass. See
+[VR-0144](../research/records/validation_runs/VR-0144.md).
+
+### f02 option naming update (2026-11-12)
+
+Maintainer-assigned naming follow-up on `manual-automation`, owned by Dai
+Yamazaki with Codex implementation: a `connect_type`, b `enhance_tickness`,
+c `enhance_color` (exact requested spelling). Filenames, titles, wrapper,
+README/catalog and active examples now agree; all PNGs regenerated. Plotting
+content is unchanged, verified by exact non-title pixel/source comparisons
+and five three-panel sizing scenarios. See
+[VR-0143](../research/records/validation_runs/VR-0143.md).
+
+### Three-panel line river map revision (2026-11-12)
+
+The maintainer assigned p01-f02's three-panel revision to the current
+`manual-automation` branch, owned by Dai Yamazaki with Codex implementation,
+and explicitly authorized commit/push after verification. Scope: f02 wrapper,
+panel scripts/helpers, tracked project figures, README/catalog and necessary
+naming examples; no Gallery publication. Acceptance: all panels use
+102–109°E, 10–17°N; f02a has stronger black local/orange flexible arrows;
+f02b has black area-scaled enhanced thickness; f02c uses shade-rainbow arrows
+over categorical dark-gray bsncol; aligned canvases and readable exports.
+All four PNGs are generated; five sizing scenarios pass across three panels,
+including exact extent, full-link counts, foreground encodings and aligned
+geometry. The composite was visually reviewed. See
+[VR-0141](../research/records/validation_runs/VR-0141.md).
+
+The maintainer's follow-up retains the current **99–109°E, 9–19°N** extent,
+superseding the initial bounds above. Targeted refinements reduce orange
+flexible-arrow heads and increase f02a curvature, keep f02b shaft scaling with
+standard-size heads, and darken f02c's categorical background. All four PNGs
+are regenerated; exact prior width/color/coordinate comparisons and five
+three-panel sizing scenarios pass. See
+[VR-0142](../research/records/validation_runs/VR-0142.md).
+
+
+### Three-panel raster river map revision (2026-11-12)
+
+The maintainer assigned this bounded task to `manual-automation`, owned by
+Dai Yamazaki with Codex implementation, and requested commit/push after checks.
+f01 now contains Upstream Area (`uparea`), original Basin IDs (`basin`), and
+soft Basin Color indices (`bsncol`); the elevation and width panels are removed.
+All three panels reuse the verified explicit colorbar-slot layout and have
+identical map geometry. The README and catalog distinguish original IDs from
+display indices and reference the actual regional-map preparation code.
+Three f01 sizing scenarios and five f02 scenarios pass; f02 PNGs regenerated
+byte-for-byte unchanged. Gallery and map/model sources remain unchanged. See
+[VR-0139](../research/records/validation_runs/VR-0139.md) for evidence and limits.
+
+The maintainer's follow-up requests a display-only pseudo-log categorical legend
+for f01b: IDs 1–20 have individual expanded slots; higher IDs have compressed
+intervals and representative labels. Map colors, raw IDs and geometry remain
+unchanged. Three sizing checks pass with no overlapping legend labels; the map
+pixels exactly match the prior Figure. See
+[VR-0140](../research/records/validation_runs/VR-0140.md).
+
+### Visualization method naming and discovery (2026-11-12)
+
+The maintainer assigned this bounded refactor to `manual-automation`, owned by
+Dai Yamazaki with Codex implementation, and requested commit/push on completion.
+The development guide now defines stable method/option identifiers and semantic
+discovery; the catalog, river-map entry points, six panels, titles, and eight
+PNGs use consistent names. Both workflows and five f02 sizing scenarios pass;
+six-panel baseline comparisons preserve scientific content and axes geometry.
+Gallery, model/map tools, and historical evidence remain unchanged. See
+[VR-0137](../research/records/validation_runs/VR-0137.md) for naming mappings,
+semantic-discovery review, and validation details.
+
+The maintainer subsequently clarified that f02 is **Line River Map**
+(`line_river_map`); vector visualization is a distinct future method. Active
+resources, titles, catalog and naming examples now use this corrected name;
+the implementation and virtual-colorbar layout are unchanged. See
+[VR-0138](../research/records/validation_runs/VR-0138.md).
+
+### Bounded p01-f02 layout experiment (2026-11-12)
+
+The maintainer explicitly assigned this task to `manual-automation`, owned by
+Dai Yamazaki with Codex implementation, and authorized commit/push after checks.
+Scope: shared f02 map/colorbar layout, river-map README, and three regenerated
+project PNGs; preserve scientific plotting, Gallery, and the shared guideline.
+The virtual-colorbar experiment passes five real-panel sizing/export scenarios:
+both default map rectangles are 968x968 pixels on identical 1393x1188 canvases,
+with aligned real/hidden colorbar axes. See
+[VR-0136](../research/records/validation_runs/VR-0136.md) for evidence and limits.
+This records the bounded assignment, not a change to other registered projects.
+
+After reviewing the successful alignment, the maintainer approved promoting
+virtual colorbars to the common visualization rules on 2026-11-12, on the same
+`manual-automation` branch. The guideline and f02 documentation now agree;
+plotting behavior and generated images are unchanged. See
+[ADR-0009](../research/records/decisions/ADR-0009-virtual-colorbar-layout.md).
+
+### Tutorial01 manual-authoring milestone (2026-11-08)
+
+Tutorial01 now has a standalone educational GOSH script and beginner manual at [`tutorial/tutorial01-get_started/`](../tutorial/tutorial01-get_started/); manual design, reset tooling, assessment, original drafts, and developer-only manual-generation evidence are separated under `design/`. The standard beginner build command is `make all` from `src_main/`, for either a new or existing executable. The 40-day Mekong simulation completed in a disposable checkout, and reset preserved `config/Mkinclude`. The manual defines `cmf_root`, shows verified repository and data listings, explains setup prompts and required actions, and introduces the map/runoff/matrix before their GOSH settings. Tutorial01 now uses `PROJ` and isolates results under `out/${PROJ}/`; rerun and developer-reset checks preserved sibling projects, input data, and configuration. The shared agent instructions remain evolving defaults. Python package installation remains optional; the setup script was tested in diagnosis/decline mode. This is not release-package validation, scientific validation, or Linux portability evidence. See the [tutorial collection](../tutorial/README.md), [contributor guide](../tutorial/how_to_develop_tutorials.md), [development plan](tutorial_development_plan.md), DT-0083–DT-0088, and VR-0126–VR-0131.
+
+The documentation reorganization project was completed and merged to `master` in PR #121; it is no longer active. Map modernization continues under Issue #122. Research logging is a separate, cross-project case-study activity; its current framework edits use `feature/map-data-tools` by maintainer instruction, but the research activity is not tied to that feature branch and has no dedicated Issue. Historical work is not reconstructed in this status table.
+
+| Project / scope and coordination record | Owner | Persistent working branch | Main modules or files | Current progress | Potential conflicts | Next actions |
+| --- | --- | --- | --- | --- | --- | --- |
+| CaMa-Flood v5 model source and simulation workflow modernization — isolate legacy v4 code and establish independently buildable v5 model/run examples; no GitHub Issue by maintainer direction. | Dai Yamazaki (maintainer); Codex implements approved stages | `feature/gosh-refactor` | [Phase 0/1 plan and validation](model_source_workflow_plan.md); `src_main/`; `gosh_test/`; `inp/test-mek_1deg_nc/`. | Phase 0 and Phase 1A–1D plus individual Binary/NetCDF map-input support are implemented and locally validated on macOS. Separate Binary-only and NetCDF-enabled builds work. Mixed-map 40-day Mekong tests (one variable NetCDF, network-only NetCDF, and all nine core map inputs NetCDF) completed; all five output variables matched the all-Binary baseline bitwise. Converter output was read back and verified exactly. The clarified contract limits individual NetCDF input to variables already read through the legacy Binary path; ECMWF-specific `elevslope` / `mask_slope` remain consolidated-NetCDF-only and produce explicit errors in individual-file mode. The two legacy consolidated slope-reader handle defects have now been corrected: each read uses an open `CRIVPARNC` handle, without changing equations or the individual-file contract. These checks were rerun after the clarification. In three 40-day comparisons, Binary versus NetCDF runoff and Binary versus NetCDF output matched bitwise for `outflw`, `storge`, `sfcelv`, `flddph`, and `fldfrc`. The annual-NetCDF workflow completed 2000 (366 records) and 2001 (365 records), carrying the Binary restart into year two; 731 records total. Runoff conversion is exact for all 731 source float32 fields. Model output metadata was corrected for `cell_methods` and dimensionless `fldfrc` units. Restart variables are now documented in `variable_table/restart_variables.csv`; a separate two-year NetCDF-Restart run completed with exact `outflw`, `storge`, and `sfcelv` agreement against Binary-Restart output. Binary Restart CTLs are generated from the current Namelist and registry; Float64 files use an explicitly lossy Float32 visualization copy because standard GrADS Binary CTLs read 32-bit floats. Synthetic checks cover Float32/Float64, normal/storage-only, and optional restart fields. GrADS runtime reading could not be verified because the local OpenGrADS executable lacks a required dynamic library. These are operational/I/O checks, not scientific validation or broad platform support. Interactive workstation setup is now available through root `s01-setup_fortran.sh` and `s02-python_setup.sh`; both diagnose first, require confirmation for local changes, and leave `adm/Mkinclude` untouched. See the setup section in the project plan and VR-0119. The tutorial plan now requires interactive researcher review between source/data investigation and specification approval. Tutorial 02 has a researcher-approved four-experiment design at [the experiment spec](../tutorial/tutorial02-mekong_netcdf_4exp/tutorial_design.md): Default, No Bifurcation, Kinematic Wave, and No Floodplain; `DT=600`; adaptive stepping for Local Inertial and fixed stepping for Kinematic Wave. All four required annual runoff files (2000–2003) are Git-tracked; the branch currently tracks 2000–2005. Hydrograph and annual-maximum daily-mean discharge comparisons are specified. All four experiment scripts and visualization tools are implemented; all 16 annual segments (2000–2003) completed on macOS with NetCDF runoff, maps, output, and Restart handoffs. Each experiment produced 1,461 daily records with continuous represented dates; the selected-site hydrograph and annual-maximum figures were generated. Simulated reverse flow occurs at Prek Kdam in both Local Inertial cases; the Can Tho Default/No-Bifurcation series differ throughout 2001–2003. No observed discharge validation is claimed. The updated source evidence, result summaries, figures, and unresolved scientific interpretation questions are in [the experiment specification](../tutorial/tutorial02-mekong_netcdf_4exp/tutorial_design.md), DT-0078, DR-0062, and VR-0123. The beginner README and package assembly remain future work.| Legacy `src/` and `gosh/` remain unchanged. NetCDF build has only been exercised on macOS/Homebrew; Linux portability, MPI, `heatlink/`, `sediment/`, and `ICI/` remain unvalidated. The derived NetCDF sample's inclusion in a future v5 downloadable package is undecided because a v5 packaging workflow is not established. No suitable consolidated NetCDF fixture is available, so runtime use of `LSLOPEMOUTH` / `LSLPMIX` in legacy mode remains unverified despite the handle fixes. The current-outflow reader discrepancy was corrected in commit `87abfddf`; the post-fix diagnostic effect has not been runtime-validated (KG-0029). | Retain a fixture-based test of the legacy consolidated route and optional groundwater, mean-sea-level, and MPI paths for a later task (KG-0027); review the Float32 visualization-copy behavior for Float64 Restart (KG-0030); no separate post-fix runtime check is planned per maintainer decision; source-level alignment is documented in KG-0029; decide whether to include `inp/test-mek_1deg_nc/` in a future downloadable v5 package; validate the build on Linux when available. Future Driver/Coupler design goals and open execution-order questions are recorded in [the model-source plan](model_source_workflow_plan.md#future-work-driver-and-coupler-architecture); no interface change is authorized. |
+| Runoff input data tools modernization ([Issue #126](https://github.com/global-hydrodynamics/CaMa-Flood_v4/issues/126); [PR #127](https://github.com/global-hydrodynamics/CaMa-Flood_v4/pull/127)) — improve runoff workflow reproducibility, metadata, tests, and usability. | Dai Yamazaki (maintainer); Codex implements explicitly assigned phases | `feature/runoff-data-tools` | ERA5-Land workflow: `inp/ERA5-Land_download/`; product registry: `inp/runoff_datasets.csv`; user guide: `inp/README.md`; phase evidence: `docs/runoff_data_inventory.md`; model contract: `src/cmf_ctrl_forcing_mod.F90`. | The approved Runoff Input Data Tools changes from `feature/runoff-data-tools` were merged to `master` in PR #127. The registry, reproducible ELSE_GPCC Mekong sample workflow, ERA5-Land download/conversion tools, and associated examples are integrated. Follow-up local v5 work adds the derived annual NetCDF Mekong sample under `inp/test-mek_1deg_nc/`; it is registered separately and reuses the `test-mek_1deg` grid/input matrix. End-to-end model validation of new products is recorded in the model-source project, not treated as completion of every runoff science question. KG-0019 and the ERA5-Land source/metadata questions KG-0022–KG-0024 remain as recorded. | Historical `feature/runoff-data-tools` work is merged; current v5 model I/O work is tracked under `feature/gosh-refactor`. Scientific interpretations in the open knowledge gaps remain unresolved unless explicitly stated in their records. | Resolve the open runoff source/metadata questions when authoritative evidence is available; decide v5 distribution packaging for the derived annual NetCDF sample with the model-source project. |
+| Map data/tools modernization ([Issue #122](https://github.com/global-hydrodynamics/CaMa-Flood_v4/issues/122)) — map metadata, conversion, and processing tools. | Dai Yamazaki (maintainer); Codex implements assigned tasks | `feature/map-data-tools` | Map project plan: `docs/map_data_tools_plan.md`; migration details: `docs/map_params_migration_plan.md`; map metadata and conversion files under `map/`. | Standard channel parameter, permanent-water area, non-MPI bifurcation, and MPI map-preprocessing workflows are implemented in v5 `map/tools/`; the permanent-water migration preserves legacy output on the Mekong sample and is intended for post-processing, not current simulation input. Normal and `MaxMPI` Mekong basin groups plus 4/8/16 region maps matched legacy outputs byte-for-byte. The independent partition diagnostic follows model-local vector membership. s04 can now optionally write `check_bif_bsnmod_mpi.bin` with the legacy basin-change and bifurcation-endpoint classifications before MPI region assignment; focused regression compares both records with the legacy outputs. It writes `bifcol_mpi.bin` from MPI-aggregated basin IDs (independent of process count N, but dependent on `normal`/`MaxMPI` aggregation mode), plus only numbered `mpireg-N.bin` region maps. It runs `analysis_check_mpi_bifurcation` on the numbered `DEFAULT_MPI` map. The optional `analysis_mpi_region_color` can manually create `bsncol_mpi-N.bin` from a selected region map; s04 does not invoke it. No `mpireg.bin` alias is generated. s01-s05 use consistent STEP/SUCCESS/ERROR banners with simulated failure-path coverage. Model execution through `gosh/` and changes to `src/` are outside the current map-tools construction milestone. An incidental build-only probe is recorded in VR-0044; it does not block this milestone. The maintainer confirms `map/src/` is historical v4 and must be preserved; legacy workflows retain `diminfo_` names. v5 uses `ROFFTAG` for paired `inpdim_`/`inpmat_` names and `HIRES_TAG` for high-resolution selection. Allocation Phase B migrated the flow-gauge, dam, and level-gauge allocation tools into `map/tools/` with shared map I/O, explicit single-area `HIRES_TAG` selection, and v4 regression baselines; committed and pushed as `ef9fec9`; see `docs/map_allocation_migration_plan.md`. All five GRDC, GRanD, and MLIT list CSVs present in `map/data/` are designated for Git tracking under their existing names. This does not include source workbooks or unrestricted source databases. `GRanD_alloc+Mekong.csv` supplements the GRanD list with several recently constructed Mekong dams added through Yamazaki Laboratory research; row-level sources and review date are not documented; the v5 level-gauge wrapper now uses the approved `MLIT_LevelGauge_allocated.csv`, while the legacy v4 wrapper remains unchanged. | Legacy v4 interfaces and v5 workflows must remain distinct. Any future model-source or `gosh/` integration is a separate task. | Consider any future scientific changes to legacy thresholds only under separate approval and validation; recover row-level provenance for Mekong GRanD additions if needed. Multi-area allocation is not a required follow-up for the initial migration. Matrix and permanent-water tools process multiple areas by source inspection; full package-scale integration remains pending. Model-side bifurcation integration is now implemented on `feature/gosh-refactor`: simulation accepts the authoritative map-root `bifprm.csv`, NetCDF-enabled builds also accept `<MAPDIR>/netcdf/bifprm.nc`, and legacy `bifprm.txt` remains supported; focused I/O and Restart checks are recorded in VR-0115. Row-level sources for the added Mekong dams remain unresolved. Independent scientific validation is not part of Phase B. The five current list CSVs are designated for tracking. MPI model-runtime pairing with `mpireg-N.bin` and process count belongs to a separately scoped future simulation-workflow task; the model-side bifurcation-table integration is complete as recorded in VR-0115. Preserve `map/src/` and reconcile this branch-local status when publishing. |
+| CaMa-Flood v4-to-v5 research case study (cross-project activity; no dedicated Issue) — evidence-linked record of discussions through validation across successive projects. | Dai Yamazaki (maintainer; primary framework user); Codex assists with record maintenance | No research-specific branch. Current framework update: `feature/map-data-tools`, by explicit maintainer instruction. | Canonical record set: `research/`; policy: `AGENTS.md`; protocol: `research/study_protocol.md`. | Framework approved. Git-based documentation and map-tools stage narratives are recorded; the pre-documentation parent commit is tagged. `EV-0001` and the current task are in the event log. Earlier ChatGPT discussion details remain queued for maintainer-supplied sources. | Research records span project boundaries; preserve the same `research/` history when branches change or merge. Initial use is single-maintainer, with ordinary Git handling and no locking system. | Continue significant event logging across projects. Review the pending stage/branch-name caveat and discussion summaries; specify concrete v4/v5 task comparisons and resolve package-baseline identity and human-participant ethics before formal evaluation. The map-tools project remains ongoing. |
+
+## Coordination requiring maintainer decisions
+
+| Decision | Current state | Next action |
+| --- | --- | --- |
+| Comparative study protocol | Four evaluation dimensions are maintainer-approved; concrete comparable tasks, rubrics, and v4 package identity remain to be specified | Define task-based evidence and baseline before comparative claims or participant evaluation |
+| Dashboard publisher | Maintainer responsibility; named publisher not yet assigned | Assign the person responsible for reconciling and publishing rows to `master` |
+| Supported validation configurations | Baseline version, compiler matrix, and required datasets not yet agreed | Record acceptance checks in the project plan and status, or in an Issue if one is used |
+
+## Approved updates awaiting publication
+
+The v4/v5 build configuration separation is implemented on `feature/gosh-refactor`: legacy Makefiles retain `adm/Mkinclude`, while v5 model and map-tool Makefiles require `config/Mkinclude`. The default v5 templates and setup guide are in `config/`. GitHub Actions now creates the ignored active configuration from the tracked GNU template in its disposable checkout, installs GNU Fortran and NetCDF-Fortran, and requires the v5 model and regional map-tool builds plus existing map checks; a local clean-checkout build passed. The active configuration remains untracked. See the build setup section in `docs/model_source_workflow_plan.md`.
+
+Map data/tool work is tracked by Issue [#122](https://github.com/global-hydrodynamics/CaMa-Flood_v4/issues/122). Research logging is a cross-project activity with no dedicated Issue. This dashboard copy is branch-local until reconciled on `origin/master`. The B2.4 migration records MPI preprocessing and diagnostics; historical `map/src/` tools and tracked Mekong binaries were not modified. Phase C exposes four shared analysis tools under descriptive names (`analysis_river_point_info`, `analysis_upbasin`, `analysis_subbasin`, `analysis_river_node_latlon`) and a portable, explicitly prepared `script_analysis/` bundle alongside independent standard s06/s07 workflows. The Mekong sample uses a 30,000 km2 subbasin threshold, ID 0 for modeled cells below threshold, and station-labeled `upbasin-<GRDC_ID>.bin`; the historical `map/src/` source tree remains unchanged. The Phase C specification update and its 65-test validation are recorded in DR-0043 and VR-0070; the earlier migration and sample-output milestones remain in VR-0068 and VR-0069.
+
+High-resolution area handling contracts are documented in `docs/map_data_tools_plan.md`: allocation is intentionally single-area; matrix and permanent-water aggregation support multiple areas by source inspection. Multi-area package-scale integration validation is pending and is not claimed as completed. The previous wording that treated multi-area allocation itself as an unresolved defect has been narrowed; see `research/records/knowledge_gaps/KG-0014.md`.
