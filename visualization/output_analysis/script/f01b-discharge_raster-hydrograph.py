@@ -117,7 +117,7 @@ def main() -> None:
     axes[-1].xaxis.set_major_locator(mdates.MonthLocator(interval=3))
     axes[-1].xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
     fig.suptitle(
-        "p02-f01b River Discharge: Hydrograph\n"
+        "p02-f01b Discharge Raster: Hydrograph\n"
         "Negative values indicate flow opposite to the model-defined direction",
         fontsize=12, y=0.98,
     )

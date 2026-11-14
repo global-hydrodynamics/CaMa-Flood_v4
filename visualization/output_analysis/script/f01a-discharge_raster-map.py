@@ -271,7 +271,7 @@ def draw_figure(sample_path: Path, params: Path, stations_path: Path, output: Pa
         get_cmap("diverge_spectral"), norm.zero_position,
     )
     cmap.set_bad("white")
-    title = f"p02-f01a River Discharge: Raster ({VARIABLE})\n{selected_time:%Y-%m-%d}"
+    title = f"p02-f01a Discharge Raster: Map ({VARIABLE})\n{selected_time:%Y-%m-%d}"
     fig, ax = create_map_axes(geometry, west, east, south, north, title)
     ax.set_xlabel("Longitude")
     ax.set_ylabel("Latitude")

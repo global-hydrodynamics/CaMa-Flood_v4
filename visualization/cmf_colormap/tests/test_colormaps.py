@@ -232,10 +232,10 @@ class ColormapTests(unittest.TestCase):
     def test_diverge_asymmetry_definition_and_registered_colors(self):
         definition = self.diverge_asymmetry_definition
         controls = definition["control_colors"]
-        expected_positions = [0.00, 0.14, 0.28, 0.40, 0.50, 0.67, 0.84, 1.00]
+        expected_positions = [0.00, 0.14, 0.28, 0.40, 0.50, 0.59, 0.68, 0.77, 0.85, 0.93, 1.00]
         expected_colors = [
             "#9F5A45", "#E04B1F", "#E96F1F", "#F6B13A", "#FFF9D8",
-            "#49D17D", "#005BFF", "#7040FF",
+            "#C8E84A", "#43D66B", "#00CDB5", "#168BFF", "#5A3DFF", "#F018C8",
         ]
         self.assertEqual(definition["name"], "diverge_asymmetry")
         self.assertEqual(definition["type"], "diverging")
@@ -250,7 +250,7 @@ class ColormapTests(unittest.TestCase):
                 for index in (1, 3, 5)
             )
             np.testing.assert_allclose(
-                cmap(control["position"])[:3], expected, atol=2e-5,
+                cmap(control["position"])[:3], expected, atol=3e-5,
             )
         self.assertEqual(
             self.registry_by_name["diverge_asymmetry"]["display_name"],

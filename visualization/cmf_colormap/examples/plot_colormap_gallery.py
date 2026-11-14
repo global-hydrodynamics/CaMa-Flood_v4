@@ -372,7 +372,7 @@ def plot_diverge_spectral_detail():
 
 
 def plot_diverge_asymmetry_detail():
-    """Write signed-flow diagnostics for the extended red-to-violet palette."""
+    """Write signed-flow diagnostics for the extended red-to-magenta palette."""
     plot_detailed_preview("diverge_asymmetry", "asymmetric_signed_flow")
 
 

@@ -14,11 +14,29 @@ practices that can evolve as the Gallery grows.
   temporal definitions in labels, captions, or documentation when relevant.
 - Handle missing values, invalid cells, and masks according to the data
   contract. Do not silently treat missing values as zero or as valid data.
+- For categorical map products, use the documented category definitions and
+  distinguish valid categories (including a meaningful value of zero),
+  unassigned cells, outside-domain cells, and missing-value sentinels. Render
+  categories discretely; do not interpolate them as continuous quantities.
+  Use verified category names in legends and descriptions.
 - Do not alter scientific input values merely to improve appearance. Any
   aggregation, normalization, clipping, threshold, or transformation that
   affects interpretation must be explicit and justified.
 - Ensure the visualization supports the stated scientific question. A
   plausible-looking image is not evidence that its interpretation is correct.
+
+### River-network topology and direction
+
+- When a Figure represents the complete network within its stated domain,
+  include every valid in-scope connection. Do not omit or subsample links to
+  reduce visual density. If the Figure intentionally shows a subset, state
+  its selection rule.
+- Derive link direction from the documented connectivity data. Show direction
+  explicitly when it is part of the Figure's purpose, and describe how each
+  connection type is represented.
+- To reduce arrowhead overlap at confluences, move or repeat a direction marker
+  along the displayed link where appropriate; do not change or shorten the
+  source-to-destination geometry to suggest a different connection.
 
 ### Comparability
 
@@ -170,6 +188,11 @@ colorbar-related layout difference.
 - Use panel labels consistently when panels are referenced separately.
 - Ensure lines, markers, categories, and overlaid geographic layers remain
   distinguishable at the image's intended display size.
+- Set an intentional drawing order for map layers so backgrounds and boundary
+  overlays do not obscure the river network, outlets, or observation markers
+  that the Figure is intended to show. Choose marker fills and outlines to
+  remain visible without hiding important underlying map information, and
+  verify the saved Figure at its intended display size.
 
 ## Recommended visual practices
 

@@ -79,10 +79,11 @@ saturated `#005BFF` cobalt blue.
 ### Diverge-Asymmetry signed flow
 
 Diverge-Asymmetry transitions from muted red-brown through red-orange and
-golden orange for negative values, pale warm yellow at zero, and bright green
-through cobalt blue to blue-violet for positive values. Its control colors are
-independent of units, limits, and normalization. This is a custom diverging
-palette, not a standard named scheme. The authoritative definition is
+golden orange for negative values, pale warm yellow at zero, and yellow-green,
+green, turquoise, vivid blue, violet, and magenta-pink for positive values.
+Its control colors are independent of units, limits, and normalization. This is
+a custom diverging palette, not a standard named scheme. The authoritative
+definition is
 [`src/cmf_colormap/data/diverge_asymmetry.json`](src/cmf_colormap/data/diverge_asymmetry.json).
 
 ![Diverge-Asymmetry color definition and diagnostics](examples/diverge_asymmetry_detailed.png)
@@ -325,7 +326,7 @@ source .venv/bin/activate
 python visualization/cmf_colormap/examples/compare_p02_f01_colormaps.py
 ```
 
-It reads `visualization/output_2d_maps/out_sample/outflw_2001-09-01.nc` and
+It reads `visualization/output_analysis/out_sample/outflw_2001-09-01.nc` and
 writes `diverge_outflow_comparison.png` beside the other examples. Install test
 dependencies and run the focused tests
 from this directory:

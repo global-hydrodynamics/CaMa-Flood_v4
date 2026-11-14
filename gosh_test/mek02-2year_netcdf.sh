@@ -46,7 +46,7 @@ CVNTIME="time"                  # NetCDF CF time-coordinate variable name.
 
 # Output and restart products.
 IFRQ_OUT=24                      # Model-output interval [hours]; 24 means daily output.
-CVARSOUT="outflw,storge,sfcelv,rivdph,flddph,fldfrc,fldare" # Comma-separated model output variable names.
+CVARSOUT="outflw,pthflw,storge,sfcelv,rivdph,flddph,fldfrc,fldare" # Comma-separated model output variable names.
 LOUTCDF=".TRUE."                # TRUE: write NetCDF model output; FALSE: write Binary output.
 IFRQ_RST=0                       # 0: write restart at end only; 1-24: hourly; 30: monthly (also at end).
 CVNREST="restart"               # Prefix for dated restart files.

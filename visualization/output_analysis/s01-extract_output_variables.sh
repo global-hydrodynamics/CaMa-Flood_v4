@@ -13,7 +13,7 @@ OUTPUT_DIR="$SCRIPT_DIR/out_sample" # One-record NetCDF files and extraction log
 STATION_CSV="$SCRIPT_DIR/station_map_locations.csv" # Selected Mekong station locations.
 
 # User settings: comma-separated variables and requested CF dates.
-VARIABLES="outflw" # NetCDF variable(s); extend with comma-separated names.
+VARIABLES="outflw,pthflw" # NetCDF variable(s); extend with comma-separated names.
 DATES="2001-09-01" # Requested midnight dates; extend with comma-separated dates.
 PYTHON="python3" # Activate the repository .venv before running this script.
 

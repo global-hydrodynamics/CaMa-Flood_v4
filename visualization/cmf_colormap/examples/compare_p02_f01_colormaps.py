@@ -19,19 +19,19 @@ from netCDF4 import Dataset, num2date
 from importlib.resources import files
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-OUTPUT_MAP_DIR = REPO_ROOT / "visualization" / "output_2d_maps"
+OUTPUT_ANALYSIS_DIR = REPO_ROOT / "visualization" / "output_analysis"
 RIVER_MAP_SCRIPT_DIR = REPO_ROOT / "visualization" / "river_map" / "script"
 sys.path.insert(0, str(RIVER_MAP_SCRIPT_DIR))
 
 from river_map_common import read_geometry  # noqa: E402
 from cmf_colormap import get_cmap  # noqa: E402
 
-P02_SCRIPT = OUTPUT_MAP_DIR / "script" / "f01a-river_discharge-raster.py"
+P02_SCRIPT = OUTPUT_ANALYSIS_DIR / "script" / "f01a-discharge_raster-map.py"
 P02_SPEC = importlib.util.spec_from_file_location("p02_f01_outflow", P02_SCRIPT)
 P02_MODULE = importlib.util.module_from_spec(P02_SPEC)
 P02_SPEC.loader.exec_module(P02_MODULE)
 
-DEFAULT_SAMPLE = OUTPUT_MAP_DIR / "out_sample" / "outflw_2001-09-01.nc"
+DEFAULT_SAMPLE = OUTPUT_ANALYSIS_DIR / "out_sample" / "outflw_2001-09-01.nc"
 DEFAULT_PARAMS = REPO_ROOT / "map" / "mekong_15min" / "params.txt"
 DEFAULT_OUTPUT = Path(__file__).resolve().parent / "diverge_outflow_comparison.png"
 PALETTE_NAMES = ("diverge_spectral", "diverge_asymmetry")
@@ -110,7 +110,7 @@ def make_comparison(sample_path: Path, params_path: Path, output_path: Path,
         wspace=0.30, hspace=0.26,
     )
     figure.suptitle(
-        f"p02-f01 River Discharge — colormap comparison ({selected_time:%Y-%m-%d})",
+        f"p02-f01 Discharge Raster — colormap comparison ({selected_time:%Y-%m-%d})",
         fontsize=13,
     )
 

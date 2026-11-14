@@ -1,4 +1,4 @@
-# output_2d_maps
+# output_analysis
 
 Project number: `p02`.
 
@@ -23,7 +23,8 @@ once, then run the Figure's Shell entry point:
 ```bash
 ./s02-python_setup.sh
 source .venv/bin/activate
-./visualization/output_2d_maps/f01-river_discharge.sh
+./visualization/output_analysis/f01-discharge_raster.sh
+./visualization/output_analysis/f02-discharge_vector.sh
 ```
 
 The entry point resolves repository paths relative to its own location. It
@@ -31,16 +32,19 @@ stores compact extracted inputs in `out_sample/` and generated project figures
 in `figure/`. The standalone extractor can also be run directly when preparing
 samples for later figures.
 
-## p02-f01 — River Discharge
+## p02-f01 — Discharge Raster
 
-Method: `river_discharge`.
+![p02-f01 Discharge Raster](figure/f01-discharge_raster.png)
+
+
+Method: `discharge_raster`.
 
 | Option | Option identifier | Variable |
 | --- | --- | --- |
 | Panel | Option name | Variable |
 | --- | --- | --- |
-| (a) River discharge raster | `river_discharge-raster` | `outflw` |
-| (b) River discharge hydrograph | `river_discharge-hydrograph` | `outflw` |
+| (a) River discharge raster | `discharge_raster-map` | `outflw` |
+| (b) River discharge hydrograph | `discharge_raster-hydrograph` | `outflw` |
 
 The Figure contains two panels. Panel (a) shows the full-grid outflow map with
 the Stung Treng and Prek Kdam station coordinates and names from
@@ -97,9 +101,11 @@ selects the unique midnight record for the requested date; it does not infer
 the record index from the start date. For f01, it extracts variable `outflw`
 at 2001-09-01 00:00 from `o_outflw2001.nc` and writes a one-record NetCDF
 containing `time`, `lat`, `lon`, and `outflw` to
-`out_sample/outflw_2001-09-01.nc`. The extracted sample retains the original
-coordinate values, units, variable attributes, fill value, and time-coordinate
-definition, with provenance attributes identifying the source record.
+`out_sample/outflw_2001-09-01.nc`. It also extracts `pthflw` at the same CF
+timestamp to `out_sample/pthflw_2001-09-01.nc`, preserving the layer and path
+dimensions and static path metadata such as `pth_id`, endpoints, and widths.
+Both samples retain their source attributes, time-coordinate definition, and
+provenance identifying the selected record.
 
 The same Shell workflow also calls `script/extract_station_outflw.py`. It reads
 the six selected locations in `station_map_locations.csv` and extracts each
@@ -119,8 +125,8 @@ records the variable, requested date and selected CF time, source file and
 zero-based record index, destination, grid dimensions, data type, and units.
 This makes the extraction reproducible and identifies exactly which output
 record was used. The extractor accepts comma-separated `--variables` and
-`--dates` lists, so additional variables and dates can be extracted without
-changing the Python source. Output filenames use
+`--dates` lists for `outflw` and `pthflw`, so additional dates can be extracted
+without changing the Python source. Output filenames use
 `<variable>_<YYYY-MM-DD>.nc`; annual source files use
 `o_<variable><year>.nc`.
 
@@ -143,11 +149,11 @@ simulated model samples, not observed station discharge.
 
 ### Run and output
 
-Run `./visualization/output_2d_maps/f01-river_discharge.sh`. It invokes the
+Run `./visualization/output_analysis/f01-discharge_raster.sh`. It invokes the
 extraction wrapper, draws both panels, then assembles the complete Figure.
 To prepare the dated map sample and two-year station series without drawing
-f01, run `./visualization/output_2d_maps/s01-extract_output_variables.sh`; its
-defaults are `VARIABLES="outflw"` and `DATES="2001-09-01"`. Edit those settings or pass
+f01, run `./visualization/output_analysis/s01-extract_output_variables.sh`; its
+defaults are `VARIABLES="outflw,pthflw"` and `DATES="2001-09-01"`. Edit those settings or pass
 `--variables` and `--dates` to select more output variables and CF dates. Edit
 `TARGET_DATE` in the f01 wrapper to select another daily CF timestamp. Edit
 `CELV`, `LINTHRESH`,
@@ -157,15 +163,81 @@ list containing negative values, zero exactly once, and positive values; its
 endpoints must extend beyond `±LINTHRESH`. `LINEAR_FRAC` must be between 0 and
 1. The script creates compact NetCDF samples and these PNGs:
 
-- `figure/f01a-river_discharge-raster.png`
-- `figure/f01b-river_discharge-hydrograph.png`
-- `figure/f01-river_discharge.png` (panels (a) and (b), side by side)
+- `figure/f01a-discharge_raster-map.png`
+- `figure/f01b-discharge_raster-hydrograph.png`
+- `figure/f01-discharge_raster.png` (panels (a) and (b), side by side)
 
 Negative values indicate flow opposite to the model-defined positive
 direction.
 
-![p02-f01a River Discharge: Raster](figure/f01a-river_discharge-raster.png)
 
-![p02-f01b River Discharge: Hydrograph](figure/f01b-river_discharge-hydrograph.png)
 
-![p02-f01 River Discharge](figure/f01-river_discharge.png)
+
+## p02-f02 — Discharge Vector
+
+![p02-f02 Discharge Vector](figure/f02-discharge-vector.png)
+
+
+Method: `discharge-vector`.
+
+| Panel | Option identifier | Flow variable |
+| --- | --- | --- |
+| (a) Default signed-flow view | `discharge-vector_default` | `outflw`, sum of `pthflw` layers |
+| (b) Direction-aware view | `discharge-vector_direction-aware` | `outflw`, sum of `pthflw` layers |
+
+Both panels show 2001-09-01 daily-mean flow on outlet-to-outlet network
+segments over the subdued 1-minute elevation background used in the Tutorial02
+network figure. The default extent is 103–108°E and 9–14°N. Main connections
+follow `nextxy_noedge` and use outlet coordinates from `lonlat.nc`; their line
+widths increase by source-cell upstream-area quartile. Small-area connections
+are drawn first so larger downstream channels remain visible. Both panels
+sum signed `pthflw` across all five pathway layers for each path, without
+reversing signs before summation. They include paths with positive width in at
+least one `bifprm.nc` layer, including channel and overland-only bifurcations.
+Dashed paths have positive width in layer 1; dotted paths have no layer-1
+width and are overland-only.
+
+The panels demonstrate two ways to present complex signed flow. Panel (a),
+`discharge-vector_default`, colors signed `outflw` and the signed sum of
+`pthflw` layers with `diverge_asymmetry`. The sum retains its positive or
+negative sign, and no direction markers are drawn. Negative values use the
+negative side of the scale and indicate flow opposite to the model-defined
+positive direction.
+
+Panel (b), `discharge-vector_direction-aware`, keeps signed `outflw` colors and
+adds midpoint arrows to negative main-channel links, pointing opposite to the
+stored `nextxy_noedge` direction. For bifurcation paths, it first sums the
+signed `pthflw` values across all five pathway layers for each path, then colors
+by the absolute value of that total on the positive side of the shared scale.
+Midpoint arrows follow net flow: positive sums follow the stored `bifprm.nc`
+source-to-destination direction, while negative sums point in reverse. Color
+communicates net pathway magnitude while arrow direction communicates its sign.
+The same dashed/dotted path styles and all-layer sum are used in both
+panels; panel (a) retains the signed sum colors without direction markers.
+Both panels use the same default `CELV`, `LINTHRESH`, and `LINEAR_FRAC` scale
+as f01; zero is the palette's pale-yellow neutral color. Path IDs and endpoint
+indices are checked against `bifprm.nc`.
+
+The one-day pthflw sample preserves `pth_id`, endpoint indices, path
+coordinates, and width layers alongside `pthflw`. The model sample's
+`CVARSOUT` now includes `pthflw` so future simulation runs produce the annual
+source file. The pthflw file used for this dated sample was generated from the
+2001 start restart with the same model settings; the regenerated annual
+`outflw` values matched the existing file exactly.
+
+Run `./visualization/output_analysis/f02-discharge_vector.sh` to extract both
+CF-timestamped records, render the panels, and assemble the Figure. The Shell
+script exposes `WEST`, `EAST`, `SOUTH`, and `NORTH` for the map extent,
+`COLORMAP` for palette selection, `LINE_WIDTH_SCALE` for main and bifurcation
+line widths, and `CELV`, `LINTHRESH`, and `LINEAR_FRAC` for scale adjustment.
+It creates:
+
+- `figure/f02a-discharge-vector_default.png`
+- `figure/f02b-discharge-vector_direction-aware.png`
+- `figure/f02-discharge-vector.png` (panels (a) and (b), side by side)
+
+The pthflw panel requires `o_pthflw<year>.nc` alongside the annual outflw
+file. The extractor selects both records by their CF time coordinates.
+
+
+

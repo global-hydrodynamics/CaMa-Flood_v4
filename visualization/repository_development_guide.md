@@ -129,19 +129,25 @@ concise description, a link to the project's user-facing Shell script, and a
 link to the corresponding section of the project README. Do not put detailed
 technical explanations in the Gallery.
 
+Order each entry in `visualization/README.md` as: Figure heading, published
+Gallery image, then its concise description and links. This lets readers see
+the Figure before reading its summary. This order applies only to the top-level
+Gallery README; project READMEs place project-local figures after their
+explanations as described below.
+
 Maintain one README per visualization project, not one document per Figure.
 The project README gives a short project overview and common execution
 instructions, followed by a stable, descriptive heading for every Figure. Each
-Figure section explains its scientific purpose and interpretation, required
+Figure section starts with its full or combined project-local Figure image,
+then explains its scientific purpose and interpretation, required
 datasets/variables/units, important processing and display methods, settings
-and execution, and relevant limitations; place that Figure's project-local
-image immediately after its explanation. Extend the existing project README
-when adding figures rather than creating individual Figure documents or a
-separate project-gallery section. Keep the top-level Gallery and CSV catalog
-concise; link to the project README for full explanations.
+and execution, and relevant limitations. Embed only the full/combined Figure
+in the README; keep individual panel PNGs in `figure/` for reuse without
+embedding them individually. Extend the existing project README when adding
+figures rather than creating individual Figure documents or a separate
+project-gallery section. Keep the top-level Gallery and CSV catalog concise;
+link to the project README for full explanations.
 
-A project README should embed its own tracked figures from that project's
-`figure/` directory immediately after the corresponding Figure explanation.
 These project Figures are distinct from the user-authorized copies shown in
 the top-level Gallery.
 

@@ -4,15 +4,18 @@
   "type": "diverging",
   "interpolation": "linear_srgb",
   "center_position": 0.5,
-  "description": "A diverging palette for signed flow with muted red-brown through orange negative colors, pale warm yellow at zero, and bright green through cobalt-blue violet positive colors.",
+  "description": "A diverging palette for signed flow with muted red-brown through orange negative colors, pale warm yellow at zero, and positive colors progressing through yellow-green, green, turquoise, blue, violet, and vivid magenta.",
   "control_colors": [
     {"name": "Muted red-brown (negative extreme)", "hex": "#9F5A45", "position": 0.00},
     {"name": "Red-orange", "hex": "#E04B1F", "position": 0.14},
     {"name": "Orange", "hex": "#E96F1F", "position": 0.28},
     {"name": "Golden orange", "hex": "#F6B13A", "position": 0.40},
     {"name": "Pale warm yellow (zero)", "hex": "#FFF9D8", "position": 0.50},
-    {"name": "Bright green", "hex": "#49D17D", "position": 0.67},
-    {"name": "Vivid blue", "hex": "#005BFF", "position": 0.84},
-    {"name": "Blue-violet (positive extreme)", "hex": "#7040FF", "position": 1.00}
+    {"name": "Vivid yellow-green", "hex": "#C8E84A", "position": 0.59},
+    {"name": "Bright green", "hex": "#43D66B", "position": 0.68},
+    {"name": "Turquoise", "hex": "#00CDB5", "position": 0.77},
+    {"name": "Vivid blue", "hex": "#168BFF", "position": 0.85},
+    {"name": "Violet", "hex": "#5A3DFF", "position": 0.93},
+    {"name": "Vivid magenta-pink (positive extreme)", "hex": "#F018C8", "position": 1.00}
   ]
 }

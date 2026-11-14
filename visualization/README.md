@@ -57,15 +57,32 @@ upstream-area-colored channels; the second uses the `pale_terrain` palette
 and black channels. See the [figure script](river_map/f05-hires_background.sh)
 and the [project explanation](river_map/README.md#p01-f05--high-resolution-background).
 
-### p02 — Output 2D Maps
+### p02 — Output Analysis
 
-#### p02-f01 — River Discharge
+#### p02-f01 — Discharge Raster
 
-![p02-f01 River Discharge](gallery/p02-f01-river-discharge.png)
+![p02-f01 Discharge Raster](gallery/p02-f01-discharge-raster.png)
 
 The two-panel Figure combines a 2001-09-01 Mekong river-discharge raster with
 2000–2001 daily discharge hydrographs for Stung Treng and Prek Kdam. The
 Tonle Sap series shows modeled flow reversal as negative `outflw`. Its options
-are `river_discharge-raster` (a) and `river_discharge-hydrograph` (b); see the
-[figure script](output_2d_maps/f01-river_discharge.sh) and the
-[project explanation](output_2d_maps/README.md#p02-f01--river-discharge).
+are `discharge_raster-map` (a) and `discharge_raster-hydrograph` (b); see the
+[figure script](output_analysis/f01-discharge_raster.sh) and the
+[project explanation](output_analysis/README.md#p02-f01--discharge-raster).
+
+#### p02-f02 — Discharge Vector
+
+![p02-f02 Discharge Vector](output_analysis/figure/f02-discharge-vector.png)
+
+Panels (a) and (b) compare two views of complex signed flow on 2001-09-01.
+Both sum signed `pthflw` across all pathway layers and include channel and
+overland-only bifurcations. Dashed links have positive width in layer 1;
+dotted links have no layer-1 width. Panel `discharge-vector_default` colors
+the signed `outflw` and `pthflw` sum without direction markers or sign
+reversal. Panel `discharge-vector_direction-aware` uses arrows to show net
+path flow direction, including reversals, and colors bifurcations by the
+magnitude of their layer sum. Both use `diverge_asymmetry` over 103–108°E,
+9–14°N. This pair demonstrates how visualization choices can make reversals
+and branching flows easier to interpret.
+See the [Figure script](output_analysis/f02-discharge_vector.sh) and the
+[project explanation](output_analysis/README.md#p02-f02--discharge-vector).

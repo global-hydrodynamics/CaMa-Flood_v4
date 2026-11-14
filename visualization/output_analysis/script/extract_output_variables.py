@@ -80,23 +80,22 @@ def extract_output_variable(
     params_path: Path,
     destination: Path,
 ) -> dict[str, str]:
-    """Copy one variable's exact CF-dated 2-D record to a compact NetCDF."""
+    """Copy one variable's exact CF-dated record and required static metadata."""
     source_path = source_dir / f"o_{variable_name}{target_date.year:04d}.nc"
     if not source_path.is_file():
         raise FileNotFoundError(f"Annual output file not found: {source_path}")
     destination.parent.mkdir(parents=True, exist_ok=True)
 
     with Dataset(source_path, "r") as source:
-        for name in ("time", "lat", "lon", variable_name):
+        for name in ("time", variable_name):
             if name not in source.variables:
                 raise ValueError(f"{source_path} is missing variable {name!r}")
         time_var = source.variables["time"]
         data_var = source.variables[variable_name]
         units = str(getattr(data_var, "units", ""))
-        if data_var.dimensions != ("time", "lat", "lon"):
+        if not data_var.dimensions or data_var.dimensions[0] != "time":
             raise ValueError(
-                f"Expected {variable_name} dimensions (time, lat, lon); "
-                f"found {data_var.dimensions}"
+                f"Expected {variable_name} to start with time; found {data_var.dimensions}"
             )
         if not np.issubdtype(data_var.dtype, np.number):
             raise ValueError(f"Output variable {variable_name} is not numeric")
@@ -109,27 +108,55 @@ def extract_output_variable(
             only_use_cftime_datetimes=False,
         )
         record_index, selected_time = _find_date_record(times, target_date)
-        lon = np.asarray(source.variables["lon"][:], dtype=np.float64)
-        lat = np.asarray(source.variables["lat"][:], dtype=np.float64)
-        nx, ny = _validate_grid(lon, lat, params_path)
-        if data_var.shape[1:] != (ny, nx):
-            raise ValueError(
-                f"{variable_name} grid shape {data_var.shape[1:]} does not match "
-                f"params.txt grid {(ny, nx)}"
-            )
-
+        if variable_name == "outflw":
+            if data_var.dimensions != ("time", "lat", "lon"):
+                raise ValueError(
+                    f"Expected outflw dimensions (time, lat, lon); found {data_var.dimensions}"
+                )
+            for name in ("lat", "lon"):
+                if name not in source.variables:
+                    raise ValueError(f"{source_path} is missing variable {name!r}")
+            lon = np.asarray(source.variables["lon"][:], dtype=np.float64)
+            lat = np.asarray(source.variables["lat"][:], dtype=np.float64)
+            nx, ny = _validate_grid(lon, lat, params_path)
+            if data_var.shape[1:] != (ny, nx):
+                raise ValueError(
+                    f"outflw grid shape {data_var.shape[1:]} does not match "
+                    f"params.txt grid {(ny, nx)}"
+                )
+        elif variable_name == "pthflw":
+            if len(data_var.dimensions) != 3:
+                raise ValueError(
+                    f"Expected pthflw dimensions (time, layer, path); found {data_var.dimensions}"
+                )
+            path_dim = source.variables.get("pth_id")
+            if path_dim is None or path_dim.dimensions != (data_var.dimensions[2],):
+                raise ValueError("pthflw path dimension does not match one-dimensional pth_id")
+            if units != "m3/s" or getattr(data_var, "cell_methods", "") != "time: mean":
+                raise ValueError("pthflw must be a daily-mean discharge in m3/s")
         data_var.set_auto_maskandscale(False)
-        field = np.asarray(data_var[record_index, :, :])
+        field = np.asarray(data_var[record_index, ...])
+        output_dimensions = data_var.dimensions
+        output_shape = (1, *field.shape)
         selected_time_value = np.asarray(time_var[record_index:record_index + 1])
         with Dataset(destination, "w", format="NETCDF4_CLASSIC") as sample:
             sample.createDimension("time", None)
-            sample.createDimension("lat", ny)
-            sample.createDimension("lon", nx)
-            for name, values in (("lat", lat), ("lon", lon)):
-                source_coord = source.variables[name]
-                output_coord = sample.createVariable(name, source_coord.dtype, (name,))
-                _copy_attributes(source_coord, output_coord)
-                output_coord[:] = values
+            data_dimensions = data_var.dimensions[1:]
+            for dim_name in data_dimensions:
+                if dim_name == "time":
+                    raise ValueError(f"Unexpected repeated time dimension in {data_var.dimensions}")
+                sample.createDimension(dim_name, len(source.dimensions[dim_name]))
+
+            # Keep coordinate and path metadata needed to interpret the extracted data.
+            for name, source_coord in source.variables.items():
+                if name in ("time", variable_name) or "time" in source_coord.dimensions:
+                    continue
+                if source_coord.dimensions and set(source_coord.dimensions).issubset(data_dimensions):
+                    output_coord = sample.createVariable(
+                        name, source_coord.dtype, source_coord.dimensions,
+                    )
+                    _copy_attributes(source_coord, output_coord)
+                    output_coord[:] = source_coord[:]
 
             output_time = sample.createVariable("time", time_var.dtype, ("time",))
             _copy_attributes(time_var, output_time)
@@ -140,11 +167,10 @@ def extract_output_variable(
             if fill_value is not None:
                 create_options["fill_value"] = fill_value
             output_data = sample.createVariable(
-                variable_name, data_var.dtype, ("time", "lat", "lon"),
-                **create_options,
+                variable_name, data_var.dtype, data_var.dimensions, **create_options,
             )
             _copy_attributes(data_var, output_data)
-            output_data[0, :, :] = field
+            output_data[0, ...] = field
             for attribute in source.ncattrs():
                 sample.setncattr(attribute, source.getncattr(attribute))
             sample.setncattr("source_filename", source_path.name)
@@ -174,8 +200,8 @@ def extract_output_variable(
         "source_file": str(source_path.resolve()),
         "source_record_index_zero_based": str(record_index),
         "destination_file": str(destination.resolve()),
-        "dimensions": "time,lat,lon",
-        "shape": f"1,{ny},{nx}",
+        "dimensions": ",".join(output_dimensions),
+        "shape": ",".join(str(size) for size in output_shape),
         "dtype": str(field.dtype),
         "units": units,
     }

@@ -24,6 +24,9 @@ descriptive section for each Figure added to the project.
 
 ## p01-f01 — Raster River Map
 
+![Raster River Map](figure/f01-raster_river_map.png)
+
+
 Method identifier: `raster_river_map`.
 
 | Panel | Option | Option identifier | Map variable |
@@ -77,7 +80,6 @@ that the modeled river network is disconnected; connectivity is stored in
 `nextxy` rather than inferred from geographic proximity. No simulation or
 observation-station data are required.
 
-![Raster River Map](figure/f01-raster_river_map.png)
 
 ### Inputs, units, and methods
 
@@ -208,6 +210,9 @@ geometry under legacy limits and the physical sizing modes.
 
 ## p01-f02 — Line River Map
 
+![p01-f02 Line River Map: connectivity, enhanced thickness, and upstream-area color](figure/f02-line_river_map.png)
+
+
 Method identifier: `line_river_map`. Vector visualization remains a separate
 future method.
 
@@ -240,7 +245,6 @@ Upstream drainage area is contributing land area, not discharge.
   background: zero is light gray, positive classes are progressively darker,
   and `-9999` remains white.
 
-![p01-f02 Line River Map: connectivity, enhanced thickness, and upstream-area color](figure/f02-line_river_map.png)
 
 ### Inputs, units, and methods
 
@@ -325,12 +329,14 @@ labels, hidden slots, extent, link counts and foreground encodings.
 
 ## p01-f03 — Vector River Map
 
+![p01-f03 Vector River Map](figure/f03-vector_river_map.png)
+
+
 The three panels show the main network at geographic unit-catchment outlets.
 They use stored `nextxy` topology and `outlon`/`outlat` locations rather than
 estimating links from geographic proximity. Tutorial02 Figure 1c is the
 original implementation reference.
 
-![p01-f03 Vector River Map](figure/f03-vector_river_map.png)
 
 Method identifier: `vector_river_map`.
 
@@ -446,6 +452,9 @@ PNG resolution. The script writes all three panels and the combined Figure under
 
 ## p01-f04 — River Map Catchment
 
+![p01-f04 River Map Catchment](figure/f04-rivmap_catchment.png)
+
+
 Method identifier: `rivmap_catchment`.
 
 | Panel | Option | Option identifier | Map variables | Panel script | Panel image |
@@ -459,7 +468,6 @@ observation-station data or shows station markers and station links. The shared
 plotting implementation gives both options identical map and colorbar geometry
 and reserves the same legend area.
 
-![p01-f04 River Map Catchment](figure/f04-rivmap_catchment.png)
 
 The combined figure is also included in the repository Gallery.
 
@@ -534,6 +542,9 @@ not infer catchments or river links from geographic proximity.
 
 ## p01-f05 — High-resolution Background
 
+![p01-f05 High-resolution Background](figure/f05-hires_background.png)
+
+
 Method identifier: `hires_background`.
 
 | Panel | Option | Background data | Panel image |
@@ -545,7 +556,6 @@ Method identifier: `hires_background`.
 | p01-f05e — Slope (based on `elevtn`) | `terrain_slope` | `1min.elevtn.bin` (`elevtn`, m; derived) | `f05e-hires_background-terrain_slope.png` |
 | p01-f05f — Floodplain height (`flddif`) | `terrain_flddif` | `1min.flddif.bin` (`flddif`, m) | `f05f-hires_background-terrain_flddif.png` |
 
-![p01-f05 High-resolution Background](figure/f05-hires_background.png)
 
 The combined figure is also included in the repository Gallery.
 
