@@ -1,110 +1,72 @@
 # CaMa-Flood v4
 
-## Overview
+## Project Overview
 
-CaMa-Flood (Catchment-based Macro-scale Floodplain) is a river hydrodynamics model for regional, continental, and global river and flood simulations. It routes runoff through a river network and represents river channels and floodplain storage using sub-grid topography. The model computes river discharge and flow velocity using the local inertial equation, and diagnoses water level and inundated area from water storage.
+CaMa-Flood (Catchment-based Macro-scale Floodplain) is a river hydrodynamics model for regional, continental, and global river and flood simulations. It routes runoff through a river network and represents river channels and floodplain storage using sub-grid topography. The v4 model computes river discharge and flow velocity using the local inertial equation, and diagnoses water level and inundated area from water storage.
 
-The repository includes adaptive time stepping, river bifurcations, reservoir operation, levee representation, upstream inflow and sea-level boundary options, and tools for diagnostic downscaling of flood depth. Optional extensions include water temperature and ice, tracers, and sediment transport. Their maturity, data requirements, and available combinations differ; consult the relevant documentation before enabling them.
+The v4 code includes adaptive time stepping, river bifurcations, reservoir and levee options, and upstream-inflow and sea-level boundary workflows. Optional extensions have their own data and build requirements; consult the corresponding v4 documentation before enabling them.
 
-## Getting Started
+This repository is maintained for using and maintaining CaMa-Flood v4, accessing its source and documentation, and referring to its development history. The v4 source is under `src/`; existing build and run workflows remain under `adm/` and `gosh/`.
 
-### Downloadable distribution package
+## CaMa-Flood v5 Development
 
-**New users who want to run CaMa-Flood should start with the distribution package.** It includes model code, basic river-map datasets, sample runoff forcing, and example experiment configurations.
+**CaMa-Flood v5 development has moved to the independent repository [global-hydrodynamics/cmf_v5_beta](https://github.com/global-hydrodynamics/cmf_v5_beta).** v5 is under active beta development and is not yet an official stable release. Its goals include improving source maintainability, reproducible experiments, tutorials and visualizations, package creation, community contributions, and AI-assisted development.
 
-The GitHub-tracked `map/mekong_15min/` directory is a development/test example used for map-tool work; it is not necessarily a fully validated or official production map. See the [map guide](map/README.md).
+Use the new repository for v5 development, feature work, and pull requests. The [`v5_dev/`](v5_dev/README.md) directory in this repository is an archive of the v5 development files that were here before the move; it is not the current v5 work area. Users who need a stable, supported distribution should continue to use the official CaMa-Flood v4 package.
 
-Visit the [official CaMa-Flood website](https://global-hydrodynamics.github.io/CaMa-Flood/) for downloads and current package information:
+## Download and Getting Started
 
-1. Complete the [registration and license-agreement form](https://forms.gle/bhq1qWqybeAk157v9).
-2. Receive the download password by email.
-3. Follow the download-page link on the official website.
+For a standard v4 installation, use the official [CaMa-Flood website](https://global-hydrodynamics.github.io/CaMa-Flood/) to find the current package and download instructions. Package access requires registration and acceptance of the license agreement. Submit the [registration form](https://forms.gle/bhq1qWqybeAk157v9); download credentials are sent by email, after which the package can be obtained from the website.
 
-Start with the [main manual](doc/Manual_CaMa-Flood_v420.docx) and [user guideline](doc/CaMa-Flood_Guideline.md). These documents contain version-specific examples; use the instructions and datasets appropriate to your package.
-
-### Source code repository
-
-This repository provides source code, build configurations, execution scripts, and preprocessing and analysis tools for development, customization, and source-code access. **Cloning it alone does not supply all the river-map and forcing datasets needed for the standard simulations.** Obtain the required data separately through the official distribution.
-
-[`variable_table/README.md`](variable_table/README.md) describes the shared variable tables. The three CSVs document map products, model outputs, and Restart state; their distinct schemas remain separate. Future tools should resolve them from `${CMF_BASE}/variable_table/`.
-
-The canonical v5 tutorial collection is under [`tutorial/`](tutorial/). Start with [Tutorial01](tutorial/tutorial01-get_started/manual_tutorial01-get_started.md) for a tested development-branch build and Mekong run; it is not a substitute for the official downloadable distribution package.
-
-[`gosh_test/`](gosh_test/) contains developer-oriented model execution and operational verification workflows. General users should start with `tutorial/`; visualization projects should normally use Git-tracked sample data or prepared visualization inputs rather than depend on `gosh_test/` outputs.
-
-The legacy v4 source and scripts use [adm/Mkinclude](adm/Mkinclude) and the `adm/` templates. The v5 development tree uses a separate, ignored `config/Mkinclude`; its GNU Fortran default enables OpenMP, NetCDF, and single precision. See the [v5 build guide](config/README.md) and [model source guide](src_main/README.md). The legacy [v4 compilation script](gosh/compile.sh) and experiments remain under `gosh/`.
-
-### Development environment setup
-
-From the repository root, run the interactive setup scripts:
-
-```bash
-./s01-setup_fortran.sh
-./s02-python_setup.sh
-```
-
-The Fortran script checks GNU Fortran, OpenMP, and a working NetCDF-Fortran installation, then can write a recommended machine-specific `./Mkinclude`. Review it before manually copying it to `config/Mkinclude`; it never changes the active v5 configuration or legacy `adm/Mkinclude`. The Python script creates or reuses the isolated repository `.venv/`, installs `requirements.txt`, and installs the included CMF Colormaps package from `visualization/cmf_colormap/` in editable mode. This makes `cmf_colormap` available to tutorials using that environment; packages are not installed into system Python. The repository-local `.venv` is the recommended Python setup, while researchers may keep an existing venv, Conda, or HPC-managed environment and configure it manually. The setup script does not modify external environments. Both setup scripts ask before creating or updating the environment and only diagnose when no terminal is attached. Activate the configured environment with `source .venv/bin/activate` before running Python tutorials. See the [Python environment guide](docs/python_environment.md) for both approaches and troubleshooting.
-
-`mek01` uses Binary input data; the standard v5 build still enables NetCDF. `mek02` uses NetCDF runoff and map inputs. MPI is optional and remains disabled in the recommended configuration. Python 3.10 or newer is needed for Python utilities; specialist workflows may have additional dependencies documented in their component guides.
-
-The optional ERA5-Land downloader also requires CDS account credentials and dataset terms acceptance. The legacy N-year flood-depth scripts and the GTSM preprocessing notebook use additional dependencies not included in the shared environment. Windows users should use WSL2 with Ubuntu for these shell workflows.
+Start with the [CaMa-Flood v4.20 manual](doc/Manual_CaMa-Flood_v420.docx) and [user guideline](doc/CaMa-Flood_Guideline.md). The [sample execution guide](gosh/README.md) explains the legacy v4 build and run scripts. A source-code clone does not necessarily include all map and forcing datasets required for a simulation; use the official distribution or obtain required data separately, subject to its terms.
 
 ## Repository Structure
 
-| Path | Responsibility |
+| Path | Purpose |
 | --- | --- |
-| [src/](src/) | Fortran numerical model, drivers, shared state, I/O, and optional extensions. |
-| [gosh/](gosh/) | Compilation and execution scripts, example experiments, and namelist templates. |
-| [adm/](adm/) | Compiler, library, precision, parallelization, and build configuration. |
-| [config/](config/) | Separate v5 compiler and library configuration templates. |
-| [src_main/](src_main/) | v5 model-source tree. |
-| [gosh_test/](gosh_test/) | Developer-oriented v5 build, simulation, and operational verification workflows. |
-| [tutorial/](tutorial/) | v5 tutorial specifications, executable examples, and learner-facing manuals. |
-| [map/](map/) | River-map preprocessing, regionalization, river parameters, input mapping, and gauge/reservoir allocation. |
-| [inp/](inp/) | Runoff forcing download and preparation tools. |
-| [etc/](etc/) | Optional-scheme workflows, parameter preparation, downscaling, validation, and analysis. |
-| [util/](util/) | Supporting utilities used by scripts. |
-| [doc/](doc/) | Scientific manuals, user documentation, and package-preparation guidance. |
-| [docs/](docs/) | Development coordination information. |
-| [AGENTS.md](AGENTS.md) | Authoritative development rules for human developers and AI coding agents. |
-| [Versions.md](Versions.md) | Source-code change history. |
-| [README.md](README.md) | Introduction and navigation for the repository. |
+| [`src/`](src/) | CaMa-Flood v4 model source. |
+| [`adm/`](adm/) | v4 compiler and library build configuration. |
+| [`gosh/`](gosh/) | v4 compilation and sample execution scripts. |
+| [`map/`](map/) | River-map data, map preparation sources, and related tools. |
+| [`inp/`](inp/) | Runoff forcing preparation and input utilities. |
+| [`etc/`](etc/) | Optional schemes, specialized workflows, and analysis utilities. |
+| [`util/`](util/) | Supporting utilities. |
+| [`out/`](out/) | Local model-run output location; contents are generated and may be ignored by Git. |
+| [`doc/`](doc/) | User manuals, scientific notes, and package documentation. |
+| [`visualization/`](visualization/README.md) | Visualization examples retained from v5 development; not validated for v4. |
+| [`v5_dev/`](v5_dev/README.md) | Archived v5 development files from before the repository split; not the current v5 development location. |
+| [`archive_src.sh`](archive_src.sh) | Source-archive helper retained with the v4 repository. |
+| [`Versions.md`](Versions.md) | Recorded v4 source changes. |
 
-Within `src/`, `cmf_drv_*` manages initialization, advancement, and finalization; `cmf_ctrl_*` coordinates model components; `cmf_calc_*` implements calculations; and `yos_cmf_*` holds shared configuration, state, map, time, and diagnostic variables. [MAIN_cmf.F90](src/MAIN_cmf.F90) is the stand-alone entry point. The main manual describes the core organization and hydrodynamic calculations.
+The [`map/README.md`](map/README.md) describes map data and preparation resources. Map and forcing data may have separate download requirements and licenses; check the documentation supplied with each dataset.
 
 ## Documentation
 
-The existing manuals remain the detailed scientific and workflow references. Their filenames identify applicable versions where available; they do not imply that all later extensions are covered.
-
 | Topic | Documentation |
 | --- | --- |
-| Model formulation, basic setup, standard input/output, and execution | [Main manual, v4.20 (Word)](doc/Manual_CaMa-Flood_v420.docx); [user guideline](doc/CaMa-Flood_Guideline.md) |
-| River parameters and runoff input matrices | [Map-parameter tools](map/src/src_param/README.md) |
-| Runoff-to-map input matrix | [v5 Input Matrix generation workflow](map/tools/script_params/s03-generate_inpmat.sh) |
-| Runoff forcing preparation | [ERA5-Land download and conversion](inp/ERA5-Land_download/README.md) |
-| Reservoir operation | [Reservoir manual, v4.20 (Word)](doc/Manual_ReservoirOperation_v420.docx); [parameter-preparation workflow](map/src/src_dam/ReadMe.md) |
-| Levee parameters | [Levee guide](doc/levee.md); [Word manual](doc/LeveeParameter.docx) |
-| Upstream inflow | [Upstream inflow manual (Word)](doc/Mannual_UpstreamInflowScheme.docx) |
-| MPI/OpenMP, precision, and high-performance computing | [HPC notes (Word)](doc/Note_HighPerformanceComputing.docx); [example workflows](etc/options_HPC/README.md) |
-| River gauge allocation | [Gauge allocation manual (Word)](doc/Manual_AllocateRiverGauges.docx); [attribute-error supplement (Word)](doc/Supp_GaugeAttributeError.docx) |
-| Flood-depth downscaling | [Workflow guide](etc/downscale_flddph/ReadMe.md); [method notes (Word)](doc/Note_Downscaling.docx) |
-| Water temperature and ice | [Heatlink stability and diagnostics](src/heatlink/README.md) |
-| Comparison with observations | [Validation examples](etc/validation/ReadMe.md) |
-| Distribution preparation | [Package-creation guide](doc/HowTo_Make_Package.md) |
+| Model formulation, setup, inputs, and standard execution | [v4.20 manual](doc/Manual_CaMa-Flood_v420.docx); [CaMa-Flood guideline](doc/CaMa-Flood_Guideline.md) |
+| Build and sample runs | [gosh sample execution guide](gosh/README.md) |
+| River maps and map preparation | [map guide](map/README.md) |
+| Reservoir operation | [v4.20 reservoir manual](doc/Manual_ReservoirOperation_v420.docx); [reservoir preparation guide](map/src/src_dam/ReadMe.md) |
+| Levee parameters | [levee guide](doc/levee.md); [parameter manual](doc/LeveeParameter.docx) |
+| Upstream inflow | [upstream inflow manual](doc/Mannual_UpstreamInflowScheme.docx) |
+| HPC, MPI, and OpenMP | [HPC note](doc/Note_HighPerformanceComputing.docx); [example workflows](etc/options_HPC/README.md) |
+| Gauge allocation | [gauge allocation manual](doc/Manual_AllocateRiverGauges.docx) |
+| Flood-depth downscaling | [workflow guide](etc/downscale_flddph/ReadMe.md); [method note](doc/Note_Downscaling.docx) |
+| Validation examples | [validation guide](etc/validation/ReadMe.md) |
+| Distribution package preparation | [package guide](doc/HowTo_Make_Package.md) |
 
-Small tests are located under [src/common/test/](src/common/test/), [src/mod/test/](src/mod/test/), [src/io/test/](src/io/test/), [src/phys/test/](src/phys/test/), and [src/heatlink/test/](src/heatlink/test/). Check their Makefiles and runners for dependencies and execution steps: some `test` targets only build executables. Native-grid remapping tests and integration-validation instructions are documented in its guide above.
+The [`visualization/`](visualization/README.md) directory contains reference examples produced during v5 development. Their scripts and data assumptions are not a v4 visualization support guarantee. Consult the v5 repository for the current visualization implementation.
 
-## Development and Contributions
+## Development and Maintenance
 
-Read [AGENTS.md](AGENTS.md) for development rules, AI-agent behavior, branch management, and contribution procedures. Consult [docs/dev_status.md](docs/dev_status.md) for active-project coordination and the status-publication workflow defined in `AGENTS.md`.
+This repository accepts maintenance and bug-fix work for v4. Preserve existing v4 interfaces, data formats, and supported workflows unless a compatibility change has been explicitly agreed. Read [`AGENTS.md`](AGENTS.md) before making changes, and use the component documentation and current v4 source as the authority for behavior.
 
-For a worked example of designing and refining scientific tutorials with
-conversational AI, repository-aware coding agents, and researcher review, see
-[Guide01](tutorial/guide01_how_to_develop_tutorial/README.md).
+New v5 development, features, and pull requests belong in [cmf_v5_beta](https://github.com/global-hydrodynamics/cmf_v5_beta). Historical v5 files in `v5_dev/` are retained for reference only and may depend on their former directory layout.
 
 ## Versions and Releases
 
-See [Versions.md](Versions.md) for recorded changes and the [official website](https://global-hydrodynamics.github.io/CaMa-Flood/) for distribution information. Source development and data-rich distribution packages are maintained separately; do not assume that `master` is identical to a particular downloadable package. For reproducible work, record the source commit or tag and the datasets used.
+See [`Versions.md`](Versions.md) for recorded changes. The [official website](https://global-hydrodynamics.github.io/CaMa-Flood/) provides the current downloadable package information. A GitHub branch should not be assumed to match a particular package release; record the source revision and datasets used for reproducibility.
 
 ## Citation and License
 
@@ -114,16 +76,12 @@ Please cite the model description and numerical-method papers when using CaMa-Fl
 - Yamazaki, D., Kanae, S., Kim, H., & Oki, T. (2011). A physically based description of floodplain inundation dynamics in a global river routing model. *Water Resources Research*, 47, W04501. [doi:10.1029/2010WR009726](https://doi.org/10.1029/2010WR009726).
 - Yamazaki, D., de Almeida, G. A., & Bates, P. D. (2013). Improving computational efficiency in global river models by implementing the local inertial flow equation and a vector-based river network map. *Water Resources Research*, 49(11), 7221–7235. [doi:10.1002/wrcr.20552](https://doi.org/10.1002/wrcr.20552).
 
-When using the river water temperature model, also cite:
-
-- Tokuda, D., Kim, H., Yamazaki, D., & Oki, T. (2019). Development of a global river water temperature model considering fluvial dynamics and seasonal freeze-thaw cycle. *Water Resources Research*, 55(2), 1366–1383. [doi:10.1029/2018WR023083](https://doi.org/10.1029/2018WR023083).
+When using the river water temperature model, also cite Tokuda, D., Kim, H., Yamazaki, D., & Oki, T. (2019). Development of a global river water temperature model considering fluvial dynamics and seasonal freeze-thaw cycle. *Water Resources Research*, 55(2), 1366–1383. [doi:10.1029/2018WR023083](https://doi.org/10.1029/2018WR023083).
 
 Use the [CaMa-Flood Zenodo archive](https://doi.org/10.5281/zenodo.4609654) to find and cite the specific archived software version used. The [official references](https://global-hydrodynamics.github.io/CaMa-Flood/#references--related-papers) provide additional model, scheme, and dataset publications.
 
 The model source code is distributed under the [Apache License 2.0](LICENSE). Separately distributed river maps, forcing, and other datasets have their own licensing terms. Consult the terms supplied with each dataset and the [official licensing information](https://global-hydrodynamics.github.io/CaMa-Flood/#license-to-use-cama-flood-model); the software license does not grant rights to all accompanying data.
 
-## Contact and Contributions
+## Contact
 
-For package access and project inquiries, contact Dai Yamazaki at **yamadai [at] iis.u-tokyo.ac.jp**. Community discussion is available through the [CaMa-Flood user group](https://groups.google.com/g/cama-flood-user).
-
-Report reproducible bugs or propose source-code improvements through [GitHub Issues](https://github.com/global-hydrodynamics/CaMa-Flood_v4/issues). Include the source revision, relevant configuration, environment, reproduction steps, and diagnostic output. Follow [AGENTS.md](AGENTS.md) when undertaking development work.
+For package access and project inquiries, contact Dai Yamazaki at **yamadai [at] iis.u-tokyo.ac.jp**. Community discussion is available through the [CaMa-Flood user group](https://groups.google.com/g/cama-flood-user). Report reproducible v4 bugs through [GitHub Issues](https://github.com/global-hydrodynamics/CaMa-Flood_v4/issues), including the source revision, configuration, environment, reproduction steps, and relevant diagnostics.

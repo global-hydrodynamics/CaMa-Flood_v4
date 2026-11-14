@@ -1,5 +1,7 @@
 # CaMa-Flood Visualization Gallery
 
+> **Compatibility note:** This visualization collection was developed during CaMa-Flood v5 work and is retained here as reference material. Its scripts and examples are not validated for the current v4 repository layout or v4 model outputs; they may depend on v5 data products, tools, or Python environments. The current development version and usage instructions are maintained in [global-hydrodynamics/cmf_v5_beta](https://github.com/global-hydrodynamics/cmf_v5_beta). No v4 port is implied by keeping these files here.
+
 Browse CaMa-Flood figures explicitly selected for Gallery publication.
 Project-local figures are tracked and documented in their project READMEs;
 the combined p01-f01 through p01-f05 figures below are the current
