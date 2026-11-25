@@ -314,6 +314,8 @@ END SUBROUTINE CMF_DAMOUT_INIT
 
 !####################################################################
 SUBROUTINE CMF_DAMOUT_CALC
+USE YOS_CMF_MAP,        ONLY: D2RIVWTH
+USE YOS_CMF_DIAG,       ONLY: D2RIVDPH, D2RIVVEL
 ! local
 IMPLICIT NONE
 ! SAVE for OMP
@@ -322,8 +324,9 @@ INTEGER(KIND=JPIM),SAVE    :: ISEQD
 REAL(KIND=JPRB),SAVE       :: DamVol
 REAL(KIND=JPRB),SAVE       :: DamInflow
 REAL(KIND=JPRB),SAVE       :: DamOutflw           !! Total outflw 
+REAL(KIND=JPRB),SAVE       :: DAREA
 REAL(KIND=JPRB),SAVE       :: DamOutTmp           !! Total outflw 
-!$OMP THREADPRIVATE    (ISEQD,DamVol,DamInflow,DamOutflw,DamOutTmp)
+!$OMP THREADPRIVATE    (ISEQD,DamVol,DamInflow,DamOutflw,DamOutTmp,DAREA)
 !====================
 !CONTAINS
 !+ UPDATE_INFLOW: replace dam upstream with kinamatic wave, calculate inflow to dam
@@ -415,6 +418,8 @@ DO IDAM=1, NDAM
 
   !! update CaMa variables  (treat all outflow as RIVOUT in dam grid, no fldout)
   D2RIVOUT(ISEQD,1) = DamOutflw
+  DAREA = D2RIVWTH(ISEQD,1) * D2RIVDPH(ISEQD,1)
+  D2RIVVEL(ISEQD,1) = merge( DamOutflw/MAX(DAREA,1.E-5_JPRB), 0._JPRB, DAREA>1.E-5_JPRB )
   D2FLDOUT(ISEQD,1) = 0._JPRB
 END DO
 !$OMP END PARALLEL DO
@@ -443,6 +448,7 @@ REAL(KIND=JPRB),SAVE       :: DSLOPE,DAREA,DVEL,DSLOPE_F,DARE_F,DVEL_F
 DO ISEQ=1, NSEQALL
   IF( I1DAM(ISEQ)>0 )THEN  !! if dam grid or upstream of dam, reset variables
     D2RIVOUT(ISEQ,1) = 0._JPRB
+    D2RIVVEL(ISEQ,1) = 0._JPRB
     D2FLDOUT(ISEQ,1) = 0._JPRB
     P2DAMINF(ISEQ,1) = D2RUNOFF(ISEQ,1)  !! consider local runoff as inflow to dam
   ENDIF
@@ -478,14 +484,13 @@ DO ISEQ=1, NSEQRIV
     DVEL   = D2RIVMAN(ISEQ,1)**(-1.) * DSLOPE**0.5 * D2RIVDPH(ISEQ,1)**(2./3.)
     DAREA  = D2RIVWTH(ISEQ,1) * D2RIVDPH(ISEQ,1)
 
-    D2RIVVEL(ISEQ,1) = DVEL
     D2RIVOUT(ISEQ,1) = DAREA * DVEL
     D2RIVOUT(ISEQ,1) = MIN( D2RIVOUT(ISEQ,1), real(P2RIVSTO(ISEQ,1),JPRB)/DT )
+    D2RIVVEL(ISEQ,1) = merge( D2RIVOUT(ISEQ,1)/MAX(DAREA,1.E-5_JPRB), 0._JPRB, DAREA>1.E-5_JPRB )
     !=== floodplain flow
     DSLOPE_F = min( 0.005_JPRB,DSLOPE )    !! set min [instead of using weirequation for efficiency]
     DVEL_F   = PMANFLD**(-1.) * DSLOPE_F**0.5 * D2FLDDPH(ISEQ,1)**(2./3.)
-    DARE_F   = REAL(P2FLDSTO(ISEQ,1),KIND=JPRB) * D2RIVLEN(ISEQ,1)**(-1.)
-    DARE_F   = MAX( DARE_F - D2FLDDPH(ISEQ,1)*D2RIVWTH(ISEQ,1), 0._JPRB )   !!remove above river channel     area
+    DARE_F   = MAX( REAL(P2FLDSTO(ISEQ,1),KIND=JPRB) * D2RIVLEN(ISEQ,1)**(-1.), 0._JPRB )
 
     D2FLDOUT(ISEQ,1) = DARE_F * DVEL_F
     D2FLDOUT(ISEQ,1) = MIN(  D2FLDOUT(ISEQ,1), REAL(P2FLDSTO(ISEQ,1),KIND=JPRB)/DT )
