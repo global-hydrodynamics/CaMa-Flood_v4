@@ -133,7 +133,7 @@ REAL(KIND=JPRB)            :: DDPH_fil(NSEQALL)
 INTEGER(KIND=JPIM),SAVE    :: ISEQ, I, ILFP
 LOGICAL,SAVE               :: Mask
 REAL(KIND=JPRD),SAVE       :: PSTOALL
-REAL(KIND=JPRB),SAVE       :: DSTOALL, DWTH_fil, DSTO_add, DWTH_add, Dmod, Dtmp
+REAL(KIND=JPRB),SAVE       :: DSTOALL, DWTH_inc, DWTH_fil, DSTO_add, DWTH_add, Dmod, Dtmp
 !================================================
 P0GLBSTOPRE2=0._JPRD
 P0GLBSTONEW2=0._JPRD
@@ -163,6 +163,7 @@ DO ISEQ=1, NSEQALL
       DDPH_fil(ISEQ)=D2FLDHGT(ISEQ,1,I-1)
     END DO
   ENDIF
+  ISTG(ISEQ)=I
   IF( I==0 .or. I==NLFP+1 )THEN
     DGRD(ISEQ)=1.E10_JPRB
   ELSE
@@ -171,13 +172,14 @@ DO ISEQ=1, NSEQALL
 END DO
 !$OMP END PARALLEL DO 
 
-!$OMP PARALLEL DO SIMD PRIVATE(PSTOALL,DSTOALL,DWTH_fil,DSTO_add,DWTH_add,Dtmp,Dmod,Mask)
+!$OMP PARALLEL DO SIMD PRIVATE(PSTOALL,DSTOALL,DWTH_inc,DWTH_fil,DSTO_add,DWTH_add,Dtmp,Dmod,Mask)
 DO ISEQ=1, NSEQALL
   PSTOALL = P2RIVSTO(ISEQ,1) + P2FLDSTO(ISEQ,1)
   DSTOALL = REAL( PSTOALL, KIND=JPRB)
 
-  DWTH_fil = D2GRAREA(ISEQ,1) / D2RIVLEN(ISEQ,1) * DFRCINC
-  DWTH_fil=DWTH_fil*ISTG(ISEQ)
+  DWTH_inc = D2GRAREA(ISEQ,1) / D2RIVLEN(ISEQ,1) * DFRCINC
+  ! Width includes the river and only the completed floodplain layers.
+  DWTH_fil = D2RIVWTH(ISEQ,1) + DWTH_inc * MAX(ISTG(ISEQ)-1,0)
 
   !! calculate storage, width, depth increment for regular case ( 0<I<=NLFP )
   DSTO_add =  DSTOALL - DSTO_fil(ISEQ)
@@ -193,8 +195,7 @@ DO ISEQ=1, NSEQALL
 
   !! Case when all water stay in channel
   Mask = ( ISTG(ISEQ) >0 ) 
-   Dmod=D2RIVWTH(ISEQ,1)
-   DWTH_add=merge(DWTH_add,Dmod,Mask)
+   DWTH_add=merge(DWTH_add,0._JPRB,Mask)
    Dtmp=D2FLDDPH(ISEQ,1)
    D2FLDDPH(ISEQ,1)=merge(Dtmp,0._JPRB,Mask)
 
@@ -206,7 +207,7 @@ DO ISEQ=1, NSEQALL
   P2FLDSTO(ISEQ,1) = PSTOALL - P2RIVSTO(ISEQ,1)
   P2FLDSTO(ISEQ,1) = MAX( P2FLDSTO(ISEQ,1), 0._JPRD )
 
-  D2FLDFRC(ISEQ,1) = (-D2RIVWTH(ISEQ,1)+DWTH_fil+DWTH_add)*D2RIVLEN(ISEQ,1) / D2GRAREA(ISEQ,1)
+  D2FLDFRC(ISEQ,1) = (-D2RIVWTH(ISEQ,1)+DWTH_fil+DWTH_add) / (DWTH_inc*NLFP)
   D2FLDFRC(ISEQ,1) = MAX( D2FLDFRC(ISEQ,1),0._JPRB)
   D2FLDFRC(ISEQ,1) = MIN( D2FLDFRC(ISEQ,1),1._JPRB)
   D2FLDARE(ISEQ,1) = D2GRAREA(ISEQ,1)*D2FLDFRC(ISEQ,1)
