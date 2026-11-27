@@ -34,8 +34,9 @@ INTEGER(KIND=JPIM)              :: EYEAR             !! END   YEAR
 INTEGER(KIND=JPIM)              :: EMON              !! END   MONTH
 INTEGER(KIND=JPIM)              :: EDAY              !! END   DAY
 INTEGER(KIND=JPIM)              :: EHOUR             !! END   HOUR 
+CHARACTER(LEN=32)               :: CALENDAR = ''      !! empty: retain NRUNVER/LLEAPYR
 
-NAMELIST/NSIMTIME/ SYEAR,SMON,SDAY,SHOUR, EYEAR,EMON,EDAY,EHOUR
+NAMELIST/NSIMTIME/ SYEAR,SMON,SDAY,SHOUR, EYEAR,EMON,EDAY,EHOUR, CALENDAR
 
 CONTAINS 
 !####################################################################
@@ -50,6 +51,8 @@ SUBROUTINE CMF_TIME_NMLIST
 ! -- Called from CMF_DRV_NMLIST
 !================================================
 USE YOS_CMF_INPUT,      ONLY: CSETFILE,NSETFILE
+USE YOS_CMF_INPUT,      ONLY: LLEAPYR
+USE cmf_cf_time_mod,    ONLY: configure_simulation_calendar
 USE YOS_CMF_TIME,       ONLY: YYYY0, MM0, DD0
 USE CMF_UTILS_MOD,      ONLY: INQUIRE_FID
 IMPLICIT NONE
@@ -71,14 +74,18 @@ EYEAR=2001
 EMON=1
 EDAY=1
 EHOUR=0
+CALENDAR=''
 
 !*** 2. read namelist
 REWIND(NSETFILE)
 READ(NSETFILE,NML=NSIMTIME)
 
+CALL configure_simulation_calendar(CALENDAR,LLEAPYR,LOGNAM)
+
 WRITE(LOGNAM,*) "=== NAMELIST, NSIMTIME ==="
 WRITE(LOGNAM,*) "SYEAR,SMON,SDAY,SHOUR:", SYEAR,SMON,SDAY,SHOUR
 WRITE(LOGNAM,*) "EYEAR,EMON,EDAY,EHOUR:", EYEAR,EMON,EDAY,EHOUR
+WRITE(LOGNAM,*) "CALENDAR: ",TRIM(CALENDAR),", effective LLEAPYR: ",LLEAPYR
 
 !*** 3. close namelist
 CLOSE(NSETFILE)

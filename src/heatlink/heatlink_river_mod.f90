@@ -523,7 +523,11 @@ subroutine calc_heatlink(dt)
         call solve_heat_budget(wattmp, &
         &   watsto, hflx_srf, hflx_bdy, rivare + fldare, dt, local_dry_energy_j, local_added_energy_j)
         if (LHEAT_DIAG) local_throughput_j(:NSEQALL) = abs(local_added_energy_j(:NSEQALL))
-        call apply_liquid_temperature_floor(wattmp, watsto, floor_energy_j)
+        if (LHEAT_DIAG) then
+            call apply_liquid_temperature_floor(wattmp, watsto, floor_energy_j)
+        else
+            call apply_liquid_temperature_floor(wattmp, watsto)
+        endif
     endif
 
     if (LHEAT_DIAG) call finish_local_diagnostics(dt, wattmp, icevol, icevol_excess, &
